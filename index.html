@@ -9,32 +9,37 @@
 <style>
     body {
       margin: 0;
-      padding: 0px 1rem;
       font-family: sans-serif;
       background: #f5f5f5;
     }
     .main-header {
+  height: 55px;
+  background-image: url("img/header.webp");
+  background-repeat: repeat-x;       /* 横方向に繰り返し */
+  background-size: auto 55px;        /* 高さ55pxにフィット */
+  background-position: center center;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: #222;
-  padding: 0.5rem 1rem;
+  padding: 0em 5px;
   color: white;
-  position: sticky;
   top: 0;
   z-index: 1000;
 }
 
 .header-logo img {
-  height: 36px;
+  height: 1.8em;
+  width: auto;
+  margin-top: 10px;
+  object-fit: contain;
 }
 
 .header-nav a {
-  margin-left: 1rem;
+  margin-left: 1em;
   color: white;
   text-decoration: none;
   font-weight: bold;
-  font-size: 0.95rem;
+  font-size: 0.85em;
 }
 
 .header-nav a:hover {
@@ -46,7 +51,7 @@
       top: 0px;
       background: #fff;
       z-index: 100;
-      margin-bottom: 1rem;
+      margin: 10px 0px;
       display: flex;
       gap: 1rem;
       padding: 8px;
@@ -227,6 +232,9 @@ footer {
     }
 
 @media (max-width: 768px) {
+  .header-nav a {
+  font-size: 0.5em;
+}
     .card-list {
       grid-template-columns: repeat(2, 1fr); /* 2列表示に */
       gap: 8px;
@@ -296,17 +304,39 @@ footer {
     padding: 0.5rem 0;
   }
   }
+  @media (max-width: 560px){
+  .header-nav a {
+    margin-left: 0.5em;
+  font-size: 0.4em;
+}
+  #deckHelp {
+    display: block;
+  font-size: 0.26rem;
+}
+@media (max-width: 410px){
+  .deck-card {
+    width: 55px;   /* 最小スマホではこのサイズに */
+    height: auto;  /* 縦幅は画像サイズに任せる or 調整 */
+  }
+  .header-nav a {
+    margin-left: 0.1em;
+  font-size: 0.2em;
+}
+}
+}
   </style>
 </head>
 <body>
 <!-- ヘッダー -->
 <header class="main-header">
   <div class="header-logo">
-    <img src="img/logo.png" alt="神託のメソロギア ロゴ" />
+    <img src="img/tatudosi.webp" alt="神託のメソロギア ロゴ" />
   </div>
   <nav class="header-nav">
     <a href="index.html">📖 一覧</a>
     <a href="deckmaker.html">🃏 デッキメーカー</a>
+    <a href="#" style="text-decoration: line-through; pointer-events: none; color: #aaa;">📊 所持率チェッカー</a>
+    <a href="#" style="text-decoration: line-through; pointer-events: none; color: #aaa;">📤 デッキ投稿</a>
   </nav>
 </header>
 

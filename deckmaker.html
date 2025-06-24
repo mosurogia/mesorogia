@@ -14,27 +14,33 @@
     }
 
     .main-header {
+  height: 55px;
+  background-image: url("img/header.webp");
+  background-repeat: repeat-x;       /* 横方向に繰り返し */
+  background-size: auto 55px;        /* 高さ55pxにフィット */
+  background-position: center center;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: #222;
-  padding: 0.5rem 1rem;
+  padding: 0px 5px;
   color: white;
-  position: sticky;
   top: 0;
   z-index: 1000;
 }
 
 .header-logo img {
-  height: 36px;
+  height: 1.8em;
+  width: auto;
+  margin-top: 10px;
+  object-fit: contain;
 }
 
 .header-nav a {
-  margin-left: 1rem;
+  margin-left: 1em;
   color: white;
   text-decoration: none;
   font-weight: bold;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
 }
 
 .header-nav a:hover {
@@ -46,12 +52,19 @@
       color: white;
     }
     .tab {
+
       flex: 1;
       padding: 12px;
       text-align: center;
       cursor: pointer;
       border-bottom: 3px solid transparent;
     }
+    .tab span {
+  background: rgba(0, 0, 0, 0.4); /* 背景の黒半透明 */
+  border-radius: 6px;
+  display: inline-block;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8); /* より濃い影 */
+}
     .tab.active {
       border-bottom: 3px solid yellow;
       background: #444;
@@ -63,6 +76,21 @@
     .tab-content.active {
       display: block;
     }
+#tab1 {
+  background-image: url("img/tab1.2.webp");
+  background-size: cover;
+  background-position: center;
+  color: white;
+  text-shadow: 1px 1px 2px black;
+}
+
+#tab2 {
+  background-image: url("img/tab2.webp");
+  background-size: cover;
+  background-position: center;
+  color: white;
+  text-shadow: 1px 1px 2px black;
+}
     .fixed-top-bar{
       position: sticky;
       top: 0px;
@@ -75,7 +103,7 @@
       top: 0px;
       background: #fff;
       z-index: 100;
-      margin-bottom: 1rem;
+      margin: 10px 0px;
       display: flex;
       gap: 1rem;
       padding: 8px;
@@ -364,11 +392,30 @@ input[type="text"] {
 }
 
 #deck-card-list {
+  position: relative;
+  background-image: url("img/cardlist.webp");
+  background-repeat: no-repeat;
+  min-height: 140px;
+  background-size: cover;
+  background-position: center;
   display: grid;
   grid-template-columns: repeat(5, 1fr); /* 横5列 */
   gap: 4px; /* カード間の隙間 */
   padding: 8px;
 }
+#deckcard-empty-message {
+  grid-column: 1 / -1; /* グリッド全体に跨る */
+  display: flex;
+  place-items: center; /* 中央寄せ（上下左右） */
+  justify-content: center;
+  color: white;
+  font-size: 1.2rem;
+  opacity: 0.6;
+  text-shadow: 1px 1px 2px #000;
+  text-align: center;
+  height: 140px;
+}
+
 .deck-entry {
   position: relative;
   width: 100%;
@@ -402,6 +449,9 @@ footer {
   }
 }
 @media (max-width: 768px) {
+  .header-nav a {
+  font-size: 0.5em;
+}
     .card-list {
       grid-template-columns: repeat(2, 1fr); /* 2列表示に */
       gap: 8px;
@@ -504,15 +554,23 @@ footer {
   }
   }
 @media (max-width: 560px){
+  .header-nav a {
+    margin-left: 0.5em;
+  font-size: 0.4em;
+}
   #deckHelp {
     display: block;
-  font-size: 0.3rem;
+  font-size: 0.26rem;
 }
 @media (max-width: 410px){
   .deck-card {
     width: 55px;   /* 最小スマホではこのサイズに */
     height: auto;  /* 縦幅は画像サイズに任せる or 調整 */
   }
+  .header-nav a {
+    margin-left: 0.1em;
+  font-size: 0.2em;
+}
 }
 }
 </style>
@@ -521,21 +579,28 @@ footer {
 <!-- ヘッダー -->
 <header class="main-header">
   <div class="header-logo">
-    <img src="img/logo.png" alt="神託のメソロギア ロゴ" />
+    <img src="img/tatudosi.webp" alt="神託のメソロギア ロゴ" />
   </div>
   <nav class="header-nav">
     <a href="index.html">📖 一覧</a>
-    <a href="デッキメーカー_スマホレイアウト対応中.html">🃏 デッキメーカー</a>
+    <a href="deckmaker.html">🃏 デッキメーカー</a>
+    <a href="#" style="text-decoration: line-through; pointer-events: none; color: #aaa;">📊 所持率チェッカー</a>
+    <a href="#" style="text-decoration: line-through; pointer-events: none; color: #aaa;">📤 デッキ投稿</a>
   </nav>
 </header>
 
 
   <div class="tab-bar">
-    <div class="tab active" onclick="switchTab('build')">🃏 デッキ構築</div>
-    <div class="tab" onclick="switchTab('edit')">💾 デッキ分析</div>
+    <div id="tab1" class="tab active" onclick="switchTab('build')">
+      <span>🃏 デッキ構築</span>
+    </div>
+    <div id="tab2" class="tab" onclick="switchTab('edit')">
+      <span>💾 デッキ分析</span>
+    </div>
   </div>
-  <div class="tab-content active" id="build">
 
+
+  <div class="tab-content active" id="build">
 
 <!--メニューバー＆デッキバー上部固定用-->
 <div class="fixed-top-bar">
@@ -3216,7 +3281,9 @@ footer {
   <div class="tab-content" id="edit">
     <h3 style="margin: 1px;">🛠 デッキ編集＆コード出力</h3>
     <div id="deck-layout">
+
       <div id="deck-card-list" class="deck-section">
+        <div id="deckcard-empty-message">デッキがここに表示されます</div>
         <!-- カード一覧（5列グリッド） -->
       </div>
       <div id="deck-info" class="deck-section">
@@ -3950,10 +4017,20 @@ function updateGrayscaleState() {
     expandCard(cardEl);
   }
 
+
+
   // デッキ一覧表示（コード生成/読み込みページ用）
   function renderDeckList() {
     const container = document.getElementById("deck-card-list");
-    container.innerHTML = "";
+
+
+  // 🔻 empty-message を一時保持（あとで戻す）
+  const emptyMessage = document.getElementById("deckcard-empty-message");
+
+  // 🔻 一旦中身をクリア（empty-message以外）
+  container.innerHTML = "";
+
+  if (emptyMessage) container.appendChild(emptyMessage); // 消えないように戻す
 
     // 🔽 deck（cd → 枚数）を配列に変換
     const entries = Object.entries(deck);
@@ -3992,7 +4069,7 @@ function updateGrayscaleState() {
 
       // ▼ カード要素生成
       const cardEl = document.createElement("div");
-      cardEl.className = "deck-entry";
+      cardEl.className = "deckcard";
       cardEl.dataset.cd = cd;
       cardEl.dataset.race = card.race;
       cardEl.dataset.type = card.type;
@@ -4011,9 +4088,23 @@ function updateGrayscaleState() {
 
       container.appendChild(cardEl);
     }
+
+    updateDeckEmptyMessage();
   }
 
+  //デッキリスト「デッキをここに表示」
+  function updateDeckEmptyMessage() {
+    const deck = document.getElementById("deck-card-list");
+    const msg = document.getElementById("deckcard-empty-message");
+    if (!deck || !msg) return;
+    const cards = deck.querySelectorAll(".deckcard"); // ← カードクラス名に合わせて変更
 
+    if (cards.length === 0) {
+      msg.style.display = "flex";
+    } else {
+      msg.style.display = "none";
+    }
+  }
 </script>
 
 

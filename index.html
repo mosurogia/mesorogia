@@ -21,7 +21,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0em 5px;
+  padding: 0px 5px;
   color: white;
   top: 0;
   z-index: 1000;
@@ -40,11 +40,18 @@
   text-decoration: none;
   font-weight: bold;
   font-size: 0.85em;
+
+  background-color: rgba(0, 0, 0, 0.4);  /* 背景とのコントラスト */
+  padding: 6px 0.2em;
+  border-radius: 6px;
+  transition: background-color 0.3s;
 }
 
 .header-nav a:hover {
-  text-decoration: underline;
+  background-color: rgba(255, 255, 255, 0.2);  /* 軽いホバー効果 */
+  text-decoration: none;
 }
+
 
     .search-bar{
       position: sticky;
@@ -224,7 +231,18 @@ footer {
   color: #666;
   padding: 1rem 0;
   background-color: #f9f9f9;
+  line-height: 1.6;
 }
+
+footer a {
+  color: #3366cc;
+  text-decoration: none;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}
+
 
 
 @media (max-width: 1024px) {
@@ -233,7 +251,7 @@ footer {
 
 @media (max-width: 768px) {
   .header-nav a {
-  font-size: 0.5em;
+  font-size: 0.75em;
 }
     .card-list {
       grid-template-columns: repeat(2, 1fr); /* 2列表示に */
@@ -304,14 +322,25 @@ footer {
     padding: 0.5rem 0;
   }
   }
+  @media (max-width: 680px){
+  .header-nav a {
+  font-size: 0.65em;
+}
+}
+@media (max-width: 630px){
+  .header-nav a {
+  font-size: 0.6em;
+}
+}
   @media (max-width: 560px){
   .header-nav a {
-    margin-left: 0.5em;
-  font-size: 0.4em;
+    margin-left: 0.1em;
+  font-size: 0.45em;
 }
   #deckHelp {
     display: block;
   font-size: 0.26rem;
+}
 }
 @media (max-width: 410px){
   .deck-card {
@@ -319,11 +348,10 @@ footer {
     height: auto;  /* 縦幅は画像サイズに任せる or 調整 */
   }
   .header-nav a {
-    margin-left: 0.1em;
-  font-size: 0.2em;
+    font-size: 0.23em;
 }
 }
-}
+
   </style>
 </head>
 <body>
@@ -6147,9 +6175,12 @@ footer {
 </div>
 </div>
 <footer>
-  © 2025 Mesorogia Cards. All rights reserved.<br/>
-  当サイトは「神託のメソロギア」の非公式ファンサイトです。画像・データ等の著作権は各権利者に帰属します。
+  © 2025 Mesorogia Cards. All rights reserved.<br />
+  当サイトは「神託のメソロギア」の非公式ファンサイトです。画像・データ等の著作権は各権利者に帰属します。<br />
+  一部画像素材は「ジュエルセイバーFREE」<br />
+  （<a href="https://www.jewel-s.jp/" target="_blank" rel="noopener">https://www.jewel-s.jp/</a>）を使用しています。
 </footer>
+
 <script>
   function openFilterModal() {
     document.getElementById("filterModal").style.display = "flex";

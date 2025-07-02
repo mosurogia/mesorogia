@@ -7800,11 +7800,26 @@ function updateDeck() {
         if (Math.abs(diffY) > 30) {
           if (diffY > 0) {
             // 上フリック → 追加
+
+            // === 同名カードは3枚まで ===
+            if (deck[cd] >= 3) return;
+
+            // === 旧神は1種1枚まで ===
+            const isOldGod = cardMap[cd]?.race === "旧神";
+            if (isOldGod) {
+              const otherOldGodExists = Object.keys(deck).some(cdKey => {
+                return cardMap[cdKey]?.race === "旧神" && cdKey !== cd;
+              });
+              if (otherOldGodExists) return;
+              if (deck[cd] >= 1) return;
+            }
+
+            // === 制限クリアなら追加 ===
             cardEl.classList.add('flick-up');
             setTimeout(() => cardEl.classList.remove('flick-up'), 200);
 
             deck[cd] = (deck[cd] || 0) + 1;
-          } else {
+          }else {
             // 下フリック → 削除
             cardEl.classList.add('flick-down');
             setTimeout(() => cardEl.classList.remove('flick-down'), 200);
@@ -8447,7 +8462,6 @@ function updateGrayscaleState() {
   }
 
 
-
   // デッキリスト表示（コード生成/読み込みページ用）
   function renderDeckList() {
     const container = document.getElementById("deck-card-list");
@@ -8975,10 +8989,6 @@ function checkSameNameLimit() {
 
 
 
-
-
-
-
 //一時保存デッキリスト確認
     function updateSavedDeckList() {
       const container = document.getElementById("savedDeckList");
@@ -9111,8 +9121,6 @@ function checkSameNameLimit() {
   }
 
 
-
-
 //メイン種族判断
         function getMainTribe(g) {
           const tribeMap = {
@@ -9124,6 +9132,7 @@ function checkSameNameLimit() {
           };
           return tribeMap[g] || "？";
         }
+
 
 //一時保存デッキ単体
     function loadDeckFromSaved() {
@@ -9183,6 +9192,8 @@ function checkSameNameLimit() {
       updateSavedDeckList();
       alert("保存されたデッキを削除しました");
     }
+
+
 //一時保存デッキ削除（複数）
   function deleteDeckFromIndex(index) {
     const savedList = JSON.parse(localStorage.getItem("savedDecks") || "[]");
@@ -9191,9 +9202,12 @@ function checkSameNameLimit() {
     updateSavedDeckList(); // 一覧を更新
   }
 
+
+//タブ切り替え時一時保存リスト更新
     document.getElementById("tab-edit")?.addEventListener("click", () => {
       updateSavedDeckList();
     });
+
 
   //龍年モード表示
   const searchInput = document.getElementById('keyword'); // 検索欄のID

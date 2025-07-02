@@ -136,7 +136,6 @@
       top: 0px;
       background: #fff;
       z-index: 100;
-      margin: 10px 0px;
       display: flex;
       gap: 1rem;
       padding: 8px;
@@ -155,44 +154,18 @@
       max-width: 100px;
     }
     .deck-card {
-  width: 100px;
-  background: #ccc;
-  border: 2px solid #666;
-  position: relative;
-  flex-shrink: 0;
-  box-sizing: border-box;
-  border-radius: 6px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.btn-plus,
-.btn-minus {
-  width: 100%;
-  font-size: 0.28em;
-  border: none;
-  background: #ddd;
-  cursor: pointer;
-}
-.btn-plus:disabled {
-  background: #aaa;    /* 色を暗く */
-  cursor: not-allowed; /* マウスカーソル */
-  opacity: 0.7;        /* 半透明で分かりやすく */
-}
-
+      width: 100px;
+      background: #ccc;
+      border: 2px solid #666;
+      position: relative;
+      flex-shrink: 0;
+      box-sizing: border-box;
+      border-radius: 6px;
+    }
     .deck-card img {
       width: 100%;
       display: block;
     }
-    .img-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-.img-wrapper img {
-  width: 100%;
-  display: block;
-}
     .count-badge {
       position: absolute;
       top: 2px;
@@ -204,6 +177,15 @@
       padding: 1px 8px;
     }
 
+    .deck-card.flick-up {
+  transform: translateY(-20px);
+  transition: transform 0.2s ease;
+}
+
+.deck-card.flick-down {
+  transform: translateY(20px);
+  transition: transform 0.2s ease;
+}
 
 
 
@@ -218,7 +200,7 @@
 
 #deckHelp {
   white-space: nowrap;
-  font-size: 0.5rem;
+  font-size: 0.4rem;
   display: flex;
   color: #555;
   padding: 4px;
@@ -229,7 +211,7 @@
   min-height: 87px;
   display: flex;
   gap:  4px;
-  padding: 0px 4px;
+  padding: 4px 4px 0px 4px;
   background: #fff;
 }
 
@@ -246,7 +228,6 @@
 .deck-summary-toggle {
     display: none;
   }
-
 
 .analyze-button-wrapper {
   margin-top: 0.3rem;
@@ -727,9 +708,6 @@ footer a:hover {
     width: 70px;   /* スマホではこのサイズに */
     height: auto;  /* 縦幅は画像サイズに任せる or 調整 */
   }
-  .count-badge {
-      font-size: 10px;
-    }
   .deck-bar-wrapper {
     position: relative;
   }
@@ -1088,10 +1066,14 @@ footer a:hover {
     <div class="deck-bar-top" id="deckBarTop">
       <div class="deck-help" id="deckHelp">
         <div>
-        ここにデッキリストが表示されます<br>
-        ＋－ボタンでカード追加削除<br>
-        ※同名カードは3枚、旧神は1種1枚です<br>
-        ※デッキは30枚～40枚です
+        【PC】<br>
+        ・カード画像orデッキバークリック：追加<br>
+        ・デッキバー右クリック：削除<br>
+        </div>
+        <div>
+        【スマホ】<br>
+        ・カード画像タップ：追加<br>
+        ・デッキバータップ：削除
         </div>
       </div>
       <!-- JSでカードが並ぶ -->
@@ -7268,6 +7250,8 @@ footer a:hover {
   </a>
 </footer>
 
+
+
 <div id="toast-warning" ></div>
 
 <script>
@@ -7394,7 +7378,7 @@ function rebuildCardMap() {
 
 
 
-    // カード追加関数（画像クリック＋－ボタンで使う）
+    // カード追加関数（画像クリックで使う）
     window.addCard = function (cd) {
       // 該当カードの種族情報を取得
       const card = document.querySelector(`.card[data-cd="${cd}"]`);
@@ -7435,20 +7419,6 @@ function rebuildCardMap() {
       applyFilters();
     }
 
-
-   //カード削除関数（画像クリック＋－ボタンで使う）
-    window.removeCard = function (cd) {
-      if (deck[cd]) {
-        deck[cd] -= 1;
-        if (deck[cd] <= 0) {
-          delete deck[cd];
-        }
-        updateDeck();
-        updateCardDisabling();
-        applyGrayscaleFilter();
-        applyFilters();
-      }
-    };
 
     // カードクリック操作（左クリック追加、右クリック削除）
     document.querySelectorAll('.card').forEach(card => {
@@ -7798,58 +7768,66 @@ function updateDeck() {
     const cardEl = document.createElement('div');
     cardEl.className = 'deck-card';
     cardEl.dataset.cd = cd;
-    cardEl.dataset.race = cardMap[cd]?.race || "";
 
-    // ＋ボタン
-    // ＋ボタン
-    const plusBtn = document.createElement('button');
-    plusBtn.textContent = '＋';
-    plusBtn.className = 'btn-plus';
-
-    // 旧神は1枚上限 / それ以外は3枚上限
-    const isKyuushin = cardMap[cd]?.race === '旧神';
-    const maxCount = isKyuushin ? 1 : 3;
-
-    if (deck[cd] >= maxCount) {
-      plusBtn.disabled = true; // 上限なら無効化
-    } else {
-      plusBtn.addEventListener('click', () => addCard(cd));
-    }
-
-
-
-    // 📌 画像＋バッジを包むラッパー
-    const imgWrapper = document.createElement('div');
-    imgWrapper.className = 'img-wrapper';
+    const race = cardMap[cd]?.race || "";
+    cardEl.dataset.race = race;
 
     const img = document.createElement('img');
     img.src = `img/${cd.slice(0, 5)}.webp`;
     img.alt = cd;
 
+    if (!isCardAllowed(cd)) cardEl.classList.add('grayscale');
+    cardEl.appendChild(img);
+
     const badge = document.createElement('div');
     badge.className = 'count-badge';
     badge.textContent = count;
+    cardEl.appendChild(badge);
 
-    imgWrapper.appendChild(img);
-    imgWrapper.appendChild(badge);
+//スマホ、PCでの追加削除処理
+    if (isMobile()) {
+      let touchStartY = 0;
+      let touchEndY = 0;
 
-    if (!isCardAllowed(cd)) cardEl.classList.add('grayscale');
+      cardEl.addEventListener('touchstart', e => {
+        touchStartY = e.changedTouches[0].screenY;
+      });
 
-    // －ボタン
-    const minusBtn = document.createElement('button');
-    minusBtn.textContent = '－';
-    minusBtn.className = 'btn-minus';
-    minusBtn.addEventListener('click', () => removeCard(cd));
+      cardEl.addEventListener('touchend', e => {
+        touchEndY = e.changedTouches[0].screenY;
+        const diffY = touchStartY - touchEndY;
 
-    // 順番に追加
-    cardEl.appendChild(plusBtn);
-    cardEl.appendChild(imgWrapper); // ← ここ！
-    cardEl.appendChild(minusBtn);
+        if (Math.abs(diffY) > 30) {
+          if (diffY > 0) {
+            // 上フリック → 追加
+            cardEl.classList.add('flick-up');
+            setTimeout(() => cardEl.classList.remove('flick-up'), 200);
+
+            deck[cd] = (deck[cd] || 0) + 1;
+          } else {
+            // 下フリック → 削除
+            cardEl.classList.add('flick-down');
+            setTimeout(() => cardEl.classList.remove('flick-down'), 200);
+
+            if (deck[cd] > 1) deck[cd]--;
+            else delete deck[cd];
+          }
+
+          updateDeck();
+          updateCardDisabling();
+          applyGrayscaleFilter();
+        }
+      });
+    }else {
+      // PC：右クリックで削除
+      cardEl.addEventListener('mousedown', e => handleClick(e, cd));
+      cardEl.addEventListener('contextmenu', e => e.preventDefault());
+    }
+
 
     deckBarTop.appendChild(cardEl);
 
   }
-
 
 
   // 🔽 サマリー表示
@@ -7908,6 +7886,12 @@ function updateDeck() {
     const card = cardMap[cd];
     if (!card) return [];
     return Array(count).fill({ ...card });
+  });
+
+  document.querySelectorAll('.deck-card').forEach(card => {
+    card.addEventListener('contextmenu', e => {
+      e.preventDefault(); // 🔴 右クリックメニュー抑制
+    });
   });
   currentDeck = expandedDeck; // グローバルに設定（分析関数用）
   rebuildCardMap();

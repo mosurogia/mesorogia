@@ -180,6 +180,15 @@
       width: 100%;
       display: block;
     }
+    .img-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.img-wrapper img {
+  width: 100%;
+  display: block;
+}
     .count-badge {
       position: absolute;
       top: 2px;
@@ -7881,149 +7890,6 @@ function updateDeck() {
     if (!card) return [];
     return Array(count).fill({ ...card });
   });
-
-
-  function updateDeck() {
-    const deckBarTop = document.getElementById("deckBarTop");
-    deckBarTop.innerHTML = '';
-
-    // 🔽 ソート対象のdeckを配列に変換
-    const entries = Object.entries(deck);
-
-    // 🔽 タイプ順に並べるための優先度設定
-    const typeOrder = { "チャージャー": 0, "アタッカー": 1, "ブロッカー": 2 };
-
-    // 🔽 カードを通常順（タイプ→コスト→パワー→cd）に並べ替え
-    entries.sort((a, b) => {
-      const [cdA] = a;
-      const [cdB] = b;
-      const cardA = cardMap[cdA];
-      const cardB = cardMap[cdB];
-
-      if (!cardA || !cardB) return 0; // 情報不足なら順序維持
-
-      const typeA = typeOrder[cardA.type] ?? 99;
-      const typeB = typeOrder[cardB.type] ?? 99;
-      if (typeA !== typeB) return typeA - typeB;
-
-      const costA = parseInt(cardA.cost) || 0;
-      const costB = parseInt(cardB.cost) || 0;
-      if (costA !== costB) return costA - costB;
-
-      const powerA = parseInt(cardA.power) || 0;
-      const powerB = parseInt(cardB.power) || 0;
-      if (powerA !== powerB) return powerA - powerB;
-
-      return cdA.localeCompare(cdB); // 最後にcdで並べる
-    });
-
-    // 🔽 ソートされた順でデッキバーにカードを表示
-    for (const [cd, count] of entries) {
-      const cardEl = document.createElement('div');
-      cardEl.className = 'deck-card';
-      cardEl.dataset.cd = cd;
-
-      const race = cardMap[cd]?.race || "";
-      cardEl.dataset.race = race;
-
-      const img = document.createElement('img');
-      img.src = `img/${cd.slice(0, 5)}.webp`;
-      img.alt = cd;
-
-      if (!isCardAllowed(cd)) cardEl.classList.add('grayscale');
-      cardEl.appendChild(img);
-
-      const badge = document.createElement('div');
-      badge.className = 'count-badge';
-      badge.textContent = count;
-      cardEl.appendChild(badge);
-
-      if (isMobile()) {
-        //スマホ：タップで削除
-        cardEl.addEventListener('click', () => {
-          if (deck[cd] > 1) deck[cd]--;
-          else delete deck[cd];
-          updateDeck();
-          updateCardDisabling();
-          applyGrayscaleFilter()
-        });
-      } else {
-        //PC：右クリックで削除
-        cardEl.addEventListener('mousedown', e => handleClick(e, cd));
-        cardEl.addEventListener('contextmenu', e => e.preventDefault());
-      }
-
-      deckBarTop.appendChild(cardEl);
-
-    }
-
-
-    // 🔽 サマリー表示
-    const summary = document.getElementById("deck-summary");
-
-    // 🔽 一度中身を全部消すのではなく、必要な部分だけ消す
-    // 情報部分を入れる専用ラッパーを探すか、なければ作る
-    let info = summary.querySelector(".deck-info");
-    if (!info) {
-      info = document.createElement("div");
-      info.className = "deck-info";
-      summary.insertBefore(info, summary.firstChild); // ボタンの前に配置
-    }
-
-    let total = 0;
-    const typeCount = { "チャージャー": 0, "アタッカー": 0, "ブロッカー": 0 };
-    const races = new Set();
-    let hasOldGod = false;
-
-    for (const [cd, count] of Object.entries(deck)) {
-      const card = cardMap[cd];
-      if (!card) continue;
-      total += count;
-      typeCount[card.type] += count;
-      // 使用種族としてカウント（イノセント・旧神は除く）
-      if (card.race !== "イノセント" && card.race !== "旧神") races.add(card.race);
-      if (card.race === "旧神") hasOldGod = true;
-    }
-
-    const raceLine = "使用種族：" + (races.size > 0 ? Array.from(races).join("/") : "なし");
-    const oldGodLine = `旧神：${hasOldGod ? "採用中" : "未採用"}`;
-    const typeLine = `🔵 ${typeCount["チャージャー"]} 🟣 ${typeCount["アタッカー"]} ⚪️ ${typeCount["ブロッカー"]}`;
-
-    // 改行で分けて表示
-    info.innerHTML = `
-  デッキ枚数：${total} /30~40<br>
-  ${raceLine}<br>
-  ${oldGodLine}<br>
-  ${typeLine}
-`;
-    updateGrayscaleState();
-    updateCardDisabling();
-    // 🔽 デッキ情報（種族・タイプなど）表示を更新
-    const deckCards = Object.entries(deck).flatMap(([cd, count]) => {
-      const card = cardMap[cd];
-      if (!card) return [];
-      return Array(count).fill({
-        種族: card.race,
-        タイプ: card.type
-      });
-    });
-    updateDeckSummary(deckCards);
-    // 🔽 デッキ配列をカード詳細付きで展開して分析
-    const expandedDeck = Object.entries(deck).flatMap(([cd, count]) => {
-      const card = cardMap[cd];
-      if (!card) return [];
-      return Array(count).fill({ ...card });
-    });
-    document.querySelectorAll('.deck-card').forEach(card => {
-      card.addEventListener('contextmenu', e => {
-        e.preventDefault(); // 🔴 右クリックメニュー抑制
-      });
-    });
-    currentDeck = expandedDeck; // グローバルに設定（分析関数用）
-    rebuildCardMap();
-    updateDeckAnalysis(); // 分析実行
-    applyFilters();
-  }
   currentDeck = expandedDeck; // グローバルに設定（分析関数用）
   rebuildCardMap();
   updateDeckAnalysis(); // 分析実行

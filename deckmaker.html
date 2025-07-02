@@ -2,10 +2,31 @@
 <!DOCTYPE html>
 
 <html lang="ja">
+<head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta charset="utf-8"/>
-<title>神託のメソロギアカードデッキメーカー</title>
+  <meta name="google-site-verification" content="5NzYWNH5_YUg0dUV2iCzg_bSo7M1lLJi6IzOeF2dGXM" />
+    <!-- ページの説明（検索結果の下に表示） -->
+    <meta name="description" content="このサイトは、アプリ「信託のメソロギア」のカード一覧、デッキ構築、デッキ分析ができる非公式サイトです。カード検索やデッキ管理をスマホでも快適に！">
+    <!-- キーワード（今は効果は薄いが一応） -->
+    <meta name="keywords" content="カードゲーム,デッキメーカー,DCG,神託のメソロギア,メソロギア,神託,デッキ分析,一覧,モスロギア">
+    <!-- OGP基本 -->
+    <meta property="og:title" content="モスロギア | 神託のメソロギア デッキメーカー">
+    <meta property="og:description" content="神託のメソロギアのカード検索・デッキ構築ができる非公式サイトです。">
+    <meta property="og:image" content="https://mosurogia.github.io/mesorogia-cards/img/deckmakerogp.webp">
+    <meta property="og:url" content="https://mosurogia.github.io/mesorogia-cards/">
+    <meta property="og:type" content="website">
+
+    <!-- Twitterカード向け -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="モスロギア | 神託のメソロギア デッキメーカー">
+    <meta name="twitter:description" content="カード検索とデッキ構築で信託のメソロギアをもっと楽しもう！">
+    <meta name="twitter:image" content="https://mosurogia.github.io/mesorogia-cards/img/deckmakerogp.webp">
+
+    <meta charset="utf-8" />
+    <title>モスロギア 神託のメソロギア デッキメーカー</title>
 <link href="favicon.ico" rel="icon" type="image/png"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 <style>
     body {
       margin: 0;
@@ -134,21 +155,34 @@
       max-width: 100px;
     }
     .deck-card {
-      width: 100px;
-      background: #ccc;
-      border: 2px solid #666;
-      position: relative;
-      flex-shrink: 0;
-      box-sizing: border-box;
-      border-radius: 6px;
-    }
+  width: 100px;
+  background: #ccc;
+  border: 2px solid #666;
+  position: relative;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.btn-plus,
+.btn-minus {
+  width: 100%;
+  height: 2.5em;
+  font-size: 0.3em;
+  border: none;
+  background: #ddd;
+  cursor: pointer;
+}
+
     .deck-card img {
       width: 100%;
       display: block;
     }
     .count-badge {
       position: absolute;
-      top: 2px;
+      top: 1.2em;
       right: 4px;
       background: #222;
       color: #fff;
@@ -156,11 +190,14 @@
       border-radius: 20px;
       padding: 1px 8px;
     }
+
+
+
+
 .deck-bar-wrapper {
   display: flex;
   overflow: hidden;
 }
-
 .deck-bar-scroll {
   overflow-x: auto;
   flex: 1;
@@ -168,15 +205,18 @@
 
 #deckHelp {
   white-space: nowrap;
-  overflow-x: auto;
-  font-size: 0.4rem;
+  font-size: 0.5rem;
+  display: flex;
+  color: #555;
+  padding: 4px;
+  border-radius: 6px;
 }
 
 .deck-bar-top {
+  min-height: 87px;
   display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  padding: 4px;
+  gap:  4px;
+  padding: 0px 4px;
   background: #fff;
 }
 
@@ -193,14 +233,7 @@
 .deck-summary-toggle {
     display: none;
   }
-.deck-help {
-  display: flex;
-  font-size: 12px;
-  color: #555;
-  padding: 4px;
-  border-radius: 6px;
-  white-space: pre-wrap;
-}
+
 
 .analyze-button-wrapper {
   margin-top: 0.3rem;
@@ -245,11 +278,16 @@ input[type="text"] {
       border-radius: 6px;
     }
 
+    button, .card {
+  touch-action: manipulation;
+}
 .card.grayscale img {
   filter: grayscale(100%);
   opacity: 0.5;
 }
-
+.hidden-by-grayscale {
+  display: none !important;
+}
     .zoom-btn {
       position: absolute;
       top: 4px;
@@ -406,7 +444,7 @@ input[type="text"] {
   width: 100%;
   background-color: #e0e0e0;
   color: #333;
-  font-size: 0.85rem;
+  font-size: 0.5rem;
   padding: 2px 0px;
   border: 1px solid #aaa;
   cursor: pointer;
@@ -436,21 +474,21 @@ input[type="text"] {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  padding: 8px;;
 }
 
 .deck-section {
   background: #fff;
-  padding: 1rem;
+  padding: 0.5rem 0px;
   border: 1px solid #ccc;
   border-radius: 6px;
+  max-height: 25rem;
+
 }
 
 #deck-card-list {
   position: relative;
   background-image: url("img/cardlist.webp");
   background-repeat: no-repeat;
-  min-height: auto;
   background-size: cover;
   background-position: center;
   display: grid;
@@ -460,6 +498,7 @@ input[type="text"] {
   min-height: 140px;
   align-content: start;       /* カードを上詰め配置 */
   justify-content: start;
+  overflow-y: auto;
 }
 #deckcard-empty-message {
   position: absolute;
@@ -467,14 +506,15 @@ input[type="text"] {
   left: 50%;
   transform: translate(-50%, -50%);
   color: white;
-  font-size: 1.2rem;
   opacity: 0.8;
   text-shadow: 1px 1px 2px #000;
   text-align: center;
   pointer-events: none;
   z-index: 1;
 }
-
+#deck-info{
+  overflow-y: auto;
+}
 
 .deck-entry {
   position: relative;
@@ -491,15 +531,25 @@ input[type="text"] {
 }
 /* 代表カードの枠（styleタグまたはCSSに追加） */
 .deck-entry.representative {
-  outline: 3px solid limegreen;
+  outline: 3px solid crimson;
   outline-offset: -2px;
   border-radius: 6px;
   box-shadow: 0 0 10px limegreen;
 }
 
+#analysis-section {
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.5s ease, opacity 0.5s ease;
+}
 
+#analysis-section.open {
+  max-height: 700px; /* 必要に応じて調整 */
+  opacity: 1;
+}
 #deck-info .deck-name-row {
   margin-bottom: 0.5rem;
+
 }
 #deck-info label {
   font-weight: bold;
@@ -509,18 +559,26 @@ input[type="text"] {
   width: 100%;
   max-width: 240px;
   padding: 4px 8px;
-  font-size: 0.9rem;
+  font-size: 0.65rem;
   box-sizing: border-box;
 }
 #deck-info div {
-  margin-bottom: 0.3rem;
-  font-size: 0.9rem;
+  font-size: 0.65rem;
+  overflow-y: auto;
+}
+#exchange-toggle-btn{
+  font-size: 0.65em;
+}
+#toggle-analysis-btn{
+  font-size: 0.6em;
+}
+.deck-code-controls button{
+  font-size: 0.85em;
 }
 .deck-type-breakdown {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem 1rem; /* 行と列に少し余白 */
-  margin-top: 0.5rem;
   font-size: 0.9rem;
 }
 
@@ -530,7 +588,8 @@ input[type="text"] {
 #savedDeckList {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); /* ⬅ 2列対応 */
-  gap: 1em;
+  gap: 0.3em;
+  margin-top: 0.2em;
 }
 
 .saved-deck-item {
@@ -539,7 +598,7 @@ input[type="text"] {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1em;
+  gap: 0.5em;
   border: 1px solid #ccc;
   padding: 0.5em;
   background-color: #fff;
@@ -562,16 +621,43 @@ input[type="text"] {
 .saved-deck-info .row {
   display: flex;
   flex-wrap: wrap;
-  gap: 1em;
+  gap: 0.5em;
 }
-
+.saved-deck-info .row small {
+  font-size: 0.75em;
+  color: #555;
+}
 .saved-deck-buttons {
   display: flex;
   flex-direction: column;
   gap: 0.5em;
   min-width: 80px;
 }
+#toast-warning{
+  font-size: 0.65rem;
+  display: none;
+  position: fixed;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(220, 53, 69, 0.95); /* Bootstrap系red */
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  z-index: 9999;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+#deck-stats {
+  margin-bottom: 1.5em; /* ボタンとの重なりを防ぐ */
+}
 
+#deck-stats .accident-rate {
+  display: block;
+  margin-top: 0.2em;
+  font-size: 0.9em;
+  color: #444;
+}
 
 footer {
   text-align: center;
@@ -594,14 +680,21 @@ footer a:hover {
 @media (max-width: 1024px) {
       .card { width: calc(100% / 5 - 8px); }
     }
-    @media (min-width: 768px) {
+    @media (min-width: 700px) {
   #deck-layout {
     flex-direction: row;
+    height: 100%;
+    max-height: 25rem;
   }
-  #deck-card-list,
   #deck-info {
-    flex: 1;
-  }
+  flex: 1;
+  max-width: 50%; /* ← 適宜調整可能 */
+  min-height: 5rem;
+}
+#deck-card-list {
+  flex: 1;
+  min-width: 0;
+}
 }
 @media (max-width: 768px) {
   .header-nav a {
@@ -708,6 +801,7 @@ footer a:hover {
   #deck-info div {
   font-size: 0.75rem;
 }
+
   footer {
     font-size: 0.5rem; /* ← モバイルではさらに小さく */
     padding: 0.5rem 0;
@@ -735,7 +829,6 @@ footer a:hover {
 }
 @media (max-width: 410px){
   .deck-card {
-    width: 55px;   /* 最小スマホではこのサイズに */
     height: auto;  /* 縦幅は画像サイズに任せる or 調整 */
   }
   .header-nav a {
@@ -766,7 +859,7 @@ footer a:hover {
   </nav>
 </header>
 
-
+<!--タブ切り替え-->
   <div class="tab-bar">
     <div id="tab1" class="tab active" onclick="switchTab('build')">
       <span>🃏 デッキ構築</span>
@@ -776,8 +869,8 @@ footer a:hover {
     </div>
   </div>
 
-
-  <div class="tab-content active" id="build">
+<!--デッキ構築タブ-->
+<div class="tab-content active" id="build">
 
 <!--メニューバー＆デッキバー上部固定用-->
 <div class="fixed-top-bar">
@@ -979,14 +1072,10 @@ footer a:hover {
     <div class="deck-bar-top" id="deckBarTop">
       <div class="deck-help" id="deckHelp">
         <div>
-        【PC】<br>
-        ・カード画像orデッキバークリック：追加<br>
-        ・デッキバー右クリック：削除<br>
-        </div>
-        <div>
-        【スマホ】<br>
-        ・カード画像タップ：追加<br>
-        ・デッキバータップ：削除
+        ここにデッキリストが表示されます<br>
+        ＋－ボタンでカード追加削除<br>
+        ※同名カードは3枚、旧神は1種1枚です<br>
+        ※デッキは30枚～40枚です
         </div>
       </div>
       <!-- JSでカードが並ぶ -->
@@ -1005,15 +1094,17 @@ footer a:hover {
 
 </div>
 
-</div>
 <!--使用不可種族表示非表示ボタン-->
 <div class="deck-filter-bar">
   <button id="toggle-invalid-race" class="filter-toggle-button">✅使用不可種族を表示(モノクロ)</button>
 </div>
 
 
+</div>
+
 <button id="scrollTopFixed" onclick="scrollToTop()">▲</button>
 
+<!--カード一覧-->
 <div class="grid" id="grid">
   <div class="card"
       data-cd="10001"
@@ -1877,7 +1968,7 @@ footer a:hover {
       data-cd="20010"
       data-race="アンドロイド"
       data-category="アドミラルシップ"
-      data-rarity="レジェンド"
+      data-rarity="ブロンズ"
       data-type="チャージャー"
       data-cost="0"
       data-power="8"
@@ -3332,7 +3423,7 @@ footer a:hover {
       data-rarity="ブロンズ"
       data-type="ブロッカー"
       data-cost="20"
-      data-power="14"
+      data-power="12"
       data-destroy="破壊なし"
       data-pack="Awaking The Oracle「神託者の覚醒」"
       data-effectname="■手札発動■"
@@ -7003,28 +7094,29 @@ footer a:hover {
     ■攻撃成功時■<br/>カードを3枚引く。
   </div>
 </div>
+
+<!--龍年ボタン-->
+
+<button id="dragon-mode-btn" style="display: none;">🐉 龍年モード</button>
+
+
 </div>
 
-<footer>
-  © 2025 Mesorogia Cards. All rights reserved.<br />
-  当サイトは「神託のメソロギア」の非公式ファンサイトです。画像・データ等の著作権は各権利者に帰属します。<br />
-  一部画像素材は「ジュエルセイバーFREE」<br />
-  （<a href="https://www.jewel-s.jp/" target="_blank" rel="noopener">https://www.jewel-s.jp/</a>）を使用しています。
-</footer>
-
-  </div>
+</div>
 
 
-<!--デッキ編集ページ-->
-  <div class="grid" id="cardGrid"></div>
-  <div class="tab-content" id="edit">
-<div id="deck-layout">
+<!--デッキ編集タブ-->
+<div class="tab-content" id="edit">
+  <div id="deck-layout">
+<!--デッキリストゾーン-->
       <div id="deck-card-list" class="deck-section">
         <div id="deckcard-empty-message">デッキがここに表示されます</div>
         <!-- カード一覧（5列グリッド） -->
       </div>
+
+<!--デッキ情報ゾーン-->
       <div id="deck-info" class="deck-section">
-        <h3 style="margin-top: 0px;">デッキ情報</h3>
+        <h3 style="margin: 0px 0px 0.5em; font-size: 0.8em;">デッキ情報</h3>
         <!-- デッキ名入力欄 -->
         <div class="deck-name-row">
           <input type="text" id="deck-name" placeholder="デッキ名を入力" />
@@ -7032,7 +7124,7 @@ footer a:hover {
 
         <!-- デッキ枚数 -->
         <div class="deck-count">
-          デッキ枚数：<span id="deck-count">0</span> /40
+          デッキ枚数：<span id="deck-count">0</span> /30~40
         </div>
 
         <!-- 使用種族 -->
@@ -7047,12 +7139,13 @@ footer a:hover {
         <!-- 代表カード -->
         <div class="deck-representative">
           代表カード：<span id="deck-representative">未選択</span>
+          <div style="font-size: 14px;">タップで変更可能</div>
         </div>
         <!-- 使用タイプ内訳 -->
         <div class="deck-type-breakdown">
           <span class="type-count">🔵 チャージャー：<span id="count-charger">0</span></span>
           <span class="type-count">🟣 アタッカー：<span id="count-attacker">0</span></span>
-          <span class="type-count">⚪ ブロッカー：<span id="count-blocker">0</span></span>
+          <span class="type-count">⚪️️️️️ ブロッカー：<span id="count-blocker">0</span></span>
         </div>
         <!--交換ポイント-->
         <div class="exchange-summary" style="margin-top: 0.5rem; font-size: 0.85rem;">
@@ -7061,61 +7154,105 @@ footer a:hover {
           <div id="exchange-diamond" style="display:none;">💎 必要ダイヤ：<span id="diamond-cost">0</span></div>
           <div id="exchange-sand" style="display:none;">
             🪨 必要砂
-            <ul style="margin: 0.2rem 0 0 1rem;">
+            <ul style="margin: 0.2rem 0 0 0.5rem;">
               <li>レジェンドの砂：<span id="sand-leg">0</span>個</li>
               <li>ゴールドの砂：<span id="sand-gld">0</span>個</li>
             </ul>
           </div>
-          <div style="font-size: 14px;">※採用中のゴールドとレジェンドを全部交換した場合（今後変更予定）</div>
+          <div style="font-size: 14px;">※採用中のゴールドとレジェンドを全部交換した場合（今後所持カードから反映予定）</div>
         </div>
-          <!-- 🔽 デッキ分析結果 -->
+<!-- 🔽 デッキ分析結果 -->
       <button id="toggle-analysis-btn" onclick="toggleAnalysis()">🔍 分析を表示</button>
-      <div id="analysis-section" class="deck-analysis" style="margin-top: 1rem; font-size: 0.85rem; display: none;">
+      <div id="analysis-section" class="deck-analysis" style="margin-top: 0.5rem; font-size: 0.85rem;">
             <div>
               <strong>レアリティ内訳：</strong>
               <span id="rarity-legend">🌈0</span> /
               <span id="rarity-gold">🟡 0</span> /
-              <span id="rarity-silver">⚪ 0</span> /
+              <span id="rarity-silver">⚪️ 0</span> /
               <span id="rarity-bronze">🟤 0</span>
             </div>
+            <!--メイン種族リスト-->
             <div>
               <strong>メイン種族率：</strong>
               <span id="race-rate"> 0%</span>
             </div>
-            <div>
-              <strong>平均コスト：</strong><span id="avg-cost">0.00</span>  <strong>平均パワー：</strong><span id="avg-power">🔵0.00 / 🟣0.00</span>
+            <!--コスト、パワー分布グラフ-->
+            <div style="max-width: 100%;">
+              <strong>コスト分布：</strong>
+              <canvas id="costChart" height="80em"></canvas>
+            </div>
+            <div style="max-width: 100%; margin-top: 20px;">
+              <strong>パワー分布：</strong>
+              <canvas id="powerChart" height="80em"></canvas>
             </div>
             <div>
+            <!--総コスト、パワー-->
               <strong>総コスト：</strong><span id="total-cost">0</span>  <strong>総パワー：</strong><span id="total-power">🔵0 / 🟣0</span>
             </div>
+            <!--マリガンボタン-->
             <div>
-              <strong>初手事故率：</strong><span id="bad-hand-rate">0.0%</span>
-            <div style="font-size: 14px;">※4枚マリガン込みしてもチャージャー1枚も引けない確率</div>
+              <label for="mulligan-count">マリガン枚数：</label>
+              <select id="mulligan-count">
+                <option value="0">マリガンなし</option>
+                <option value="1">1枚マリガン</option>
+                <option value="2">2枚マリガン</option>
+                <option value="3">3枚マリガン</option>
+                <option value="4" selected>4枚マリガン</option>
+              </select>
+              <strong>初手事故率：</strong>
+              <span id="bad-hand-rate">0.0%</span>
+              <span id="bad-hand-frequency">（ほぼ事故なし）</span>
+              <div style="font-size: 14px;">※初手に出せるカードがマリガンしても来ない確率</div>
           </div>
-      </div>
+        </div>
     <!-- 🔽 コード出力・入力ボタン群 -->
-    <div class="deck-code-controls" style="margin-top: 1rem;">
+    <div class="deck-code-controls">
       <button id="generate-code-btn">📤 コード生成</button>
       <div id="copy-message" style="font-size: 0.85rem; color: green; margin-top: 0.5rem; display: none;">
         コピーしました！ </div>
       <button id="load-code-btn">📥 コード読み込み</button>
       <button onclick="saveDeckToLocalStorage()">💾 一時保存</button>
-
-      </div>
+      <button id="resetDeckButton">デッキをリセット</button>
     </div>
-</div>
+      </div>
+  </div>
 
 <!-- 保存デッキ一覧表示用 -->
-<div id="savedDeckList" style="gap: 0.5em; margin-top: 1em;"></div>
+<div id="savedDeckCount" style="margin-bottom: 0.3em; font-size: 20px; color: #333;"></div>
+<p style="color: red; font-weight: bold;font-size: 15px; margin: 0px;">
+  ⚠️ デッキはブラウザに保存されます。キャッシュを削除するとデータが消えるのでご注意ください。
+</p>
+<div id="savedDeckList"></div>
 
-    <footer>
-      © 2025 Mesorogia Cards. All rights reserved.<br />
-      当サイトは「神託のメソロギア」の非公式ファンサイトです。画像・データ等の著作権は各権利者に帰属します。<br />
-      一部画像素材は「ジュエルセイバーFREE」<br />
-      （<a href="https://www.jewel-s.jp/" target="_blank" rel="noopener">https://www.jewel-s.jp/</a>）を使用しています。
-    </footer>
 </div>
 
+
+<footer>
+  <div class="site-description">
+    <p>
+      <strong>モスロギア</strong> はアプリ『神託のメソロギア』の非公式ファンサイトです。<br>
+      カード一覧検索やデッキメーカー、デッキ分析などを通じて、プレイヤー向けに便利なデータベース機能を提供しています。
+    </p>
+  </div>
+
+  <p>
+    🔗 公式サイトはこちら 👉
+    <a href="https://mythologiatheoracle.com/" target="_blank" rel="noopener noreferrer">
+      神託のメソロギア公式サイト
+    </a>
+  </p>
+
+  © 2025 Mesorogia Cards. All rights reserved.<br />
+  当サイトは「神託のメソロギア」の非公式ファンサイトです。画像・データ等の著作権は各権利者に帰属します。<br />
+  一部画像素材は「ジュエルセイバーFREE」<br />
+  （<a href="https://www.jewel-s.jp/" target="_blank" rel="noopener">https://www.jewel-s.jp/</a>）を使用しています。<br />
+  💬 ご要望・不具合報告 👉
+  <a href="https://x.com/192837465aruneo" target="_blank" rel="noopener noreferrer">
+    @192837465aruneo
+  </a>
+</footer>
+
+<div id="toast-warning" ></div>
 
 <script>
   // ==========================
@@ -7124,6 +7261,7 @@ footer a:hover {
   const deck = {}; // 現在のデッキ状態を保持（カードcd → 枚数）
    let cardMap = {}; // ← グローバルに定義
     let representativeCd = null;  // 代表カードのcd（5桁）
+      Chart.register(ChartDataLabels);
 
 // カード情報を集約するマップを作る（type, race, name）
 function rebuildCardMap() {
@@ -7189,6 +7327,20 @@ function rebuildCardMap() {
     rebuildCardMap();
     updateSavedDeckList();
 
+
+
+    // デッキバー初期化
+    const deckBarTop = document.getElementById("deckBarTop");
+    // デッキバー内のカードに右クリック防止処理を追加
+    document.addEventListener("contextmenu", e => {
+      const deckBarTop = document.getElementById("deckBarTop");
+      if (deckBarTop && deckBarTop.contains(e.target)) {
+        e.preventDefault(); // 🔴 deckBarTop内であれば常に抑制
+      }
+    });
+
+
+
     // --------------------------
     // フィルター関連イベント登録
     // --------------------------
@@ -7224,12 +7376,9 @@ function rebuildCardMap() {
       applyFilters();
     });
 
-    // --------------------------
-    // デッキバー初期化
-    // --------------------------
-    const deckBarTop = document.getElementById("deckBarTop");
 
-    // カード追加関数（画像クリックで使う）
+
+    // カード追加関数（画像クリック＋－ボタンで使う）
     window.addCard = function (cd) {
       // 該当カードの種族情報を取得
       const card = document.querySelector(`.card[data-cd="${cd}"]`);
@@ -7266,12 +7415,24 @@ function rebuildCardMap() {
       deck[cd] = (deck[cd] || 0) + 1;
       updateDeck();
       updateCardDisabling(); // ✅ これがなければ一覧の更新がされない
-      applyGrayscaleFilter()
+      applyGrayscaleFilter();
+      applyFilters();
     }
 
 
-
-
+   //カード削除関数（画像クリック＋－ボタンで使う）
+    window.removeCard = function (cd) {
+      if (deck[cd]) {
+        deck[cd] -= 1;
+        if (deck[cd] <= 0) {
+          delete deck[cd];
+        }
+        updateDeck();
+        updateCardDisabling();
+        applyGrayscaleFilter();
+        applyFilters();
+      }
+    };
 
     // カードクリック操作（左クリック追加、右クリック削除）
     document.querySelectorAll('.card').forEach(card => {
@@ -7281,10 +7442,7 @@ function rebuildCardMap() {
         // IMG または 🔎（zoom-btn）を押した場合はカード追加しない
         if (e.target.tagName === 'IMG' || e.target.classList.contains('zoom-btn')) return;
         handleClick(e, cd);
-
       });
-
-
       card.addEventListener('contextmenu', e => e.preventDefault());
     });
 
@@ -7322,6 +7480,8 @@ function rebuildCardMap() {
       "パック名": "pack", "効果名": "effectname", "特殊効果": "skill",
       "BP要素": "bp", "フィールド": "field", "破壊": "destroy"
     };
+
+
 
     document.querySelectorAll(".filter-group").forEach(group => {
       const key = group.getAttribute("data-key");
@@ -7387,7 +7547,9 @@ function rebuildCardMap() {
     const active = document.querySelector(".card-detail.active");
     if (active) active.remove();
     sortCards();
+    applyGrayscaleFilter();
   }
+
 
   function resetFilters() {
     document.querySelectorAll(".filter-btn.selected").forEach(btn => btn.classList.remove("selected"));
@@ -7566,10 +7728,8 @@ function getRaceType(race) {
     // 表示更新
     updateDeck();
     updateCardDisabling();
-    applyGrayscaleFilter()
+    applyGrayscaleFilter();
   }
-
-
 
 
 
@@ -7626,36 +7786,39 @@ function updateDeck() {
     const race = cardMap[cd]?.race || "";
     cardEl.dataset.race = race;
 
+    // ＋ボタン
+    const plusBtn = document.createElement('button');
+    plusBtn.textContent = '＋';
+    plusBtn.className = 'btn-plus';
+    plusBtn.addEventListener('click', () => addCard(cd));
+
+    // 画像
     const img = document.createElement('img');
     img.src = `img/${cd.slice(0, 5)}.webp`;
     img.alt = cd;
 
     if (!isCardAllowed(cd)) cardEl.classList.add('grayscale');
-    cardEl.appendChild(img);
 
+    // 枚数バッジ
     const badge = document.createElement('div');
     badge.className = 'count-badge';
     badge.textContent = count;
-    cardEl.appendChild(badge);
 
-    if (isMobile()) {
-      //スマホ：タップで削除
-      cardEl.addEventListener('click', () => {
-        if (deck[cd] > 1) deck[cd]--;
-        else delete deck[cd];
-        updateDeck();
-        updateCardDisabling();
-        applyGrayscaleFilter()
-      });
-    } else {
-      //PC：右クリックで削除
-      cardEl.addEventListener('mousedown', e => handleClick(e, cd));
-      cardEl.addEventListener('contextmenu', e => e.preventDefault());
-    }
+    // －ボタン
+    const minusBtn = document.createElement('button');
+    minusBtn.textContent = '－';
+    minusBtn.className = 'btn-minus';
+    minusBtn.addEventListener('click', () => removeCard(cd));
+
+    // 順番に追加
+    cardEl.appendChild(plusBtn);
+    cardEl.appendChild(img);
+    cardEl.appendChild(badge);
+    cardEl.appendChild(minusBtn);
 
     deckBarTop.appendChild(cardEl);
-
   }
+
 
 
   // 🔽 サマリー表示
@@ -7687,11 +7850,11 @@ function updateDeck() {
 
   const raceLine = "使用種族：" + (races.size > 0 ? Array.from(races).join("/") : "なし");
   const oldGodLine = `旧神：${hasOldGod ? "採用中" : "未採用"}`;
-  const typeLine = `🔵 ${typeCount["チャージャー"]} 🟣 ${typeCount["アタッカー"]} ⚪ ${typeCount["ブロッカー"]}`;
+  const typeLine = `🔵 ${typeCount["チャージャー"]} 🟣 ${typeCount["アタッカー"]} ⚪️ ${typeCount["ブロッカー"]}`;
 
   // 改行で分けて表示
   info.innerHTML = `
-  デッキ枚数：${total} / 40<br>
+  デッキ枚数：${total} /30~40<br>
   ${raceLine}<br>
   ${oldGodLine}<br>
   ${typeLine}
@@ -7716,22 +7879,165 @@ function updateDeck() {
     return Array(count).fill({ ...card });
   });
 
+
+  function updateDeck() {
+    const deckBarTop = document.getElementById("deckBarTop");
+    deckBarTop.innerHTML = '';
+
+    // 🔽 ソート対象のdeckを配列に変換
+    const entries = Object.entries(deck);
+
+    // 🔽 タイプ順に並べるための優先度設定
+    const typeOrder = { "チャージャー": 0, "アタッカー": 1, "ブロッカー": 2 };
+
+    // 🔽 カードを通常順（タイプ→コスト→パワー→cd）に並べ替え
+    entries.sort((a, b) => {
+      const [cdA] = a;
+      const [cdB] = b;
+      const cardA = cardMap[cdA];
+      const cardB = cardMap[cdB];
+
+      if (!cardA || !cardB) return 0; // 情報不足なら順序維持
+
+      const typeA = typeOrder[cardA.type] ?? 99;
+      const typeB = typeOrder[cardB.type] ?? 99;
+      if (typeA !== typeB) return typeA - typeB;
+
+      const costA = parseInt(cardA.cost) || 0;
+      const costB = parseInt(cardB.cost) || 0;
+      if (costA !== costB) return costA - costB;
+
+      const powerA = parseInt(cardA.power) || 0;
+      const powerB = parseInt(cardB.power) || 0;
+      if (powerA !== powerB) return powerA - powerB;
+
+      return cdA.localeCompare(cdB); // 最後にcdで並べる
+    });
+
+    // 🔽 ソートされた順でデッキバーにカードを表示
+    for (const [cd, count] of entries) {
+      const cardEl = document.createElement('div');
+      cardEl.className = 'deck-card';
+      cardEl.dataset.cd = cd;
+
+      const race = cardMap[cd]?.race || "";
+      cardEl.dataset.race = race;
+
+      const img = document.createElement('img');
+      img.src = `img/${cd.slice(0, 5)}.webp`;
+      img.alt = cd;
+
+      if (!isCardAllowed(cd)) cardEl.classList.add('grayscale');
+      cardEl.appendChild(img);
+
+      const badge = document.createElement('div');
+      badge.className = 'count-badge';
+      badge.textContent = count;
+      cardEl.appendChild(badge);
+
+      if (isMobile()) {
+        //スマホ：タップで削除
+        cardEl.addEventListener('click', () => {
+          if (deck[cd] > 1) deck[cd]--;
+          else delete deck[cd];
+          updateDeck();
+          updateCardDisabling();
+          applyGrayscaleFilter()
+        });
+      } else {
+        //PC：右クリックで削除
+        cardEl.addEventListener('mousedown', e => handleClick(e, cd));
+        cardEl.addEventListener('contextmenu', e => e.preventDefault());
+      }
+
+      deckBarTop.appendChild(cardEl);
+
+    }
+
+
+    // 🔽 サマリー表示
+    const summary = document.getElementById("deck-summary");
+
+    // 🔽 一度中身を全部消すのではなく、必要な部分だけ消す
+    // 情報部分を入れる専用ラッパーを探すか、なければ作る
+    let info = summary.querySelector(".deck-info");
+    if (!info) {
+      info = document.createElement("div");
+      info.className = "deck-info";
+      summary.insertBefore(info, summary.firstChild); // ボタンの前に配置
+    }
+
+    let total = 0;
+    const typeCount = { "チャージャー": 0, "アタッカー": 0, "ブロッカー": 0 };
+    const races = new Set();
+    let hasOldGod = false;
+
+    for (const [cd, count] of Object.entries(deck)) {
+      const card = cardMap[cd];
+      if (!card) continue;
+      total += count;
+      typeCount[card.type] += count;
+      // 使用種族としてカウント（イノセント・旧神は除く）
+      if (card.race !== "イノセント" && card.race !== "旧神") races.add(card.race);
+      if (card.race === "旧神") hasOldGod = true;
+    }
+
+    const raceLine = "使用種族：" + (races.size > 0 ? Array.from(races).join("/") : "なし");
+    const oldGodLine = `旧神：${hasOldGod ? "採用中" : "未採用"}`;
+    const typeLine = `🔵 ${typeCount["チャージャー"]} 🟣 ${typeCount["アタッカー"]} ⚪️ ${typeCount["ブロッカー"]}`;
+
+    // 改行で分けて表示
+    info.innerHTML = `
+  デッキ枚数：${total} /30~40<br>
+  ${raceLine}<br>
+  ${oldGodLine}<br>
+  ${typeLine}
+`;
+    updateGrayscaleState();
+    updateCardDisabling();
+    // 🔽 デッキ情報（種族・タイプなど）表示を更新
+    const deckCards = Object.entries(deck).flatMap(([cd, count]) => {
+      const card = cardMap[cd];
+      if (!card) return [];
+      return Array(count).fill({
+        種族: card.race,
+        タイプ: card.type
+      });
+    });
+    updateDeckSummary(deckCards);
+    // 🔽 デッキ配列をカード詳細付きで展開して分析
+    const expandedDeck = Object.entries(deck).flatMap(([cd, count]) => {
+      const card = cardMap[cd];
+      if (!card) return [];
+      return Array(count).fill({ ...card });
+    });
+    document.querySelectorAll('.deck-card').forEach(card => {
+      card.addEventListener('contextmenu', e => {
+        e.preventDefault(); // 🔴 右クリックメニュー抑制
+      });
+    });
+    currentDeck = expandedDeck; // グローバルに設定（分析関数用）
+    rebuildCardMap();
+    updateDeckAnalysis(); // 分析実行
+    applyFilters();
+  }
   currentDeck = expandedDeck; // グローバルに設定（分析関数用）
   rebuildCardMap();
   updateDeckAnalysis(); // 分析実行
-
-
+  applyFilters();
 }
+
+
+
 
 //分析表示/非表示ボタン
-function toggleAnalysis() {
-  const section = document.getElementById("analysis-section");
-  const btn = document.getElementById("toggle-analysis-btn");
+  function toggleAnalysis() {
+    const section = document.getElementById("analysis-section");
+    const btn = document.getElementById("toggle-analysis-btn");
+    const isOpen = section.classList.toggle("open");
+    btn.textContent = isOpen ? "⬆ 分析を隠す" : "🔍 分析を表示";
+  }
 
-  const isHidden = section.style.display === "none";
-  section.style.display = isHidden ? "block" : "none";
-  btn.textContent = isHidden ? "⬆ 分析を隠す" : "🔍 分析を表示";
-}
 
 //カード分析
   function updateDeckAnalysis() {
@@ -7780,27 +8086,25 @@ function toggleAnalysis() {
       if (!raceCounts[race]) raceCounts[race] = 0;
       raceCounts[race]++;
     });
-
-    const avgCost = (costCount > 0 ? (totalCost / costCount) : 0).toFixed(2);
-    const avgChargerPower = (chargerCount > 0 ? (totalChargerPower / chargerCount) : 0).toFixed(2);
-    const avgAttackerPower = (attackerCount > 0 ? (totalAttackerPower / attackerCount) : 0).toFixed(2);
+    updateDeckAnalysisCharts();
 
     // 上位3種族（メイン種族）
     const sortedRaces = Object.entries(raceCounts).sort((a, b) => b[1] - a[1]);
-    const mainRace = sortedRaces[0] || ["-", 0];
+    const mainRace = sortedRaces[0] || [0];
     const mainRate = deck.length ? Math.round((mainRace[1] / deck.length) * 100) : 0;
 
     // 初手事故率（コスト5以上のカードが初手8枚に8枚とも含まれる確率）
-    const badRate = calcBadHandRate(deck);
+    const mulliganCount = parseInt(document.getElementById("mulligan-count").value);
+    const badRate = calcBadHandRate(deck, mulliganCount);
+
+
 
     // 表示更新
     document.getElementById("rarity-legend").textContent = `🌈 ${rarityCounts.LEG}`;
     document.getElementById("rarity-gold").textContent = `🟡 ${rarityCounts.GLD}`;
-    document.getElementById("rarity-silver").textContent = `⚪ ${rarityCounts.SIL}`;
+    document.getElementById("rarity-silver").textContent = `⚪️ ${rarityCounts.SIL}`;
     document.getElementById("rarity-bronze").textContent = `🟤 ${rarityCounts.BRZ}`;
     document.getElementById("race-rate").textContent = `${mainRace[0]}: ${mainRate}%`;
-    document.getElementById("avg-cost").textContent = avgCost;
-    document.getElementById("avg-power").textContent = `🔵${avgChargerPower}  🟣${avgAttackerPower}`;
     document.getElementById("total-cost").textContent = totalCost;
     document.getElementById("total-power").textContent = `🔵${totalChargerPower}  🟣${totalAttackerPower}`;
     document.getElementById("bad-hand-rate").textContent = `${badRate.toFixed(1)}%`;
@@ -7822,21 +8126,215 @@ function toggleAnalysis() {
 
   }
 
+//コストパワー棒グラフ
+  let costChartInstance = null;
+  let powerChartInstance = null;
+
+  function updateDeckAnalysisCharts() {
+    const deck = currentDeck; // デッキのカード配列
+    const costCount = {};
+    const powerCount = {};
+
+    const alwaysShowCosts = [2, 4, 6, 8, 10, 12];
+    const alwaysShowPowers = [0, 4, 5, 6, 7, 8, 12, 16];
+
+    deck.forEach(card => {
+      const cost = parseInt(card.cost, 10);
+      const power = parseInt(card.power, 10);
+      if (!isNaN(cost)) costCount[cost] = (costCount[cost] || 0) + 1;
+      if (!isNaN(power)) powerCount[power] = (powerCount[power] || 0) + 1;
+    });
+
+    const costLabels = [...new Set([...alwaysShowCosts, ...Object.keys(costCount).map(Number)])].sort((a, b) => a - b);
+    const costData = costLabels.map(c => costCount[c] || 0);
+    const powerLabels = [...new Set([...alwaysShowPowers, ...Object.keys(powerCount).map(Number)])].sort((a, b) => a - b);
+    const powerData = powerLabels.map(p => powerCount[p] || 0);
+
+    const costCtx = document.getElementById("costChart").getContext("2d");
+    const powerCtx = document.getElementById("powerChart").getContext("2d");
+
+    if (costChartInstance) costChartInstance.destroy();
+    if (powerChartInstance) powerChartInstance.destroy();
+
+    const typeList = ['チャージャー', 'アタッカー', 'ブロッカー'];
+    const typeColors = {
+      'チャージャー': 'rgba(119, 170, 212, 0.7)',
+      'アタッカー': 'rgba(125, 91, 155, 0.7)',
+      'ブロッカー': 'rgba(214, 212, 204, 0.7)'
+    };
+
+    const powerTypeCount = {};
+    deck.forEach(card => {
+      const power = parseInt(card.power, 10);
+      const type = card.type;
+      if (!isNaN(power) && typeList.includes(type)) {
+        if (!powerTypeCount[power]) powerTypeCount[power] = {};
+        powerTypeCount[power][type] = (powerTypeCount[power][type] || 0) + 1;
+      }
+    });
+
+    const powerLabelsStacked = [...new Set([...alwaysShowPowers, ...Object.keys(powerTypeCount).map(Number)])].sort((a, b) => a - b);
+
+    const powerDatasets = typeList.map(type => ({
+      label: type,
+      data: powerLabelsStacked.map(p => (powerTypeCount[p] && powerTypeCount[p][type]) ? powerTypeCount[p][type] : 0),
+      backgroundColor: typeColors[type],
+      stack: 'stack1',
+      datalabels: {
+        color: '#000',
+        font: { size: 10 },
+        anchor: 'center',
+        align: 'center',
+        formatter: value => value === 0 ? '' : value
+      }
+    }));
+    const costTypeCount = {};
+
+    deck.forEach(card => {
+      const cost = parseInt(card.cost, 10);
+      const type = card.type;
+      if (!isNaN(cost) && typeList.includes(type)) {
+        if (!costTypeCount[cost]) costTypeCount[cost] = {};
+        costTypeCount[cost][type] = (costTypeCount[cost][type] || 0) + 1;
+      }
+    });
+
+    const costLabelsStacked = [...new Set([...alwaysShowCosts, ...Object.keys(costTypeCount).map(Number)])].sort((a, b) => a - b);
+
+    const costDatasets = typeList.map(type => ({
+      label: type,
+      data: costLabelsStacked.map(c => (costTypeCount[c] && costTypeCount[c][type]) ? costTypeCount[c][type] : 0),
+      backgroundColor: typeColors[type],
+      stack: 'stack1',
+      datalabels: {
+        color: '#000',
+        font: { size: 10 },
+        anchor: 'center',
+        align: 'center',
+        formatter: value => value === 0 ? '' : value
+      }
+    }));
+
+    costChartInstance = new Chart(costCtx, {
+      type: 'bar',
+      data: {
+        labels: costLabelsStacked,
+        datasets: costDatasets
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false },
+          datalabels: {
+            display: true
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            grid: { display: false },
+            ticks: { color: '#333', font: { size: 11 } }
+          },
+          y: {
+            stacked: true,
+            display: false,
+            beginAtZero: true,
+            grid: { display: false }
+          }
+        }
+      },
+      plugins: [ChartDataLabels]
+    });
+
+    powerChartInstance = new Chart(powerCtx, {
+      type: 'bar',
+      data: {
+        labels: powerLabelsStacked,
+        datasets: powerDatasets
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false },
+          datalabels: {
+            display: true
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            grid: { display: false },
+            ticks: { color: '#333', font: { size: 11 } }
+          },
+          y: {
+            stacked: true,
+            display: false,
+            beginAtZero: true,
+            grid: { display: false }
+          }
+        }
+      },
+      plugins: [ChartDataLabels]
+    });
+  }
+
 
 //初手事故率
-  function calcBadHandRate(deck) {
+  function calcBadHandRate(deck, mulliganCount = 4) {
     const trials = 1000;
     let badCount = 0;
+    const deckSize = deck.length;
 
     for (let i = 0; i < trials; i++) {
       const shuffled = [...deck].sort(() => Math.random() - 0.5);
-      const top8 = shuffled.slice(0, 8);
-      const isBad = top8.every(card => card.type === "アタッカー" || card.type === "ブロッカー");
-      if (isBad) badCount++;
+
+      const hand1 = shuffled.slice(0, 4);
+      const unplayable = hand1.filter(card => parseInt(card.cost) > 4);
+
+      if (unplayable.length < 4) continue;
+
+      const keepCount = 4 - mulliganCount;
+      const keptCards = hand1.slice(0, keepCount);
+      const remainingDeck = shuffled.slice(4);
+      const drawn = remainingDeck.slice(0, mulliganCount);
+      const finalHand = keptCards.concat(drawn);
+
+      const hasPlayable = finalHand.some(card => parseInt(card.cost) <= 4);
+      if (!hasPlayable) badCount++;
     }
 
     return (badCount / trials) * 100;
   }
+    function updateAccidentRateOnly() {
+      const deck = currentDeck;
+      const mulliganCount = parseInt(document.getElementById("mulligan-count").value);
+      const accidentRate = calcBadHandRate(deck, mulliganCount);
+
+      document.getElementById("bad-hand-rate").textContent =
+        accidentRate.toFixed(1) + "%";
+
+      // 何回に1回の表示
+      const frequency = 100 / accidentRate;
+      const frequencyText =
+        accidentRate > 0.0 && frequency <= 100
+          ? `（約${Math.round(frequency)}回に1回）`
+          : "（ほぼ事故なし）";
+
+
+      document.getElementById("bad-hand-frequency").textContent = frequencyText;
+    }
+
+
+      document.getElementById("mulligan-count").addEventListener("change", () => {
+        updateAccidentRateOnly();
+      });
+
+
+
+
+
 
 //交換ポイント（ダイヤ・砂）
   function showExchange(type) {
@@ -8024,10 +8522,15 @@ function toggleAnalysis() {
             const cards = document.querySelectorAll(".card");
             cards.forEach(card => {
               const isGrayscale = card.classList.contains("grayscale");
-              card.style.display = (hideInvalidRace && isGrayscale) ? "none" : "";
-            });
-        }
 
+              // 条件に合うカードにだけ非表示クラスを付与／削除
+              if (hideInvalidRace && isGrayscale) {
+                card.classList.add("hidden-by-grayscale");
+              } else {
+                card.classList.remove("hidden-by-grayscale");
+              }
+            });
+          }
 
 
 
@@ -8063,6 +8566,7 @@ function updateGrayscaleState() {
 }
 
 
+//カード詳細情報🔎ボタン
   function handleZoomClick(event, el) {
     event.stopPropagation();
     event.preventDefault();
@@ -8072,7 +8576,7 @@ function updateGrayscaleState() {
 
 
 
-  // デッキ一覧表示（コード生成/読み込みページ用）
+  // デッキリスト表示（コード生成/読み込みページ用）
   function renderDeckList() {
     const container = document.getElementById("deck-card-list");
 
@@ -8088,10 +8592,10 @@ function updateGrayscaleState() {
     // 🔽 deck（cd → 枚数）を配列に変換
     const entries = Object.entries(deck);
 
-    // 🔽 タイプ順に並べるための優先度定義
+    // 🔽 並び順変更の優先度定義
     const typeOrder = { "チャージャー": 0, "アタッカー": 1, "ブロッカー": 2 };
 
-    // 🔽 通常順でソート：タイプ → コスト → パワー → cd
+    // 🔽 並び順変更：タイプ → コスト → パワー → cd
     entries.sort((a, b) => {
       const [cdA] = a;
       const [cdB] = b;
@@ -8183,8 +8687,6 @@ function updateGrayscaleState() {
 
 
   function updateDeckSummary(deckCards) {
-      // deckCards = 追加されたカードデータの配列と仮定
-
       // 枚数
       document.getElementById("deck-count").textContent = deckCards.length;
 
@@ -8200,7 +8702,7 @@ function updateGrayscaleState() {
     const eldergods = deckCards.filter(c => c.種族 === "旧神");
 
     if (eldergods.length === 0) {
-      document.getElementById("deck-eldergod").textContent = "なし";
+      document.getElementById("deck-eldergod").textContent = "未採用";
     } else if (eldergods.length === 1) {
       const cd = Object.keys(deck).find(cd => cardMap[cd]?.race === "旧神");
       const name = cd ? cardMap[cd]?.name || "旧神" : "旧神";
@@ -8222,17 +8724,133 @@ function updateGrayscaleState() {
     document.getElementById("deck-representative").textContent = name;
   }
 
+//コードをカードcdと枚数に分ける工程
+    function parseCdAndCount(fullCd) {
+      const cd = fullCd.slice(0, 5);
+      const count = parseInt(fullCd.slice(5), 10);
+      return { cd, count };
+    }
 
-  // 📤 コード生成（コピー）
-  document.getElementById("generate-code-btn").addEventListener("click", function () {
-    const code = generateDeckCode(); // デッキコード生成関数（別途定義）
-    navigator.clipboard.writeText(code).then(() => {
-      showCopyMessage(); // ← メッセージ表示
-    }).catch(err => {
-      alert("コピーに失敗しました");
-      console.error(err);
+//同名カード制限
+function checkSameNameLimit() {
+  const nameCount = {};
+  const errors = [];
+
+  for (const cd in deck) {
+    const count = deck[cd];
+    const card = cardMap[cd];
+    if (!card) continue;
+
+    const name = card.name;
+    nameCount[name] = (nameCount[name] || 0) + count;
+  }
+
+  for (const name in nameCount) {
+    if (nameCount[name] > 3) {
+      errors.push(`「${name}」は同じカードを3枚までしか入れられません（現在：${nameCount[name]}枚）`);
+    }
+  }
+
+  return errors;
+}
+
+
+//旧神１種１枚制限
+  function checkOldGodLimit() {
+    const errors = [];
+    const oldGodTypes = new Set();
+
+    for (const cd in deck) {
+      const count = deck[cd];
+      const card = cardMap[cd];
+      if (!card) continue;
+
+      if (card.race === "旧神") {
+        oldGodTypes.add(card.name);
+        if (count > 1) {
+          errors.push(`・旧神「${card.name}」は1枚までです`);
+        }
+      }
+    }
+
+    if (oldGodTypes.size > 1) {
+      errors.push("旧神カードは1種類までしか入れられません");
+    }
+
+    return errors;
+  }
+
+
+//メイン種族制限
+  function checkRaceLimit() {
+    const errors = [];
+    const raceSet = new Set();
+
+    for (const cd in deck) {
+      const card = cardMap[cd]; // ← parseCdAndCountは不要です
+      if (!card) continue;
+      raceSet.add(card.race);
+    }
+
+    const mainRaces = [...raceSet].filter(r => !["イノセント", "旧神"].includes(r));
+    if (mainRaces.length > 1) {
+      errors.push(`使用可能な種族は1種類です（現在：${mainRaces.join("・")}）`);
+    }
+
+    return errors;
+  }
+
+
+//コードチェック
+  function isDeckValidWithWarning() {
+    const errors = [
+      ...checkSameNameLimit(),
+      ...checkOldGodLimit(),
+      ...checkRaceLimit()
+    ];
+
+    if (errors.length > 0) {
+      showToastWarning(errors);
+      return false;
+    }
+
+    return true;
+  }
+
+
+  //エラー表示
+  function showToastWarning(messages) {
+    const toast = document.getElementById("toast-warning");
+    if (!toast) return;
+
+    toast.innerHTML = "⚠️デッキ制限違反<br>" + messages.map(msg => "●" + msg).join("<br>");
+    toast.style.display = "block";
+
+    setTimeout(() => {
+      toast.style.display = "none";
+    }, 4000);
+  }
+
+
+    // 📤 コード生成（コピー）
+    document.getElementById("generate-code-btn").addEventListener("click", function () {
+      const code = generateDeckCode(); // デッキコード生成関数
+
+      if (!code) {
+        return; // ← コピーもメッセージも行わない
+      }
+
+      navigator.clipboard.writeText(code).then(() => {
+        showCopyMessage();
+      }).catch(err => {
+        alert("コピーに失敗しました");
+        console.error(err);
+        hideCopyMessage(); // ← 失敗時にボタン文言を戻す（下で定義）
+      });
     });
-  });
+
+
+    //コード生成ボタン変化
     function showCopyMessage() {
       const btn = document.getElementById("generate-code-btn");
       if (!btn) return;
@@ -8245,90 +8863,36 @@ function updateGrayscaleState() {
       }, 1500); // 1.5秒後に元に戻す
     }
 
-  // 📥 コード読み込み（クリップボードから直接）
-  document.getElementById("load-code-btn").addEventListener("click", async function () {
-    try {
-      const code = await navigator.clipboard.readText();
-      if (!code) {
-        alert("クリップボードが空です");
-        return;
-      }
 
-      const result = loadDeckFromCode(code.trim()); // 読み込み処理（別途定義）
-      if (!result) {
-        alert("デッキコードが無効です");
-      } else {
-        alert("デッキを復元しました！");
-      }
-    } catch (err) {
-      alert("クリップボードの読み取りに失敗しました");
-      console.error(err);
-    }
-  });
-
-//コード読み込み
-  function loadDeckFromCode(codeStr) {
-    console.log("読み込んだコード内容:", codeStr);
-    let obj;
-    try {
-      obj = JSON.parse(codeStr);
-    } catch (e) {
-      console.error("JSONパースエラー:", e);
-      return false;
-    }
-
-    if (!obj || !obj.cd || typeof obj.cd !== "string") {
-      console.warn("cd情報が無効です");
-      return false;
-    }
-
-    const newDeck = {};
-    const parts = obj.cd.split(",");
-    for (const part of parts) {
-      if (!/^\d{8}$/.test(part)) {
-        console.warn("形式不正:", part);
-        return false;
-      }
-
-      const cd = part.slice(0, 5);
-      const count = parseInt(part.slice(5, 8), 10);
-      if (!cardMap[cd]) {
-        console.warn("存在しないカードcd:", cd);
-        continue; // スキップするが読み込み自体は続ける
-      }
-
-      newDeck[cd] = count;
-    }
-
-    // デッキ更新
-    Object.keys(deck).forEach(k => delete deck[k]);
-    Object.assign(deck, newDeck);
-
-    // 代表カード（m）の反映
-    if (obj.m) {
-      const repCdPrefix = String(obj.m).padStart(5, "0");
-      for (const cd of Object.keys(deck)) {
-        if (cd.startsWith(repCdPrefix)) {
-          representativeCd = cd;
-          break;
+    // 📥 コード読み込み（クリップボードから直接）
+    document.getElementById("load-code-btn").addEventListener("click", async function () {
+      try {
+        const code = await navigator.clipboard.readText();
+        if (!code) {
+          // 何もコピーされていないときは通知しない
+          console.warn("⚠️ クリップボードが空です");
+          return;
         }
+
+        const result = loadDeckFromCode(code.trim());
+
+        if (result === "invalid") {
+          alert("デッキコードが無効です"); // これは表示したいなら残す
+        } else if (result === "rule_violation") {
+          // 制限違反の alert は loadDeckFromCode 側で出すのでここでは何もしない
+        } else if (result === "success") {
+          alert("デッキを復元しました！");
+        }
+      } catch (err) {
+        // ⚠️ エラーは console に出すだけで、alert はしない
+        console.error("📛 クリップボード読み取りエラー:", err);
       }
-    }
+    });
 
-    // デッキ名の表示も更新（任意）
-    if (obj.n && document.getElementById("deck-name")) {
-      document.getElementById("deck-name").value = obj.n;
-    }
 
-    updateDeck();
-    updateCardDisabling();
-    renderDeckList()
-    updateDeckSummaryDisplay();
-    return true;
-  }
-
-//デッキコード生成
+//デッキコード生成処理
     function generateDeckCode() {
+
       if (Object.keys(deck).length === 0) return "";
 
       // 使用種族を抽出（イノセント・旧神を除く）
@@ -8352,6 +8916,12 @@ function updateGrayscaleState() {
         return cd + paddedCount;
       });
 
+      // 🔸 制限違反チェック
+      if (!isDeckValidWithWarning()) {
+        Object.keys(deck).forEach(k => delete deck[k]);
+        return ;
+      }
+
       // 代表カード（cdの最初を代表とする）
       const m = representativeCd ? representativeCd.slice(0, 5) : "00000";
 
@@ -8371,8 +8941,81 @@ function updateGrayscaleState() {
     }
 
 
+//デッキコード読み込み処理
+      function loadDeckFromCode(codeStr) {
+        console.log("読み込んだコード内容:", codeStr);
+        let obj;
+        try {
+          obj = JSON.parse(codeStr);
+        } catch (e) {
+          console.error("JSONパースエラー:", e);
+          return "invalid"; // ← パース失敗
+        }
+
+        if (!obj || !obj.cd || typeof obj.cd !== "string") {
+          console.warn("cd情報が無効です");
+          return "invalid";
+        }
+
+        const newDeck = {};
+        const parts = obj.cd.split(",");
+        for (const part of parts) {
+          if (!/^\d{8}$/.test(part)) {
+            console.warn("形式不正:", part);
+            return "invalid";
+          }
+
+          const cd = part.slice(0, 5);
+          const count = parseInt(part.slice(5, 8), 10);
+          if (!cardMap[cd]) {
+            console.warn("存在しないカードcd:", cd);
+            continue;
+          }
+
+          newDeck[cd] = count;
+        }
+
+        // デッキ更新
+        Object.keys(deck).forEach(k => delete deck[k]);
+        Object.assign(deck, newDeck);
+
+        // 🔸 制限違反チェック
+        if (!isDeckValidWithWarning()) {
+          Object.keys(deck).forEach(k => delete deck[k]);
+          return;
+        }
+
+        // 代表カード（m）の反映
+        if (obj.m) {
+          const repCdPrefix = String(obj.m).padStart(5, "0");
+          for (const cd of Object.keys(deck)) {
+            if (cd.startsWith(repCdPrefix)) {
+              representativeCd = cd;
+              break;
+            }
+          }
+        }
+
+        // デッキ名の表示も更新
+        if (obj.n && document.getElementById("deck-name")) {
+          document.getElementById("deck-name").value = obj.n;
+        }
+
+        updateDeck();
+        updateCardDisabling();
+        renderDeckList();
+        updateDeckSummaryDisplay();
+        return "success";
+      }
+
+
 //デッキ一時保存ボタン
   function saveDeckToLocalStorage() {
+    // 🔸 制限違反チェック
+    if (!isDeckValidWithWarning()) {
+      Object.keys(deck).forEach(k => delete deck[k]);
+      return ;
+    }
     // デッキ名
     const deckNameInput = document.getElementById("deck-name");
     const deckName = deckNameInput ? deckNameInput.value.trim() : "名称未設定";
@@ -8403,6 +9046,8 @@ function updateGrayscaleState() {
       cardCounts: { ...deck }
     };
 
+    const MAX_SAVED_DECKS = 20;
+
     // 既存の保存リストを取得
     const savedList = JSON.parse(localStorage.getItem("savedDecks") || "[]");
 
@@ -8418,6 +9063,12 @@ function updateGrayscaleState() {
       }
       savedList[existingIndex] = newDeck;
     } else {
+        // ✅ 上限チェック（新規保存のみ）
+      if (savedList.length >= MAX_SAVED_DECKS) {
+        alert("保存できるデッキは最大20件までです。不要なデッキを削除してください。");
+        return;
+      }
+
       savedList.push(newDeck);
     }
 
@@ -8429,21 +9080,64 @@ function updateGrayscaleState() {
   }
 
 
+//デッキリセット
+  document.getElementById("resetDeckButton").addEventListener("click", () => {
+    if (confirm("本当にデッキをリセットしますか？")) {
+      // 🔑 デッキデータを空に
+      for (const key in deck) {
+        delete deck[key];
+      }
 
+      // 🔑 更新
+      updateDeck();       // デッキバー＆種族など
+      renderDeckList();   // デッキ詳細リスト
+
+      // 🔑 デッキ名をリセット
+      document.getElementById("deck-name").value = "";
+
+      // 🔑 representativeCd を初期化して表示更新
+      representativeCd = "";
+      updateDeckSummaryDisplay();
+    }
+  });
+
+
+
+
+
+
+
+//一時保存デッキリスト確認
     function updateSavedDeckList() {
       const container = document.getElementById("savedDeckList");
+      const counter = document.getElementById("savedDeckCount");
       container.innerHTML = "";
 
       const multiSaved = JSON.parse(localStorage.getItem("savedDecks") || "[]");
 
+        // ✅ 件数表示（20上限）
+      if (counter) {
+        counter.textContent = `保存デッキ数：${multiSaved.length} / 20`;
+      }
+      // ✅ 複数保存デッキがある場合
       if (multiSaved.length > 0) {
-        // ✅ 複数保存デッキがある場合
         multiSaved.forEach((deckData, index) => {
+          // ✅ 保存日時がない場合は作る（古いデータ用）
+          if (!deckData.date) {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            deckData.date = `${yyyy}/${mm}/${dd}`;
+          }
+
+          // ✅ generateDeckLayout に渡す
           const html = generateDeckLayout(deckData, index);
           container.insertAdjacentHTML("beforeend", html);
         });
         return;
       }
+
 
       // 🔁 複数保存がなければ、旧式（tempDeck）を使う
       const singleSaved = localStorage.getItem("tempDeck");
@@ -8452,6 +9146,11 @@ function updateGrayscaleState() {
           const parsed = JSON.parse(singleSaved);
           if (parsed.cardCounts) {
             container.innerHTML = generateDeckLayout(parsed, 0);
+
+            // ✅ 旧式保存にも件数表示（1件扱い）
+            if (counter) {
+              counter.textContent = `保存デッキ数：1 / 20`;
+            }
             return;
           }
         } catch (e) {
@@ -8462,57 +9161,74 @@ function updateGrayscaleState() {
 
       // 🆘 どちらもない場合は仮デッキを表示
       container.innerHTML = generateDeckLayout(null);
+      if (counter) {
+        counter.textContent = `保存デッキ数：0 / 20`;
+      }
     }
 
 
-      function generateDeckLayout(deckData, index = null) {
-        let cardImg = "img/10001.webp";
-        let deckName = "デッキ一時保存（複数可）";
-        let race = "リーダー種族表示";
-        let count = "デッキ枚数";
-        let typeCount = "チャージャー：🔵アタッカー：🟣ブロッカー：⚪";
+//保存デッキ表示
+  function generateDeckLayout(deckData, index = null) {
+    let cardImg = "img/10001.webp";
+    let deckName = "デッキ一時保存（複数可）";
+    let race = "リーダー種族表示";
+    let count = "デッキ枚数";
+    let typeCount = "チャージャー：🔵アタッカー：🟣ブロッカー：⚪️";
+    let savedDate = ""; // ✅ 保存日時の初期値
 
-        if (deckData && deckData.cardCounts) {
-          let total = 0, charge = 0, attack = 0, block = 0;
-          for (const cd in deckData.cardCounts) {
-            const n = deckData.cardCounts[cd];
-            total += n;
-            const card = cards.find(c => c.cd === cd);
-            if (card) {
-              if (card.type === "チャージャー") charge += n;
-              if (card.type === "アタッカー") attack += n;
-              if (card.type === "ブロッカー") block += n;
-            }
-          }
-          count = total + "/40";
-          typeCount = `🔵${charge}🟣${attack}⚪${block}`;
-          deckName = deckData.name || "名称未設定";
-          race = getMainTribe(deckData.g);
-          if (deckData.m) {
-            cardImg = "img/" + String(deckData.m) + ".webp";
-          }
+    if (deckData && deckData.cardCounts) {
+      // ✅ デッキ枚数・タイプ数を計算
+      let total = 0, charge = 0, attack = 0, block = 0;
+      for (const cd in deckData.cardCounts) {
+        const n = deckData.cardCounts[cd];
+        total += n;
+        const card = cards.find(c => c.cd === cd);
+        if (card) {
+          if (card.type === "チャージャー") charge += n;
+          if (card.type === "アタッカー") attack += n;
+          if (card.type === "ブロッカー") block += n;
         }
+      }
+      count = total + "/30~40";
+      typeCount = `🔵${charge}🟣${attack}⚪️${block}`;
+      deckName = deckData.name || "名称未設定";
+      race = getMainTribe(deckData.g);
 
-        const loadBtn = index != null
-          ? `<button onclick="loadDeckFromIndex(${index})">🔄 読み込む</button>`
-          : `<button onclick="loadDeckFromSaved()">🔄 読み込む</button>`;
+      // ✅ 代表カード画像
+      if (deckData.m) {
+        cardImg = "img/" + String(deckData.m) + ".webp";
+      }
 
-        const deleteBtn = index != null
-          ? `<button onclick="deleteDeckFromIndex(${index})">🗑 削除</button>`
-          : `<button onclick="clearSavedDeck()">🗑 削除</button>`;
+      // ✅ 保存日時があれば設定（無ければ空）
+      savedDate = deckData.date ? deckData.date : "";
+    }
 
-        return `
+    // ✅ 読み込み・削除ボタン（複数か単一か）
+    const loadBtn = index != null
+      ? `<button onclick="loadDeckFromIndex(${index})">🔄 読み込む</button>`
+      : `<button onclick="loadDeckFromSaved()">🔄 読み込む</button>`;
+
+    const deleteBtn = index != null
+      ? `<button onclick="deleteDeckFromIndex(${index})">🗑 削除</button>`
+      : `<button onclick="clearSavedDeck()">🗑 削除</button>`;
+
+    // ✅ 保存日時を含むHTMLを返す
+    return `
     <div class="saved-deck-item">
       <img src="${cardImg}" alt="代表カード" />
-      <div class="deck-info">
-        <div class="deck-info-row">
+      <div class="saved-deck-info">
+        <div class="row">
           <strong>${deckName}</strong>
           <span>使用種族：${race}</span>
         </div>
-        <div class="deck-info-row">
+        <div class="row">
           <span>${count}</span>
           <span>${typeCount}</span>
         </div>
+        ${savedDate
+        ? `<div class="row"><small>保存日時: ${savedDate}</small></div>`
+        : ""
+      }
       </div>
       <div class="deck-buttons">
         ${loadBtn}
@@ -8520,11 +9236,12 @@ function updateGrayscaleState() {
       </div>
     </div>
   `;
-      }
+  }
 
 
 
 
+//メイン種族判断
         function getMainTribe(g) {
           const tribeMap = {
             1: "ドラゴン",
@@ -8584,7 +9301,6 @@ function updateGrayscaleState() {
         updateCardDisabling();
         renderDeckList();
         updateDeckSummaryDisplay();
-
         alert("保存されたデッキを読み込みました");
       }
 
@@ -8606,6 +9322,19 @@ function updateGrayscaleState() {
     document.getElementById("tab-edit")?.addEventListener("click", () => {
       updateSavedDeckList();
     });
+
+  //龍年モード表示
+  const searchInput = document.getElementById('keyword'); // 検索欄のID
+  const dragonButton = document.getElementById('dragon-mode-btn'); // 龍年ボタンのID
+
+  searchInput.addEventListener('input', () => {
+    const keyword = searchInput.value.trim();
+    if (keyword.includes('龍年')) {
+      dragonButton.style.display = 'inline-block'; // ボタン表示
+    } else {
+      dragonButton.style.display = 'none'; // 非表示
+    }
+  });
 </script>
 
 

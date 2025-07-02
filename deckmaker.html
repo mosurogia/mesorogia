@@ -182,7 +182,7 @@
     }
     .count-badge {
       position: absolute;
-      top: 1.2em;
+      top: 2px;
       right: 4px;
       background: #222;
       color: #fff;
@@ -7782,9 +7782,7 @@ function updateDeck() {
     const cardEl = document.createElement('div');
     cardEl.className = 'deck-card';
     cardEl.dataset.cd = cd;
-
-    const race = cardMap[cd]?.race || "";
-    cardEl.dataset.race = race;
+    cardEl.dataset.race = cardMap[cd]?.race || "";
 
     // ＋ボタン
     const plusBtn = document.createElement('button');
@@ -7792,17 +7790,22 @@ function updateDeck() {
     plusBtn.className = 'btn-plus';
     plusBtn.addEventListener('click', () => addCard(cd));
 
-    // 画像
+    // 📌 画像＋バッジを包むラッパー
+    const imgWrapper = document.createElement('div');
+    imgWrapper.className = 'img-wrapper';
+
     const img = document.createElement('img');
     img.src = `img/${cd.slice(0, 5)}.webp`;
     img.alt = cd;
 
-    if (!isCardAllowed(cd)) cardEl.classList.add('grayscale');
-
-    // 枚数バッジ
     const badge = document.createElement('div');
     badge.className = 'count-badge';
     badge.textContent = count;
+
+    imgWrapper.appendChild(img);
+    imgWrapper.appendChild(badge);
+
+    if (!isCardAllowed(cd)) cardEl.classList.add('grayscale');
 
     // －ボタン
     const minusBtn = document.createElement('button');
@@ -7812,11 +7815,11 @@ function updateDeck() {
 
     // 順番に追加
     cardEl.appendChild(plusBtn);
-    cardEl.appendChild(img);
-    cardEl.appendChild(badge);
+    cardEl.appendChild(imgWrapper); // ← ここ！
     cardEl.appendChild(minusBtn);
 
     deckBarTop.appendChild(cardEl);
+
   }
 
 

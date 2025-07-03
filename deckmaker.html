@@ -195,6 +195,7 @@
   overflow: hidden;
 }
 .deck-bar-scroll {
+  position: relative;
   overflow-x: auto;
   flex: 1;
   touch-action: pan-x;
@@ -329,6 +330,9 @@ input[type="text"] {
   max-height: 100%;
   overflow-y: auto;
   position: relative;
+  box-sizing: border-box;
+  margin: auto;
+
 }
 .filter-btn {
   margin: 4px 0px;
@@ -7799,13 +7803,13 @@ function updateDeck() {
 
     // スマホ、PCでの追加削除処理
     if (isMobile()) {
+      let touchStartX = 0;
       let touchStartY = 0;
       let dummy = null;
 
       cardEl.addEventListener('touchstart', e => {
+        touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
-
-        const rect = cardEl.getBoundingClientRect();
 
         // === ダミーで並びをキープ ===
         dummy = document.createElement('div');
@@ -7818,8 +7822,8 @@ function updateDeck() {
         cardEl.parentNode.insertBefore(dummy, cardEl.nextSibling);
 
         // === 固定して最前面 ===
-        cardEl.style.position = 'fixed';
-        cardEl.style.left = `${rect.left}px`;
+        cardEl.style.position = 'absolute';
+        cardEl.style.left = `${rect.left + scrollLeft}px`;
         cardEl.style.top = `${rect.top}px`;
         cardEl.style.width = `${rect.width}px`;
         cardEl.style.height = `${rect.height}px`;
@@ -7828,6 +7832,26 @@ function updateDeck() {
 
         cardEl.style.transition = '';
       });
+
+      cardEl.addEventListener('touchmove', e => {
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+
+        const diffX = currentX - touchStartX;
+        const diffY = currentY - touchStartY;
+
+        // ✅ 横移動の方が大きければ上下フリックを無視
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+          return;
+        }
+
+        let limitedDiffY = diffY;
+        if (limitedDiffY > 30) limitedDiffY = 30;
+        if (limitedDiffY < -30) limitedDiffY = -30;
+
+        cardEl.style.transform = `translateY(${limitedDiffY}px)`;
+      });
+
 
       cardEl.addEventListener('touchmove', e => {
         const currentY = e.touches[0].clientY;

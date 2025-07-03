@@ -177,10 +177,16 @@
       padding: 1px 8px;
     }
 
-.deck-card.flicking {
-  position: relative;
-  z-index: 9999;
+    .deck-card.flicking {
+  position: fixed;
+  z-index: 2000;
+  pointer-events: none;
 }
+.deck-card-placeholder {
+  flex-shrink: 0;
+  visibility: hidden;
+}
+
 
 
 
@@ -7783,9 +7789,33 @@ function updateDeck() {
     // スマホ、PCでの追加削除処理
     if (isMobile()) {
       let touchStartY = 0;
+      let dummy = null; // ダミー要素を保持
 
       cardEl.addEventListener('touchstart', e => {
         touchStartY = e.touches[0].clientY;
+
+        // === 現在の位置とサイズを確定 ===
+        const rect = cardEl.getBoundingClientRect();
+
+        // === ダミー要素を挿入して並び順を保持 ===
+        dummy = document.createElement('div');
+        dummy.className = 'deck-card-placeholder';
+        dummy.style.width = `${rect.width}px`;
+        dummy.style.height = `${rect.height}px`;
+        dummy.style.flexShrink = '0'; // flex 子要素なので必須
+        dummy.style.visibility = 'hidden';
+
+        cardEl.parentNode.insertBefore(dummy, cardEl.nextSibling);
+
+        // === フリックカードを固定化 ===
+        cardEl.style.position = 'fixed';
+        cardEl.style.left = `${rect.left}px`;
+        cardEl.style.top = `${rect.top}px`;
+        cardEl.style.width = `${rect.width}px`;
+        cardEl.style.height = `${rect.height}px`;
+        cardEl.style.zIndex = 2000;
+        cardEl.classList.add('flicking');
+
         cardEl.style.transition = ''; // 途中のtransitionをクリア
       });
 
@@ -7793,7 +7823,6 @@ function updateDeck() {
         const currentY = e.touches[0].clientY;
         let diffY = currentY - touchStartY;
 
-        // 追従距離を制限（例えば上下最大40px）
         if (diffY > 30) diffY = 30;
         if (diffY < -30) diffY = -30;
 
@@ -7803,24 +7832,18 @@ function updateDeck() {
       cardEl.addEventListener('touchend', e => {
         const touchEndY = e.changedTouches[0].clientY;
         const diffY = touchStartY - touchEndY;
-
         const threshold = 20;
-        // === アニメーション ===
-        cardEl.style.transition = 'transform 0.2s ease';
 
+        cardEl.style.transition = 'transform 0.2s ease';
 
         if (Math.abs(diffY) > threshold) {
 
           if (diffY > 0) {
-            cardEl.classList.add('flicking');
-
-            // === 同名カードは3枚まで ===
+            // === 上フリック → 追加 ===
             if (deck[cd] >= 3) {
               cardEl.style.transform = 'translateY(0)';
               return;
             }
-
-            // === 旧神は1種1枚まで ===
             const isOldGod = cardMap[cd]?.race === "旧神";
             if (isOldGod) {
               const otherOldGodExists = Object.keys(deck).some(cdKey =>
@@ -7832,13 +7855,25 @@ function updateDeck() {
               }
             }
 
-            // 確定したら固定距離にカクッと動かす
             cardEl.style.transform = 'translateY(-40px)';
-
             setTimeout(() => {
+              // アニメ後リセット
               cardEl.style.transform = 'translateY(0)';
               cardEl.style.transition = '';
+
               cardEl.classList.remove('flicking');
+              cardEl.style.position = '';
+              cardEl.style.left = '';
+              cardEl.style.top = '';
+              cardEl.style.width = '';
+              cardEl.style.height = '';
+              cardEl.style.zIndex = '';
+
+              if (dummy) {
+                dummy.remove();
+                dummy = null;
+              }
+
               deck[cd] = (deck[cd] || 0) + 1;
               updateDeck();
               updateCardDisabling();
@@ -7846,15 +7881,25 @@ function updateDeck() {
             }, 200);
 
           } else {
-            // 下フリック → 削除
-            cardEl.classList.add('flicking');
-
+            // === 下フリック → 削除 ===
             cardEl.style.transform = 'translateY(40px)';
-
             setTimeout(() => {
               cardEl.style.transform = 'translateY(0)';
               cardEl.style.transition = '';
+
               cardEl.classList.remove('flicking');
+              cardEl.style.position = '';
+              cardEl.style.left = '';
+              cardEl.style.top = '';
+              cardEl.style.width = '';
+              cardEl.style.height = '';
+              cardEl.style.zIndex = '';
+
+              if (dummy) {
+                dummy.remove();
+                dummy = null;
+              }
+
               if (deck[cd] > 1) deck[cd]--;
               else delete deck[cd];
               updateDeck();
@@ -7864,7 +7909,7 @@ function updateDeck() {
           }
 
         } else {
-          // 距離が小さいときは元に戻すだけ
+          // === しきい値未満 → 元に戻す ===
           cardEl.style.transform = 'translateY(0)';
           setTimeout(() => {
             cardEl.style.transition = '';
@@ -7879,6 +7924,8 @@ function updateDeck() {
     }
 
     deckBarTop.appendChild(cardEl);
+
+
 
 
   }

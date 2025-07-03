@@ -177,14 +177,9 @@
       padding: 1px 8px;
     }
 
-    .deck-card.flick-up {
-  transform: translateY(-20px);
-  transition: transform 0.2s ease;
-}
-
-.deck-card.flick-down {
-  transform: translateY(20px);
-  transition: transform 0.2s ease;
+.deck-card.flicking {
+  position: relative;
+  z-index: 9999;
 }
 
 
@@ -196,6 +191,7 @@
 .deck-bar-scroll {
   overflow-x: auto;
   flex: 1;
+  touch-action: pan-x;
 }
 
 #deckHelp {
@@ -7784,63 +7780,106 @@ function updateDeck() {
     badge.textContent = count;
     cardEl.appendChild(badge);
 
-//スマホ、PCでの追加削除処理
+    // スマホ、PCでの追加削除処理
     if (isMobile()) {
       let touchStartY = 0;
-      let touchEndY = 0;
 
       cardEl.addEventListener('touchstart', e => {
-        touchStartY = e.changedTouches[0].screenY;
+        touchStartY = e.touches[0].clientY;
+        cardEl.style.transition = ''; // 途中のtransitionをクリア
+      });
+
+      cardEl.addEventListener('touchmove', e => {
+        const currentY = e.touches[0].clientY;
+        let diffY = currentY - touchStartY;
+
+        // 追従距離を制限（例えば上下最大40px）
+        if (diffY > 30) diffY = 30;
+        if (diffY < -30) diffY = -30;
+
+        cardEl.style.transform = `translateY(${diffY}px)`;
       });
 
       cardEl.addEventListener('touchend', e => {
-        touchEndY = e.changedTouches[0].screenY;
+        const touchEndY = e.changedTouches[0].clientY;
         const diffY = touchStartY - touchEndY;
 
-        if (Math.abs(diffY) > 30) {
+        const threshold = 20;
+        // === アニメーション ===
+        cardEl.style.transition = 'transform 0.2s ease';
+
+
+        if (Math.abs(diffY) > threshold) {
+
           if (diffY > 0) {
-            // 上フリック → 追加
+            cardEl.classList.add('flicking');
 
             // === 同名カードは3枚まで ===
-            if (deck[cd] >= 3) return;
+            if (deck[cd] >= 3) {
+              cardEl.style.transform = 'translateY(0)';
+              return;
+            }
 
             // === 旧神は1種1枚まで ===
             const isOldGod = cardMap[cd]?.race === "旧神";
             if (isOldGod) {
-              const otherOldGodExists = Object.keys(deck).some(cdKey => {
-                return cardMap[cdKey]?.race === "旧神" && cdKey !== cd;
-              });
-              if (otherOldGodExists) return;
-              if (deck[cd] >= 1) return;
+              const otherOldGodExists = Object.keys(deck).some(cdKey =>
+                cardMap[cdKey]?.race === "旧神" && cdKey !== cd
+              );
+              if (otherOldGodExists || deck[cd] >= 1) {
+                cardEl.style.transform = 'translateY(0)';
+                return;
+              }
             }
 
-            // === 制限クリアなら追加 ===
-            cardEl.classList.add('flick-up');
-            setTimeout(() => cardEl.classList.remove('flick-up'), 200);
+            // 確定したら固定距離にカクッと動かす
+            cardEl.style.transform = 'translateY(-40px)';
 
-            deck[cd] = (deck[cd] || 0) + 1;
-          }else {
+            setTimeout(() => {
+              cardEl.style.transform = 'translateY(0)';
+              cardEl.style.transition = '';
+              cardEl.classList.remove('flicking');
+              deck[cd] = (deck[cd] || 0) + 1;
+              updateDeck();
+              updateCardDisabling();
+              applyGrayscaleFilter();
+            }, 200);
+
+          } else {
             // 下フリック → 削除
-            cardEl.classList.add('flick-down');
-            setTimeout(() => cardEl.classList.remove('flick-down'), 200);
+            cardEl.classList.add('flicking');
 
-            if (deck[cd] > 1) deck[cd]--;
-            else delete deck[cd];
+            cardEl.style.transform = 'translateY(40px)';
+
+            setTimeout(() => {
+              cardEl.style.transform = 'translateY(0)';
+              cardEl.style.transition = '';
+              cardEl.classList.remove('flicking');
+              if (deck[cd] > 1) deck[cd]--;
+              else delete deck[cd];
+              updateDeck();
+              updateCardDisabling();
+              applyGrayscaleFilter();
+            }, 200);
           }
 
-          updateDeck();
-          updateCardDisabling();
-          applyGrayscaleFilter();
+        } else {
+          // 距離が小さいときは元に戻すだけ
+          cardEl.style.transform = 'translateY(0)';
+          setTimeout(() => {
+            cardEl.style.transition = '';
+          }, 200);
         }
       });
-    }else {
+
+    } else {
       // PC：右クリックで削除
       cardEl.addEventListener('mousedown', e => handleClick(e, cd));
       cardEl.addEventListener('contextmenu', e => e.preventDefault());
     }
 
-
     deckBarTop.appendChild(cardEl);
+
 
   }
 

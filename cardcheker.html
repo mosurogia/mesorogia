@@ -137,6 +137,28 @@ overflow-y: auto;
 background: #fff;
 font-size: clamp(12px, 1.5vw, 30px);
 }
+
+/*全体所持率*/
+.summary-block {
+display: flex;
+flex-direction: column;
+align-items: flex-start;  /* 左寄せベース */
+margin: 0.5em 0;
+}
+
+.summary-label {
+font-weight: bold;
+font-size: clamp(0.9rem, 1.2vw, 1.1rem);
+}
+
+.summary-rate {
+font-size: clamp(0.9rem, 1.2vw, 1.1rem);
+margin-top: 0.2em;
+align-self: flex-end;    /* ← 右寄せにする */
+width: 100%;
+text-align: right;
+}
+/*各パック所持率*/
 #pack-summary-list {
 list-style: none;
 padding-left: 0;
@@ -148,28 +170,33 @@ margin-bottom: 0.3em; /* 必要なら間隔調整 */
 }
 .pack-summary-link {
 display: flex;
-justify-content: space-between;
-align-items: baseline;
-text-decoration: none;  /* 下線削除 */
-color: #333;  /* お好みで */
+flex-direction: column;  /* ← 常に縦並びに */
+align-items: flex-start;
+text-decoration: none;
+color: #333;
+margin: 0.5em 0;
 }
 
 .pack-summary-name {
 font-weight: bold;
-font-size: clamp(0.3rem, 1.3vw, 1rem);
+font-size: clamp(0.4rem, 1.8vw, 1.1rem);
+line-height: 1.4;
 }
 
 .pack-summary-name small {
-  display: block; /* 必ず改行される */
-  font-size: 80%;
-  margin-left: 0;
+display: block;
+font-size: 80%;
+margin-left: 0;
 }
 
 .pack-summary-rate {
-white-space: nowrap;
-font-size: 0.85em;
-margin-left: 0.5em;
+font-size: clamp(0.4rem, 1.8vw, 1.1rem);
+margin-top: 0.2em;
+align-self: flex-end;
+width: 100%;
+text-align: right;
 }
+
 
 
 .card-content {
@@ -556,12 +583,15 @@ padding: 0.5em ;
 <div class="page-wrapper">
 <!-- PC・タブレット用 所持率サマリーサイドバー -->
 <aside class="summary-panel">
-    <!-- 所持率サマリー -->
-    <div id="summary">
-        全カード所持率: <span id="owned-count">0</span>/<span id="total-count">0</span>
-        (<span id="owned-percent">0%</span>)
+<!-- 全体所持率 -->
+    <div id="summary" class="summary-block">
+        <span class="summary-label">全カード所持率</span>
+        <span class="summary-rate">
+            <span id="owned-count">0</span>/<span id="total-count">0</span> (<span id="owned-percent">0%</span>)
+        </span>
     </div>
 
+<!-- 各パック所持率 -->
     <div id="pack-summary">
         <ul id="pack-summary-list">
             <!-- JSで生成 -->

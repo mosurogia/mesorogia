@@ -2,9 +2,28 @@
 <!DOCTYPE html>
 
 <html lang="ja">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta charset="utf-8"/>
-<title>神託のメソロギアカード一覧</title>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google-site-verification" content="5NzYWNH5_YUg0dUV2iCzg_bSo7M1lLJi6IzOeF2dGXM" />
+    <!-- ページの説明（検索結果の下に表示） -->
+    <meta name="description" content="このサイトはアプリ「信託のメソロギア」のカード一覧、デッキ構築、デッキ分析ができる非公式サイトです。カード検索やデッキ管理をスマホでも快適に！">
+    <!-- キーワード（今は効果は薄いが一応） -->
+    <meta name="keywords" content="カードゲーム,DCG,神託のメソロギア,メソロギア,神託,図鑑,攻略,一覧,モスロギア">
+    <!-- OGP基本 -->
+    <meta property="og:title" content="モスロギア | 神託のメソロギア カード一覧">
+    <meta property="og:description" content="神託のメソロギアのカード検索・デッキ構築ができる非公式サイトです。">
+    <meta property="og:image" content="https://mosurogia.github.io/mesorogia-cards/img/indexogp.webp">
+    <meta property="og:url" content="https://mosurogia.github.io/mesorogia-cards/">
+    <meta property="og:type" content="website">
+
+    <!-- Twitterカード向け -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="モスロギア | 神託のメソロギア カード一覧">
+    <meta name="twitter:description" content="カード検索とデッキ構築で信託のメソロギアをもっと楽しもう！">
+    <meta name="twitter:image" content="https://mosurogia.github.io/mesorogia-cards/img/indexogp.webp">
+
+    <meta charset="utf-8" />
+    <title>モスロギア メソロギア カード一覧</title>
 <link href="favicon.ico" rel="icon" type="image/png"/>
 <style>
     body {
@@ -85,7 +104,7 @@
     .grid {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 5px;
     }
     .card {
       width: calc(100% / 7 - 8px);
@@ -363,7 +382,7 @@ footer a:hover {
   <nav class="header-nav">
     <a href="index.html">📖 一覧</a>
     <a href="deckmaker.html">🃏 デッキメーカー</a>
-    <a href="#" style="text-decoration: line-through; pointer-events: none; color: #aaa;">📊 所持率チェッカー</a>
+    <a href="cardcheker.html">📊 所持率チェッカー</a>
     <a href="#" style="text-decoration: line-through; pointer-events: none; color: #aaa;">📤 デッキ投稿</a>
   </nav>
 </header>
@@ -1353,7 +1372,7 @@ footer a:hover {
   data-pack="Awaking The Oracle「神託者の覚醒」"
   data-cost="0"
   data-power="8"
-  data-rarity="レジェンド"
+  data-rarity="ブロンズ"
   data-effectname="■手札発動■"
   data-skill="特殊効果未所持"
   data-bp="BPあり"
@@ -2672,7 +2691,7 @@ footer a:hover {
   data-category="白騎士"
   data-pack="Awaking The Oracle「神託者の覚醒」"
   data-cost="20"
-  data-power="14"
+  data-power="12"
   data-rarity="ブロンズ"
   data-effectname="■手札発動■"
   data-skill="特殊効果未所持"
@@ -6175,11 +6194,32 @@ footer a:hover {
 </div>
 </div>
 <footer>
+  <div class="site-description">
+    <p>
+      <strong>モスロギア</strong> はアプリ『神託のメソロギア』の非公式ファンサイトです。<br>
+      カード一覧検索やデッキメーカー、デッキ分析などを通じて、プレイヤー向けに便利なデータベース機能を提供しています。
+    </p>
+  </div>
+
+  <p>
+    🔗 公式サイトはこちら 👉
+    <a href="https://mythologiatheoracle.com/" target="_blank" rel="noopener noreferrer">
+      神託のメソロギア公式サイト
+    </a>
+  </p>
+
   © 2025 Mesorogia Cards. All rights reserved.<br />
   当サイトは「神託のメソロギア」の非公式ファンサイトです。画像・データ等の著作権は各権利者に帰属します。<br />
   一部画像素材は「ジュエルセイバーFREE」<br />
-  （<a href="https://www.jewel-s.jp/" target="_blank" rel="noopener">https://www.jewel-s.jp/</a>）を使用しています。
+  （<a href="https://www.jewel-s.jp/" target="_blank" rel="noopener">https://www.jewel-s.jp/</a>）を使用しています。<br />
+  💬 ご要望・不具合報告 👉
+  <a href="https://x.com/192837465aruneo" target="_blank" rel="noopener noreferrer">
+    @192837465aruneo
+  </a>
 </footer>
+
+
+
 
 <script>
   function openFilterModal() {
@@ -6477,6 +6517,7 @@ footer a:hover {
           behavior: 'smooth'
         });
       }
+
 
 </script>
 </body>

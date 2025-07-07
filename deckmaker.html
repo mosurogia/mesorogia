@@ -62,8 +62,7 @@
   text-decoration: none;
   font-weight: bold;
   font-size: 0.85em;
-
-  background-color: rgba(0, 0, 0, 0.4);  /* 背景とのコントラスト */
+  background-color: rgba(0, 0, 0, 0.4);
   padding: 6px 0.2em;
   border-radius: 6px;
   transition: background-color 0.3s;
@@ -161,6 +160,7 @@
       flex-shrink: 0;
       box-sizing: border-box;
       border-radius: 6px;
+      z-index: 2000; /* ← sticky header より大きく！ */
     }
     .deck-card img {
       width: 100%;
@@ -177,16 +177,6 @@
       padding: 1px 8px;
     }
 
-    .deck-card.flicking {
-  position: fixed;
-  z-index: 2000;
-  pointer-events: none;
-}
-.deck-card-placeholder {
-  flex-shrink: 0;
-  visibility: hidden;
-}
-
 
 
 
@@ -197,8 +187,9 @@
 .deck-bar-scroll {
   position: relative;
   overflow-x: auto;
-  flex: 1;
+  overflow-y: hidden;
   touch-action: pan-x;
+  flex: 1;
 }
 
 #deckHelp {
@@ -217,6 +208,13 @@
   gap:  4px;
   padding: 4px 4px 0px 4px;
   background: #fff;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+.deck-bar-content {
+  overflow: visible;  /* ← transform の飛び出しを切らない！ */
+  position: relative;
 }
 
 .deck-summary {
@@ -261,7 +259,7 @@ input[type="text"] {
     .grid {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 5px;
     }
     .card {
       width: calc(100% / 7 - 8px);
@@ -823,7 +821,6 @@ footer a:hover {
     margin-left: 0.1em;
   font-size: 0.45em;
 }
-
 }
 @media (max-width: 410px){
   .deck-card {
@@ -852,7 +849,7 @@ footer a:hover {
   <nav class="header-nav">
     <a href="index.html">📖 一覧</a>
     <a href="deckmaker.html">🃏 デッキメーカー</a>
-    <a href="#" style="text-decoration: line-through; pointer-events: none; color: #aaa;">📊 所持率チェッカー</a>
+    <a href="cardcheker.html">📊 所持率チェッカー</a>
     <a href="#" style="text-decoration: line-through; pointer-events: none; color: #aaa;">📤 デッキ投稿</a>
   </nav>
 </header>
@@ -1067,44 +1064,43 @@ footer a:hover {
 <!-- 🔽 デッキバー全体のラッパーを追加 -->
 <div class="deck-bar-wrapper">
   <div class="deck-bar-scroll">
-    <div class="deck-bar-top" id="deckBarTop">
-      <div id="deck-empty-text">
-        <div style="font-size: 0.7rem;">デッキバー操作</div>
+    <div class="deck-bar-content">
+      <div class="deck-bar-top" id="deckBarTop">
+        <div id="deck-empty-text">
+          <div style="font-size: 0.7rem;">デッキバー操作</div>
           <div class="deck-help" id="deckHelp">
             <div>
-            【PC】<br>
-            ・左クリック：追加<br>
-            ・右クリック：削除<br>
+              【PC】<br>
+              ・左クリック：追加<br>
+              ・右クリック：削除<br>
             </div>
             <div>
-            【スマホ】<br>
-            ・上フリック：追加<br>
-            ・下フリック：削除
+              【スマホ】<br>
+              ・上フリック：追加<br>
+              ・下フリック：削除
             </div>
           </div>
+        </div>
+        <!-- JSでカードが並ぶ -->
       </div>
-      <!-- JSでカードが並ぶ -->
     </div>
   </div>
 
-  <!-- 🔽 ミニ情報を分離して固定 -->
   <div class="deck-summary" id="deck-summary">
-    <div class="deck-info"><!-- ←ここにJSが出力 --></div>
+    <div class="deck-info"></div>
     <div class="analyze-button-wrapper">
       <button class="analyze-button" onclick="goToAnalyzeTab()">💾コード生成</button>
     </div>
   </div>
-  <!-- 🔘 スライド開閉ボタン -->
-  <button class="deck-summary-toggle" onclick="toggleDeckSummary()">◀</button>
 
+  <button class="deck-summary-toggle" onclick="toggleDeckSummary()">◀</button>
 </div>
+
 
 <!--使用不可種族表示非表示ボタン-->
 <div class="deck-filter-bar">
   <button id="toggle-invalid-race" class="filter-toggle-button">✅使用不可種族を表示(モノクロ)</button>
 </div>
-
-
 </div>
 
 <button id="scrollTopFixed" onclick="scrollToTop()">▲</button>
@@ -7749,6 +7745,7 @@ function updateDeck() {
           </div>
       </div>
   `;
+
   deckBarTop.appendChild(emptyText);
   // 🔽 ソート対象のdeckを配列に変換
   const entries = Object.entries(deck);
@@ -7811,26 +7808,8 @@ function updateDeck() {
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
 
-        // === ダミーで並びをキープ ===
-        dummy = document.createElement('div');
-        dummy.className = 'deck-card-placeholder';
-        dummy.style.width = `${rect.width}px`;
-        dummy.style.height = `${rect.height}px`;
-        dummy.style.flexShrink = '0';
-        dummy.style.visibility = 'hidden';
-
-        cardEl.parentNode.insertBefore(dummy, cardEl.nextSibling);
-
-        // === 固定して最前面 ===
-        cardEl.style.position = 'absolute';
-        cardEl.style.left = `${rect.left + scrollLeft}px`;
-        cardEl.style.top = `${rect.top}px`;
-        cardEl.style.width = `${rect.width}px`;
-        cardEl.style.height = `${rect.height}px`;
-        cardEl.style.zIndex = 2000;
-        cardEl.classList.add('flicking');
-
         cardEl.style.transition = '';
+        cardEl.style.zIndex = '2000';
       });
 
       cardEl.addEventListener('touchmove', e => {
@@ -7840,27 +7819,15 @@ function updateDeck() {
         const diffX = currentX - touchStartX;
         const diffY = currentY - touchStartY;
 
-        // ✅ 横移動の方が大きければ上下フリックを無視
-        if (Math.abs(diffX) > Math.abs(diffY)) {
-          return;
-        }
+        if (Math.abs(diffX) > Math.abs(diffY)) return;
 
         let limitedDiffY = diffY;
-        if (limitedDiffY > 30) limitedDiffY = 30;
-        if (limitedDiffY < -30) limitedDiffY = -30;
+        if (limitedDiffY > 40) limitedDiffY = 40;
+        if (limitedDiffY < -40) limitedDiffY = -40;
 
         cardEl.style.transform = `translateY(${limitedDiffY}px)`;
       });
 
-
-      cardEl.addEventListener('touchmove', e => {
-        const currentY = e.touches[0].clientY;
-        let diffY = currentY - touchStartY;
-        if (diffY > 30) diffY = 30;
-        if (diffY < -30) diffY = -30;
-
-        cardEl.style.transform = `translateY(${diffY}px)`;
-      });
 
       cardEl.addEventListener('touchend', e => {
         const touchEndY = e.changedTouches[0].clientY;
@@ -7870,17 +7837,8 @@ function updateDeck() {
         cardEl.style.transition = 'transform 0.2s ease';
 
         const cleanUp = () => {
-          cardEl.classList.remove('flicking');
-          cardEl.style.position = '';
-          cardEl.style.left = '';
-          cardEl.style.top = '';
-          cardEl.style.width = '';
-          cardEl.style.height = '';
-          cardEl.style.zIndex = '';
-          if (dummy) {
-            dummy.remove();
-            dummy = null;
-          }
+          cardEl.style.transform = 'translateY(0)';
+          cardEl.style.zIndex = ''; // ← 忘れず戻す
         };
 
         if (Math.abs(diffY) > threshold) {
@@ -7889,7 +7847,6 @@ function updateDeck() {
             // === 上フリック → 追加 ===
 
             if (deck[cd] >= 3) {
-              cardEl.style.transform = 'translateY(0)';
               cleanUp();
               return;
             }
@@ -7900,7 +7857,6 @@ function updateDeck() {
                 cardMap[cdKey]?.race === "旧神" && cdKey !== cd
               );
               if (otherOldGodExists || deck[cd] >= 1) {
-                cardEl.style.transform = 'translateY(0)';
                 cleanUp();
                 return;
               }
@@ -7908,7 +7864,6 @@ function updateDeck() {
 
             cardEl.style.transform = 'translateY(-40px)';
             setTimeout(() => {
-              cardEl.style.transform = 'translateY(0)';
               cardEl.style.transition = '';
               cleanUp();
 
@@ -7923,7 +7878,6 @@ function updateDeck() {
             // === 下フリック → 削除 ===
             cardEl.style.transform = 'translateY(40px)';
             setTimeout(() => {
-              cardEl.style.transform = 'translateY(0)';
               cardEl.style.transition = '';
               cleanUp();
 
@@ -7938,10 +7892,10 @@ function updateDeck() {
 
         } else {
           // === 距離未満 → 元に戻すだけ ===
-          cardEl.style.transform = 'translateY(0)';
           setTimeout(() => {
             cardEl.style.transition = '';
             cleanUp();
+            checkDeckEmpty()
           }, 200);
         }
       });
@@ -7950,6 +7904,7 @@ function updateDeck() {
       // PC：右クリックで削除
       cardEl.addEventListener('mousedown', e => handleClick(e, cd));
       cardEl.addEventListener('contextmenu', e => e.preventDefault());
+      checkDeckEmpty()
     }
 
     deckBarTop.appendChild(cardEl);
@@ -8023,6 +7978,7 @@ function updateDeck() {
   rebuildCardMap();
   updateDeckAnalysis(); // 分析実行
   applyFilters();
+  checkDeckEmpty()
 }
 
     //デッキバー説明表示
@@ -9012,7 +8968,6 @@ function checkSameNameLimit() {
         updateCardDisabling();
         renderDeckList();
         updateDeckSummaryDisplay();
-        checkDeckEmpty();
         return "success";
       }
 
@@ -9099,8 +9054,6 @@ function checkSameNameLimit() {
       // 🔑 更新
       updateDeck();       // デッキバー＆種族など
       renderDeckList();   // デッキ詳細リスト
-      checkDeckEmpty();  //デッキバー説明表示
-
       // 🔑 デッキ名をリセット
       document.getElementById("deck-name").value = "";
 

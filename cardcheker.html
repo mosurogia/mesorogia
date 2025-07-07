@@ -1,0 +1,1962 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google-site-verification" content="5NzYWNH5_YUg0dUV2iCzg_bSo7M1lLJi6IzOeF2dGXM" />
+    <!-- ページの説明（検索結果の下に表示） -->
+    <meta name="description" content="このサイトは、アプリ「信託のメソロギア」のカード一覧、デッキ構築、デッキ分析ができる非公式サイトです。カード検索やデッキ管理をスマホでも快適に！">
+    <!-- キーワード（今は効果は薄いが一応） -->
+    <meta name="keywords" content="カードゲーム,デッキメーカー,DCG,神託のメソロギア,メソロギア,神託,デッキ分析,一覧,モスロギア">
+    <!-- OGP基本 -->
+    <meta property="og:title" content="モスロギア | 神託のメソロギア デッキメーカー">
+    <meta property="og:description" content="神託のメソロギアのカード検索・デッキ構築ができる非公式サイトです。">
+    <meta property="og:image" content="https://mosurogia.github.io/mesorogia-cards/img/deckmakerogp.webp">
+    <meta property="og:url" content="https://mosurogia.github.io/mesorogia-cards/">
+    <meta property="og:type" content="website">
+
+    <!-- Twitterカード向け -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="モスロギア | 神託のメソロギア デッキメーカー">
+    <meta name="twitter:description" content="カード検索とデッキ構築で信託のメソロギアをもっと楽しもう！">
+    <meta name="twitter:image" content="https://mosurogia.github.io/mesorogia-cards/img/deckmakerogp.webp">
+
+    <meta charset="utf-8" />
+    <title>モスロギア 神託のメソロギア デッキメーカー</title>
+    <link href="favicon.ico" rel="icon" type="image/png" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <style>
+/* ======== リセット & 基本 ======== */
+body {
+margin: 0;
+font-family: sans-serif;
+background: #f5f5f5;
+}
+/* ======== ヘッダー ======== */
+.main-header {
+background-image: url("img/header.webp");
+height: 55px;
+background-repeat: repeat-x;
+background-size: auto 55px;
+background-position: center center;
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 0px 5px;
+color: white;
+top: 0;
+z-index: 1000;
+}
+
+.header-logo img {
+height: 1.8em;
+width: auto;
+margin-top: 10px;
+object-fit: contain;
+}
+
+.header-nav a {
+margin-left: 1em;
+color: white;
+text-decoration: none;
+font-weight: bold;
+font-size: 0.85em;
+background-color: rgba(0, 0, 0, 0.4);
+padding: 6px 0.2em;
+border-radius: 6px;
+transition: background-color 0.3s;
+}
+
+.header-nav a:hover {
+background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ======== タブ切り替え ======== */
+.tab-bar {
+display: flex;
+background: #333;
+color: white;
+}
+
+.tab {
+flex: 1;
+padding: 12px;
+text-align: center;
+cursor: pointer;
+border-bottom: 3px solid transparent;
+}
+
+.tab span {
+background: rgba(0, 0, 0, 0.4);
+border-radius: 6px;
+display: inline-block;
+text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+.tab:not(.active):hover span {
+background-color: rgba(255, 230, 150, 0.6);
+transition: background 0.3s;
+}
+
+.tab.active {
+border-bottom: 3px solid yellow;
+background: #444;
+}
+
+.tab-content {
+display: none;
+padding: 8px;
+}
+
+.tab-content.active {
+display: block;
+}
+/*=========所持率サマリー==========*/
+.top-summary {
+display: none;
+}
+.page-wrapper {
+display: flex;
+}
+h3{
+    margin: 0.5em 0;
+}
+.summary-panel {
+width: 20%;
+flex-shrink: 0;
+padding-left: 0.2%;
+padding-top: 0.3rem;
+border-right: 2px solid #ccc;
+box-sizing: border-box;
+position: sticky;
+top: 0;
+height: 100vh;
+overflow-y: auto;
+background: #fff;
+font-size: clamp(12px, 1.5vw, 30px);
+}
+#pack-summary-list {
+list-style: none;
+padding-left: 0;
+margin: 0.5em 0;
+}
+
+#pack-summary-list li {
+margin-bottom: 0.3em; /* 必要なら間隔調整 */
+}
+.pack-summary-link {
+display: flex;
+justify-content: space-between;
+align-items: baseline;
+text-decoration: none;  /* 下線削除 */
+color: #333;  /* お好みで */
+}
+
+.pack-summary-name {
+font-weight: bold;
+font-size: clamp(0.3rem, 1.3vw, 1rem);
+}
+
+.pack-summary-name small {
+  display: block; /* 必ず改行される */
+  font-size: 80%;
+  margin-left: 0;
+}
+
+.pack-summary-rate {
+white-space: nowrap;
+font-size: 0.85em;
+margin-left: 0.5em;
+}
+
+
+.card-content {
+flex: 1;
+padding: 0 0.4rem;
+}
+
+
+/*=======保存読み込み共有=========*/
+.save-load-buttons {
+display: flex;
+flex-wrap: wrap;
+gap: 0.5rem;
+margin: 0.5rem;
+}
+
+.save-load-buttons button {
+flex: 1 1 calc(50% - 0.5rem);
+padding: 0.6rem 0;
+font-size: 0.85rem;
+border: none;
+border-radius: 6px;
+background: linear-gradient(135deg, #4caf50, #81c784);
+color: #fff;
+font-weight: bold;
+cursor: pointer;
+transition: background 0.3s, transform 0.2s;
+text-align: center;
+box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.save-load-buttons button:hover {
+background: linear-gradient(135deg, #388e3c, #66bb6a);
+transform: translateY(-2px);
+}
+
+.save-load-buttons button:active {
+transform: translateY(0);
+opacity: 0.9;
+}
+
+/* ======== カード一覧グリッド ======== */
+.pack-section {
+border: 6px solid #646464;
+padding: 0.5rem 1rem 1rem 1rem;
+margin: 1rem 0;
+border-radius: 12px;
+background: #fff;
+}
+.pack-section h3 {
+display: block;
+margin: 0.5rem 0;
+padding: 0.7em 1em;
+background: #f5f5f5;  /* 明るめ背景 */
+background: linear-gradient(90deg, #f7f7f7, #e0e0e0);
+border-left: 8px solid #646464;
+border-radius: 4px;
+font-size: 1.1rem;
+font-weight: bold;
+color: #333;
+box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+h4{
+display: block;
+margin: 0 0 0.3rem;
+padding: 0.7em 0.7em 0.6em;
+color: #fff;
+font-size: 0.8rem;
+font-weight: bold;
+line-height: 1.35;
+background-color: #646464;
+}
+.race-controls{
+display: flex;
+gap: 0.2rem;
+padding: 0.2rem;
+}
+.race-controls button {
+flex: 1;          /* ← 幅を均等に分ける */
+padding: 0.3rem;     /* 任意の内側余白 */
+font-size: 0.6rem;
+box-sizing: border-box;
+}
+
+.card-list{
+display: flex;
+flex-wrap: wrap;
+gap: 9px;
+    }
+
+
+
+.race-group {
+margin: 0.3rem auto;      /* 中央寄せ */
+border: 2px solid #666; /* 枠線は種族ごとに上書きでもOK */
+border-radius: 6px;
+box-sizing: border-box;
+padding: 0.3rem;
+}
+
+
+.card {
+width: calc(100% / 8 - 9px);
+box-sizing: border-box;
+cursor: pointer;
+position: relative;
+}
+
+.card img {
+width: 100%;
+height: auto;
+display: block;
+border-radius: 6px;
+}
+
+.card.grayscale img {
+filter: grayscale(100%);
+opacity: 0.5;
+}
+.race-group.race-ドラゴン { background: rgba(255, 100, 100, 0.1); }
+.race-group.race-アンドロイド { background: rgba(100, 200, 255, 0.1); }
+.race-group.race-エレメンタル { background: rgba(100, 255, 150, 0.1); }
+.race-group.race-ルミナス { background: rgba(255, 250, 150, 0.1); }
+.race-group.race-シェイド { background: rgba(200, 150, 255, 0.1); }
+.race-group.race-イノセント { background: rgba(220, 220, 220, 0.1); }
+.race-group.race-旧神 {
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.2),
+        rgba(255, 215, 140, 0.3),
+        rgba(180, 255, 255, 0.3),
+        rgba(220, 180, 255, 0.3),
+        rgba(255, 255, 255, 0.2)
+    );
+}
+
+
+/* ======== 所持マーク ======== */
+.owned-mark {
+position: absolute;
+top: 5px;
+right: 5px;
+background: #4caf50;
+color: #fff;
+border-radius: 50%;
+padding: 5px;
+font-size: 12px;
+display: none;
+}
+
+.card.owned .owned-mark {
+display: block;
+}
+
+/* ======== モーダル ======== */
+.modal {
+display: flex;
+position: fixed;
+top: 0; left: 0;
+width: 100%; height: 100%;
+background: rgba(0, 0, 0, 0.5);
+z-index: 1200;
+justify-content: center;
+align-items: center;
+}
+
+.modal-content {
+background: #fff;
+padding: 20px;
+border-radius: 10px;
+max-width: 950px;
+width: 90%;
+max-height: 100%;
+overflow-y: auto;
+box-sizing: border-box;
+}
+
+/* ======== フィルターボタン ======== */
+.filter-btn {
+margin: 4px 0px;
+}
+
+.filter-btn.selected {
+background-color: #333;
+color: white;
+}
+
+.filter-group {
+display: flex;
+flex-wrap: wrap;
+gap: 0.5rem;
+}
+
+/* ======== 種族枠線 & タイプ背景 ======== */
+.type-アタッカー { background: rgba(125, 91, 155, 0.5); }
+.type-チャージャー { background: rgba(119, 170, 212, 0.5); }
+.type-ブロッカー { background: rgba(214, 212, 204, 0.5); }
+
+.race-ドラゴン { border: 6px solid rgb(200, 40, 40); }
+.race-アンドロイド { border: 6px solid rgb(40, 200, 200); }
+.race-エレメンタル { border: 6px solid rgb(40, 180, 90); }
+.race-ルミナス { border: 6px solid rgb(240, 200, 40); }
+.race-シェイド { border: 6px solid rgb(150, 100, 180); }
+.race-イノセント { border: 6px solid silver; }
+.race-旧神 {
+border: 6px solid;
+border-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.6),
+    rgba(255, 215, 140, 0.8),
+    rgba(180, 255, 255, 0.7),
+    rgba(220, 180, 255, 0.7),
+    rgba(255, 255, 255, 0.6)
+) 1;
+}
+
+/* ======== フッター ======== */
+footer {
+text-align: center;
+font-size: 0.85rem;
+color: #666;
+padding: 1rem 0;
+background-color: #f9f9f9;
+line-height: 1.6;
+}
+
+footer a {
+color: #3366cc;
+text-decoration: none;
+}
+
+footer a:hover {
+text-decoration: underline;
+}
+
+/* ======== レスポンシブ調整 ======== */
+@media (max-width: 1024px) {
+.card {width: calc(100% / 6 - 8px);}
+}
+
+
+@media (max-width: 768px) {
+.header-nav a {
+font-size: 0.75em;
+}
+footer {
+font-size: 0.5rem;
+padding: 0.5rem 0;
+}
+}
+@media (max-width: 700px){
+/*サマリー上部バー*/
+.summary-panel {
+display: none;
+}
+.top-summary {
+display: flex;
+flex-direction: column;
+position: sticky;
+top: 0;
+background: #fff;
+border-bottom: 2px solid #ccc;
+z-index: 2000;
+padding: 0.5rem;
+font-size: 0.8rem;
+}
+.save-load-buttons {
+display: flex;
+gap: 0.5rem;
+margin: 0.3rem;
+}
+.save-load-buttons button {
+font-size: 0.6rem;
+padding: 0.5rem 0;
+}
+.summary-bar {
+display: flex;
+justify-content: space-between;
+align-items: center;
+flex-wrap: wrap;
+gap: 0.5rem;
+}
+
+.summary-bar select {
+font-size: 0.68rem;
+padding: 0.2rem;
+}
+
+#mobile-pack-summary {
+margin-top: 0.2rem;
+font-size: 0.8rem;
+}
+
+#mobile-pack-summary a {
+color: #333;
+text-decoration: underline;
+}
+
+
+/*サマリーサイドバー*/
+.page-wrapper {
+flex-direction: column;
+}
+.summary-panel {
+width: 100%;
+height: auto;
+border-right: none;
+border-bottom: 2px solid #ccc;
+position: relative;
+}
+
+.pack-section{
+padding: 0.1rem 0.4rem 0.4rem 0.4rem;
+}
+}
+@media (max-width: 680px){
+.header-nav a {
+font-size: 0.65em;
+}
+}
+@media (max-width: 630px){
+.header-nav a {
+font-size: 0.6em;
+}
+}
+@media (max-width: 560px){
+.header-nav a {
+margin-left: 0.1em;
+font-size: 0.45em;
+}
+.card { width: calc(100% / 5 - 8px);}
+}
+@media (max-width: 410px){
+.header-nav a {
+font-size: 0.23em;
+}
+.pack-section h3 {
+font-size: 0.9rem;
+padding: 0.5em ;
+}
+}
+    </style>
+</head>
+
+<body>
+<!-- ヘッダー -->
+<header class="main-header">
+    <div class="header-logo">
+        <img src="img/tatudosi.webp" alt="神託のメソロギア ロゴ" />
+    </div>
+    <nav class="header-nav">
+        <a href="index.html">📖 一覧</a>
+        <a href="deckmaker.html">🃏 デッキメーカー</a>
+        <a href="cardcheker.html">📊 所持率チェッカー</a>
+        <a href="#" style="text-decoration: line-through; pointer-events: none; color: #aaa;">📤 デッキ投稿</a>
+    </nav>
+</header>
+
+
+<!-- スマホ用 所持率サマリー上部バー -->
+<div class="top-summary">
+
+    <!-- 所持率情報 + パック選択 -->
+    <div class="summary-bar">
+        <span>
+            全体: <span id="mobile-owned-count">0</span>/<span id="mobile-total-count">0</span>
+            (<span id="mobile-owned-percent">0%</span>)
+        </span>
+
+        <select id="pack-selector" onchange="selectMobilePack(this.value)">
+            <option value="awaking">Awaking The Oracle「神託者の覚醒」</option>
+        </select>
+    </div>
+
+    <!-- 選択パックの所持率情報 -->
+    <div id="mobile-pack-summary">
+        <a href="#pack-awaking">Awaking The Oracle: 10/50 (20%)</a>
+    </div>
+</div>
+
+
+
+<div class="page-wrapper">
+<!-- PC・タブレット用 所持率サマリーサイドバー -->
+<aside class="summary-panel">
+    <!-- 所持率サマリー -->
+    <div id="summary">
+        全カード所持率: <span id="owned-count">0</span>/<span id="total-count">0</span>
+        (<span id="owned-percent">0%</span>)
+    </div>
+
+    <div id="pack-summary">
+        <ul id="pack-summary-list">
+            <!-- JSで生成 -->
+        </ul></div>
+
+
+</aside>
+
+
+
+<main class="card-content">
+<!-- 所持データ操作ボタンエリア -->
+<div class="save-load-buttons">
+    <button onclick="saveOwnership()">💾 保存</button>
+    <button onclick="exportOwnership()">🔗 共有コピー</button>
+    <button onclick="importOwnership()">📥 他人データ読み込み</button>
+</div>
+
+    <!-- カード一覧（パックごと） -->
+    <section id="pack-awaking" class="pack-section">
+        <h3 class="pack-title">
+            <span class="pack-name-main">Awaking The Oracle</span><br>
+            <small class="pack-name-sub">「神託者の覚醒」</small>
+        </h3>
+        <div class="race-controls">
+            <button class="pack-select-all-btn">パック全選択</button>
+            <button class="pack-clear-all-btn">パック全解除</button>
+        </div>
+        <div id="card-list-awaking">
+            <!-- ドラゴン種族 -->
+            <section id="race-dragon-awaking" class="race-group race-ドラゴン">
+                <h4>ドラゴン</h4>
+                <div class="race-controls">
+                    <button class="select-all-btn">全選択</button>
+                    <button class="clear-all-btn">全選択解除</button>
+                </div>
+                <div class="card-list">
+                    <div class="card" data-name="聖焔龍王 リズオレイル" data-cd="10001" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="聖焔龍（フォルティア）" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="聖焔龍王 リズオレイル" loading="lazy" src="img/10001.webp" />
+                    </div>
+
+                    <div class="card" data-name="聖焔龍妃 グラセリカ" data-cd="10002" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="聖焔龍（フォルティア）" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="聖焔龍妃 グラセリカ" loading="lazy" src="img/10002.webp" />
+                    </div>
+
+                    <div class="card" data-name="聖焔龍の先導 フラム" data-cd="10003" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="聖焔龍（フォルティア）" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="聖焔龍の先導 フラム" loading="lazy" src="img/10003.webp" />
+                    </div>
+
+                    <div class="card" data-name="聖焔龍の威光 シャンブレイズ" data-cd="10004" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="聖焔龍（フォルティア）" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="聖焔龍の威光 シャンブレイズ" loading="lazy" src="img/10004.webp" />
+                    </div>
+
+                    <div class="card" data-name="聖焔龍の秘匿 シュエ" data-cd="10005" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="聖焔龍（フォルティア）" data-rarity="レジェンド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="聖焔龍の秘匿 シュエ" loading="lazy" src="img/10005.webp" />
+                    </div>
+
+                    <div class="card" data-name="聖焔龍の至宝 ヴァンセ" data-cd="10006" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="聖焔龍（フォルティア）" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="聖焔龍の至宝 ヴァンセ" loading="lazy" src="img/10006.webp" />
+                    </div>
+
+                    <div class="card" data-name="聖焔龍の賢者 ラペル" data-cd="10007" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="聖焔龍（フォルティア）" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="聖焔龍の賢者 ラペル" loading="lazy" src="img/10007.webp" />
+                    </div>
+
+                    <div class="card" data-name="聖焔龍の守護 ゼフォル" data-cd="10008" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="聖焔龍（フォルティア）" data-rarity="シルバー" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="聖焔龍の守護 ゼフォル" loading="lazy" src="img/10008.webp" />
+                    </div>
+
+                    <div class="card" data-name="ドラゴライダー・マルミア" data-cd="10009" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ドラゴライダー" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="ドラゴライダー・マルミア" loading="lazy" src="img/10009.webp" />
+                    </div>
+
+                    <div class="card" data-name="ドラゴライダー・ヴァルマ" data-cd="10010" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ドラゴライダー" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="ドラゴライダー・ヴァルマ" loading="lazy" src="img/10010.webp" />
+                    </div>
+
+                    <div class="card" data-name="ドラゴライダー・ハルパー" data-cd="10011" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ドラゴライダー" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="ドラゴライダー・ハルパー" loading="lazy" src="img/10011.webp" />
+                    </div>
+
+                    <div class="card" data-name="ドラゴライダー・ケラウノス" data-cd="10012" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ドラゴライダー" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="ドラゴライダー・ケラウノス" loading="lazy" src="img/10012.webp" />
+                    </div>
+
+                    <div class="card" data-name="ドラゴライダー・ヴェロス" data-cd="10013" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ドラゴライダー" data-rarity="シルバー" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="ドラゴライダー・ヴェロス" loading="lazy" src="img/10013.webp" />
+                    </div>
+
+                    <div class="card" data-name="ドラゴライダー・ノプリア" data-cd="10014" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ドラゴライダー" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="ドラゴライダー・ノプリア" loading="lazy" src="img/10014.webp" />
+                    </div>
+
+                    <div class="card" data-name="ドラゴライダー・トリアイナ" data-cd="10015" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ドラゴライダー" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="ドラゴライダー・トリアイナ" loading="lazy" src="img/10015.webp" />
+                    </div>
+
+                    <div class="card" data-name="ドラゴライダー・アイギス" data-cd="10016" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ドラゴライダー" data-rarity="レジェンド" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="ドラゴライダー・アイギス" loading="lazy" src="img/10016.webp" />
+                    </div>
+
+                    <div class="card" data-name="海王 リヴァイアサン" data-cd="10017" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="海王 リヴァイアサン" loading="lazy" src="img/10017.webp" />
+                    </div>
+
+                    <div class="card" data-name="竜殺しの騎士-ジークフリート" data-cd="10019" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="竜殺しの騎士-ジークフリート" loading="lazy" src="img/10019.webp" />
+                    </div>
+
+                    <div class="card" data-name="カーバンクル" data-cd="10020" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="カーバンクル" loading="lazy" src="img/10020.webp" />
+                    </div>
+
+                    <div class="card" data-name="ヘルフレイムワイバーン" data-cd="10021" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="ヘルフレイムワイバーン" loading="lazy" src="img/10021.webp" />
+                    </div>
+
+                    <div class="card" data-name="魔獣 サウラー" data-cd="10022" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="魔獣 サウラー" loading="lazy" src="img/10022.webp" />
+                    </div>
+
+                    <div class="card" data-name="若きグラディエーター" data-cd="10023" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="若きグラディエーター" loading="lazy" src="img/10023.webp" />
+                    </div>
+
+                    <div class="card" data-name="竜胤の祈り手" data-cd="10024" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="竜胤の祈り手" loading="lazy" src="img/10024.webp" />
+                    </div>
+
+                    <div class="card" data-name="ドラゴンファウンダー" data-cd="10025" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="ドラゴンファウンダー" loading="lazy" src="img/10025.webp" />
+                    </div>
+
+                    <div class="card" data-name="砂漠の旅人" data-cd="10026" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="砂漠の旅人" loading="lazy" src="img/10026.webp" />
+                    </div>
+
+                    <div class="card" data-name="灼熱の踊り子" data-cd="10027" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="灼熱の踊り子" loading="lazy" src="img/10027.webp" />
+                    </div>
+
+                    <div class="card" data-name="共和国の一級鍛治士" data-cd="10028" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="共和国の一級鍛治士" loading="lazy" src="img/10028.webp" />
+                    </div>
+
+                    <div class="card" data-name="鋼鉄リザード" data-cd="10029" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="鋼鉄リザード" loading="lazy" src="img/10029.webp" />
+                    </div>
+
+                    <div class="card" data-name="採掘用ゴーレム" data-cd="10030" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="採掘用ゴーレム" loading="lazy" src="img/10030.webp" />
+                    </div>
+
+                    <div class="card" data-name="始祖なる大蛇ゴーゴン" data-cd="10031" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ドラゴン" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="始祖なる大蛇ゴーゴン" loading="lazy" src="img/10031.webp" />
+                    </div>
+                </div>
+            </section>
+
+            <!-- アンドロイド種族 -->
+            <section id="race-android-awaking" class="race-group race-アンドロイド">
+                <h4>アンドロイド</h4>
+                <div class="race-controls">
+                    <button class="select-all-btn">全選択</button>
+                    <button class="clear-all-btn">全選択解除</button>
+                </div>
+                <div class="card-list">
+                    <div class="card" data-name="メイドロボ・ブルーベリー" data-cd="20001" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="メイドロボ" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="メイドロボ・ブルーベリー" loading="lazy" src="img/20001.webp" />
+                    </div>
+
+                    <div class="card" data-name="メイドロボ・クランベリー" data-cd="20002" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="メイドロボ" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="メイドロボ・クランベリー" loading="lazy" src="img/20002.webp" />
+                    </div>
+
+                    <div class="card" data-name="メイドロボ・チェリー" data-cd="20003" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="メイドロボ" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="メイドロボ・チェリー" loading="lazy" src="img/20003.webp" />
+                    </div>
+
+                    <div class="card" data-name="メイドロボ・パイン" data-cd="20004" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="メイドロボ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="メイドロボ・パイン" loading="lazy" src="img/20004.webp" />
+                    </div>
+
+                    <div class="card" data-name="メイドロボ・シトロン" data-cd="20005" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="メイドロボ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="メイドロボ・シトロン" loading="lazy" src="img/20005.webp" />
+                    </div>
+
+                    <div class="card" data-name="メイドロボ・ライム" data-cd="20006" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="メイドロボ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="メイドロボ・ライム" loading="lazy" src="img/20006.webp" />
+                    </div>
+
+                    <div class="card" data-name="メイドロボ・ラフラン" data-cd="20007" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="メイドロボ" data-rarity="シルバー" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="メイドロボ・ラフラン" loading="lazy" src="img/20007.webp" />
+                    </div>
+
+                    <div class="card" data-name="メイドロボ・メルロウ" data-cd="20008" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="メイドロボ" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="メイドロボ・メルロウ" loading="lazy" src="img/20008.webp" />
+                    </div>
+
+                    <div class="card" data-name="アドミラルシップ テセウス" data-cd="20009" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="アドミラルシップ" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="アドミラルシップ テセウス" loading="lazy" src="img/20009.webp" />
+                    </div>
+
+                    <div class="card" data-name="アドミラルシップ ダリオン" data-cd="20010" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="アドミラルシップ" data-rarity="レジェンド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="アドミラルシップ ダリオン" loading="lazy" src="img/20010.webp" />
+                    </div>
+
+                    <div class="card" data-name="アドミラルシップ パウ" data-cd="20011" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="アドミラルシップ" data-rarity="シルバー" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="アドミラルシップ パウ" loading="lazy" src="img/20011.webp" />
+                    </div>
+
+                    <div class="card" data-name="アドミラルシップ ステム" data-cd="20012" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="アドミラルシップ" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="アドミラルシップ ステム" loading="lazy" src="img/20012.webp" />
+                    </div>
+
+                    <div class="card" data-name="アドミラルシップ パドラ" data-cd="20013" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="アドミラルシップ" data-rarity="レジェンド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="アドミラルシップ パドラ" loading="lazy" src="img/20013.webp" />
+                    </div>
+
+                    <div class="card" data-name="アドミラルシップ キール" data-cd="20014" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="アドミラルシップ" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="アドミラルシップ キール" loading="lazy" src="img/20014.webp" />
+                    </div>
+
+                    <div class="card" data-name="アドミラルシップ ビィム" data-cd="20015" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="アドミラルシップ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="アドミラルシップ ビィム" loading="lazy" src="img/20015.webp" />
+                    </div>
+
+                    <div class="card" data-name="アドミラルシップ セイル" data-cd="20016" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="アドミラルシップ" data-rarity="ブロンズ" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="アドミラルシップ セイル" loading="lazy" src="img/20016.webp" />
+                    </div>
+
+                    <div class="card" data-name="大いなる母・マザーマキナ" data-cd="20017" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="大いなる母・マザーマキナ" loading="lazy" src="img/20017.webp" />
+                    </div>
+
+                    <div class="card" data-name="PSYクロン" data-cd="20018" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="PSYクロン" loading="lazy" src="img/20018.webp" />
+                    </div>
+
+                    <div class="card" data-name="古代機巧の少女" data-cd="20019" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="古代機巧の少女" loading="lazy" src="img/20019.webp" />
+                    </div>
+
+                    <div class="card" data-name="増殖型メカスライム" data-cd="20020" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="増殖型メカスライム" loading="lazy" src="img/20020.webp" />
+                    </div>
+
+                    <div class="card" data-name="メカミミック" data-cd="20021" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="メカミミック" loading="lazy" src="img/20021.webp" />
+                    </div>
+
+                    <div class="card" data-name="魔獣 デルフィニ" data-cd="20022" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="魔獣 デルフィニ" loading="lazy" src="img/20022.webp" />
+                    </div>
+
+                    <div class="card" data-name="偉大になる錬金術師" data-cd="20023" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="偉大になる錬金術師" loading="lazy" src="img/20023.webp" />
+                    </div>
+
+                    <div class="card" data-name="叡智の祈り手" data-cd="20024" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="叡智の祈り手" loading="lazy" src="img/20024.webp" />
+                    </div>
+
+                    <div class="card" data-name="機構龍-Jabberwock" data-cd="20025" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="機構龍-Jabberwock" loading="lazy" src="img/20025.webp" />
+                    </div>
+
+                    <div class="card" data-name="マッドエンジニアちゃん" data-cd="20026" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="マッドエンジニアちゃん" loading="lazy" src="img/20026.webp" />
+                    </div>
+
+                    <div class="card" data-name="義眼のスナイバー" data-cd="20027" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="義眼のスナイバー" loading="lazy" src="img/20027.webp" />
+                    </div>
+
+                    <div class="card" data-name="酔いどれ機工士" data-cd="20028" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="酔いどれ機工士" loading="lazy" src="img/20028.webp" />
+                    </div>
+
+                    <div class="card" data-name="建設用ゴーレム" data-cd="20029" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="建設用ゴーレム" loading="lazy" src="img/20029.webp" />
+                    </div>
+
+                    <div class="card" data-name="神秘の結晶体" data-cd="20030" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="アンドロイド" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="神秘の結晶体" loading="lazy" src="img/20030.webp" />
+                    </div>
+                </div>
+            </section>
+
+            <!-- エレメンタル種族 -->
+            <section id="race-elemental-awaking" class="race-group race-エレメンタル">
+                <h4>エレメンタル</h4>
+                <div class="race-controls">
+                    <button class="select-all-btn">全選択</button>
+                    <button class="clear-all-btn">全選択解除</button>
+                </div>
+                <div class="card-list">
+                    <div class="card" data-name="情熱のナチュリア サラ" data-cd="30001" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ナチュリア" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="情熱のナチュリア サラ" loading="lazy" src="img/30001.webp" />
+                    </div>
+
+                    <div class="card" data-name="悲嘆のナチュリア バンシー" data-cd="30002" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ナチュリア" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="悲嘆のナチュリア バンシー" loading="lazy" src="img/30002.webp" />
+                    </div>
+
+                    <div class="card" data-name="自由のナチュリア シルフィー" data-cd="30003" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ナチュリア" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="自由のナチュリア シルフィー" loading="lazy" src="img/30003.webp" />
+                    </div>
+
+                    <div class="card" data-name="支配のナチュリア オヴェロン" data-cd="30004" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ナチュリア" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="支配のナチュリア オヴェロン" loading="lazy" src="img/30004.webp" />
+                    </div>
+
+                    <div class="card" data-name="矜持のナチュリア ティタニア" data-cd="30005" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ナチュリア" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="矜持のナチュリア ティタニア" loading="lazy" src="img/30005.webp" />
+                    </div>
+
+                    <div class="card" data-name="冷静のナチュリア ディーネ" data-cd="30006" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ナチュリア" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="冷静のナチュリア ディーネ" loading="lazy" src="img/30006.webp" />
+                    </div>
+
+                    <div class="card" data-name="治癒のナチュリア アグナス" data-cd="30007" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ナチュリア" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="治癒のナチュリア アグナス" loading="lazy" src="img/30007.webp" />
+                    </div>
+
+                    <div class="card" data-name="堅実のナチュリア ノーム" data-cd="30008" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ナチュリア" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="堅実のナチュリア ノーム" loading="lazy" src="img/30008.webp" />
+                    </div>
+
+                    <div class="card" data-name="鬼刹衆 浮水" data-cd="30009" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="鬼刹（きせつ）" data-rarity="レジェンド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="鬼刹衆 浮水" loading="lazy" src="img/30009.webp" />
+                    </div>
+
+                    <div class="card" data-name="鬼刹衆 虚空" data-cd="30010" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="鬼刹（きせつ）" data-rarity="シルバー" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="鬼刹衆 虚空" loading="lazy" src="img/30010.webp" />
+                    </div>
+
+                    <div class="card" data-name="鬼刹衆 立花" data-cd="30011" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="鬼刹（きせつ）" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="鬼刹衆 立花" loading="lazy" src="img/30011.webp" />
+                    </div>
+
+                    <div class="card" data-name="鬼刹衆 芒守" data-cd="30012" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="鬼刹（きせつ）" data-rarity="シルバー" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="鬼刹衆 芒守" loading="lazy" src="img/30012.webp" />
+                    </div>
+
+                    <div class="card" data-name="鬼刹衆 焦々" data-cd="30013" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="鬼刹（きせつ）" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="鬼刹衆 焦々" loading="lazy" src="img/30013.webp" />
+                    </div>
+
+                    <div class="card" data-name="鬼刹衆 蒼紅" data-cd="30014" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="鬼刹（きせつ）" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="鬼刹衆 蒼紅" loading="lazy" src="img/30014.webp" />
+                    </div>
+
+                    <div class="card" data-name="鬼刹衆 燈侍" data-cd="30015" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="鬼刹（きせつ）" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="鬼刹衆 燈侍" loading="lazy" src="img/30015.webp" />
+                    </div>
+
+                    <div class="card" data-name="滅鬼刹鬼の大将官" data-cd="30016" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="鬼刹（きせつ）" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="滅鬼刹鬼の大将官" loading="lazy" src="img/30016.webp" />
+                    </div>
+
+                    <div class="card" data-name="眠らぬ大樹" data-cd="30017" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="眠らぬ大樹" loading="lazy" src="img/30017.webp" />
+                    </div>
+
+                    <div class="card" data-name="半神の巨人" data-cd="30018" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="半神の巨人" loading="lazy" src="img/30018.webp" />
+                    </div>
+
+                    <div class="card" data-name="深森武神" data-cd="30019" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="深森武神" loading="lazy" src="img/30019.webp" />
+                    </div>
+
+                    <div class="card" data-name="残忍なゴブリン" data-cd="30020" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="残忍なゴブリン" loading="lazy" src="img/30020.webp" />
+                    </div>
+
+                    <div class="card" data-name="流離のダークエルフ" data-cd="30021" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="流離のダークエルフ" loading="lazy" src="img/30021.webp" />
+                    </div>
+
+                    <div class="card" data-name="魔獣 ラゴス" data-cd="30022" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="魔獣 ラゴス" loading="lazy" src="img/30022.webp" />
+                    </div>
+
+                    <div class="card" data-name="新緑の祈り手" data-cd="30023" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="新緑の祈り手" loading="lazy" src="img/30023.webp" />
+                    </div>
+
+                    <div class="card" data-name="ドリュアス・ヴァンテージ" data-cd="30024" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="ドリュアス・ヴァンテージ" loading="lazy" src="img/30024.webp" />
+                    </div>
+
+                    <div class="card" data-name="ハッピーハーピイ" data-cd="30025" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="ハッピーハーピイ" loading="lazy" src="img/30025.webp" />
+                    </div>
+
+                    <div class="card" data-name="ケット・シー" data-cd="30026" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="ケット・シー" loading="lazy" src="img/30026.webp" />
+                    </div>
+
+                    <div class="card" data-name="クー・シー" data-cd="30027" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="クー・シー" loading="lazy" src="img/30027.webp" />
+                    </div>
+
+                    <div class="card" data-name="ビーストテイマー" data-cd="30028" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="ビーストテイマー" loading="lazy" src="img/30028.webp" />
+                    </div>
+
+                    <div class="card" data-name="妖精王の親衛隊" data-cd="30029" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="妖精王の親衛隊" loading="lazy" src="img/30029.webp" />
+                    </div>
+
+                    <div class="card" data-name="整地用ゴーレム" data-cd="30030" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="エレメンタル" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="整地用ゴーレム" loading="lazy" src="img/30030.webp" />
+                    </div>
+                </div>
+            </section>
+
+            <!-- ルミナス種族 -->
+            <section id="race-luminous-awaking" class="race-group race-ルミナス">
+                <h4>ルミナス</h4>
+                <div class="race-controls">
+                    <button class="select-all-btn">全選択</button>
+                    <button class="clear-all-btn">全選択解除</button>
+                </div>
+                <div class="card-list">
+                    <div class="card" data-name="プロスリスデビル アイン" data-cd="40001" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ロスリス" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="プロスリスデビル アイン" loading="lazy" src="img/40001.webp" />
+                    </div>
+
+                    <div class="card" data-name="ロスリスプリースト ギメル" data-cd="40002" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ロスリス" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="ロスリスプリースト ギメル" loading="lazy" src="img/40002.webp" />
+                    </div>
+
+                    <div class="card" data-name="プロスリスリーパー ヌン" data-cd="40003" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ロスリス" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="プロスリスリーパー ヌン" loading="lazy" src="img/40003.webp" />
+                    </div>
+
+                    <div class="card" data-name="ロスリスパラディン へスト" data-cd="40004" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ロスリス" data-rarity="シルバー" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="ロスリスパラディン へスト" loading="lazy" src="img/40004.webp" />
+                    </div>
+
+                    <div class="card" data-name="ロスリスビースト シャメフ" data-cd="40005" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ロスリス" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="ロスリスビースト シャメフ" loading="lazy" src="img/40005.webp" />
+                    </div>
+
+                    <div class="card" data-name="ロスリスマジシャン ヴェート" data-cd="40006" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ロスリス" data-rarity="レジェンド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="ロスリスマジシャン ヴェート" loading="lazy" src="img/40006.webp" />
+                    </div>
+
+                    <div class="card" data-name="ロスリスフォロワー エム" data-cd="40007" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ロスリス" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="ロスリスフォロワー エム" loading="lazy" src="img/40007.webp" />
+                    </div>
+
+                    <div class="card" data-name="ロスリスガーディアン ラメッド" data-cd="40008" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ロスリス" data-rarity="ブロンズ" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="ロスリスガーディアン ラメッド" loading="lazy" src="img/40008.webp" />
+                    </div>
+
+                    <div class="card" data-name="白騎士団長 ユートピア" data-cd="40009" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="白騎士" data-rarity="レジェンド" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="白騎士団長 ユートピア" loading="lazy" src="img/40009.webp" />
+                    </div>
+
+                    <div class="card" data-name="白騎士指揮官 アルカディア" data-cd="40010" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="白騎士" data-rarity="レジェンド" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="白騎士指揮官 アルカディア" loading="lazy" src="img/40010.webp" />
+                    </div>
+
+                    <div class="card" data-name="白騎士 シャンパラ" data-cd="40011" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="白騎士" data-rarity="ゴールド" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="白騎士 シャンパラ" loading="lazy" src="img/40011.webp" />
+                    </div>
+
+                    <div class="card" data-name="白騎士 ヴァルハラ" data-cd="40012" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="白騎士" data-rarity="シルバー" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="白騎士 ヴァルハラ" loading="lazy" src="img/40012.webp" />
+                    </div>
+
+                    <div class="card" data-name="白騎士 エルドラド" data-cd="40013" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="白騎士" data-rarity="ゴールド" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="白騎士 エルドラド" loading="lazy" src="img/40013.webp" />
+                    </div>
+
+                    <div class="card" data-name="白騎士 トーゲン" data-cd="40014" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="白騎士" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="白騎士 トーゲン" loading="lazy" src="img/40014.webp" />
+                    </div>
+
+                    <div class="card" data-name="白騎士 ライカ" data-cd="40015" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="白騎士" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="白騎士 ライカ" loading="lazy" src="img/40015.webp" />
+                    </div>
+
+                    <div class="card" data-name="白騎士 ガンダーラ" data-cd="40016" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="白騎士" data-rarity="ブロンズ" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="白騎士 ガンダーラ" loading="lazy" src="img/40016.webp" />
+                    </div>
+
+                    <div class="card" data-name="セイントパニッシャー" data-cd="40017" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="セイントパニッシャー" loading="lazy" src="img/40017.webp" />
+                    </div>
+
+                    <div class="card" data-name="剣聖-アスカロン" data-cd="40018" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="剣聖-アスカロン" loading="lazy" src="img/40018.webp" />
+                    </div>
+
+                    <div class="card" data-name="光輝のヘヴィーナイト" data-cd="40019" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="光輝のヘヴィーナイト" loading="lazy" src="img/40019.webp" />
+                    </div>
+
+                    <div class="card" data-name="ムーンライトペガサス" data-cd="40020" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="ムーンライトペガサス" loading="lazy" src="img/40020.webp" />
+                    </div>
+
+                    <div class="card" data-name="魔獣 イェラ" data-cd="40021" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="魔獣 イェラ" loading="lazy" src="img/40021.webp" />
+                    </div>
+
+                    <div class="card" data-name="教団の密偵" data-cd="40022" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="教団の密偵" loading="lazy" src="img/40022.webp" />
+                    </div>
+
+                    <div class="card" data-name="聖律の祈り手" data-cd="40023" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="聖律の祈り手" loading="lazy" src="img/40023.webp" />
+                    </div>
+
+                    <div class="card" data-name="ルナティック・ガードナー" data-cd="40024" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="ルナティック・ガードナー" loading="lazy" src="img/40024.webp" />
+                    </div>
+
+                    <div class="card" data-name="見習い神父" data-cd="40025" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="見習い神父" loading="lazy" src="img/40025.webp" />
+                    </div>
+
+                    <div class="card" data-name="カイロス・バサニスト" data-cd="40026" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="カイロス・バサニスト" loading="lazy" src="img/40026.webp" />
+                    </div>
+
+                    <div class="card" data-name="聖使徒" data-cd="40027" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="聖使徒" loading="lazy" src="img/40027.webp" />
+                    </div>
+
+                    <div class="card" data-name="敬虔なシスター" data-cd="40028" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="敬虔なシスター" loading="lazy" src="img/40028.webp" />
+                    </div>
+
+                    <div class="card" data-name="喜びの狂信者" data-cd="40029" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="喜びの狂信者" loading="lazy" src="img/40029.webp" />
+                    </div>
+
+                    <div class="card" data-name="稽古用ゴーレム" data-cd="40030" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="ルミナス" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="稽古用ゴーレム" loading="lazy" src="img/40030.webp" />
+                    </div>
+                </div>
+            </section>
+
+            <!-- シェイド種族 -->
+            <section id="race-shade-awaking" class="race-group race-シェイド">
+                <h4>シェイド</h4>
+                <div class="race-controls">
+                    <button class="select-all-btn">全選択</button>
+                    <button class="clear-all-btn">全選択解除</button>
+                </div>
+                <div class="card-list">
+                    <div class="card" data-name="昏き霊園 ガランサス" data-cd="50001" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="昏き霊園" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="昏き霊園 ガランサス" loading="lazy" src="img/50001.webp" />
+                    </div>
+
+                    <div class="card" data-name="昏き霊園 イオ" data-cd="50002" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="昏き霊園" data-rarity="シルバー" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="昏き霊園 イオ" loading="lazy" src="img/50002.webp" />
+                    </div>
+
+                    <div class="card" data-name="昏き霊園 フェル" data-cd="50003" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="昏き霊園" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="昏き霊園 フェル" loading="lazy" src="img/50003.webp" />
+                    </div>
+
+                    <div class="card" data-name="昏き霊園 マルべ" data-cd="50004" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="昏き霊園" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="昏き霊園 マルべ" loading="lazy" src="img/50004.webp" />
+                    </div>
+
+                    <div class="card" data-name="昏き霊園 タタン" data-cd="50005" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="昏き霊園" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="昏き霊園 タタン" loading="lazy" src="img/50005.webp" />
+                    </div>
+
+                    <div class="card" data-name="昏き霊園 アイヴィ" data-cd="50006" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="昏き霊園" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="昏き霊園 アイヴィ" loading="lazy" src="img/50006.webp" />
+                    </div>
+
+                    <div class="card" data-name="昏き霊園 ブラック・ローズ" data-cd="50007" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="昏き霊園" data-rarity="レジェンド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="昏き霊園 ブラック・ローズ" loading="lazy" src="img/50007.webp" />
+                    </div>
+
+                    <div class="card" data-name="昏き霊園 リリオン" data-cd="50008" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="昏き霊園" data-rarity="レジェンド" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="昏き霊園 リリオン" loading="lazy" src="img/50008.webp" />
+                    </div>
+
+                    <div class="card" data-name="マディスキア・ロノエ" data-cd="50009" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="マディスキア" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="マディスキア・ロノエ" loading="lazy" src="img/50009.webp" />
+                    </div>
+
+                    <div class="card" data-name="マディスキア・リトネア" data-cd="50010" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="マディスキア" data-rarity="シルバー" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="マディスキア・リトネア" loading="lazy" src="img/50010.webp" />
+                    </div>
+
+                    <div class="card" data-name="マディスキア・テューロ" data-cd="50011" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="マディスキア" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="マディスキア・テューロ" loading="lazy" src="img/50011.webp" />
+                    </div>
+
+                    <div class="card" data-name="マディスキア・グリタ" data-cd="50012" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="マディスキア" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="マディスキア・グリタ" loading="lazy" src="img/50012.webp" />
+                    </div>
+
+                    <div class="card" data-name="マディスキア・クイーン・モルゲン" data-cd="50013" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="マディスキア" data-rarity="レジェンド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="マディスキア・クイーン・モルゲン" loading="lazy" src="img/50013.webp" />
+                    </div>
+
+                    <div class="card" data-name="マディスキア・ノーティル" data-cd="50014" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="マディスキア" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="マディスキア・ノーティル" loading="lazy" src="img/50014.webp" />
+                    </div>
+
+                    <div class="card" data-name="マディスキア・ティーテ" data-cd="50015" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="マディスキア" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="マディスキア・ティーテ" loading="lazy" src="img/50015.webp" />
+                    </div>
+
+                    <div class="card" data-name="マディスキア・ハイト" data-cd="50016" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="マディスキア" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="マディスキア・ハイト" loading="lazy" src="img/50016.webp" />
+                    </div>
+
+                    <div class="card" data-name="マディスキア・ゾエ" data-cd="50017" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="マディスキア" data-rarity="レジェンド" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="マディスキア・ゾエ" loading="lazy" src="img/50017.webp" />
+                    </div>
+
+                    <div class="card" data-name="深影龍 ヒュドラ" data-cd="50018" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="深影龍 ヒュドラ" loading="lazy" src="img/50018.webp" />
+                    </div>
+
+                    <div class="card" data-name="地獄のヘル・デモニス" data-cd="50019" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="地獄のヘル・デモニス" loading="lazy" src="img/50019.webp" />
+                    </div>
+
+                    <div class="card" data-name="リッター・オブ・ヴァンパイア" data-cd="50020" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="リッター・オブ・ヴァンパイア" loading="lazy" src="img/50020.webp" />
+                    </div>
+
+                    <div class="card" data-name="ブラックハウンド" data-cd="50021" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="ブラックハウンド" loading="lazy" src="img/50021.webp" />
+                    </div>
+
+                    <div class="card" data-name="魔獣 コラキ" data-cd="50022" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="魔獣 コラキ" loading="lazy" src="img/50022.webp" />
+                    </div>
+
+                    <div class="card" data-name="ゴーストバット" data-cd="50023" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="ゴーストバット" loading="lazy" src="img/50023.webp" />
+                    </div>
+
+                    <div class="card" data-name="冥府の祈り手" data-cd="50024" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="冥府の祈り手" loading="lazy" src="img/50024.webp" />
+                    </div>
+
+                    <div class="card" data-name="徘徊死霊" data-cd="50025" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="徘徊死霊" loading="lazy" src="img/50025.webp" />
+                    </div>
+
+                    <div class="card" data-name="宵闇の占い師" data-cd="50026" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="宵闇の占い師" loading="lazy" src="img/50026.webp" />
+                    </div>
+
+                    <div class="card" data-name="朽ちた花嫁" data-cd="50027" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="朽ちた花嫁" loading="lazy" src="img/50027.webp" />
+                    </div>
+
+                    <div class="card" data-name="タマモノマエ" data-cd="50028" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="タマモノマエ" loading="lazy" src="img/50028.webp" />
+                    </div>
+
+                    <div class="card" data-name="古魔女・ヤガー" data-cd="50029" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="古魔女・ヤガー" loading="lazy" src="img/50029.webp" />
+                    </div>
+
+                    <div class="card" data-name="スケスケルトン" data-cd="50030" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="スケスケルトン" loading="lazy" src="img/50030.webp" />
+                    </div>
+
+                    <div class="card" data-name="埋葬用ゴーレム" data-cd="50031" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="シェイド" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="埋葬用ゴーレム" loading="lazy" src="img/50031.webp" />
+                    </div>
+                </div>
+            </section>
+
+            <!-- イノセント種族 -->
+            <section id="race-innocent-awaking" class="race-group race-イノセント">
+                <h4>イノセント</h4>
+                <div class="race-controls">
+                    <button class="select-all-btn">全選択</button>
+                    <button class="clear-all-btn">全選択解除</button>
+                </div>
+                <div class="card-list">
+                    <div class="card" data-name="剣を極めし覇者" data-cd="80001" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="剣を極めし覇者" loading="lazy" src="img/80001.webp" />
+                    </div>
+
+                    <div class="card" data-name="超越龍・ミスリルアージュ" data-cd="80002" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="超越龍・ミスリルアージュ" loading="lazy" src="img/80002.webp" />
+                    </div>
+
+                    <div class="card" data-name="咎人 ジェシー" data-cd="80003" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="咎人 ジェシー" loading="lazy" src="img/80003.webp" />
+                    </div>
+
+                    <div class="card" data-name="大海賊少女" data-cd="80006" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="大海賊少女" loading="lazy" src="img/80006.webp" />
+                    </div>
+
+                    <div class="card" data-name="ハローインプ" data-cd="80007" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="ハローインプ" loading="lazy" src="img/80007.webp" />
+                    </div>
+
+                    <div class="card" data-name="魔獣 アグリオス" data-cd="80008" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="魔獣 アグリオス" loading="lazy" src="img/80008.webp" />
+                    </div>
+
+                    <div class="card" data-name="古塔の司書" data-cd="80009" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="古塔の司書" loading="lazy" src="img/80009.webp" />
+                    </div>
+
+                    <div class="card" data-name="奈落の警吏" data-cd="80010" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="奈落の警吏" loading="lazy" src="img/80010.webp" />
+                    </div>
+
+                    <div class="card" data-name="旅の祈祷師" data-cd="80011" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="旅の祈祷師" loading="lazy" src="img/80011.webp" />
+                    </div>
+
+                    <div class="card" data-name="森ノ都の水遣い" data-cd="80012" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="森ノ都の水遣い" loading="lazy" src="img/80012.webp" />
+                    </div>
+
+                    <div class="card" data-name="氷晶の巫女" data-cd="80013" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="氷晶の巫女" loading="lazy" src="img/80013.webp" />
+                    </div>
+
+                    <div class="card" data-name="大天使 ラファエル" data-cd="80015" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="大天使 ラファエル" loading="lazy" src="img/80015.webp" />
+                    </div>
+
+                    <div class="card" data-name="マスターエイドリアン" data-cd="80016" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="マスターエイドリアン" loading="lazy" src="img/80016.webp" />
+                    </div>
+
+                    <div class="card" data-name="セーラーキャット" data-cd="80017" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="セーラーキャット" loading="lazy" src="img/80017.webp" />
+                    </div>
+
+                    <div class="card" data-name="Dr.マッドサイエンティストちゃん" data-cd="80018" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="Dr.マッドサイエンティストちゃん" loading="lazy" src="img/80018.webp" />
+                    </div>
+
+                    <div class="card" data-name="プチエンジェル" data-cd="80019" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="プチエンジェル" loading="lazy" src="img/80019.webp" />
+                    </div>
+
+                    <div class="card" data-name="ギガントハンマー兵" data-cd="80021" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="ギガントハンマー兵" loading="lazy" src="img/80021.webp" />
+                    </div>
+
+                    <div class="card" data-name="夢の精霊" data-cd="80023" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ゴールド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="夢の精霊" loading="lazy" src="img/80023.webp" />
+                    </div>
+
+                    <div class="card" data-name="クイックサポーター" data-cd="80024" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="クイックサポーター" loading="lazy" src="img/80024.webp" />
+                    </div>
+
+                    <div class="card" data-name="ゴブリンの荷物持ち" data-cd="80025" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="ゴブリンの荷物持ち" loading="lazy" src="img/80025.webp" />
+                    </div>
+
+                    <div class="card" data-name="ゴブリンの斧戦士" data-cd="80026" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="ゴブリンの斧戦士" loading="lazy" src="img/80026.webp" />
+                    </div>
+
+                    <div class="card" data-name="ゴブリンの大盾兵" data-cd="80027" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="ゴブリンの大盾兵" loading="lazy" src="img/80027.webp" />
+                    </div>
+
+                    <div class="card" data-name="至高の破壊者" data-cd="80028" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="シルバー" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="至高の破壊者" loading="lazy" src="img/80028.webp" />
+                    </div>
+
+                    <div class="card" data-name="反神のフィロソファー" data-cd="80029" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="反神のフィロソファー" loading="lazy" src="img/80029.webp" />
+                    </div>
+
+                    <div class="card" data-name="輝石のモノリス" data-cd="80030" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="イノセント" data-category="ノーカテゴリ" data-rarity="ブロンズ" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="輝石のモノリス" loading="lazy" src="img/80030.webp" />
+                    </div>
+                </div>
+            </section>
+            <!-- 旧神種族 -->
+            <section id="race-oldgod-awaking" class="race-group race-旧神">
+                <h4>旧神</h4>
+                <div class="race-controls">
+                    <button class="select-all-btn">全選択</button>
+                    <button class="clear-all-btn">全選択解除</button>
+                </div>
+                <div class="card-list">
+                    <div class="card" data-name="旧神 アストレア" data-cd="80005" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="旧神" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="旧神 アストレア" loading="lazy" src="img/80005.webp" />
+                    </div>
+
+                    <div class="card" data-name="旧神 ゼウス" data-cd="90001" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="旧神" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="旧神 ゼウス" loading="lazy" src="img/90001.webp" />
+                    </div>
+
+                    <div class="card" data-name="旧神 ファフニール" data-cd="90002" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="旧神" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="旧神 ファフニール" loading="lazy" src="img/90002.webp" />
+                    </div>
+
+                    <div class="card" data-name="旧神 アルテミス" data-cd="90003" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="旧神" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="旧神 アルテミス" loading="lazy" src="img/90003.webp" />
+                    </div>
+
+                    <div class="card" data-name="旧神 ポセイドン" data-cd="90004" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="旧神" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="旧神 ポセイドン" loading="lazy" src="img/90004.webp" />
+                    </div>
+
+                    <div class="card" data-name="旧神 タナトス" data-cd="90005" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="旧神" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="旧神 タナトス" loading="lazy" src="img/90005.webp" />
+                    </div>
+
+                    <div class="card" data-name="旧神 月読命" data-cd="90006" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="旧神" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="旧神 月読命" loading="lazy" src="img/90006.webp" />
+                    </div>
+
+                    <div class="card" data-name="旧神 天照大神" data-cd="90007" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="旧神" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="旧神 天照大神" loading="lazy" src="img/90007.webp" />
+                    </div>
+
+                    <div class="card" data-name="旧神 ラー・ホルアクティ" data-cd="90008" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="旧神" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="チャージャー"
+                        onclick="expandCard(this)">
+                        <img alt="旧神 ラー・ホルアクティ" loading="lazy" src="img/90008.webp" />
+                    </div>
+
+                    <div class="card" data-name="旧神 デウスエクスマキナ" data-cd="90009" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="旧神" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="ブロッカー"
+                        onclick="expandCard(this)">
+                        <img alt="旧神 デウスエクスマキナ" loading="lazy" src="img/90009.webp" />
+                    </div>
+
+                    <div class="card" data-name="旧神 不死鳥" data-cd="90011" data-pack="Awaking The Oracle「神託者の覚醒」"
+                        data-race="旧神" data-category="ノーカテゴリ" data-rarity="レジェンド" data-type="アタッカー"
+                        onclick="expandCard(this)">
+                        <img alt="旧神 不死鳥" loading="lazy" src="img/90011.webp" />
+                    </div>
+                </div>
+            </section>
+        </div>
+    </section>
+</main>
+</div>
+
+
+    <footer>
+        <div class="site-description">
+            <p>
+                <strong>モスロギア</strong> はアプリ『神託のメソロギア』の非公式ファンサイトです。<br>
+                カード一覧検索やデッキメーカー、デッキ分析などを通じて、プレイヤー向けに便利なデータベース機能を提供しています。
+            </p>
+        </div>
+
+        <p>
+            🔗 公式サイトはこちら 👉
+            <a href="https://mythologiatheoracle.com/" target="_blank" rel="noopener noreferrer">
+                神託のメソロギア公式サイト
+            </a>
+        </p>
+
+        © 2025 Mesorogia Cards. All rights reserved.<br />
+        当サイトは「神託のメソロギア」の非公式ファンサイトです。画像・データ等の著作権は各権利者に帰属します。<br />
+        一部画像素材は「ジュエルセイバーFREE」<br />
+        （<a href="https://www.jewel-s.jp/" target="_blank" rel="noopener">https://www.jewel-s.jp/</a>）を使用しています。<br />
+        💬 ご要望・不具合報告 👉
+        <a href="https://x.com/192837465aruneo" target="_blank" rel="noopener noreferrer">
+            @192837465aruneo
+        </a>
+    </footer>
+    <script>
+
+
+
+
+
+//所持率データ管理
+    /* 所持カードID配列を取得 */
+    function getOwnedCardIds() {
+        return [...document.querySelectorAll(".card.owned")].map(card => card.dataset.cd);
+    }
+    /*カードデータ自動読み込み*/
+    window.addEventListener('DOMContentLoaded', () => {
+    loadOwnership();
+    });
+
+    function loadOwnership() {
+    const data = localStorage.getItem("ownedCards");
+    if (!data) return;
+    applyOwnership(JSON.parse(data));
+    console.log("自分の所持カードを自動読み込みしました！");
+    }
+
+
+    /* 保存（localStorage）*/
+    function saveOwnership() {
+        const ids = getOwnedCardIds();
+        localStorage.setItem("ownedCards", JSON.stringify(ids));
+        alert("所持カードを保存しました！");
+    }
+
+
+    /* 他人のデータを一時的に読み込み（保存しない）*/
+    function importOwnership() {
+        const input = prompt("相手のカードデータを貼り付けてください");
+        if (!input) return;
+        try {
+            const ids = JSON.parse(input);
+            applyOwnership(ids);
+            alert("他人の所持カードを一時的に反映しました！\n自分の保存データは残っています。");
+        } catch (e) {
+            alert("データの形式が正しくありません！");
+        }
+    }
+
+    /* 所持状態の適用共通 */
+    function applyOwnership(ids) {
+        document.querySelectorAll(".card").forEach(card => {
+            const cd = card.dataset.cd;
+            if (ids.includes(cd)) {
+                card.classList.add("owned");
+            } else {
+                card.classList.remove("owned");
+            }
+        });
+        updateSummary();
+        updateMobileSummary();
+    }
+
+    /* 共有用に所持データをエクスポート */
+    function exportOwnership() {
+        const ids = getOwnedCardIds();
+        const data = JSON.stringify(ids);
+        navigator.clipboard.writeText(data).then(() => {
+            alert("所持カードデータをコピーしました！\n相手に送ってください！");
+        });
+    }
+
+
+//所持率表示
+function updateSummary() {
+    // 全体所持率の計算
+    const cards = document.querySelectorAll(".card");
+    const owned = [...cards].filter(card => card.classList.contains('owned')).length;
+    const total = cards.length;
+    const percent = total ? Math.round((owned / total) * 100) : 0;
+
+    document.getElementById("owned-count").textContent = owned;
+    document.getElementById("total-count").textContent = total;
+    document.getElementById("owned-percent").textContent = `${percent}%`;
+
+    updatePackSummary();  // パックごと
+    updateMobileSummary(); // モバイル表示
+}
+/*各パック所持率表示*/
+    function updatePackSummary() {
+        const packs = [
+            { key: 'awaking', nameMain: 'Awaking The Oracle', nameSub: '「神託者の覚醒」', selector: '#pack-awaking' },
+        ];
+
+        const pcList = document.getElementById('pack-summary-list');
+        const mobileSelect = document.getElementById('pack-selector');
+        const mobileSummary = document.getElementById('mobile-pack-summary');
+
+        pcList.innerHTML = '';
+        mobileSelect.innerHTML = '';
+
+        packs.forEach(pack => {
+            const cards = document.querySelectorAll(`[data-pack*="${pack.nameMain}"]`);
+            const owned = [...cards].filter(card => card.classList.contains('owned')).length;
+            const total = cards.length;
+            const percent = total ? Math.round((owned / total) * 100) : 0;
+
+            // PC用リンク
+            const li = document.createElement('li');
+            li.innerHTML = `
+            <a href="${pack.selector}" class="pack-summary-link">
+                <span class="pack-summary-name">
+                ${pack.nameMain}<br><small>${pack.nameSub}</small>
+                </span>
+                <span class="pack-summary-rate">${owned}/${total} (${percent}%)</span>
+            </a>
+            `;
+
+            pcList.appendChild(li);
+
+            // スマホ用セレクト
+            const option = document.createElement('option');
+            option.value = pack.key;
+            option.textContent = pack.nameMain;
+            mobileSelect.appendChild(option);
+
+            // 現在選択中のパックに合わせて表示を更新
+            if (mobileSelect.value === pack.key) {
+                mobileSummary.innerHTML = `<a href="${pack.selector}">${pack.nameMain}: ${owned}/${total} (${percent}%)</a>`;
+            }
+        });
+    }
+
+
+    function selectMobilePack(packKey) {
+        const mobileSelect = document.getElementById('pack-selector');
+        mobileSelect.value = packKey;
+        updatePackSummary();
+    }
+
+
+    // PCのサマリーと同期する例
+    function updateMobileSummary() {
+        document.getElementById("mobile-owned-count").textContent = document.getElementById("owned-count").textContent;
+        document.getElementById("mobile-total-count").textContent = document.getElementById("total-count").textContent;
+        document.getElementById("mobile-owned-percent").textContent = document.getElementById("owned-percent").textContent;
+    }
+
+    // 所持状況更新後に必ず呼ぶ
+    updateMobileSummary();
+</script>
+</body>
+

@@ -28,6 +28,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.4.4/libs/lz-string.min.js"></script>
+    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
     <style>
 /* ======== リセット & 基本 ======== */
 body {
@@ -492,9 +493,35 @@ top: 0;
 background: #fff;
 border-bottom: 2px solid #ccc;
 z-index: 2000;
-padding: 0.5rem;
-font-size: 0.8rem;
+padding: 0.2rem;
+font-size:clamp(0.6rem, 3vw, 20px);
 }
+
+
+.summary-bar {
+display: flex;
+justify-content: space-between;
+align-items: center;
+}
+
+#mobile-pack-summary {
+margin-top: 0.3rem;
+}
+
+#mobile-pack-summary .pack-name {
+font-size: clamp(0.5rem, 2.8vw, 20px);  /* パック名少し大きめ */
+font-weight: bold;
+}
+
+#mobile-pack-summary .pack-rate {
+font-size: clamp(0.4rem, 2.6vw, 20px);
+text-align: right;
+}
+
+#mobile-pack-summary a {
+text-decoration: none; /* 下線消す */
+}
+
 .save-load-buttons {
 display: flex;
 gap: 0.5rem;
@@ -590,32 +617,39 @@ padding: 0.5em ;
 
 <!-- スマホ用 所持率サマリー上部バー -->
 <div class="top-summary">
-    <!-- 所持率情報 + パック選択 -->
+
+    <!-- 所持率 + ツイート -->
     <div class="summary-bar">
         <span>
-            全体: <span id="mobile-owned-count">0</span>/<span id="mobile-total-count">0</span>
-            (<span id="mobile-owned-percent">0%</span>)
-        </span>
-        <span>
-            種類: <span id="mobile-owned-type-count">0</span>/<span id="mobile-total-type-count">0</span>
+            全所持率: <span id="mobile-owned-type-count">0</span>/<span id="mobile-total-type-count">0</span>
             (<span id="mobile-owned-type-percent">0%</span>)
         </span>
+        <a href="https://twitter.com/share?ref_src=twsrc%5Etfw" class="twitter-share-button" data-show-count="false"
+            data-text="モスロギア所持率チェック結果！">Tweet</a>
+    </div>
 
+    <!-- コンプ率 + プルダウン -->
+    <div class="summary-bar">
+        <span>
+            全コンプ率: <span id="mobile-owned-count">0</span>/<span id="mobile-total-count">0</span>
+            (<span id="mobile-owned-percent">0%</span>)
+        </span>
         <select id="pack-selector" onchange="selectMobilePack(this.value)">
-            <option value="awaking">Awaking The Oracle「神託者の覚醒」</option>
+            <option value="awaking">Awaking The Oracle</option>
         </select>
     </div>
 
-    <!-- 選択パックの所持率情報 -->
+    <!-- パック所持率 -->
     <div id="mobile-pack-summary">
-        <a href="#pack-awaking">Awaking The Oracle: 10/50 (20%)</a>
-    </div>
-
-    <!-- ツイッター共有 -->
-    <div>
-        <button id="mobile-summary-share-btn">🐦 ツイート</button>
+        <div class="pack-name">Awaking The Oracle</div>
+        <div class="pack-rate">
+            所持率: 0/0 (0%)<br>
+            コンプ率: 0/0 (0%)
+        </div>
     </div>
 </div>
+
+
 
 
 
@@ -627,7 +661,6 @@ padding: 0.5em ;
     <div class="summary-block">
         <a href="https://twitter.com/share?ref_src=twsrc%5Etfw" class="twitter-share-button" data-show-count="false"
             data-text="モスロギア所持率チェック結果！">Tweet</a>
-        <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
     </div>
     <!-- 全カード所持率 -->
     <div id="summary" class="summary-block">
@@ -3989,15 +4022,15 @@ function updatePackSummary() {
         option.textContent = pack.nameMain;
         mobileSelect.appendChild(option);
 
-        // モバイルパック概要
+        // モバイルパック概要の更新部分
         if (mobileSelect.value === pack.key) {
             mobileSummary.innerHTML = `
-    <a href="${pack.selector}">
-        ${pack.nameMain}:<br>
-        種類 ${ownedTypes}/${totalTypes} (${typePercent}%)<br>
-        コンプ ${owned}/${total} (${percent}%)
-    </a>
-    `;
+    <div class="pack-name">${pack.nameMain}</div>
+    <div class="pack-rate">
+      所持率: ${ownedTypes}/${totalTypes} (${typePercent}%)<br>
+      コンプ率: ${owned}/${total} (${percent}%)
+    </div>
+  `;
         }
     });
 }

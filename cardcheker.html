@@ -246,7 +246,13 @@ transform: translateY(-2px);
 transform: translateY(0);
 opacity: 0.9;
 }
-
+#save-btn {
+position: relative;
+}
+#guest-note {
+display: block;
+margin-top: 2px;
+}
 /* ======== カード一覧グリッド ======== */
 .pack-section {
 border: 6px solid #646464;
@@ -630,7 +636,10 @@ padding: 0.5em ;
 <main class="card-content">
 <!-- 所持データ操作ボタンエリア -->
 <div class="save-load-buttons">
-    <button id="save-btn" onclick="saveOwnership()">💾 保存</button>
+    <button id="save-btn" onclick="saveOwnership()">
+        💾 保存
+        <span id="guest-note" style="display:none; font-size:0.7em; display:block;">※他人データ表示中</span>
+    </button>
     <button onclick="exportOwnershipURL()">🔗 共有コピー</button>
     <button onclick="importOwnership()">📥 他人データ読み込み</button>
 </div>
@@ -3554,9 +3563,14 @@ padding: 0.5em ;
     function toggleOwnership(card) {
         // 今の所持数を取得
         let count = parseInt(card.dataset.count) || 0;
-
-        // 1増やして4なら0に戻す
-        count = (count + 1) % 4;
+        
+        if (card.dataset.race === "旧神") {
+            // 旧神だけは0→1→0のループ
+            count = count === 0 ? 1 : 0;
+        } else {
+            // 通常カードは0→1→2→3→0
+            count = (count + 1) % 4;
+        }
 
         // データ属性更新
         card.dataset.count = count;
@@ -3722,14 +3736,18 @@ window.addEventListener('DOMContentLoaded', () => {
 //保存ボタン切り替え
 function updateSaveButtonState() {
     const btn = document.getElementById('save-btn');
+    const note = document.getElementById('guest-note');
+
     if (window.isGuestView) {
-        btn.textContent = "※他人データ表示中";
-        btn.style.backgroundColor = "#aaa";
+        note.style.display = 'block';
+        btn.style.background = 'linear-gradient(135deg, #e53935, #e57373)';
     } else {
-        btn.textContent = "💾 保存";
-        btn.style.backgroundColor = ""; // 元に戻す
+        note.style.display = 'none';
+        btn.style.background = 'linear-gradient(135deg, #4caf50, #81c784)';
     }
 }
+
+
 
 
     /* 所持カード枚数確認 */

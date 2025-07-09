@@ -155,12 +155,12 @@ margin-bottom: 0.5em;
 
 .summary-label {
 font-weight: bold;
-font-size: clamp(0.9rem, 1.2vw, 1.1rem);
+font-size: clamp(0.9rem, 2vw, 1.1rem);
 color: #333;
 }
 
 .summary-rate {
-font-size: clamp(0.9rem, 1.2vw, 1.1rem);
+font-size: clamp(0.4rem, 1.8vw, 1.1rem);
 margin-top: 0.2em;
 align-self: flex-end;    /* ← 右寄せにする */
 width: 100%;
@@ -3923,17 +3923,18 @@ function updateSummary() {
     const percent = total ? Math.round((owned / total) * 100) : 0;
     const typePercent = totalTypes ? Math.round((ownedTypes / totalTypes) * 100) : 0;
 
-    document.getElementById("owned-count").textContent = owned;
-    document.getElementById("total-count").textContent = total;
-    document.getElementById("owned-percent").textContent = `${percent}%`;
-
     document.getElementById("owned-type-count").textContent = ownedTypes;
     document.getElementById("total-type-count").textContent = totalTypes;
     document.getElementById("owned-type-percent").textContent = `${typePercent}%`;
 
+    document.getElementById("owned-count").textContent = owned;
+    document.getElementById("total-count").textContent = total;
+    document.getElementById("owned-percent").textContent = `${percent}%`;
+
     updatePackSummary();
     updateMobileSummary();
 }
+
 
 /*各パック所持率表示*/
 function updatePackSummary() {
@@ -3969,16 +3970,17 @@ function updatePackSummary() {
         // PCリンク
         const li = document.createElement('li');
         li.innerHTML = `
-    <a href="${pack.selector}" class="pack-summary-link">
+  <a href="${pack.selector}" class="pack-summary-link">
     <span class="pack-summary-name">
-        ${pack.nameMain}<br><small>${pack.nameSub}</small>
+      ${pack.nameMain}<br><small>${pack.nameSub}</small>
     </span>
     <span class="pack-summary-rate">
-        種類: ${ownedTypes}/${totalTypes} (${typePercent}%)<br>
-        コンプ: ${owned}/${total} (${percent}%)
+      所持率: ${ownedTypes}/${totalTypes} (${typePercent}%)<br>
+      コンプ率: ${owned}/${total} (${percent}%)
     </span>
-    </a>
+  </a>
 `;
+
         pcList.appendChild(li);
 
         // モバイルセレクト

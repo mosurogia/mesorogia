@@ -590,12 +590,15 @@ padding: 0.5em ;
 
 <!-- スマホ用 所持率サマリー上部バー -->
 <div class="top-summary">
-
     <!-- 所持率情報 + パック選択 -->
     <div class="summary-bar">
         <span>
             全体: <span id="mobile-owned-count">0</span>/<span id="mobile-total-count">0</span>
             (<span id="mobile-owned-percent">0%</span>)
+        </span>
+        <span>
+            種類: <span id="mobile-owned-type-count">0</span>/<span id="mobile-total-type-count">0</span>
+            (<span id="mobile-owned-type-percent">0%</span>)
         </span>
 
         <select id="pack-selector" onchange="selectMobilePack(this.value)">
@@ -607,29 +610,47 @@ padding: 0.5em ;
     <div id="mobile-pack-summary">
         <a href="#pack-awaking">Awaking The Oracle: 10/50 (20%)</a>
     </div>
+
+    <!-- ツイッター共有 -->
+    <div>
+        <button id="mobile-summary-share-btn">🐦 ツイート</button>
+    </div>
 </div>
+
 
 
 
 <div class="page-wrapper">
 <!-- PC・タブレット用 所持率サマリーサイドバー -->
 <aside class="summary-panel">
-<!-- 全体所持率 -->
+    <!-- ツイッター共有 -->
+    <div class="summary-block">
+        <a href="https://twitter.com/share?ref_src=twsrc%5Etfw" class="twitter-share-button" data-show-count="false"
+            data-text="モスロギア所持率チェック結果！">Tweet</a>
+        <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+    </div>
+    <!-- 全カード所持率 -->
     <div id="summary" class="summary-block">
-        <span class="summary-label">全カード所持率</span>
+        <span class="summary-label">全カード</span>
         <span class="summary-rate">
-            <span id="owned-count">0</span>/<span id="total-count">0</span> (<span id="owned-percent">0%</span>)
+            所持率: <span id="owned-type-count">0</span>/<span id="total-type-count">0</span> (<span
+                id="owned-type-percent">0%</span>)<br>
+            コンプ率: <span id="owned-count">0</span>/<span id="total-count">0</span> (<span id="owned-percent">0%</span>)
         </span>
     </div>
 
-<!-- 各パック所持率 -->
+    <!-- 各パック所持率 -->
     <div id="pack-summary">
         <ul id="pack-summary-list">
             <!-- JSで生成 -->
-        </ul></div>
+        </ul>
+    </div>
+
 
 
 </aside>
+
+
 
 
 
@@ -3563,7 +3584,7 @@ padding: 0.5em ;
     function toggleOwnership(card) {
         // 今の所持数を取得
         let count = parseInt(card.dataset.count) || 0;
-        
+
         if (card.dataset.race === "旧神") {
             // 旧神だけは0→1→0のループ
             count = count === 0 ? 1 : 0;
@@ -3600,32 +3621,43 @@ padding: 0.5em ;
 
 
 //パック＋1ボタン
-    document.querySelectorAll('.pack-select-all-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const packSection = btn.closest('.pack-section');
-            const cards = packSection.querySelectorAll('.card');
-            cards.forEach(card => {
-                let count = parseInt(card.dataset.count) || 0;
+document.querySelectorAll('.pack-select-all-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const packSection = btn.closest('.pack-section');
+        const cards = packSection.querySelectorAll('.card');
+
+        cards.forEach(card => {
+            let count = parseInt(card.dataset.count) || 0;
+
+            if (card.dataset.race === "旧神") {
+                count = 1; // 旧神は無条件で1枚
+            } else {
                 if (count < 3) count++;
-                card.dataset.count = count;
+            }
 
-                card.classList.remove('owned-1', 'owned-2', 'owned-3', 'owned', 'grayscale');
-                if (count > 0) {
-                    card.classList.add(`owned-${count}`);
-                    card.classList.add('owned');
-                } else {
-                    card.classList.add('grayscale');
-                }
+            card.dataset.count = count;
 
-                const mark = card.querySelector('.owned-mark');
-                if (mark) {
-                    mark.textContent = count > 0 ? count : '';
-                    mark.style.display = count > 0 ? 'flex' : 'none';
-                }
-            });
-            updateSummary();
+            card.classList.remove('owned-1', 'owned-2', 'owned-3', 'owned', 'grayscale');
+
+            if (count === 0) {
+                card.classList.add('grayscale');
+            } else {
+                card.classList.add(`owned-${count}`);
+                card.classList.add('owned');
+            }
+
+            const mark = card.querySelector('.owned-mark');
+            if (mark) {
+                mark.textContent = count > 0 ? count : '';
+                mark.style.display = count > 0 ? 'flex' : 'none';
+            }
         });
+
+        updateSummary();
     });
+});
+
+
 
 
 
@@ -3653,32 +3685,42 @@ padding: 0.5em ;
 
 
 //種族＋1ボタン
-    document.querySelectorAll('.select-all-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const raceGroup = btn.closest('.race-group');
-            const cards = raceGroup.querySelectorAll('.card');
-            cards.forEach(card => {
-                let count = parseInt(card.dataset.count) || 0;
+document.querySelectorAll('.select-all-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const raceGroup = btn.closest('.race-group');
+        const cards = raceGroup.querySelectorAll('.card');
+
+        cards.forEach(card => {
+            let count = parseInt(card.dataset.count) || 0;
+
+            if (card.dataset.race === "旧神") {
+                count = 1; // 旧神は無条件で1枚
+            } else {
                 if (count < 3) count++;
-                card.dataset.count = count;
+            }
 
-                card.classList.remove('owned-1', 'owned-2', 'owned-3', 'owned', 'grayscale');
-                if (count > 0) {
-                    card.classList.add(`owned-${count}`);
-                    card.classList.add('owned');
-                } else {
-                    card.classList.add('grayscale');
-                }
+            card.dataset.count = count;
 
-                const mark = card.querySelector('.owned-mark');
-                if (mark) {
-                    mark.textContent = count > 0 ? count : '';
-                    mark.style.display = count > 0 ? 'flex' : 'none';
-                }
-            });
-            updateSummary();
+            card.classList.remove('owned-1', 'owned-2', 'owned-3', 'owned', 'grayscale');
+
+            if (count === 0) {
+                card.classList.add('grayscale');
+            } else {
+                card.classList.add(`owned-${count}`);
+                card.classList.add('owned');
+            }
+
+            const mark = card.querySelector('.owned-mark');
+            if (mark) {
+                mark.textContent = count > 0 ? count : '';
+                mark.style.display = count > 0 ? 'flex' : 'none';
+            }
         });
+
+        updateSummary();
     });
+});
+
 
 //種族全解除ボタン
     document.querySelectorAll('.clear-all-btn').forEach(btn => {
@@ -3865,72 +3907,99 @@ function updateSaveButtonState() {
 
 //所持率表示
 function updateSummary() {
-    // 全体所持率の計算
     const cards = document.querySelectorAll(".card");
     let owned = 0;
+    let ownedTypes = 0;
 
     cards.forEach(card => {
         const count = parseInt(card.dataset.count) || 0;
         owned += count;
+        if (count > 0) ownedTypes++;
     });
 
     const total = cards.length * 3;
+    const totalTypes = cards.length;
+
     const percent = total ? Math.round((owned / total) * 100) : 0;
+    const typePercent = totalTypes ? Math.round((ownedTypes / totalTypes) * 100) : 0;
 
     document.getElementById("owned-count").textContent = owned;
     document.getElementById("total-count").textContent = total;
     document.getElementById("owned-percent").textContent = `${percent}%`;
 
-    updatePackSummary();  // パックごと
-    updateMobileSummary(); // モバイル表示
+    document.getElementById("owned-type-count").textContent = ownedTypes;
+    document.getElementById("total-type-count").textContent = totalTypes;
+    document.getElementById("owned-type-percent").textContent = `${typePercent}%`;
+
+    updatePackSummary();
+    updateMobileSummary();
 }
+
 /*各パック所持率表示*/
-    function updatePackSummary() {
-        const packs = [
-            { key: 'awaking', nameMain: 'Awaking The Oracle', nameSub: '「神託者の覚醒」', selector: '#pack-awaking' },
-        ];
+function updatePackSummary() {
+    const packs = [
+        { key: 'awaking', nameMain: 'Awaking The Oracle', nameSub: '「神託者の覚醒」', selector: '#pack-awaking' },
+    ];
 
-        const pcList = document.getElementById('pack-summary-list');
-        const mobileSelect = document.getElementById('pack-selector');
-        const mobileSummary = document.getElementById('mobile-pack-summary');
+    const pcList = document.getElementById('pack-summary-list');
+    const mobileSelect = document.getElementById('pack-selector');
+    const mobileSummary = document.getElementById('mobile-pack-summary');
 
-        pcList.innerHTML = '';
-        mobileSelect.innerHTML = '';
+    pcList.innerHTML = '';
+    mobileSelect.innerHTML = '';
 
-        packs.forEach(pack => {
-            const cards = document.querySelectorAll(`[data-pack*="${pack.nameMain}"]`);
-            let owned = 0;
-            cards.forEach(card => {
-                owned += parseInt(card.dataset.count) || 0;
-            });
-            const total = cards.length * 3;
-            const percent = total ? Math.round((owned / total) * 100) : 0;
+    packs.forEach(pack => {
+        const cards = document.querySelectorAll(`[data-pack*="${pack.nameMain}"]`);
 
-            // PC用リンク
-            const li = document.createElement('li');
-            li.innerHTML = `
-            <a href="${pack.selector}" class="pack-summary-link">
-                <span class="pack-summary-name">
-                ${pack.nameMain}<br><small>${pack.nameSub}</small>
-                </span>
-                <span class="pack-summary-rate">${owned}/${total} (${percent}%)</span>
-            </a>
-            `;
+        let owned = 0;
+        let ownedTypes = 0;
 
-            pcList.appendChild(li);
-
-            // スマホ用セレクト
-            const option = document.createElement('option');
-            option.value = pack.key;
-            option.textContent = pack.nameMain;
-            mobileSelect.appendChild(option);
-
-            // 現在選択中のパックに合わせて表示を更新
-            if (mobileSelect.value === pack.key) {
-                mobileSummary.innerHTML = `<a href="${pack.selector}">${pack.nameMain}: ${owned}/${total} (${percent}%)</a>`;
-            }
+        cards.forEach(card => {
+            const count = parseInt(card.dataset.count) || 0;
+            owned += count;
+            if (count > 0) ownedTypes++;
         });
-    }
+
+        const total = cards.length * 3;
+        const totalTypes = cards.length;
+
+        const percent = total ? Math.round((owned / total) * 100) : 0;
+        const typePercent = totalTypes ? Math.round((ownedTypes / totalTypes) * 100) : 0;
+
+        // PCリンク
+        const li = document.createElement('li');
+        li.innerHTML = `
+    <a href="${pack.selector}" class="pack-summary-link">
+    <span class="pack-summary-name">
+        ${pack.nameMain}<br><small>${pack.nameSub}</small>
+    </span>
+    <span class="pack-summary-rate">
+        種類: ${ownedTypes}/${totalTypes} (${typePercent}%)<br>
+        コンプ: ${owned}/${total} (${percent}%)
+    </span>
+    </a>
+`;
+        pcList.appendChild(li);
+
+        // モバイルセレクト
+        const option = document.createElement('option');
+        option.value = pack.key;
+        option.textContent = pack.nameMain;
+        mobileSelect.appendChild(option);
+
+        // モバイルパック概要
+        if (mobileSelect.value === pack.key) {
+            mobileSummary.innerHTML = `
+    <a href="${pack.selector}">
+        ${pack.nameMain}:<br>
+        種類 ${ownedTypes}/${totalTypes} (${typePercent}%)<br>
+        コンプ ${owned}/${total} (${percent}%)
+    </a>
+    `;
+        }
+    });
+}
+
 
 
     function selectMobilePack(packKey) {

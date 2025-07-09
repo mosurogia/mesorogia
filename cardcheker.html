@@ -10,7 +10,7 @@
     <!-- キーワード（今は効果は薄いが一応） -->
     <meta name="keywords" content="カードゲーム,デッキメーカー,DCG,神託のメソロギア,メソロギア,神託,デッキ分析,一覧,モスロギア">
     <!-- OGP基本 -->
-    <meta property="og:title" content="モスロギア | 神託のメソロギア デッキメーカー">
+    <meta property="og:title" content="モスロギア | 神託のメソロギア 所持率チェッカー">
     <meta property="og:description" content="神託のメソロギアのカード検索・デッキ構築ができる非公式サイトです。">
     <meta property="og:image" content="https://mosurogia.github.io/mesorogia-cards/img/deckmakerogp.webp">
     <meta property="og:url" content="https://mosurogia.github.io/mesorogia-cards/">
@@ -167,6 +167,7 @@ align-self: flex-end;    /* ← 右寄せにする */
 width: 100%;
 text-align: right;
 }
+
 /*各パック所持率*/
 #pack-summary-list {
 list-style: none;
@@ -213,6 +214,22 @@ text-align: right;
 flex: 1;
 padding: 0 0.4rem;
 }
+
+
+/*Xポストボタン*/
+.summary-share {
+display: flex;
+justify-content: flex-end;
+align-items: center;
+width: 100%;
+padding-right: 2px;  /* 右端の空き補正 */
+height: 24px;        /* iframe高さに合わせて上下中央揃え */
+}
+
+.summary-share iframe {
+vertical-align: middle; /* iframeの上下ズレ補正 */
+}
+
 
 
 /*=======保存読み込み共有=========*/
@@ -403,18 +420,18 @@ overflow-y: auto;
 box-sizing: border-box;
 }
 #scrollTopFixed {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 40px;
-  aspect-ratio: 1/1;
-  padding: 0;
-  font-size: 25px;
-  background-color: #eee;
-  border-radius: 50%;
-  border: 1px solid #aaa;
-  cursor: pointer;
-  z-index: 9999;
+position: fixed;
+bottom: 20px;
+right: 20px;
+width: 40px;
+aspect-ratio: 1/1;
+padding: 0;
+font-size: 25px;
+background-color: #eee;
+border-radius: 50%;
+border: 1px solid #aaa;
+cursor: pointer;
+z-index: 9999;
 }
 /* ======== フィルターボタン ======== */
 .filter-btn {
@@ -670,11 +687,7 @@ padding: 0.5em ;
 <div class="page-wrapper">
 <!-- PC・タブレット用 所持率サマリーサイドバー -->
 <aside class="summary-panel">
-    <!-- ツイッター共有 -->
-    <div class="summary-block">
-        <a href="https://twitter.com/share?ref_src=twsrc%5Etfw" class="twitter-share-button" data-show-count="false"
-            data-text="モスロギア所持率チェック結果！">Tweet</a>
-    </div>
+
     <!-- 全カード所持率 -->
     <div id="summary" class="summary-block">
         <span class="summary-label">全カード</span>
@@ -683,7 +696,15 @@ padding: 0.5em ;
                 id="owned-type-percent">0%</span>)<br>
             コンプ率: <span id="owned-count">0</span>/<span id="total-count">0</span> (<span id="owned-percent">0%</span>)
         </span>
+
+        <!-- ツイート共有 -->
+        <div class="summary-share">
+            <a href="https://twitter.com/share?ref_src=twsrc%5Etfw" class="twitter-share-button" data-show-count="false"
+                data-text="">Tweet</a>
+        </div>
+
     </div>
+
 
     <!-- 各パック所持率 -->
     <div id="pack-summary">
@@ -3627,6 +3648,13 @@ padding: 0.5em ;
         </a>
     </footer>
     <script>
+
+//ページトップ移動ボタン
+function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+
 //画像クリックカードカウント//
     function toggleOwnership(card) {
         // 今の所持数を取得
@@ -3703,9 +3731,6 @@ document.querySelectorAll('.pack-select-all-btn').forEach(btn => {
         updateSummary();
     });
 });
-
-
-
 
 
 //パック全解除ボタン
@@ -3988,6 +4013,15 @@ function updateSummary() {
     document.getElementById("owned-count").textContent = owned;
     document.getElementById("total-count").textContent = total;
     document.getElementById("owned-percent").textContent = `${percent}%`;
+
+    // ツイートテキストを全カード所持率に合わせて更新
+    const tweetText =
+`【信託のメソロギア】
+全カード所持率${typePercent}％
+モスロギア～所持率チェッカー～
+＃信託のメソロギア`;
+
+    document.querySelector('.twitter-share-button').setAttribute('data-text', tweetText);
 
     updatePackSummary();
     updateMobileSummary();

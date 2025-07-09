@@ -3843,11 +3843,22 @@ function updateSaveButtonState() {
     });
 
     function loadOwnership() {
-    const data = localStorage.getItem("ownedCards");
-    if (!data) return;
-    applyOwnership(JSON.parse(data));
-    console.log("自分の所持カードを自動読み込みしました！");
+        const data = localStorage.getItem("ownedCards");
+
+        if (data) {
+            applyOwnership(JSON.parse(data));
+            console.log("自分の所持カードを自動読み込みしました！");
+        } else {
+            // データが無い場合は全カード未所持状態を適用
+            const owned = {};
+            document.querySelectorAll(".card").forEach(card => {
+                owned[card.dataset.cd] = 0;
+            });
+            applyOwnership(owned);
+            console.log("所持データなし：全カード未所持で初期化しました");
+        }
     }
+
 
 
     /* 保存（localStorage）*/

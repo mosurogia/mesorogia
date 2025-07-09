@@ -630,7 +630,7 @@ padding: 0.5em ;
 <main class="card-content">
 <!-- 所持データ操作ボタンエリア -->
 <div class="save-load-buttons">
-    <button onclick="saveOwnership()">💾 保存</button>
+    <button id="save-btn" onclick="saveOwnership()">💾 保存</button>
     <button onclick="exportOwnershipURL()">🔗 共有コピー</button>
     <button onclick="importOwnership()">📥 他人データ読み込み</button>
 </div>
@@ -3691,50 +3691,7 @@ padding: 0.5em ;
 
 
 //所持率データ管理
-    /* 所持カード枚数確認 */
-    function getOwnedCardData() {
-        const data = {};
-        document.querySelectorAll(".card").forEach(card => {
-            const count = parseInt(card.dataset.count) || 0;
-            if (count > 0) {
-                data[card.dataset.cd] = count;
-            }
-        });
-        return data;
-    }
-    /*カードデータ自動読み込み*/
-    window.addEventListener('DOMContentLoaded', () => {
-    loadOwnership();
-    });
 
-    function loadOwnership() {
-    const data = localStorage.getItem("ownedCards");
-    if (!data) return;
-    applyOwnership(JSON.parse(data));
-    console.log("自分の所持カードを自動読み込みしました！");
-    }
-
-
-    /* 保存（localStorage）*/
-    function saveOwnership() {
-        const data = getOwnedCardData();
-        localStorage.setItem("ownedCards", JSON.stringify(data));
-        alert("所持カードを保存しました！");
-    }
-
-
-    /* 他人のデータを一時的に読み込み（保存しない）*/
-    function importOwnership() {
-        const input = prompt("相手のカードデータを貼り付けてください");
-        if (!input) return;
-        try {
-            const ids = JSON.parse(input);
-            applyOwnership(ids);
-            alert("他人の所持カードを一時的に反映しました！\n自分の保存データは残っています。");
-        } catch (e) {
-            alert("データの形式が正しくありません！");
-        }
-    }
 //読み込みコード処理
 window.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
@@ -3751,13 +3708,88 @@ window.addEventListener('DOMContentLoaded', () => {
             });
             applyOwnership(owned);
             alert("共有URLの所持率データを読み込みました！");
+            window.isGuestView = true;  // ← ここで「他人データモード」にする
         } catch (e) {
             alert("URLの所持データの形式が正しくありません！");
         }
     } else {
-        loadOwnership(); // 通常のローカル保存読み込み
+        loadOwnership();  // 自分の保存データを読み込み
+        window.isGuestView = false;  // 自分データモード
     }
+    updateSaveButtonState(); // ボタン状態を更新
 });
+
+//保存ボタン切り替え
+function updateSaveButtonState() {
+    const btn = document.getElementById('save-btn');
+    if (window.isGuestView) {
+        btn.textContent = "※他人データ表示中";
+        btn.style.backgroundColor = "#aaa";
+    } else {
+        btn.textContent = "💾 保存";
+        btn.style.backgroundColor = ""; // 元に戻す
+    }
+}
+
+
+    /* 所持カード枚数確認 */
+    function getOwnedCardData() {
+        const data = {};
+        document.querySelectorAll(".card").forEach(card => {
+            const count = parseInt(card.dataset.count) || 0;
+            if (count > 0) {
+                data[card.dataset.cd] = count;
+            }
+        });
+        return data;
+    }
+
+    /*カードデータ自動読み込み*/
+    window.addEventListener('DOMContentLoaded', () => {
+    loadOwnership();
+    });
+
+    function loadOwnership() {
+    const data = localStorage.getItem("ownedCards");
+    if (!data) return;
+    applyOwnership(JSON.parse(data));
+    console.log("自分の所持カードを自動読み込みしました！");
+    }
+
+
+    /* 保存（localStorage）*/
+    function saveOwnership() {
+        if (window.isGuestView) {
+            const confirmSave = confirm(
+                "これは他人の所持データです。\n本当に自分の保存データとして上書きしてもよいですか？"
+            );
+            if (!confirmSave) return;
+            // → OKなら保存処理へ進む
+        }
+
+        const data = getOwnedCardData();
+        localStorage.setItem("ownedCards", JSON.stringify(data));
+        alert("所持カードを保存しました！");
+        window.isGuestView = false; // もう自分データとして扱う
+        updateSaveButtonState();
+    }
+
+
+
+    /* 他人のデータを一時的に読み込み（保存しない）*/
+    function importOwnership() {
+        const input = prompt("相手のカードデータを貼り付けてください");
+        if (!input) return;
+        try {
+            const ids = JSON.parse(input);
+            applyOwnership(ids);
+            alert("他人の所持カードを一時的に反映しました！\n自分の保存データは残っています。");
+        } catch (e) {
+            alert("データの形式が正しくありません！");
+        }
+    }
+
+
 
     /* 所持状態の画面反映 */
     function applyOwnership(data) {

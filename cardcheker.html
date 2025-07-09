@@ -402,7 +402,20 @@ max-height: 100%;
 overflow-y: auto;
 box-sizing: border-box;
 }
-
+#scrollTopFixed {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 40px;
+  aspect-ratio: 1/1;
+  padding: 0;
+  font-size: 25px;
+  background-color: #eee;
+  border-radius: 50%;
+  border: 1px solid #aaa;
+  cursor: pointer;
+  z-index: 9999;
+}
 /* ======== フィルターボタン ======== */
 .filter-btn {
 margin: 4px 0px;
@@ -697,6 +710,7 @@ padding: 0.5em ;
     <button onclick="exportOwnershipURL()">🔗 共有コピー</button>
     <button onclick="importOwnership()">📥 他人データ読み込み</button>
 </div>
+<button id="scrollTopFixed" onclick="scrollToTop()">▲</button>
 
     <!-- カード一覧（パックごと） -->
     <section id="pack-awaking" class="pack-section">

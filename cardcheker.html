@@ -544,7 +544,7 @@ background: #fff;
 border-bottom: 2px solid #ccc;
 z-index: 2000;
 padding: 0.2rem;
-font-size:clamp(0.6rem, 3vw, 20px);
+font-size:clamp(0.65rem, 3vw, 20px);
 }
 
 
@@ -552,6 +552,9 @@ font-size:clamp(0.6rem, 3vw, 20px);
 display: flex;
 justify-content: space-between;
 align-items: center;
+padding: 0.1rem;
+flex-wrap: wrap;
+gap: 0.1rem;
 }
 
 #mobile-pack-summary {
@@ -559,12 +562,12 @@ margin-top: 0.3rem;
 }
 
 #mobile-pack-summary .pack-name {
-font-size: clamp(0.5rem, 2.8vw, 20px);  /* パック名少し大きめ */
+font-size: clamp(0.55rem, 2.8vw, 20px);  /* パック名少し大きめ */
 font-weight: bold;
 }
 
 #mobile-pack-summary .pack-rate {
-font-size: clamp(0.4rem, 2.6vw, 20px);
+font-size: clamp(0.5rem, 2.6vw, 20px);
 text-align: right;
 }
 
@@ -580,13 +583,6 @@ margin: 0.3rem;
 .save-load-buttons button {
 font-size: 0.6rem;
 padding: 0.5rem 0;
-}
-.summary-bar {
-display: flex;
-justify-content: space-between;
-align-items: center;
-flex-wrap: wrap;
-gap: 0.5rem;
 }
 
 .summary-bar select {
@@ -4027,7 +4023,16 @@ function updateSaveButtonState() {
         });
     }
 
-
+// 関数の外でグローバルに定義
+const packs = [
+    {
+        key: 'awaking',
+        nameMain: 'Awaking The Oracle',
+        nameSub: '「神託者の覚醒」',
+        selector: '#pack-awaking'
+    },
+    // 必要なら他パックも追加
+];
 
 
 //所持率表示
@@ -4056,7 +4061,7 @@ function updateSummary() {
     document.getElementById("total-count").textContent = total;
     document.getElementById("owned-percent").textContent = `${percent}%`;
 
-    // ツイートテキストを全カード所持率に合わせて更新
+    //【パソコンタブレット用】ツイートテキストを全カード所持率に合わせて更新
     const tweetText = encodeURIComponent(
 `【神託のメソロギア】
 全カード所持率${typePercent}％
@@ -4066,6 +4071,32 @@ function updateSummary() {
     const tweetUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
     document.getElementById('tweet-link').href = tweetUrl;
 
+    //【スマホ用】選択中パックを探す
+    const selectedKey = document.getElementById('pack-selector').value;
+    const selectedPack = packs.find(p => p.key === selectedKey);
+
+    // 選択中パックの所持率計算
+    const selectedCards = document.querySelectorAll(`[data-pack*="${selectedPack.nameMain}"]`);
+    let selectedOwnedTypes = 0;
+
+    selectedCards.forEach(card => {
+        if ((parseInt(card.dataset.count) || 0) > 0) selectedOwnedTypes++;
+    });
+
+    const selectedTotalTypes = selectedCards.length;
+    const selectedTypePercent = selectedTotalTypes ? Math.round((selectedOwnedTypes / selectedTotalTypes) * 100) : 0;
+
+    // スマホ用ツイートテキスト
+    const mobileTweetText = encodeURIComponent(
+        `【信託のメソロギア】
+全カード所持率${typePercent}％
+${selectedPack.nameMain}所持率${selectedTypePercent}％
+モスロギア～所持率チェッカー～
+＃信託のメソロギア`
+    );
+
+    const mobileTweetUrl = `https://twitter.com/intent/tweet?text=${mobileTweetText}`;
+    document.getElementById('mobile-tweet-link').href = mobileTweetUrl;
 
     updatePackSummary();
     updateMobileSummary();
@@ -4074,15 +4105,6 @@ function updateSummary() {
 
 /*各パック所持率表示*/
     function updatePackSummary() {
-        const packs = [
-            {
-                key: 'awaking',
-                nameMain: 'Awaking The Oracle',
-                nameSub: '「神託者の覚醒」',
-                selector: '#pack-awaking'
-            },
-            // 必要なら他パックもここに追加
-        ];
 
         const pcList = document.getElementById('pack-summary-list');
         const mobileSelect = document.getElementById('pack-selector');

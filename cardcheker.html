@@ -28,7 +28,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.4.4/libs/lz-string.min.js"></script>
-    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
     <style>
 /* ======== リセット & 基本 ======== */
 body {
@@ -142,7 +141,7 @@ font-size: clamp(12px, 1.5vw, 30px);
 .summary-block,
 .pack-summary-link {
 background: #fff;             /* 白背景でカード風 */
-border: 1px solid #ddd;
+border-top: 4px solid #ddd;
 border-radius: 6px;
 }
 
@@ -177,6 +176,7 @@ margin: 0.5em 0;
 
 #pack-summary-list li {
 margin-bottom: 0.3em; /* 必要なら間隔調整 */
+background: #fff;
 }
 .pack-summary-link {
 display: flex;
@@ -222,13 +222,33 @@ display: flex;
 justify-content: flex-end;
 align-items: center;
 width: 100%;
-padding-right: 2px;  /* 右端の空き補正 */
-height: 24px;        /* iframe高さに合わせて上下中央揃え */
+border-bottom: 4px solid #ddd;
 }
 
-.summary-share iframe {
-vertical-align: middle; /* iframeの上下ズレ補正 */
+.custom-tweet-button {
+display: inline-flex;
+align-items: center;
+gap: 0.3rem;
+background-color: #000;
+color: #fff;
+padding: 0.3rem 0.6rem;
+border-radius: 20px;
+text-decoration: none;
+font-weight: bold;
+font-size: 0.85rem;
+transition: background 0.2s;
 }
+
+.custom-tweet-button:hover {
+background-color: #333;
+}
+
+.tweet-icon {
+width: 16px;
+height: 16px;
+}
+
+
 
 
 
@@ -648,15 +668,18 @@ padding: 0.5em ;
 <!-- スマホ用 所持率サマリー上部バー -->
 <div class="top-summary">
 
-    <!-- 所持率 + ツイート -->
-    <div class="summary-bar">
-        <span>
-            全所持率: <span id="mobile-owned-type-count">0</span>/<span id="mobile-total-type-count">0</span>
-            (<span id="mobile-owned-type-percent">0%</span>)
-        </span>
-        <a href="https://twitter.com/share?ref_src=twsrc%5Etfw" class="twitter-share-button" data-show-count="false"
-            data-text="モスロギア所持率チェック結果！">Tweet</a>
-    </div>
+<!-- 所持率 + ツイート -->
+<div class="summary-bar">
+    <span>
+        全所持率: <span id="mobile-owned-type-count">0</span>/<span id="mobile-total-type-count">0</span>
+        (<span id="mobile-owned-type-percent">0%</span>)
+    </span>
+    <a id="mobile-tweet-link" href="#" target="_blank" rel="noopener" class="custom-tweet-button">
+        <img src="img/x-logo.svg" alt="Post" class="tweet-icon">
+        <span>ポスト</span>
+    </a>
+</div>
+
 
     <!-- コンプ率 + プルダウン -->
     <div class="summary-bar">
@@ -699,9 +722,13 @@ padding: 0.5em ;
 
         <!-- ツイート共有 -->
         <div class="summary-share">
-            <a href="https://twitter.com/share?ref_src=twsrc%5Etfw" class="twitter-share-button" data-show-count="false"
-                data-text="">Tweet</a>
+            <a id="tweet-link" href="#" target="_blank" rel="noopener" class="custom-tweet-button">
+                <img src="img/x-logo.svg" alt="Post" class="tweet-icon">
+                <span>ポスト</span>
+            </a>
         </div>
+
+
 
     </div>
 
@@ -709,9 +736,24 @@ padding: 0.5em ;
     <!-- 各パック所持率 -->
     <div id="pack-summary">
         <ul id="pack-summary-list">
-            <!-- JSで生成 -->
+            <li>
+                <a href="...">
+                    <span class="pack-summary-name">パック名</span>
+                    <span class="pack-summary-rate">
+                        所持率: 0/0 (0%)<br>
+                        コンプ率: 0/0 (0%)
+                    </span>
+                </a>
+                <div class="summary-share pack-share">
+                    <a href="..." target="_blank" rel="noopener" class="custom-tweet-button pack-tweet-button">
+                        <img src="img/x-logo.svg" alt="Post" class="tweet-icon">
+                        <span>ポスト</span>
+                    </a>
+                </div>
+            </li>
         </ul>
     </div>
+
 
 
 
@@ -4015,13 +4057,15 @@ function updateSummary() {
     document.getElementById("owned-percent").textContent = `${percent}%`;
 
     // ツイートテキストを全カード所持率に合わせて更新
-    const tweetText =
-`【信託のメソロギア】
+    const tweetText = encodeURIComponent(
+`【神託のメソロギア】
 全カード所持率${typePercent}％
 モスロギア～所持率チェッカー～
-＃信託のメソロギア`;
+＃信託のメソロギア`
+    );
+    const tweetUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
+    document.getElementById('tweet-link').href = tweetUrl;
 
-    document.querySelector('.twitter-share-button').setAttribute('data-text', tweetText);
 
     updatePackSummary();
     updateMobileSummary();
@@ -4029,70 +4073,106 @@ function updateSummary() {
 
 
 /*各パック所持率表示*/
-function updatePackSummary() {
-    const packs = [
-        { key: 'awaking', nameMain: 'Awaking The Oracle', nameSub: '「神託者の覚醒」', selector: '#pack-awaking' },
-    ];
+    function updatePackSummary() {
+        const packs = [
+            {
+                key: 'awaking',
+                nameMain: 'Awaking The Oracle',
+                nameSub: '「神託者の覚醒」',
+                selector: '#pack-awaking'
+            },
+            // 必要なら他パックもここに追加
+        ];
 
-    const pcList = document.getElementById('pack-summary-list');
-    const mobileSelect = document.getElementById('pack-selector');
-    const mobileSummary = document.getElementById('mobile-pack-summary');
+        const pcList = document.getElementById('pack-summary-list');
+        const mobileSelect = document.getElementById('pack-selector');
+        const mobileSummary = document.getElementById('mobile-pack-summary');
 
-    pcList.innerHTML = '';
-    mobileSelect.innerHTML = '';
+        pcList.innerHTML = '';
+        mobileSelect.innerHTML = '';
 
-    packs.forEach(pack => {
-        const cards = document.querySelectorAll(`[data-pack*="${pack.nameMain}"]`);
+        packs.forEach(pack => {
+            const cards = document.querySelectorAll(`[data-pack*="${pack.nameMain}"]`);
 
-        let owned = 0;
-        let ownedTypes = 0;
+            let owned = 0;
+            let ownedTypes = 0;
 
-        cards.forEach(card => {
-            const count = parseInt(card.dataset.count) || 0;
-            owned += count;
-            if (count > 0) ownedTypes++;
-        });
+            cards.forEach(card => {
+                const count = parseInt(card.dataset.count) || 0;
+                owned += count;
+                if (count > 0) ownedTypes++;
+            });
 
-        const total = cards.length * 3;
-        const totalTypes = cards.length;
+            const total = cards.length * 3;
+            const totalTypes = cards.length;
 
-        const percent = total ? Math.round((owned / total) * 100) : 0;
-        const typePercent = totalTypes ? Math.round((ownedTypes / totalTypes) * 100) : 0;
+            const percent = total ? Math.round((owned / total) * 100) : 0;
+            const typePercent = totalTypes ? Math.round((ownedTypes / totalTypes) * 100) : 0;
 
-        // PCリンク
-        const li = document.createElement('li');
-        li.innerHTML = `
-  <a href="${pack.selector}" class="pack-summary-link">
-    <span class="pack-summary-name">
-      ${pack.nameMain}<br><small>${pack.nameSub}</small>
-    </span>
-    <span class="pack-summary-rate">
-      所持率: ${ownedTypes}/${totalTypes} (${typePercent}%)<br>
-      コンプ率: ${owned}/${total} (${percent}%)
-    </span>
-  </a>
+            // === 1️⃣ PC側 li要素 ===
+            const li = document.createElement('li');
+
+            // パック名＋所持率＋コンプ率をまとめて innerHTML
+            li.innerHTML = `
+<a href="${pack.selector}" class="pack-summary-link">
+<span class="pack-summary-name">
+${pack.nameMain}<br><small>${pack.nameSub}</small>
+</span>
+<span class="pack-summary-rate">
+所持率: ${ownedTypes}/${totalTypes} (${typePercent}%)<br>
+コンプ率: ${owned}/${total} (${percent}%)
+</span>
+</a>
 `;
 
-        pcList.appendChild(li);
+            // === 2️⃣ Xポストボタンを別で生成して appendChild ===
+            const packTweetText = encodeURIComponent(`
+【信託のメソロギア】
+${pack.nameMain}所持率${typePercent}％
+モスロギア～所持率チェッカー～
+＃信託のメソロギア`
+            );
+            const packTweetUrl = `https://twitter.com/intent/tweet?text=${packTweetText}`;
 
-        // モバイルセレクト
-        const option = document.createElement('option');
-        option.value = pack.key;
-        option.textContent = pack.nameMain;
-        mobileSelect.appendChild(option);
+            const packPostBtn = document.createElement('a');
+            packPostBtn.href = packTweetUrl;
+            packPostBtn.target = "_blank";
+            packPostBtn.rel = "noopener";
+            packPostBtn.className = "custom-tweet-button pack-tweet-button";
+            packPostBtn.innerHTML = `
+<img src="img/x-logo.svg" alt="Post" class="tweet-icon">
+<span>ポスト</span>
+`;
 
-        // モバイルパック概要の更新部分
-        if (mobileSelect.value === pack.key) {
-            mobileSummary.innerHTML = `
-    <div class="pack-name">${pack.nameMain}</div>
-    <div class="pack-rate">
-      所持率: ${ownedTypes}/${totalTypes} (${typePercent}%)<br>
-      コンプ率: ${owned}/${total} (${percent}%)
-    </div>
-  `;
-        }
-    });
-}
+            const shareDiv = document.createElement('div');
+            shareDiv.className = "summary-share pack-share";
+            shareDiv.appendChild(packPostBtn);
+
+            // Xボタンを li に追加（必ず innerHTML 後に！）
+            li.appendChild(shareDiv);
+
+            // ul に追加
+            pcList.appendChild(li);
+
+            // === 3️⃣ モバイルセレクト ===
+            const option = document.createElement('option');
+            option.value = pack.key;
+            option.textContent = pack.nameMain;
+            mobileSelect.appendChild(option);
+
+            // === 4️⃣ モバイルパック概要 ===
+            if (mobileSelect.value === pack.key) {
+                mobileSummary.innerHTML = `
+<div class="pack-name">${pack.nameMain}</div>
+<div class="pack-rate">
+所持率: ${ownedTypes}/${totalTypes} (${typePercent}%)<br>
+コンプ率: ${owned}/${total} (${percent}%)
+</div>
+`;
+            }
+        });
+    }
+
 
 
 

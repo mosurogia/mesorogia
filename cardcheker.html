@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="5NzYWNH5_YUg0dUV2iCzg_bSo7M1lLJi6IzOeF2dGXM" />
     <!-- ページの説明（検索結果の下に表示） -->
-    <meta name="description" content="このサイトは、アプリ「信託のメソロギア」のカード一覧、デッキ構築、デッキ分析ができる非公式サイトです。カード検索やデッキ管理をスマホでも快適に！">
+    <meta name="description" content="このサイトは、アプリ「信託のメソロギア」の所持率チェックができる非公式サイトです。">
     <!-- キーワード（今は効果は薄いが一応） -->
     <meta name="keywords" content="カードゲーム,デッキメーカー,DCG,神託のメソロギア,メソロギア,神託,デッキ分析,一覧,モスロギア">
     <!-- OGP基本 -->
@@ -366,56 +366,82 @@ display: block;
 border-radius: 6px;
 }
 
+
+.card::after {
+content: "";
+position: absolute;
+top: 0;
+left: 0;
+width: 100%;
+height: 5px; /* 帯の高さ */
+background-color: transparent; /* デフォルト透明 */
+border-radius: 4px;
+}
+
+/*カードモノクロ化*/
 .card.grayscale img {
 filter: grayscale(100%);
 opacity: 0.5;
 }
+/* ======== レアリティ枠線 ======== */
+.card.rarity-レジェンド::after {
+background: linear-gradient(90deg, #91e4fb 0%, #ffffff 70%, #91e4fb 100%);
+}
+
+.card.rarity-ゴールド::after {
+background: linear-gradient(90deg, gold 0%, #fff5cc 70%, gold 100%);
+}
+
+.card.rarity-シルバー::after {
+background: linear-gradient(90deg, silver 0%, #f0f0f0 70%, silver 100%);
+}
+
+.card.rarity-ブロンズ::after {
+background: linear-gradient(90deg, peru 0%, #ffd9b3 70%, peru 100%);
+}
+
+/*種族背景色*/
 .race-group.race-ドラゴン { background: rgba(255, 100, 100, 0.1); }
 .race-group.race-アンドロイド { background: rgba(100, 200, 255, 0.1); }
 .race-group.race-エレメンタル { background: rgba(100, 255, 150, 0.1); }
 .race-group.race-ルミナス { background: rgba(255, 250, 150, 0.1); }
 .race-group.race-シェイド { background: rgba(200, 150, 255, 0.1); }
 .race-group.race-イノセント { background: rgba(220, 220, 220, 0.1); }
-.race-group.race-旧神 {
-    background: linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0.2),
-        rgba(255, 215, 140, 0.3),
-        rgba(180, 255, 255, 0.3),
-        rgba(220, 180, 255, 0.3),
-        rgba(255, 255, 255, 0.2)
-    );
-}
+.race-group.race-旧神 {background:
+                    linear-gradient(
+                    90deg,
+                    rgba(255, 255, 255, 0.2),
+                    rgba(255, 215, 140, 0.3),
+                    rgba(180, 255, 255, 0.3),
+                    rgba(220, 180, 255, 0.3),
+                    rgba(255, 255, 255, 0.2)
+                    );
+                    }
 
 
 /* ======== 所持マーク ======== */
-.card.grayscale img {
-filter: grayscale(100%);
-opacity: 0.5;
-}
-
 .owned-mark {
-  position: absolute;
-  top: 1%;
-  right: 1%;
-  background: #4caf50;
-  color: #fff;
-  border-radius: 50%;
-  min-width: 25px;
-  max-width: 35px;
-  width: 23%;     /* 画像の幅の20% */
-  aspect-ratio: 1/1;  /* 正円にする新しい方法 */
-  display: none;
-  font-size: 0.8em;  /* 親要素に相対的 */
-  line-height: 100%; /* 必要に応じて */
-  text-align: center;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+position: absolute;
+top: 1%;
+right: 1%;
+background: #4caf50;
+color: #fff;
+border-radius: 50%;
+min-width: 25px;
+max-width: 35px;
+width: 23%;     /* 画像の幅の20% */
+aspect-ratio: 1/1;  /* 正円にする新しい方法 */
+display: none;
+font-size: 0.8em;  /* 親要素に相対的 */
+line-height: 100%; /* 必要に応じて */
+text-align: center;
+display: flex;
+justify-content: center;
+align-items: center;
 }
 
 .card.owned .owned-mark {
-  display: flex;
+display: flex;
 }
 /* ======== モーダル ======== */
 .modal {
@@ -469,11 +495,12 @@ flex-wrap: wrap;
 gap: 0.5rem;
 }
 
-/* ======== 種族枠線 & タイプ背景 ======== */
+/* ======== タイプ背景 ======== */
 .type-アタッカー { background: rgba(125, 91, 155, 0.5); }
 .type-チャージャー { background: rgba(119, 170, 212, 0.5); }
 .type-ブロッカー { background: rgba(214, 212, 204, 0.5); }
 
+/*========= 種族枠線 ==========*/
 .race-ドラゴン { border: 6px solid rgb(200, 40, 40); }
 .race-アンドロイド { border: 6px solid rgb(40, 200, 200); }
 .race-エレメンタル { border: 6px solid rgb(40, 180, 90); }
@@ -491,6 +518,166 @@ border-image: linear-gradient(
     rgba(255, 255, 255, 0.6)
 ) 1;
 }
+
+
+
+/*=========総所持枚数確認タブ===========*/
+
+
+/* 全体レイアウト */
+.owned-container {
+display: flex;
+justify-content: center;
+align-items: flex-start;
+gap: 3%;
+position: relative;
+}
+
+/* 左右aside */
+.owned-aside {
+width: 25%;
+background: #f7f7f7;
+padding: 10px;
+border-radius: 8px;
+}
+.owned-aside h4{
+font-size: clamp(0.4rem, 1.5vw, 1.1rem);
+}
+/* 中央メイン */
+.owned-main {
+position: relative;
+width: 100%;
+min-width: 1200px;
+}
+
+
+/* カードグリッド */
+.owned-card-grid {
+display: flex;
+flex-wrap: wrap;
+gap: 8px;
+justify-content: flex-start;
+}
+
+/* カード */
+.owned-card-grid .card {
+display: flex;
+flex-direction: row;
+align-items: flex-start;
+background: #fff;
+border: 1px solid #ddd;
+padding: 5px;
+border-radius: 6px;
+text-align: center;
+box-sizing: border-box;
+min-width: 0;
+}
+
+
+/* カード画像 */
+.owned-card-grid .card img {
+width: 140px;
+height: auto;
+}
+
+/*カード情報*/
+.owned-card-info {
+display: flex;
+flex-direction: column;
+gap: 6px;
+width: 100%;
+min-width: 0;
+}
+/*カード名*/
+.card-name {
+display: block;
+font-weight: bold;
+text-align: center;
+white-space: nowrap;
+overflow: hidden;
+max-width: 100%;
+box-sizing: border-box;
+min-width: 0;
+}
+/* PCだけ後半優先 */
+@media (min-width: 768px) {
+  .card-name {
+    direction: rtl;       /* 右→左に流す */
+    text-align: left;     /* RTL時は左寄せでOK */
+  }
+}
+/*±ボタン*/
+.owned-card-controls {
+display: flex;
+justify-content: center;
+gap: 0; /* 隙間なし */
+}
+.owned-card-controls button {
+flex: 1 1 auto;
+padding: 4px 0;
+}
+/*枚数表示（PC版±ボタン中央）*/
+.count-display {
+width: 40px;
+text-align: center;
+line-height: 30px;
+}
+
+/*各カード枚数操作部分*/
+.owned-card-grid .card .owned-card-info {
+display: flex;
+flex-direction: column;
+margin-left: 8px;
+font-size: 0.85rem;
+text-align: left;
+}
+
+/*エディションカウント*/
+.owned-card-edition-counts {
+display: flex;
+justify-content: space-between;
+gap: 4px;
+align-items: center;
+}
+/*エディション切り替えボタン*/
+.edition-switch .edition-mode-btn {
+width: 100%;
+padding: 4px 0;
+}
+/* グリッド中央左右矢印 */
+.grid-page-arrow {
+position: absolute;
+top: 50%;
+transform: translateY(-50%);
+background: #333;
+color: #fff;
+padding: 8px 12px;
+cursor: pointer;
+border-radius: 4px;
+user-select: none;
+}
+
+.grid-page-arrow.left-arrow {
+  left: -40px;
+}
+
+.grid-page-arrow.right-arrow {
+  right: -40px;
+}
+
+/* 下部ページ送り */
+.pagination-controls {
+  text-align: center;
+  margin-top: 10px;
+}
+
+
+.owned-card-grid .card {
+  flex: 0 0 calc(25% - 8px); /* 4列分 */
+}
+
+
+
 
 /* ======== フッター ======== */
 footer {
@@ -512,12 +699,42 @@ text-decoration: underline;
 }
 
 /* ======== レスポンシブ調整 ======== */
+@media (max-width: 1600px) {
+.owned-card-grid .card {
+display: block;
+}
+
+.owned-card-grid .card .owned-card-info {
+margin-left: 0;
+text-align: center;
+font-size: clamp(0.4rem, 1.6vw, 1.1rem);
+}
+.owned-card-grid .card img {
+width: 100%;
+}
+.owned-main{
+max-width: 65%;
+min-width: 400px;
+}
+
+.owned-card-controls {
+flex-direction: row;
+}
+}
 @media (max-width: 1024px) {
 .card {width: calc(100% / 6 - 8px);}
 .owned-mark {
 min-width: 18px;
 width: 23%;
 font-size: 0.6em;
+}
+.owned-card-grid .card {
+display: block;
+}
+
+.owned-card-grid .card .owned-card-info {
+margin-left: 0;
+text-align: center;
 }
 }
 
@@ -616,6 +833,9 @@ position: relative;
 .pack-section{
 padding: 0.1rem 0.4rem 0.4rem 0.4rem;
 }
+
+
+
 }
 @media (max-width: 680px){
 .header-nav a {
@@ -660,6 +880,21 @@ padding: 0.5em ;
     </nav>
 </header>
 
+
+<!--タブ切り替え-->
+<div class="tab-bar">
+    <div id="tab1" class="tab active" onclick="switchTab('checker')">
+        <span>📊 所持率チェッカー</span>
+    </div>
+    <div id="tab2" class="tab" onclick="switchTab('owned')">
+        <span>🔢 総所持枚数</span>
+    </div>
+</div>
+
+
+
+<!-- 所持率チェッカーのコンテンツ -->
+<div id="checker" class="tab-content active">
 
 <!-- スマホ用 所持率サマリー上部バー -->
 <div class="top-summary">
@@ -778,7 +1013,7 @@ padding: 0.5em ;
             <small class="pack-name-sub">「神託者の覚醒」</small>
         </h3>
         <div class="race-controls">
-            <button class="pack-select-all-btn">全て選択+1</button>
+            <button class="pack-select-all-btn">シルバーブロンズ+3</button>
             <button class="pack-clear-all-btn">全て選択解除</button>
         </div>
         <div id="card-list-awaking">
@@ -3657,8 +3892,6 @@ padding: 0.5em ;
             </section>
         </div>
     </section>
-</main>
-</div>
 
 
     <footer>
@@ -3685,16 +3918,153 @@ padding: 0.5em ;
             @192837465aruneo
         </a>
     </footer>
-    <script>
+</main>
+
+</div>
+</div>
+
+<!-- 総所持枚数タブのコンテンツ -->
+<div id="owned" class="tab-content">
+
+
+<div id="owned-container" class="owned-container">
+    <!-- 左サイド：総所持枚数や分解ポイント -->
+    <aside class="owned-aside left">
+        <h4>総所持枚数</h4>
+        <p><span id="owned-total">0</span> 枚</p>
+        <h4>分解ポイント</h4>
+        <p>仮表示: <span id="disassemble-point">0</span></p>
+    </aside>
+
+<!--中央：カード所持枚数一覧-->
+<div class="owned-main">
+    <div id="owned-card-grid" class="owned-card-grid">
+        <!-- JSでここにカードを追加 -->
+    </div>
+
+    <!-- グリッド中央左右ページ送りボタン -->
+    <div class="grid-page-arrow left-arrow">←</div>
+    <div class="grid-page-arrow right-arrow">→</div>
+
+
+    <!--カード送りボタン・ページ表示-->
+    <div class="pagination-controls">
+        <button id="prev-page">←</button>
+        <span id="page-info">1 / ?</span>
+        <button id="next-page">→</button>
+    </div>
+</div>
+
+<!-- 右サイド：検索機能など -->
+<aside class="owned-aside right">
+    <h4>検索</h4>
+    <button id="search-btn">🔍 検索</button>
+    <h4>保存</h4>
+    <button id="save-btn">💾 保存</button>
+</aside>
+</div>
+
+    <footer>
+        <div class="site-description">
+            <p>
+                <strong>モスロギア</strong> はアプリ『神託のメソロギア』の非公式ファンサイトです。<br>
+                カード一覧検索やデッキメーカー、デッキ分析などを通じて、プレイヤー向けに便利なデータベース機能を提供しています。
+            </p>
+        </div>
+
+        <p>
+            🔗 公式サイトはこちら 👉
+            <a href="https://mythologiatheoracle.com/" target="_blank" rel="noopener noreferrer">
+                神託のメソロギア公式サイト
+            </a>
+        </p>
+
+        © 2025 Mesorogia Cards. All rights reserved.<br />
+        当サイトは「神託のメソロギア」の非公式ファンサイトです。画像・データ等の著作権は各権利者に帰属します。<br />
+        一部画像素材は「ジュエルセイバーFREE」<br />
+        （<a href="https://www.jewel-s.jp/" target="_blank" rel="noopener">https://www.jewel-s.jp/</a>）を使用しています。<br />
+        💬 ご要望・不具合報告 👉
+        <a href="https://x.com/192837465aruneo" target="_blank" rel="noopener noreferrer">
+            @192837465aruneo
+        </a>
+    </footer>
+    </div>
+
+<script>
+/*カードデータ自動読み込み*/
+window.addEventListener('DOMContentLoaded', () => {
+    loadOwnership();
+});
+window.addEventListener('DOMContentLoaded', generateOwnedCards);
+/*グローバル設定*/
+let cards = [];
+
+
+    //読み込みコード処理
+    window.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+        const data = params.get('data');
+        if (data) {
+            try {
+                const decompressed = LZString.decompressFromEncodedURIComponent(data);
+                const raw = JSON.parse(decompressed);
+                const owned = {};
+                ["1", "2", "3"].forEach(num => {
+                    (raw[num] || []).forEach(id => {
+                        owned[parseInt(id, 36).toString()] = parseInt(num);
+                    });
+                });
+                applyOwnership(owned);
+                alert("共有URLの所持率データを読み込みました！");
+                window.isGuestView = true;  // ← ここで「他人データモード」にする
+            } catch (e) {
+                alert("URLの所持データの形式が正しくありません！");
+            }
+        } else {
+            loadOwnership();  // 自分の保存データを読み込み
+            window.isGuestView = false;  // 自分データモード
+        }
+        updateSaveButtonState(); // ボタン状態を更新
+    });
+
+
+
+//#region ページ全体関連
+
+// タブ切り替え
+function switchTab(id) {
+    // すべてのタブボタンから active を外す
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    // クリックされたタブボタンに active を付ける
+    document.querySelector(`[onclick="switchTab('${id}')"]`).classList.add('active');
+    // すべてのタブコンテンツを非表示
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    // 選択されたコンテンツだけ表示
+    document.getElementById(id).classList.add('active');
+}
+
 
 //ページトップ移動ボタン
 function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+//#endregion
 
-//画像クリックカードカウント//
-    function toggleOwnership(card) {
+
+
+//レアリティクラス付与
+    document.querySelectorAll(".card").forEach(card => {
+        const rarity = card.dataset.rarity;
+        card.classList.add(`rarity-${rarity}`);
+    });
+
+
+
+//#region カードカウントボタン
+
+//画像クリックカードカウント
+function toggleOwnership(card) {
         // 今の所持数を取得
         let count = parseInt(card.dataset.count) || 0;
 
@@ -3740,16 +4110,17 @@ document.querySelectorAll('.pack-select-all-btn').forEach(btn => {
         const cards = packSection.querySelectorAll('.card');
 
         cards.forEach(card => {
+            const rarity = card.dataset.rarity;
             let count = parseInt(card.dataset.count) || 0;
 
-            if (card.dataset.race === "旧神") {
-                count = 1; // 旧神は無条件で1枚
-            } else {
-                if (count < 3) count++;
+            if (rarity === "シルバー" || rarity === "ブロンズ") {
+                count = 3;  // シルバー・ブロンズは一括3枚
             }
+            // 他のレアリティは何もしない
 
             card.dataset.count = count;
 
+            // 表示クラス更新
             card.classList.remove('owned-1', 'owned-2', 'owned-3', 'owned', 'grayscale');
 
             if (count === 0) {
@@ -3769,6 +4140,7 @@ document.querySelectorAll('.pack-select-all-btn').forEach(btn => {
         updateSummary();
     });
 });
+
 
 
 //パック全解除ボタン
@@ -3791,7 +4163,6 @@ document.querySelectorAll('.pack-select-all-btn').forEach(btn => {
             updateSummary();
         });
     });
-
 
 
 //種族＋1ボタン
@@ -3852,38 +4223,12 @@ document.querySelectorAll('.select-all-btn').forEach(btn => {
             updateSummary();
         });
     });
+//#endregion
 
 
 
 
-//所持率データ管理
 
-//読み込みコード処理
-window.addEventListener('DOMContentLoaded', () => {
-    const params = new URLSearchParams(window.location.search);
-    const data = params.get('data');
-    if (data) {
-        try {
-            const decompressed = LZString.decompressFromEncodedURIComponent(data);
-            const raw = JSON.parse(decompressed);
-            const owned = {};
-            ["1", "2", "3"].forEach(num => {
-                (raw[num] || []).forEach(id => {
-                    owned[parseInt(id, 36).toString()] = parseInt(num);
-                });
-            });
-            applyOwnership(owned);
-            alert("共有URLの所持率データを読み込みました！");
-            window.isGuestView = true;  // ← ここで「他人データモード」にする
-        } catch (e) {
-            alert("URLの所持データの形式が正しくありません！");
-        }
-    } else {
-        loadOwnership();  // 自分の保存データを読み込み
-        window.isGuestView = false;  // 自分データモード
-    }
-    updateSaveButtonState(); // ボタン状態を更新
-});
 
 //保存ボタン切り替え
 function updateSaveButtonState() {
@@ -3900,80 +4245,74 @@ function updateSaveButtonState() {
 }
 
 
-
-
-    /* 所持カード枚数確認 */
-    function getOwnedCardData() {
-        const data = {};
-        document.querySelectorAll(".card").forEach(card => {
-            const count = parseInt(card.dataset.count) || 0;
-            if (count > 0) {
-                data[card.dataset.cd] = count;
-            }
-        });
-        return data;
-    }
-
-    /*カードデータ自動読み込み*/
-    window.addEventListener('DOMContentLoaded', () => {
-    loadOwnership();
+/* 所持カード枚数確認 */
+function getOwnedCardData() {
+    const data = {};
+    document.querySelectorAll(".card").forEach(card => {
+        const count = parseInt(card.dataset.count) || 0;
+        if (count > 0) {
+            data[card.dataset.cd] = count;
+        }
     });
+    return data;
+}
 
-    function loadOwnership() {
-        const data = localStorage.getItem("ownedCards");
 
-        if (data) {
-            applyOwnership(JSON.parse(data));
-            console.log("自分の所持カードを自動読み込みしました！");
-        } else {
-            // データが無い場合は全カード未所持状態を適用
-            const owned = {};
-            document.querySelectorAll(".card").forEach(card => {
-                owned[card.dataset.cd] = 0;
-            });
-            applyOwnership(owned);
-            console.log("所持データなし：全カード未所持で初期化しました");
-        }
+
+
+//所持カードロード確認
+function loadOwnership() {
+    const data = localStorage.getItem("ownedCards");
+
+    if (data) {
+        applyOwnership(JSON.parse(data));
+        console.log("自分の所持カードを自動読み込みしました！");
+    } else {
+        // データが無い場合は全カード未所持状態を適用
+        const owned = {};
+        document.querySelectorAll(".card").forEach(card => {
+            owned[card.dataset.cd] = 0;
+        });
+        applyOwnership(owned);
+        console.log("所持データなし：全カード未所持で初期化しました");
+    }
+}
+
+
+/* 保存（localStorage）*/
+function saveOwnership() {
+    if (window.isGuestView) {
+        const confirmSave = confirm(
+            "これは他人の所持データです。\n本当に自分の保存データとして上書きしてもよいですか？"
+        );
+        if (!confirmSave) return;
+        // → OKなら保存処理へ進む
     }
 
+    const data = getOwnedCardData();
+    localStorage.setItem("ownedCards", JSON.stringify(data));
+    alert("所持カードを保存しました！");
+    window.isGuestView = false; // もう自分データとして扱う
+    updateSaveButtonState();
+}
 
 
-    /* 保存（localStorage）*/
-    function saveOwnership() {
-        if (window.isGuestView) {
-            const confirmSave = confirm(
-                "これは他人の所持データです。\n本当に自分の保存データとして上書きしてもよいですか？"
-            );
-            if (!confirmSave) return;
-            // → OKなら保存処理へ進む
-        }
-
-        const data = getOwnedCardData();
-        localStorage.setItem("ownedCards", JSON.stringify(data));
-        alert("所持カードを保存しました！");
-        window.isGuestView = false; // もう自分データとして扱う
-        updateSaveButtonState();
+/* 他人のデータを一時的に読み込み（保存しない）*/
+function importOwnership() {
+    const input = prompt("相手のカードデータを貼り付けてください");
+    if (!input) return;
+    try {
+        const ids = JSON.parse(input);
+        applyOwnership(ids);
+        alert("他人の所持カードを一時的に反映しました！\n自分の保存データは残っています。");
+    } catch (e) {
+        alert("データの形式が正しくありません！");
     }
-
-
-
-    /* 他人のデータを一時的に読み込み（保存しない）*/
-    function importOwnership() {
-        const input = prompt("相手のカードデータを貼り付けてください");
-        if (!input) return;
-        try {
-            const ids = JSON.parse(input);
-            applyOwnership(ids);
-            alert("他人の所持カードを一時的に反映しました！\n自分の保存データは残っています。");
-        } catch (e) {
-            alert("データの形式が正しくありません！");
-        }
-    }
-
+}
 
 
     /* 所持状態の画面反映 */
-    function applyOwnership(data) {
+function applyOwnership(data) {
         document.querySelectorAll(".card").forEach(card => {
             const cd = card.dataset.cd;
             const count = data[cd] || 0;
@@ -4047,7 +4386,15 @@ function updateSummary() {
         if (count > 0) ownedTypes++;
     });
 
-    const total = cards.length * 3;
+    let total = 0;
+    cards.forEach(card => {
+        if (card.dataset.race === "旧神") {
+            total += 1;  // 旧神は1枚
+        } else {
+            total += 3;  // それ以外は3枚
+        }
+    });
+
     const totalTypes = cards.length;
 
     const percent = total ? Math.round((owned / total) * 100) : 0;
@@ -4067,7 +4414,7 @@ function updateSummary() {
 全カード所持率${typePercent}％
 モスロギア～所持率チェッカー～
 ＃信託のメソロギア
-https://example.com/cardcheker`
+https://mosurogia.github.io/cardcheker/`
     );
     const tweetUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
     document.getElementById('tweet-link').href = tweetUrl;
@@ -4094,7 +4441,7 @@ https://example.com/cardcheker`
 ${selectedPack.nameMain}所持率${selectedTypePercent}％
 モスロギア～所持率チェッカー～
 ＃信託のメソロギア
-https://example.com/cardcheker`
+https://mosurogia.github.io/cardcheker/`
     );
 
     const mobileTweetUrl = `https://twitter.com/intent/tweet?text=${mobileTweetText}`;
@@ -4106,38 +4453,46 @@ https://example.com/cardcheker`
 
 
 /*各パック所持率表示*/
-    function updatePackSummary() {
+function updatePackSummary() {
 
-        const pcList = document.getElementById('pack-summary-list');
-        const mobileSelect = document.getElementById('pack-selector');
-        const mobileSummary = document.getElementById('mobile-pack-summary');
+    const pcList = document.getElementById('pack-summary-list');
+    const mobileSelect = document.getElementById('pack-selector');
+    const mobileSummary = document.getElementById('mobile-pack-summary');
 
-        pcList.innerHTML = '';
-        mobileSelect.innerHTML = '';
+    pcList.innerHTML = '';
+    mobileSelect.innerHTML = '';
 
-        packs.forEach(pack => {
-            const cards = document.querySelectorAll(`[data-pack*="${pack.nameMain}"]`);
+    packs.forEach(pack => {
+        const cards = document.querySelectorAll(`[data-pack*="${pack.nameMain}"]`);
 
-            let owned = 0;
-            let ownedTypes = 0;
+    let owned = 0;
+    let ownedTypes = 0;
 
-            cards.forEach(card => {
-                const count = parseInt(card.dataset.count) || 0;
-                owned += count;
-                if (count > 0) ownedTypes++;
-            });
+    cards.forEach(card => {
+        const count = parseInt(card.dataset.count) || 0;
+        owned += count;
+        if (count > 0) ownedTypes++;
+    });
 
-            const total = cards.length * 3;
-            const totalTypes = cards.length;
+    let total = 0;
+    cards.forEach(card => {
+        if (card.dataset.race === "旧神") {
+            total += 1;  // 旧神は1枚
+        } else {
+            total += 3;  // それ以外は3枚
+        }
+    });
 
-            const percent = total ? Math.round((owned / total) * 100) : 0;
-            const typePercent = totalTypes ? Math.round((ownedTypes / totalTypes) * 100) : 0;
+    const totalTypes = cards.length;
 
-            // === 1️⃣ PC側 li要素 ===
-            const li = document.createElement('li');
+    const percent = total ? Math.round((owned / total) * 100) : 0;
+    const typePercent = totalTypes ? Math.round((ownedTypes / totalTypes) * 100) : 0;
 
-            // パック名＋所持率＋コンプ率をまとめて innerHTML
-            li.innerHTML = `
+    // === 1️⃣ PC側 li要素 ===
+    const li = document.createElement('li');
+
+    // パック名＋所持率＋コンプ率をまとめて innerHTML
+    li.innerHTML = `
 <a href="${pack.selector}" class="pack-summary-link">
 <span class="pack-summary-name">
 ${pack.nameMain}<br><small>${pack.nameSub}</small>
@@ -4149,22 +4504,22 @@ ${pack.nameMain}<br><small>${pack.nameSub}</small>
 </a>
 `;
 
-            // === 2️⃣ Xポストボタンを別で生成して appendChild ===
-            const packTweetText = encodeURIComponent(`
-【信託のメソロギア】
-${pack.nameMain}所持率${typePercent}％
-モスロギア～所持率チェッカー～
-＃信託のメソロギア
-https://example.com/cardcheker`
-            );
-            const packTweetUrl = `https://twitter.com/intent/tweet?text=${packTweetText}`;
+    // === 2️⃣ Xポストボタンを別で生成して appendChild ===
+    const packTweetText = encodeURIComponent(`
+    【信託のメソロギア】
+    ${pack.nameMain}所持率${typePercent}％
+    モスロギア～所持率チェッカー～
+    ＃信託のメソロギア
+    https://mosurogia.github.io/cardcheker/`
+    );
+    const packTweetUrl = `https://twitter.com/intent/tweet?text=${packTweetText}`;
 
-            const packPostBtn = document.createElement('a');
-            packPostBtn.href = packTweetUrl;
-            packPostBtn.target = "_blank";
-            packPostBtn.rel = "noopener";
-            packPostBtn.className = "custom-tweet-button pack-tweet-button";
-            packPostBtn.innerHTML = `
+    const packPostBtn = document.createElement('a');
+    packPostBtn.href = packTweetUrl;
+    packPostBtn.target = "_blank";
+    packPostBtn.rel = "noopener";
+    packPostBtn.className = "custom-tweet-button pack-tweet-button";
+    packPostBtn.innerHTML = `
 <img src="img/x-logo.svg" alt="Post" class="tweet-icon">
 <span>ポスト</span>
 `;
@@ -4199,24 +4554,159 @@ https://example.com/cardcheker`
     }
 
 
+function selectMobilePack(packKey) {
+    const mobileSelect = document.getElementById('pack-selector');
+    mobileSelect.value = packKey;
+    updatePackSummary();
+}
 
 
-    function selectMobilePack(packKey) {
-        const mobileSelect = document.getElementById('pack-selector');
-        mobileSelect.value = packKey;
-        updatePackSummary();
+// PCのサマリーと同期する例
+function updateMobileSummary() {
+    document.getElementById("mobile-owned-count").textContent = document.getElementById("owned-count").textContent;
+    document.getElementById("mobile-total-count").textContent = document.getElementById("total-count").textContent;
+    document.getElementById("mobile-owned-percent").textContent = document.getElementById("owned-percent").textContent;
+}
+
+
+// 所持状況更新後に必ず呼ぶ
+updateMobileSummary();
+
+
+
+
+
+//===================
+//カード枚数所持確認タブ
+//==================
+let ownedCardsData = []; // フィルタ後のカードをここに
+let currentPage = 1;
+const cardsPerPage = 16;
+
+
+    // ページ描画
+    function renderOwnedPage() {
+        const grid = document.getElementById('owned-card-grid');
+        grid.innerHTML = '';
+
+        const totalPages = Math.ceil(ownedCardsData.length / cardsPerPage);
+        if (currentPage < 1) currentPage = 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        const startIndex = (currentPage - 1) * cardsPerPage;
+        const endIndex = startIndex + cardsPerPage;
+        const pageCards = ownedCardsData.slice(startIndex, endIndex);
+
+        pageCards.forEach(card => {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.dataset.cd = card.cd;
+            div.dataset.type = card.type;
+            div.dataset.race = card.race;
+            div.dataset.category = card.category;
+            div.dataset.pack = card.pack;
+            div.dataset.cost = card.cost;
+            div.dataset.power = card.power;
+            div.dataset.rarity = card.rarity;
+            div.dataset.editionMode = 'all'; // 初期は全体
+
+            div.innerHTML = `
+            <img alt="${card.name}" loading="lazy" src="img/${card.cd}.webp" />
+            <div class="owned-card-info">
+            <div class="card-name" title="${card.name}">${card.name}</div>
+
+            <div class="owned-card-controls">
+                <button class="decrement-btn">-</button>
+                <span class="count-display">0</span>
+                <button class="increment-btn">+</button>
+            </div>
+
+
+            <div class="owned-card-edition-counts">
+                <span class="normal-count">📇0</span>
+                <span class="shine-count">✨0</span>
+                <span class="premium-count">🔮0</span>
+            </div>
+
+            <div class="edition-switch">
+                <button class="edition-mode-btn">全体</button>
+            </div>
+            </div>
+        `;
+            grid.appendChild(div);
+        });
+
+
+        // ページ番号の表示もここで更新
+        document.getElementById('page-info').textContent = `${currentPage} / ${totalPages}`;
     }
 
 
-    // PCのサマリーと同期する例
-    function updateMobileSummary() {
-        document.getElementById("mobile-owned-count").textContent = document.getElementById("owned-count").textContent;
-        document.getElementById("mobile-total-count").textContent = document.getElementById("total-count").textContent;
-        document.getElementById("mobile-owned-percent").textContent = document.getElementById("owned-percent").textContent;
-    }
+//カード並び替え
+async function generateOwnedCards() {
+    const res = await fetch('/public/cards_latest.json');
+    cards = await res.json();
 
-    // 所持状況更新後に必ず呼ぶ
-    updateMobileSummary();
+    const typeOrder = {
+        "チャージャー": 0,
+        "アタッカー": 1,
+        "ブロッカー": 2
+    };
+
+    cards.sort((a, b) => {
+        if (typeOrder[a.type] !== typeOrder[b.type]) {
+            return typeOrder[a.type] - typeOrder[b.type];
+        }
+        if (a.cost !== b.cost) return a.cost - b.cost;
+        if (a.power !== b.power) return a.power - b.power;
+        return parseInt(a.cd) - parseInt(b.cd);
+    });
+
+    ownedCardsData = cards;  // ← データだけ更新
+}
+
+
+    // 初期呼び出し
+    generateOwnedCards().then(() => {
+        ownedCardsData = cards; // 生成後にデータをセット
+        renderOwnedPage(); // 最初のページを表示
+    });
+
+    // 左右中央矢印のクリックで前後ページ送り
+    document.querySelector('.grid-page-arrow.left-arrow').addEventListener('click', () => {
+        currentPage--;
+        renderOwnedPage();
+    });
+
+    document.querySelector('.grid-page-arrow.right-arrow').addEventListener('click', () => {
+        currentPage++;
+        renderOwnedPage();
+    });
+
+    // 下のボタンと連動
+    document.getElementById('prev-page').addEventListener('click', () => {
+        currentPage--;
+        renderOwnedPage();
+    });
+    document.getElementById('next-page').addEventListener('click', () => {
+        currentPage++;
+        renderOwnedPage();
+    });
+
+
+
+    // ← ボタン
+    document.getElementById('prev-page').addEventListener('click', () => {
+        currentPage--;
+        renderOwnedPage();
+    });
+
+    // → ボタン
+    document.getElementById('next-page').addEventListener('click', () => {
+        currentPage++;
+        renderOwnedPage();
+    });
+
 </script>
 </body>
 

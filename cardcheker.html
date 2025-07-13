@@ -180,7 +180,7 @@ background: #fff;
 }
 .pack-summary-link {
 display: flex;
-flex-direction: column;  /* ← 常に縦並びに */
+flex-direction: column;
 align-items: flex-start;
 text-decoration: none;
 color: #333;
@@ -261,7 +261,7 @@ margin: 0.5rem;
 }
 
 .save-load-buttons button {
-flex: 1 1 calc(50% - 0.5rem);
+flex: 1 1 calc(50% - 10px);
 padding: 0.6rem 0;
 font-size: 0.85rem;
 border: none;
@@ -353,7 +353,7 @@ padding: 0.3rem;
 
 
 .card {
-width: calc(100% / 8 - 9px);
+width: calc(100% / 8 - 8px);
 box-sizing: border-box;
 cursor: pointer;
 position: relative;
@@ -570,6 +570,7 @@ border-radius: 6px;
 text-align: center;
 box-sizing: border-box;
 min-width: 0;
+flex: 0 0 calc(25% - 2px);
 }
 
 
@@ -592,21 +593,15 @@ min-width: 0;
 /*カード名*/
 .card-name {
 display: block;
-font-size: clamp(0.3rem, 0.9vw, 1rem);
+font-size: clamp(0.3rem, 1vw, 10px);
 font-weight: bold;
-text-align: center;
+text-align:start;
 overflow: hidden;
 max-width: 100%;
 box-sizing: border-box;
 min-width: 0;
 }
-/* PCだけ後半優先 */
-@media (min-width: 768px) {
-  .card-name {
-    direction: rtl;       /* 右→左に流す */
-    text-align: left;     /* RTL時は左寄せでOK */
-  }
-}
+
 /*±ボタン*/
 .owned-card-controls {
 display: flex;
@@ -617,7 +612,7 @@ height: 50%;
 .owned-card-controls button {
 flex: 1 1 auto;
 padding: 3px 0;
-font-size: clamp(0.5rem, 0.9vw, 1rem);
+font-size: clamp(0.5rem, 1.2vw, 1rem);
 }
 /*枚数表示（PC版±ボタン中央）*/
 .count-display {
@@ -631,7 +626,7 @@ line-height: 20px;
 display: flex;
 flex-direction: column;
 text-align: left;
-font-size: clamp(0.3rem, 0.9vw, 1rem);
+font-size: clamp(0.3rem, 1.2vw, 1rem);
 }
 
 /*エディションカウント*/
@@ -665,7 +660,7 @@ user-select: none;
 }
 
 .grid-page-arrow.right-arrow {
-  right: -18px;
+  right: -40px;
 }
 
 /* 下部ページ送り */
@@ -674,10 +669,6 @@ user-select: none;
   margin-top: 10px;
 }
 
-
-.owned-card-grid .card {
-  flex: 0 0 calc(25% - 8px); /* 4列分 */
-}
 
 
 
@@ -703,18 +694,34 @@ text-decoration: underline;
 
 /* ======== レスポンシブ調整 ======== */
 @media (max-width: 1024px) {
+/*====総所持枚数タブ関連======*/
+/*カード*/
 .owned-card-grid .card {
 display: block;
+flex-direction: column; /* 横並びを解除して縦に */
+align-items: center;
 }
-
+/*カード画像*/
+.owned-card-grid .card img {
+width: 100%;
+height: auto;
+}
+/*カード情報*/
+.owned-card-info{
+width: 100%;
+gap: 1px;
+}
+.card-name{
+font-size: clamp(0.3rem, 1.4vw, 1rem);
+height: 4.2vw;
+}
 .owned-card-grid .card .owned-card-info {
 margin-left: 0;
 text-align: center;
-font-size: clamp(0.4rem, 1.6vw, 1.1rem);
+font-size: clamp(0.4rem, 1.3vw, 1.1rem);
 }
-.owned-card-grid .card img {
-width: 100%;
-}
+
+
 .owned-main{
 max-width: 65%;
 min-width: 400px;
@@ -730,14 +737,6 @@ flex-direction: row;
 min-width: 18px;
 width: 23%;
 font-size: 0.6em;
-}
-.owned-card-grid .card {
-display: block;
-}
-
-.owned-card-grid .card .owned-card-info {
-margin-left: 0;
-text-align: center;
 }
 }
 
@@ -4643,7 +4642,7 @@ const cardsPerPage = 16;
 
 //カード並び替え
 async function generateOwnedCards() {
-    const res = await fetch('/mesorogia/public/cards_latest.json');
+    const res = await fetch('mosurogia//public/cards_latest.json');
     cards = await res.json();
 
     const typeOrder = {

@@ -535,7 +535,7 @@ position: relative;
 
 /* 左右aside */
 .owned-aside {
-width: 25%;
+width: 15%;
 background: #f7f7f7;
 padding: 10px;
 border-radius: 8px;
@@ -547,7 +547,6 @@ font-size: clamp(0.4rem, 1.5vw, 1.1rem);
 .owned-main {
 position: relative;
 width: 100%;
-min-width: 1200px;
 }
 
 
@@ -555,7 +554,6 @@ min-width: 1200px;
 .owned-card-grid {
 display: flex;
 flex-wrap: wrap;
-gap: 8px;
 justify-content: flex-start;
 }
 
@@ -566,7 +564,8 @@ flex-direction: row;
 align-items: flex-start;
 background: #fff;
 border: 1px solid #ddd;
-padding: 5px;
+margin: 1px;
+padding: 2px;
 border-radius: 6px;
 text-align: center;
 box-sizing: border-box;
@@ -576,24 +575,26 @@ min-width: 0;
 
 /* カード画像 */
 .owned-card-grid .card img {
-width: 140px;
+width: 50%;
 height: auto;
 }
 
 /*カード情報*/
 .owned-card-info {
 display: flex;
+flex: 1 1 auto;
 flex-direction: column;
-gap: 6px;
-width: 100%;
+padding-left: 2px;
+gap: 2px;
+width: 50%;
 min-width: 0;
 }
 /*カード名*/
 .card-name {
 display: block;
+font-size: clamp(0.3rem, 0.9vw, 1rem);
 font-weight: bold;
 text-align: center;
-white-space: nowrap;
 overflow: hidden;
 max-width: 100%;
 box-sizing: border-box;
@@ -610,39 +611,41 @@ min-width: 0;
 .owned-card-controls {
 display: flex;
 justify-content: center;
-gap: 0; /* 隙間なし */
+gap: 0;
+height: 50%;
 }
 .owned-card-controls button {
 flex: 1 1 auto;
-padding: 4px 0;
+padding: 3px 0;
+font-size: clamp(0.5rem, 0.9vw, 1rem);
 }
 /*枚数表示（PC版±ボタン中央）*/
 .count-display {
-width: 40px;
 text-align: center;
-line-height: 30px;
+width: 20%;
+line-height: 20px;
 }
 
 /*各カード枚数操作部分*/
 .owned-card-grid .card .owned-card-info {
 display: flex;
 flex-direction: column;
-margin-left: 8px;
-font-size: 0.85rem;
 text-align: left;
+font-size: clamp(0.3rem, 0.9vw, 1rem);
 }
 
 /*エディションカウント*/
 .owned-card-edition-counts {
 display: flex;
 justify-content: space-between;
-gap: 4px;
+gap: 2px;
 align-items: center;
 }
 /*エディション切り替えボタン*/
 .edition-switch .edition-mode-btn {
 width: 100%;
 padding: 4px 0;
+font-size: clamp(0.4rem, 1vw, 1rem);
 }
 /* グリッド中央左右矢印 */
 .grid-page-arrow {
@@ -651,7 +654,7 @@ top: 50%;
 transform: translateY(-50%);
 background: #333;
 color: #fff;
-padding: 8px 12px;
+padding: 30px 4px;
 cursor: pointer;
 border-radius: 4px;
 user-select: none;
@@ -662,7 +665,7 @@ user-select: none;
 }
 
 .grid-page-arrow.right-arrow {
-  right: -40px;
+  right: -18px;
 }
 
 /* 下部ページ送り */
@@ -682,7 +685,7 @@ user-select: none;
 /* ======== フッター ======== */
 footer {
 text-align: center;
-font-size: 0.85rem;
+font-size: clamp(0.5rem, 1vw, 1rem);
 color: #666;
 padding: 1rem 0;
 background-color: #f9f9f9;
@@ -699,7 +702,7 @@ text-decoration: underline;
 }
 
 /* ======== レスポンシブ調整 ======== */
-@media (max-width: 1600px) {
+@media (max-width: 1024px) {
 .owned-card-grid .card {
 display: block;
 }
@@ -4001,7 +4004,7 @@ let cards = [];
 
 
     //読み込みコード処理
-    window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', () => {
         const params = new URLSearchParams(window.location.search);
         const data = params.get('data');
         if (data) {
@@ -4226,10 +4229,6 @@ document.querySelectorAll('.select-all-btn').forEach(btn => {
 //#endregion
 
 
-
-
-
-
 //保存ボタン切り替え
 function updateSaveButtonState() {
     const btn = document.getElementById('save-btn');
@@ -4339,28 +4338,28 @@ function applyOwnership(data) {
     }
 
 
-    /* 共有用に所持データをエクスポート */
-    function exportOwnershipURL() {
-        const owned = { "1": [], "2": [], "3": [] };
-        document.querySelectorAll(".card").forEach(card => {
-            const count = parseInt(card.dataset.count) || 0;
-            if (count >= 1 && count <= 3) {
-                const id = parseInt(card.dataset.cd).toString(36);
-                owned[count].push(id);
-            }
-        });
+/* 共有用に所持データをエクスポート */
+function exportOwnershipURL() {
+    const owned = { "1": [], "2": [], "3": [] };
+    document.querySelectorAll(".card").forEach(card => {
+        const count = parseInt(card.dataset.count) || 0;
+        if (count >= 1 && count <= 3) {
+            const id = parseInt(card.dataset.cd).toString(36);
+            owned[count].push(id);
+        }
+    });
 
-        // LZ-stringで圧縮してBase64化
-        const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(owned));
+    // LZ-stringで圧縮してBase64化
+    const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(owned));
 
-        // 今のページURL + ?data= で生成
-        const baseUrl = window.location.href.split('?')[0];
-        const shareUrl = `${baseUrl}?data=${compressed}`;
+    // 今のページURL + ?data= で生成
+    const baseUrl = window.location.href.split('?')[0];
+    const shareUrl = `${baseUrl}?data=${compressed}`;
 
-        navigator.clipboard.writeText(shareUrl).then(() => {
-            alert("所持カード共有URLをコピーしました！\nリプにそのまま貼れます！");
-        });
-    }
+    navigator.clipboard.writeText(shareUrl).then(() => {
+        alert("所持カード共有URLをコピーしました！\nリプにそのまま貼れます！");
+    });
+}
 
 // 関数の外でグローバルに定義
 const packs = [
@@ -4645,7 +4644,6 @@ const cardsPerPage = 16;
 //カード並び替え
 async function generateOwnedCards() {
     const res = await fetch('/mesorogia/public/cards_latest.json');
-
     cards = await res.json();
 
     const typeOrder = {

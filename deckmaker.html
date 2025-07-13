@@ -11,7 +11,7 @@
     <meta name="keywords" content="カードゲーム,デッキメーカー,DCG,神託のメソロギア,メソロギア,神託,デッキ分析,一覧,モスロギア">
     <!-- OGP基本 -->
     <meta property="og:title" content="モスロギア | 神託のメソロギア デッキメーカー">
-    <meta property="og:description" content="神託のメソロギアのカード検索・デッキ構築ができる非公式サイトです。">
+    <meta property="og:description" content="このサイトはアプリ「神託のメソロギア」のカード検索・デッキ構築ができる非公式サイトです。">
     <meta property="og:image" content="https://mosurogia.github.io/mesorogia-cards/img/deckmakerogp.webp">
     <meta property="og:url" content="https://mosurogia.github.io/mesorogia-cards/">
     <meta property="og:type" content="website">
@@ -662,7 +662,7 @@ input[type="text"] {
 
 footer {
   text-align: center;
-  font-size: 0.85rem;
+  font-size: clamp(0.5rem, 1vw, 1rem);
   color: #666;
   padding: 1rem 0;
   background-color: #f9f9f9;
@@ -8365,9 +8365,13 @@ function updateDeck() {
   // タブ切り替え
   // ==========================
   function switchTab(id) {
+    // すべてのタブボタンから active を外す
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    // クリックされたタブボタンに active を付ける
     document.querySelector(`[onclick="switchTab('${id}')"]`).classList.add('active');
+    // すべてのタブコンテンツを非表示
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    // 選択されたコンテンツだけ表示
     document.getElementById(id).classList.add('active');
 
     // 👇 追加：editタブに切り替わったときだけ実行

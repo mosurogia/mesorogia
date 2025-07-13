@@ -4642,7 +4642,7 @@ const cardsPerPage = 16;
 
 //カード並び替え
 async function generateOwnedCards() {
-    const res = await fetch('/mosurogia/public/cards_latest.json');
+    const res = await fetch('/mesorogia/public/cards_latest.json');
     cards = await res.json();
 
     const typeOrder = {

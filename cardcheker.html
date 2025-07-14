@@ -479,6 +479,26 @@ border: 1px solid #aaa;
 cursor: pointer;
 z-index: 9999;
 }
+
+#filter-modal {
+display: none;               /* 初期は非表示 */
+position: fixed;             /* 画面に固定 */
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);  /* 中央に寄せる */
+background: #fff;            /* 白背景 */
+border: 2px solid #333;      /* 枠線 */
+padding: 20px;
+z-index: 1000;               /* 上に表示 */
+max-height: 80%;
+overflow-y: auto;            /* スクロール対応 */
+box-shadow: 0 0 20px rgba(0,0,0,0.3);
+}
+#modal-backdrop {
+  position: fixed;
+  z-index: 900;
+}
+
 /* ======== フィルターボタン ======== */
 .filter-btn {
 margin: 4px 0px;
@@ -494,7 +514,16 @@ display: flex;
 flex-wrap: wrap;
 gap: 0.5rem;
 }
-
+#filter-modal button.selected {
+background-color: #333;
+color: #fff;
+border: 2px solid #333;
+}
+.type-btn.selected{
+background-color: #333;
+color: #fff;
+border: 2px solid #333;
+}
 /* ======== タイプ背景 ======== */
 .type-アタッカー { background: rgba(125, 91, 155, 0.5); }
 .type-チャージャー { background: rgba(119, 170, 212, 0.5); }
@@ -537,11 +566,57 @@ position: relative;
 .owned-aside {
 width: 15%;
 background: #f7f7f7;
-padding: 10px;
+padding: 5px;
 border-radius: 8px;
+font-size: clamp(0.3rem, 1.4vw, 1.3rem);
+max-height: 45vw;
+overflow-y: auto;
 }
 .owned-aside h4{
-font-size: clamp(0.4rem, 1.5vw, 1.1rem);
+font-size: clamp(0.4rem, 1.2vw, 1.1rem);
+}
+.owned-aside p{
+margin: 0.5rem 0;
+
+}
+.sand {
+font-size: clamp(0.3rem, 1vw, 14px);
+}
+#owned-race-summary{
+margin: 0.5rem 0;
+font-size: clamp(0.3rem, 1vw, 1.3rem);
+}
+#owned-race-summary p{
+margin: 2px 0;
+}
+#sand-summary{
+font-size: clamp(0.4rem, 1.2vw, 1.1rem);
+}
+#reset-excess-btn{
+font-size: clamp(0.5rem, 1vw, 1.1rem);
+width: 100%;
+margin-bottom: 2px;
+}
+.owned-aside.right {
+  overflow-x: hidden;   /* 横スクロールを防ぐ */
+  max-width: 100%;      /* はみ出さないようにする */
+}
+
+#type-toggle button {
+  display: block;       /* ボタンを1列縦並びにする */
+  width: 100%;          /* 親要素に合わせて横幅を自動調整 */
+  box-sizing: border-box;
+}
+#keyword-input{
+font-size: clamp(0.4rem, 0.9vw, 1.1rem);
+width: 95%;
+height: 1vw;
+}
+#open-filter-modal{
+font-size: clamp(0.5rem, 1vw, 1.1rem);
+}
+.type-btn{
+font-size: clamp(0.5rem, 1vw, 1.1rem);
 }
 /* 中央メイン */
 .owned-main {
@@ -593,13 +668,14 @@ min-width: 0;
 /*カード名*/
 .card-name {
 display: block;
-font-size: clamp(0.3rem, 1vw, 10px);
+font-size: clamp(0.3rem, 1vw, 1rem);
 font-weight: bold;
 text-align:start;
 overflow: hidden;
 max-width: 100%;
 box-sizing: border-box;
 min-width: 0;
+height: 3vw;
 }
 
 /*±ボタン*/
@@ -695,6 +771,10 @@ text-decoration: underline;
 /* ======== レスポンシブ調整 ======== */
 @media (max-width: 1024px) {
 /*====総所持枚数タブ関連======*/
+/*サイド*/
+.owned-aside{
+    max-height: 120vw;
+}
 /*カード*/
 .owned-card-grid .card {
 display: block;
@@ -889,7 +969,7 @@ padding: 0.5em ;
         <span>📊 所持率チェッカー</span>
     </div>
     <div id="tab2" class="tab" onclick="switchTab('owned')">
-        <span>🔢 総所持枚数</span>
+        <span>🔢 所持カード分析</span>
     </div>
 </div>
 
@@ -3931,12 +4011,31 @@ padding: 0.5em ;
 
 <div id="owned-container" class="owned-container">
     <!-- 左サイド：総所持枚数や分解ポイント -->
-    <aside class="owned-aside left">
-        <h4>総所持枚数</h4>
-        <p><span id="owned-total">0</span> 枚</p>
-        <h4>分解ポイント</h4>
-        <p>仮表示: <span id="disassemble-point">0</span></p>
-    </aside>
+<aside class="owned-aside left">
+    <button id="reset-excess-btn">余剰分リセット</button>
+
+    <h4>所持データ</h4>
+    <p>総枚数: <span id="owned-total">0</span> 枚</p>
+
+    <h4>レアリティ別</h4>
+    <p>レジェンド: <span id="owned-legend">0</span></p>
+    <p>ゴールド: <span id="owned-gold">0</span></p>
+    <p>シルバー: <span id="owned-silver">0</span></p>
+    <p>ブロンズ: <span id="owned-bronze">0</span></p>
+
+    <h4>分解時の砂の量</h4>
+    <p class="sand">ブロンズの砂: <span id="sand-bronze">0</span></p>
+    <p class="sand">シルバーの砂: <span id="sand-silver">0</span></p>
+    <p class="sand">ゴールドの砂: <span id="sand-gold">0</span></p>
+    <p class="sand">レジェンドの砂: <span id="sand-legend">0</span></p>
+
+    <h4>種族ごと</h4>
+    <div id="owned-race-summary"></div>
+
+
+</aside>
+
+
 
 <!--中央：カード所持枚数一覧-->
 <div class="owned-main">
@@ -3959,11 +4058,32 @@ padding: 0.5em ;
 
 <!-- 右サイド：検索機能など -->
 <aside class="owned-aside right">
-    <h4>検索</h4>
-    <button id="search-btn">🔍 検索</button>
-    <h4>保存</h4>
-    <button id="save-btn">💾 保存</button>
+    <h4>キーワード検索</h4>
+    <input type="text" id="keyword-input" placeholder="カード名・効果など">
+
+    <h4>フィルター</h4>
+    <button id="open-filter-modal">📊 フィルター</button>
+
+    <div id="type-toggle">
+        <button class="type-btn selected" data-type="all">全タイプ</button>
+        <button class="type-btn" data-type="チャージャー">チャージャー</button>
+        <button class="type-btn" data-type="アタッカー">アタッカー</button>
+        <button class="type-btn" data-type="ブロッカー">ブロッカー</button>
+    </div>
 </aside>
+
+<!-- フィルターモーダル -->
+<div id="filter-modal" style="display: none;">
+    <h4>種族</h4>
+    <div id="filter-race"></div>
+    <h4>カテゴリ</h4>
+    <div id="filter-category"></div>
+    <h4>レアリティ</h4>
+    <div id="filter-rarity"></div>
+</div>
+<div id="modal-backdrop"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:900;">
+</div>
 </div>
 
     <footer>
@@ -3994,40 +4114,58 @@ padding: 0.5em ;
 
 <script>
 /*カードデータ自動読み込み*/
-window.addEventListener('DOMContentLoaded', () => {
-    loadOwnership();
-});
 window.addEventListener('DOMContentLoaded', generateOwnedCards);
 /*グローバル設定*/
 let cards = [];
+//モーダル内容
+const filterConditions = {
+    keyword: '',
+    type: 'all', // チャージャー / アタッカー / ブロッカー / all
+    race: [],
+    category: [],
+    rarity: []
+};
 
-
-    //読み込みコード処理
+//読み込みコード処理
 window.addEventListener('DOMContentLoaded', () => {
-        const params = new URLSearchParams(window.location.search);
-        const data = params.get('data');
-        if (data) {
-            try {
-                const decompressed = LZString.decompressFromEncodedURIComponent(data);
-                const raw = JSON.parse(decompressed);
-                const owned = {};
-                ["1", "2", "3"].forEach(num => {
-                    (raw[num] || []).forEach(id => {
-                        owned[parseInt(id, 36).toString()] = parseInt(num);
-                    });
+    const params = new URLSearchParams(window.location.search);
+    const data = params.get('data');
+
+    if (data) {
+        try {
+            const decompressed = LZString.decompressFromEncodedURIComponent(data);
+            const raw = JSON.parse(decompressed);
+            const owned = {};
+            ["1", "2", "3"].forEach(num => {
+                (raw[num] || []).forEach(id => {
+                    owned[parseInt(id, 36).toString()] = parseInt(num);
                 });
-                applyOwnership(owned);
-                alert("共有URLの所持率データを読み込みました！");
-                window.isGuestView = true;  // ← ここで「他人データモード」にする
-            } catch (e) {
-                alert("URLの所持データの形式が正しくありません！");
-            }
-        } else {
-            loadOwnership();  // 自分の保存データを読み込み
-            window.isGuestView = false;  // 自分データモード
+            });
+            applyOwnership(owned);
+            alert("共有URLの所持率データを読み込みました！");
+            window.isGuestView = true;
+        } catch (e) {
+            alert("URLの所持データの形式が正しくありません！");
         }
-        updateSaveButtonState(); // ボタン状態を更新
-    });
+    } else {
+        loadOwnership();
+        window.isGuestView = false;
+    }
+    const openFilterBtn = document.getElementById('open-filter-modal');
+    const filterModal = document.getElementById('filter-modal');
+
+    if (openFilterBtn && filterModal) {
+        openFilterBtn.addEventListener('click', () => {
+            filterModal.style.display = 'block';
+        });
+    } else {
+        console.error('❌ open-filter-modal または filter-modal が見つかりません！');
+    }
+    updateSaveButtonState();
+    generateOwnedCards();
+    generateFilterOptions();
+});
+
 
 
 
@@ -4244,16 +4382,21 @@ function updateSaveButtonState() {
 
 
 /* 所持カード枚数確認 */
-function getOwnedCardData() {
-    const data = {};
-    document.querySelectorAll(".card").forEach(card => {
-        const count = parseInt(card.dataset.count) || 0;
-        if (count > 0) {
-            data[card.dataset.cd] = count;
-        }
-    });
-    return data;
-}
+    function getOwnedCardData() {
+        const data = {};
+        document.querySelectorAll(".card").forEach(card => {
+            const count = parseInt(card.dataset.count) || 0;
+            if (count > 0) {
+                data[card.dataset.cd] = {
+                    normal: count,
+                    shine: 0,
+                    premium: 0
+                };
+            }
+        });
+        return data;
+    }
+
 
 
 
@@ -4310,10 +4453,34 @@ function importOwnership() {
 
 
     /* 所持状態の画面反映 */
-function applyOwnership(data) {
+    function applyOwnership(data) {
+        ownedCards = {};
+
+        for (const cd in data) {
+            const entry = data[cd];
+            if (typeof entry === "object") {
+                // 既に構造化されている場合
+                ownedCards[cd] = {
+                    normal: entry.normal || 0,
+                    shine: entry.shine || 0,
+                    premium: entry.premium || 0
+                };
+            } else {
+                // 数値だけの場合
+                ownedCards[cd] = {
+                    normal: entry,
+                    shine: 0,
+                    premium: 0
+                };
+            }
+        }
+
+        localStorage.setItem('ownedCards', JSON.stringify(ownedCards));
+
+        // ✅ 画面反映は同じでOK
         document.querySelectorAll(".card").forEach(card => {
             const cd = card.dataset.cd;
-            const count = data[cd] || 0;
+            const count = ownedCards[cd] ? ownedCards[cd].normal : 0;
 
             card.dataset.count = count;
             card.classList.remove('owned-1', 'owned-2', 'owned-3', 'owned', 'grayscale');
@@ -4333,9 +4500,9 @@ function applyOwnership(data) {
         });
 
         updateSummary();
+        updateOwnedTotal();
         updateMobileSummary();
     }
-
 
 /* 共有用に所持データをエクスポート */
 function exportOwnershipURL() {
@@ -4607,6 +4774,10 @@ const cardsPerPage = 16;
             div.dataset.power = card.power;
             div.dataset.rarity = card.rarity;
             div.dataset.editionMode = 'all'; // 初期は全体
+            if (card.effect_name1) div.dataset.effectname1 = card.effect_name1;
+            if (card.effect_name2) div.dataset.effectname2 = card.effect_name2;
+            if (card.effect_text1) div.dataset.effecttext1 = card.effect_text1;
+            if (card.effect_text2) div.dataset.effecttext2 = card.effect_text2;
 
             div.innerHTML = `
             <img alt="${card.name}" loading="lazy" src="img/${card.cd}.webp" />
@@ -4627,11 +4798,13 @@ const cardsPerPage = 16;
             </div>
 
             <div class="edition-switch">
-                <button class="edition-mode-btn">全体</button>
+                <button class="edition-mode-btn">ノーマル</button>
             </div>
             </div>
         `;
             grid.appendChild(div);
+            // イベント登録
+            bindCardEvents(div);
         });
 
 
@@ -4663,13 +4836,15 @@ async function generateOwnedCards() {
     ownedCardsData = cards;  // ← データだけ更新
 }
 
-
     // 初期呼び出し
-    generateOwnedCards().then(() => {
-        ownedCardsData = cards; // 生成後にデータをセット
-        renderOwnedPage(); // 最初のページを表示
-    });
+generateOwnedCards().then(() => {
+    ownedCardsData = cards; // 生成後にデータをセット
+    renderOwnedPage();       // 1ページ目を表示
+    updateOwnedTotal();      // ←ここで呼ぶ！
+});
 
+
+//#region ページ送り戻りボタン
     // 左右中央矢印のクリックで前後ページ送り
     document.querySelector('.grid-page-arrow.left-arrow').addEventListener('click', () => {
         currentPage--;
@@ -4691,8 +4866,6 @@ async function generateOwnedCards() {
         renderOwnedPage();
     });
 
-
-
     // ← ボタン
     document.getElementById('prev-page').addEventListener('click', () => {
         currentPage--;
@@ -4704,6 +4877,387 @@ async function generateOwnedCards() {
         currentPage++;
         renderOwnedPage();
     });
+//#endregion
+
+
+// 所持枚数データ
+let ownedCards = JSON.parse(localStorage.getItem('ownedCards')) || {};
+
+// 総所持枚数のaside反映
+function updateOwnedTotal() {
+    let total = 0;
+    let legend = 0;
+    let gold = 0;
+    let silver = 0;
+    let bronze = 0;
+
+    for (const cd in ownedCards) {
+        const c = ownedCards[cd];
+        const sum = (c.normal || 0) + (c.shine || 0) + (c.premium || 0);
+        total += sum;
+
+        const cardInfo = cards.find(card => String(card.cd) === cd);
+
+        if (!cardInfo) continue;
+
+        switch (cardInfo.rarity) {
+            case "レジェンド": legend += sum; break;
+            case "ゴールド": gold += sum; break;
+            case "シルバー": silver += sum; break;
+            case "ブロンズ": bronze += sum; break;
+        }
+    }
+
+    document.getElementById('owned-total').textContent = total;
+    document.getElementById('owned-legend').textContent = legend;
+    document.getElementById('owned-gold').textContent = gold;
+    document.getElementById('owned-silver').textContent = silver;
+    document.getElementById('owned-bronze').textContent = bronze;
+
+    calculateDismantleSand();
+    updateOwnedRaceSummary();
+}
+
+
+
+//余剰分リセットボタン
+document.getElementById('reset-excess-btn').addEventListener('click', () => {
+    for (const cd in ownedCards) {
+        ["normal", "shine", "premium"].forEach(edition => {
+            const cardInfo = cards.find(card => String(card.cd) === cd);
+            if (!cardInfo) return;
+
+            const limit = cardInfo.race.includes("旧神") ? 1 : 3;
+            if (ownedCards[cd][edition] > limit) {
+                ownedCards[cd][edition] = limit;
+            }
+        });
+    }
+    localStorage.setItem('ownedCards', JSON.stringify(ownedCards));
+    updateOwnedTotal();
+    renderOwnedPage();
+    alert("余剰分を全て制限枚数にリセットしました！");
+});
+
+
+//分解砂計算
+function calculateDismantleSand() {
+  let sand = {
+    bronze: 0,
+    silver: 0,
+    gold: 0,
+    legend: 0
+  };
+
+  for (const cd in ownedCards) {
+    const c = ownedCards[cd];
+      const cardInfo = cards.find(card => String(card.cd) === cd);
+    if (!cardInfo) continue;
+
+    const limit = cardInfo.race.includes("旧神") ? 1 : 3;
+
+    ["normal", "shine", "premium"].forEach(edition => {
+      const excess = Math.max(0, c[edition] - limit);
+      if (excess > 0) {
+        switch (cardInfo.rarity) {
+          case "ブロンズ": sand.bronze += excess * 2; break;
+          case "シルバー": sand.silver += excess * 4; break;
+          case "ゴールド": sand.gold += excess * 40; break;
+          case "レジェンド": sand.legend += excess * 100; break;
+        }
+      }
+    });
+  }
+
+  document.getElementById('sand-bronze').textContent = sand.bronze;
+  document.getElementById('sand-silver').textContent = sand.silver;
+  document.getElementById('sand-gold').textContent = sand.gold;
+  document.getElementById('sand-legend').textContent = sand.legend;
+}
+
+//種族枚数反映
+    function updateOwnedRaceSummary() {
+        const raceCount = {};
+
+        for (const cd in ownedCards) {
+            const c = ownedCards[cd];
+            const sum = (c.normal || 0) + (c.shine || 0) + (c.premium || 0);
+            if (sum === 0) continue;
+
+            const cardInfo = cards.find(card => String(card.cd) === cd);
+            if (!cardInfo) continue;
+
+            const races = Array.isArray(cardInfo.race) ? cardInfo.race : [cardInfo.race];
+            races.forEach(race => {
+                if (!raceCount[race]) {
+                    raceCount[race] = { total: 0, rarity: {} };
+                }
+                raceCount[race].total += sum;
+
+                if (!raceCount[race].rarity[cardInfo.rarity]) {
+                    raceCount[race].rarity[cardInfo.rarity] = 0;
+                }
+                raceCount[race].rarity[cardInfo.rarity] += sum;
+            });
+        }
+
+        // HTML生成
+        let html = "";
+        for (const race in raceCount) {
+            html += `<details><summary>${race}: ${raceCount[race].total}枚</summary>`;
+            for (const rarity in raceCount[race].rarity) {
+                html += `<p>　${rarity}: ${raceCount[race].rarity[rarity]}枚</p>`;
+            }
+            html += `</details>`;
+        }
+
+        document.getElementById("owned-race-summary").innerHTML = html;
+    }
+
+
+
+//#region 右asaide
+
+
+
+
+//キーワード検索
+document.getElementById('keyword-input').addEventListener('input', (e) => {
+    filterConditions.keyword = e.target.value.trim();
+    applyFilterAndSearch();
+});
+
+
+//タイプ切り替え
+document.querySelectorAll('.type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        filterConditions.type = btn.dataset.type;
+        applyFilterAndSearch();
+    });
+});
+
+
+
+
+
+//フィルターモーダル開閉
+document.getElementById('open-filter-modal').addEventListener('click', () => {
+    document.getElementById('filter-modal').style.display = 'block';
+});
+
+document.querySelectorAll('#filter-modal button[data-value]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        btn.classList.toggle('selected');
+    });
+});
+
+
+document.getElementById('open-filter-modal').addEventListener('click', () => {
+    document.getElementById('filter-modal').style.display = 'block';
+    document.getElementById('modal-backdrop').style.display = 'block';
+});
+
+document.getElementById('modal-backdrop').addEventListener('click', () => {
+    document.getElementById('filter-modal').style.display = 'none';
+    document.getElementById('modal-backdrop').style.display = 'none';
+});
+
+
+
+
+//検索動作
+function applyFilterAndSearch() {
+    // 1: フィルタ条件取得
+    const keyword = filterConditions.keyword.toLowerCase();
+    const selectedType = filterConditions.type;
+    const selectedRaces = filterConditions.race;
+    const selectedCategories = filterConditions.category;
+    const selectedRarities = filterConditions.rarity;
+
+    // 2: 絞り込む
+    const filtered = cards.filter(card => {
+        const cd = String(card.cd);
+        const owned = ownedCards[cd];
+        if (!owned) return false;
+
+        // キーワード一致
+        if (keyword) {
+            const keywordHit =
+                card.name.toLowerCase().includes(keyword) ||
+                (card.effect && card.effect.toLowerCase().includes(keyword));
+            if (!keywordHit) return false;
+        }
+
+        // タイプ一致
+        if (selectedType !== 'all' && card.type !== selectedType) {
+            return false;
+        }
+
+        // 種族
+        if (selectedRaces.length > 0) {
+            const races = Array.isArray(card.race) ? card.race : [card.race];
+            if (!races.some(r => selectedRaces.includes(r))) return false;
+        }
+
+        // カテゴリ
+        if (selectedCategories.length > 0) {
+            if (!selectedCategories.includes(card.category)) return false;
+        }
+
+        // レアリティ
+        if (selectedRarities.length > 0) {
+            if (!selectedRarities.includes(card.rarity)) return false;
+        }
+
+        return true;
+    });
+
+    // 3: 結果を再描画
+    ownedCardsData = filtered;
+    renderOwnedPage();
+}
+
+//モーダル選択肢表示
+function generateFilterOptions() {
+    const races = ['ドラゴン', 'アンドロイド', 'エレメンタル', 'ルミナス', 'シェイド', 'イノセント', '旧神'];
+
+    const categories = [
+        '聖焔龍（フォルティア）',
+        'ドラゴライダー',
+        'メイドロボ',
+        'アドミラルシップ',
+        'ナチュリア',
+        '鬼刹（きせつ）',
+        'ロスリス',
+        '白騎士',
+        '昏き霊園',
+        'マディスキア',
+        'ノーカテゴリ'
+    ];
+
+    const rarities = ['レジェンド', 'ゴールド', 'シルバー', 'ブロンズ'];
+
+    const raceArea = document.getElementById('filter-race');
+    const categoryArea = document.getElementById('filter-category');
+    const rarityArea = document.getElementById('filter-rarity');
+
+    raceArea.innerHTML = '';
+    categoryArea.innerHTML = '';
+    rarityArea.innerHTML = '';
+
+    // 📌 種族ボタン
+    races.forEach(race => {
+        const btn = document.createElement('button');
+        btn.dataset.value = race;
+        btn.textContent = race;
+        btn.addEventListener('click', () => {
+            btn.classList.toggle('selected');
+
+            // 選択状態を即更新
+            filterConditions.race = [...document.querySelectorAll('#filter-race button.selected')].map(b => b.dataset.value);
+            applyFilterAndSearch();
+        });
+        raceArea.appendChild(btn);
+    });
+
+    // 📌 カテゴリボタン
+    categories.forEach(category => {
+        const btn = document.createElement('button');
+        btn.dataset.value = category;
+        btn.textContent = category;
+        btn.addEventListener('click', () => {
+            btn.classList.toggle('selected');
+
+            filterConditions.category = [...document.querySelectorAll('#filter-category button.selected')].map(b => b.dataset.value);
+            applyFilterAndSearch();
+        });
+        categoryArea.appendChild(btn);
+    });
+
+    // 📌 レアリティボタン
+    rarities.forEach(rarity => {
+        const btn = document.createElement('button');
+        btn.dataset.value = rarity;
+        btn.textContent = rarity;
+        btn.addEventListener('click', () => {
+            btn.classList.toggle('selected');
+
+            filterConditions.rarity = [...document.querySelectorAll('#filter-rarity button.selected')].map(b => b.dataset.value);
+            applyFilterAndSearch();
+        });
+        rarityArea.appendChild(btn);
+    });
+
+    console.log('✅ generateFilterOptions 完了（即時反映 & 絞り込みボタン不要）');
+}
+
+
+
+//#endregion
+
+
+// 各カードのイベント登録
+function bindCardEvents(cardDiv) {
+    const cd = cardDiv.dataset.cd;
+    if (!ownedCards[cd]) ownedCards[cd] = { normal: 0, shine: 0, premium: 0 };
+
+    let mode = 'normal'; // 初期モード
+    const editionBtn = cardDiv.querySelector('.edition-mode-btn');
+    const decBtn = cardDiv.querySelector('.decrement-btn');
+    const incBtn = cardDiv.querySelector('.increment-btn');
+
+    const countSpan = cardDiv.querySelector('.count-display');
+    const normalSpan = cardDiv.querySelector('.normal-count');
+    const shineSpan = cardDiv.querySelector('.shine-count');
+    const premiumSpan = cardDiv.querySelector('.premium-count');
+
+    function getModeLabel(mode) {
+        return mode === 'normal' ? '📇ノーマル'
+            : mode === 'shine' ? '✨シャイン'
+                : '🔮プレミアム';
+    }
+
+    function updateDisplay() {
+        // 合計表示
+        const total = ownedCards[cd].normal + ownedCards[cd].shine + ownedCards[cd].premium;
+        countSpan.textContent = total;
+
+        // 各エディション表示
+        normalSpan.textContent = `📇${ownedCards[cd].normal}`;
+        shineSpan.textContent = `✨${ownedCards[cd].shine}`;
+        premiumSpan.textContent = `🔮${ownedCards[cd].premium}`;
+
+        // 切替ボタンのラベル
+        editionBtn.textContent = getModeLabel(mode);
+    }
+
+    editionBtn.addEventListener('click', () => {
+        const next = { normal: 'shine', shine: 'premium', premium: 'normal' };
+        mode = next[mode];
+        updateDisplay();
+    });
+
+    incBtn.addEventListener('click', () => {
+        ownedCards[cd][mode]++;
+        localStorage.setItem('ownedCards', JSON.stringify(ownedCards));
+        updateDisplay();
+        updateOwnedTotal();
+    });
+
+    decBtn.addEventListener('click', () => {
+        if (ownedCards[cd][mode] > 0) {
+            ownedCards[cd][mode]--;
+            localStorage.setItem('ownedCards', JSON.stringify(ownedCards));
+            updateDisplay();
+            updateOwnedTotal();
+        }
+    });
+
+    updateDisplay();
+}
+
 
 </script>
 </body>

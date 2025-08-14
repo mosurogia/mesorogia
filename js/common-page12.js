@@ -7,7 +7,7 @@
 
 // JSON読み込み＆フィルター済み配列取得
 async function fetchLatestCards() {
-  const res = await fetch('/public/cards_latest.json');
+  const res = await fetch('/mesorogia//public/cards_latest.json');
   const allCards = await res.json();
   return allCards.filter(card => card.is_latest === true);
 }

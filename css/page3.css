@@ -334,7 +334,27 @@ section h4 {
     position: relative;
     overflow: hidden;
 }
+@media (max-width: 1024px) {
+    .card {
+        width: calc(100% / 6 - 8px);
+    }
 
+    .owned-mark {
+        min-width: 18px;
+        width: 23%;
+        font-size: 0.6em;
+    }
+}
+@media (max-width: 560px) {
+    .header-nav a {
+        margin-left: 0.1em;
+        font-size: 0.45em;
+    }
+
+    .card {
+        width: calc(100% / 5 - 8px);
+    }
+}
 /* ======== レアリティ枠線 ======== */
 /* 帯（画像の上に出す） */
 .card::before {

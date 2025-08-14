@@ -18,7 +18,11 @@
     font-size: 1rem;
     box-sizing: border-box;
 }
-
+input[type="text"] {
+    font-size: 16px;
+    padding: 6px 12px;
+    height: 36px;
+}
 
 /*並び替え*/
 select {
@@ -151,15 +155,7 @@ select {
     cursor: pointer;
     position: relative;
 }
-button,
-.card {
-    touch-action: manipulation;/*ダブルタップ防止*/
-}
 
-.card.grayscale img {
-    filter: grayscale(100%);
-    opacity: 0.5;
-}
 /*非表示種族*/
 .hidden-by-grayscale {
     display: none !important;

@@ -1,6 +1,7 @@
 /*=======================
         1.タブ画像
 ========================*/
+
 #tab1 {
     background-image: url("/img/tab1.2.webp");
     background-size: cover;
@@ -44,7 +45,11 @@
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
-
+.filter-toggle-button.active {
+    background-color: #6a5acd;
+    color: white;
+    border-color: #5a4cb5;
+}
 
 /*=======デッキバー=========*/
 .deck-bar-wrapper {
@@ -129,9 +134,40 @@
 .analyze-button:hover {
     background-color: #5a4cb5;
 }
+/*============================
+        3.デッキ構築-カード一覧
+=============================*/
+.used-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    font-weight: bold;
+    font-size: 0.85em;
+    text-align: center;
+    z-index: 5;
+}
+
+
 /*=======================
-        3.デッキ編集
+        4.デッキ編集
 ========================*/
+/*編集画面全体*/
+#deck-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+@media (min-width: 700px) {
+#deck-layout {
+        flex-direction: row;
+        height: 100%;
+        max-height: 25rem;
+    }
+}
+/*編集セクション*/
 .deck-section {
     background: #fff;
     padding: 0.5rem 0px;
@@ -141,7 +177,33 @@
 }
 
 
-/*=======デッキリスト=======*/
+
+/*=======デッキリストゾーン=======*/
+/*カードリスト画面*/
+#deck-card-list {
+    position: relative;
+    background-image: url(/img/cardlist.webp);
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    /* 横5列 */
+    gap: 4px;
+    padding: 8px;
+    min-height: 140px;
+    align-content: start;
+    justify-content: start;
+    overflow-y: auto;
+}
+@media (min-width: 700px) {
+#deck-card-list {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+/*「デッキがここに表示されます」*/
 #deckcard-empty-message {
     position: absolute;
     top: 50%;
@@ -153,42 +215,6 @@
     text-align: center;
     pointer-events: none;
     z-index: 1;
-}
-
-/*========デッキカード=======*/
-    .deck-card {
-        width: 100px;
-        background: #ccc;
-        border: 2px solid #666;
-        position: relative;
-        flex-shrink: 0;
-        box-sizing: border-box;
-        border-radius: 6px;
-        z-index: 2000;
-    }
-
-    .deck-card img {
-        width: 100%;
-        display: block;
-    }
-
-    .count-badge {
-        position: absolute;
-        top: 2px;
-        right: 4px;
-        background: #222;
-        color: #fff;
-        font-size: 15px;
-        border-radius: 20px;
-        padding: 1px 8px;
-    }
-@media (max-width: 768px) {
-    .deck-card {
-            width: 70px;
-            /* スマホではこのサイズに */
-            height: auto;
-            /* 縦幅は画像サイズに任せる or 調整 */
-        }
 }
 
 /*代表カード*/
@@ -213,18 +239,64 @@
     box-shadow: 0 0 10px limegreen;
 }
 
-/*=======デッキ情報=======*/
+/*========デッキ情報ゾーン=======*/
+/*情報ゾーンレイアウト*/
 #deck-info {
     overflow-y: auto;
 }
+@media (min-width: 700px) {
+#deck-info {
+        flex: 1;
+        max-width: 50%;
+        /* ← 適宜調整可能 */
+        min-height: 5rem;
+    }
+}
 #deck-info div {
     font-size: 0.65rem;
-    overflow-y: auto;
 }
+
 #deck-info label {
     font-weight: bold;
     margin-right: 0.5rem;
 }
+.deck-card {
+    width: 100px;
+    background: #ccc;
+    border: 2px solid #666;
+    position: relative;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    border-radius: 6px;
+    z-index: 2000;
+}
+
+.deck-card img {
+    width: 100%;
+    display: block;
+}
+
+.count-badge {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    background: #222;
+    color: #fff;
+    font-size: 15px;
+    border-radius: 20px;
+    padding: 1px 8px;
+}
+@media (max-width: 768px) {
+    .deck-card {
+            width: 70px;
+            /* スマホではこのサイズに */
+            height: auto;
+            /* 縦幅は画像サイズに任せる or 調整 */
+        }
+}
+
+
+
 
 
 
@@ -268,6 +340,7 @@
 }
 
 #analysis-section {
+    overflow: hidden;
     max-height: 0;
     opacity: 0;
     transition: max-height 0.5s ease, opacity 0.5s ease;
@@ -284,3 +357,94 @@
 .deck-code-controls button {
     font-size: 0.85em;
 }
+
+
+/*=======グラフ=========*/
+.chart{
+    max-width: 100%;
+    position: relative;
+    height: 200px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+
+
+
+
+/*======デッキ保存リスト=========*/
+/*保存デッキ一覧*/
+#saved-deck {
+    margin: 0;
+}
+/*デッキ数カウント*/
+#savedDeckCount {
+    margin-bottom: 0.3em;
+    font-size: 20px;
+    color: #333;
+}
+
+/*注意書き*/
+.saved-deck-massage{
+    color: red;
+    font-weight: bold;
+    font-size: 15px;
+    margin: 0px;
+}
+
+/*保存デッキリスト*/
+#savedDeckList {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    /* ⬅ 2列対応 */
+    gap: 0.3em;
+    margin-top: 0.2em;
+}
+#savedDeckList p{
+    margin: 0.5em;
+}
+.saved-deck-item {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5em;
+    border: 1px solid #ccc;
+    background-color: #fff;
+}
+
+.saved-deck-item img {
+    width: 80px;
+    height: auto;
+    object-fit: cover;
+}
+
+.saved-deck-info {
+    flex: 1 1 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25em;
+    min-width: 150px;
+}
+
+.saved-deck-info .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+}
+
+.saved-deck-info .row small {
+    font-size: 0.75em;
+    color: #555;
+}
+
+.saved-deck-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    min-width: 80px;
+}
+
+
+

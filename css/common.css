@@ -10,6 +10,18 @@ body {
     display: block;
     border-radius: 6px;
 }
+/*カードでのダブルタップ防止（スマホ）*/
+button,
+.card {
+    touch-action: manipulation;
+    /*ダブルタップ防止*/
+}
+
+/*カードモノクロ化*/
+.grayscale img {
+    filter: grayscale(100%);
+    opacity: 0.5;
+}
 /*所持マーク*/
 .owned-mark {
     position: absolute;
@@ -32,6 +44,7 @@ body {
     text-align: center;
     justify-content: center;
     align-items: center;
+    z-index: 2;
 }
 
 .card.owned .owned-mark {

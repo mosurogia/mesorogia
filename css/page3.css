@@ -1,0 +1,689 @@
+/*=======================
+        0.初期呼び出し
+=======================*/
+
+
+/*=======================
+    1.ツイッターボタン
+=======================*/
+/*Xポストボタン*/
+.summary-share {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    width: 100%;
+    border-bottom: 4px solid #ddd;
+}
+
+.custom-tweet-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background-color: #000;
+    color: #fff;
+    padding: 0.3rem 0.6rem;
+    border-radius: 20px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+}
+
+.custom-tweet-button:hover {
+    background-color: #333;
+}
+
+.tweet-icon {
+    width: 16px;
+    height: 16px;
+}
+/*=======================
+    2.スマホ版所持率
+=======================*/
+
+.top-summary {
+    display: none;
+}
+@media (max-width: 700px) {
+    .top-summary {
+        display: flex;
+        flex-direction: column;
+        position: sticky;
+        top: 0;
+        background: #fff;
+        border-bottom: 2px solid #ccc;
+        z-index: 2000;
+        padding: 0.2rem;
+        font-size: clamp(0.65rem, 3vw, 20px);
+    }
+}
+
+/*所持率+ポストボタン*/
+.summary-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.1rem;
+    flex-wrap: wrap;
+    gap: 0.1rem;
+}
+
+
+
+
+/*パック名選択*/
+.summary-bar select {
+    font-size: 0.68rem;
+    padding: 0.2rem;
+}
+/*=======================
+        3.PC版所持率
+=======================*/
+/*サイドバー*/
+.page-wrapper {
+    display: flex;
+}
+@media (max-width: 700px) {
+.page-wrapper {
+        flex-direction: column;
+    }
+}
+
+
+/*所持率パネル*/
+.summary-panel {
+    width: 20%;
+    flex-shrink: 0;
+    padding-left: 0.2%;
+    background: #fafafa;
+    /* 少し明るいグレー */
+    border-radius: 0 8px 8px 0;
+    /* 左はピタッと */
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    border-right: 12px solid #ccc;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    font-size: clamp(12px, 1.5vw, 30px);
+}
+@media (max-width: 700px) {
+.summary-panel {
+    display: none;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 2px solid #ccc;
+    position: relative;
+}
+}
+
+/*================全所持率ブロック==============*/
+/*所持率+ポスト*/
+#summary {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;/* 左寄せベース */
+    margin-bottom: 0.5em;/*各パック所持率と空ける*/
+    background: #fff;/* 白背景でカード風 */
+    border-top: 4px solid #ddd;
+    border-radius: 6px;
+}
+
+/*全カード見出し*/
+.summary-panel h4 {
+    margin: 0;
+    font-weight: bold;
+    font-size: clamp(0.9rem, 2vw, 1.1rem);
+    color: #333;
+}
+
+/*全カード所持率コンプ率表記*/
+.summary-rate {
+    font-size: clamp(0.4rem, 1.6vw, 1.1rem);
+    margin-top: 0.2em;
+    align-self: flex-end;
+    /* ← 右寄せにする */
+    width: 100%;
+    text-align: right;
+}
+
+
+
+/*============--各パック所持率ブロック=============*/
+/*パック全体*/
+#pack-summary-list {
+    margin: 0.5em 0;
+}
+/*各パックブロック+ポストボタン*/
+.pack-summary{
+    margin-bottom: 0.3em;
+    /* 必要なら間隔調整 */
+    background: #fff;
+}
+/*パック名リンク*/
+.pack-summary-link {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-decoration: none;
+    color: #333;
+    text-decoration: none;
+    margin: 0.5em 0;
+}
+/*パック名（メイン）*/
+.pack-summary-name {
+    font-weight: bold;
+    font-size: clamp(0.5rem, 1.7vw, 1.1rem);
+    line-height: 1.4;
+}
+/*パック名（サブ）*/
+.pack-summary-name small {
+    display: block;
+    font-size: 80%;
+    margin-left: 0;
+}
+
+
+
+/*パック所持率コンプ率表記*/
+.pack-summary-rate {
+    font-size: clamp(0.5rem, 1.5vw, 1.1rem);
+    margin-top: 0.2em;
+    align-self: flex-end;
+    width: 100%;
+    text-align: right;
+}
+
+
+
+/*===============================
+        5.メニュー
+===============================*/
+/*メニュ＋カード一覧*/
+.card-content {
+    flex: 1;
+    padding: 0 0.4rem;
+}
+
+/*メニュー全体*/
+.menu {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.5rem;
+}
+
+/*メニューボタン*/
+.menu button {
+    flex: 1 1 calc(50% - 10px);
+    padding: 0.6rem 0;
+    font-size: 0.85rem;
+    border: none;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #4caf50, #81c784);
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.menu button:hover {
+    background: linear-gradient(135deg, #388e3c, #66bb6a);
+    transform: translateY(-2px);
+}
+.menu button:active {
+    transform: translateY(0);
+    opacity: 0.9;
+}
+/*保存ボタン*/
+#save-btn {
+    position: relative;
+}
+/*保存ボタン追記*/
+#guest-note {
+    display: none;
+    font-size: 0.7em;
+    display: block;
+}
+
+/*=======================
+        6.カード一覧
+=======================*/
+/*各パックセクション*/
+.pack-section {
+    border: 6px solid #646464;
+    padding: 0.5rem 1rem 1rem 1rem;
+    margin: 1rem 0;
+    border-radius: 12px;
+    background: #fff;
+}
+
+/*パック名*/
+.pack-section h3 {
+    display: block;
+    margin: 0.5rem 0;
+    padding: 0.7em 1em;
+    background: #f5f5f5;/* 明るめ背景 */
+    background: linear-gradient(90deg, #f7f7f7, #e0e0e0);
+    border-left: 8px solid #646464;
+    border-radius: 4px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #333;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+/*カードまとめてボタン枠*/
+.race-controls {
+    display: flex;
+    gap: 0.2rem;
+    padding: 0.2rem;
+}
+/*カードまとめてボタン*/
+.race-controls button {
+    flex: 1;
+    /* ← 幅を均等に分ける */
+    padding: 0.3rem;
+    /* 任意の内側余白 */
+    font-size: 0.6rem;
+    box-sizing: border-box;
+}
+/*種族小見出し*/
+section h4 {
+    display: block;
+    margin: 0 0 0.3rem;
+    padding: 0.7em 0.7em 0.6em;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: bold;
+    line-height: 1.35;
+    background-color: #646464;
+}
+
+
+
+
+/*カードリスト*/
+.card-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+}
+
+
+/*種族枠※合併予定*/
+.race-group {
+    margin: 0.3rem auto;
+    /* 中央寄せ */
+    border: 2px solid #666;
+    /* 枠線は種族ごとに上書きでもOK */
+    border-radius: 6px;
+    box-sizing: border-box;
+    padding: 0.3rem;
+}
+
+
+
+
+/*カード*/
+.card {
+    width: calc(100% / 8 - 8px);
+    box-sizing: border-box;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+/* ======== レアリティ枠線 ======== */
+/* 帯（画像の上に出す） */
+.card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;/* 帯の太さ */
+    z-index: 1;
+    pointer-events: none;/* クリック判定は画像のまま */
+}
+
+.card.rarity-legend::before {
+    background: linear-gradient(90deg, #91e4fb 0%, #ffffff 70%, #91e4fb 100%);
+}
+
+.card.rarity-gold::before {
+    background: linear-gradient(90deg, gold 0%, #fff5cc 70%, gold 100%);
+}
+
+.card.rarity-silver::before {
+    background: linear-gradient(90deg, silver 0%, #f0f0f0 70%, silver 100%);
+}
+
+.card.rarity-bronze::before {
+    background: linear-gradient(90deg, peru 0%, #ffd9b3 70%, peru 100%);
+}
+
+
+/*=======================
+    7.カード分析
+=======================*/
+
+/*=======スマホ用=======*/
+
+/*モバイル検索、所持内訳非表示*/
+.owned-search-mobile,
+.owned-summary-mobile {
+    display: none;
+}
+@media (max-width: 700px) {
+/*モバイル検索、所持内訳表示*/
+.owned-search-mobile,
+    .owned-summary-mobile {
+        display: block;
+        width: 100%;
+        padding: 3px;
+        box-sizing: border-box;
+    }
+
+/* モバイル検索 */
+.owned-search-mobile {
+    display: block;
+    background: #f9f9f9;
+    border-bottom: 2px solid #ccc;
+}
+.owned-search-mobile h4 {
+    margin-top: 5px;
+    font-size: clamp(9px, 2.5vw, 18px);
+}
+
+/*モバイル所持枚数内訳*/
+.owned-summary-mobile {
+    overflow-x: auto;
+    background: #f9f9f9;
+    border-top: 2px solid #ccc;
+    font-size: clamp(13px, 3.5vw, 25px);
+}
+
+.owned-summary-mobile h4 {
+    font-size: clamp(9px, 2.5vw, 18px);
+}
+/*所持率反映、リセットボタン*/
+#reset-excess-btn-mobile,
+#apply-to-checker-mobile {
+    flex: 0 0 auto;
+    font-size: clamp(9px, 2.5vw, 18px);
+    padding: 5px;
+}
+/*モバイルレアリティ枚数内訳*/
+.owned-summary-mobile .summary-card {
+    flex: 1 0 auto;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+    padding: 0.1rem;
+    text-align: center;
+}
+.owned-summary-mobile .summary-card span {
+    font-weight: bold;
+    margin-top: 0.2rem;
+}
+
+/*レアリティ砂種族ブロック*/
+.summary-scroll {
+    display: flex;
+    width: 100%;
+}
+/*（変更予定）*/
+/*種族ブロック*/
+#owned-race-summary-mobile.summary-scroll {
+    display: block;
+}
+/*種族別レアリティブロック*/
+.race-row {
+    display: flex;
+    justify-content: space-between;
+}
+}
+
+@media (max-width: 700px) {
+    .owned-main {
+        max-width: 80%;
+        min-width: 200px;
+    }
+}
+/*==========パソコン===========*/
+
+/* 全体レイアウト */
+.owned-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 3%;
+    position: relative;
+}
+
+/* 左右aside */
+.owned-aside {
+    width: 15%;
+    background: #f7f7f7;
+    padding: 5px;
+    border-radius: 8px;
+    font-size: clamp(10px, 1.4vw, 20px);
+    max-height: 45vw;
+    overflow-y: auto;
+}
+@media (max-width: 1024px) {
+    .owned-aside {
+            max-height: 120vw;
+        }
+    }
+.owned-aside h4 {
+    font-size: clamp(6px, 1.3vw, 19px);
+    padding: 0.6vw 6px;
+}
+.owned-aside p {
+    margin: 0.5vw 0;
+}
+/*所持率反映、リセットボタン*/
+#reset-excess-btn,
+#apply-to-checker {
+    font-size: clamp(6px, 0.95vw, 15px);
+    width: 100%;
+    margin-bottom: 2px;
+    padding: 1px;
+}
+
+/*砂表記*/
+.sand {
+    font-size: clamp(7px, 1.2vw, 14px);
+}
+
+/**/
+#owned-race-summary li {
+    font-size: clamp(10px, 1vw, 15px);
+    margin: 1vw 5px 1vw 0;
+    padding: 5px 0;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+}
+
+#owned-race-summary div {
+    font-size: clamp(11px, 1.3vw, 18px);
+}
+
+#owned-race-summary p {
+    margin: 2px 0;
+}
+
+/* 中央メイン */
+.owned-main {
+    position: relative;
+    width: 100%;
+}
+@media (max-width: 1024px) {
+.owned-main {
+    max-width: 65%;
+    min-width: 400px;
+}
+}
+
+/*=======共通=========*/
+
+/* カードグリッド */
+.owned-card-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.tab-content h4 {
+    display: block;
+    margin: 0 0 0.3rem;
+    padding: 0.7em 0.7em 0.6em;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: bold;
+    line-height: 1.35;
+    background-color: #646464;
+}
+
+/* カード */
+.owned-card-grid .card {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    background: #fff;
+    border: 1px solid #ddd;
+    margin: 1px;
+    padding: 2px;
+    border-radius: 6px;
+    text-align: center;
+    box-sizing: border-box;
+    min-width: 0;
+    flex: 0 0 calc(25% - 2px);
+}
+
+
+/* カード画像 */
+.owned-card-grid .card img {
+    width: 50%;
+    height: auto;
+}
+/*カード情報*/
+.owned-card-info {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    padding-left: 2px;
+    gap: 2px;
+    width: 50%;
+    min-width: 0;
+}
+
+/*カード名*/
+.card-name {
+    display: block;
+    font-size: clamp(0.3rem, 1vw, 1rem);
+    font-weight: bold;
+    text-align: start;
+    overflow: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+    height: 3vw;
+}
+
+/*±ボタン*/
+.owned-card-controls {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    height: 50%;
+}
+
+.owned-card-controls button {
+    flex: 1 1 auto;
+    padding: 3px 0;
+    font-size: clamp(0.5rem, 1.2vw, 1rem);
+}
+
+/*枚数表示（PC版±ボタン中央）*/
+.count-display {
+    text-align: center;
+    width: 20%;
+    line-height: 20px;
+}
+
+/*各カード枚数操作部分*/
+.owned-card-grid .card .owned-card-info {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    font-size: clamp(0.3rem, 1.2vw, 1rem);
+}
+
+/*エディションカウント*/
+.owned-card-edition-counts {
+    display: flex;
+    justify-content: space-between;
+    gap: 2px;
+    align-items: center;
+}
+
+/*エディション切り替えボタン*/
+.edition-switch .edition-mode-btn {
+    width: 100%;
+    padding: 4px 0;
+    font-size: clamp(0.4rem, 1vw, 1rem);
+}
+
+
+@media (max-width: 1024px) {
+    /*カード*/
+        .owned-card-grid .card {
+            display: block;
+            flex-direction: column;
+            /* 横並びを解除して縦に */
+            align-items: center;
+        }
+
+        /*カード画像*/
+        .owned-card-grid .card img {
+            width: 100%;
+            height: auto;
+        }
+    }
+
+
+
+        /* グリッド中央左右矢印 */
+        .grid-page-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #333;
+            color: #fff;
+            padding: 30px 4px;
+            cursor: pointer;
+            border-radius: 4px;
+            user-select: none;
+        }
+
+        .grid-page-arrow.left-arrow {
+            left: -30px;
+        }
+
+        .grid-page-arrow.right-arrow {
+            right: -30px;
+        }
+
+        /* 下部ページ送り */
+        .pagination-controls {
+            text-align: center;
+            margin-top: 10px;
+        }
+/*=======================
+        .パック枠
+=======================*/

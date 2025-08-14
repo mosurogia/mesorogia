@@ -347,10 +347,6 @@ section h4 {
     }
 }
 @media (max-width: 560px) {
-    .header-nav a {
-        margin-left: 0.1em;
-        font-size: 0.45em;
-    }
 
     .card {
         width: calc(100% / 5 - 8px);
@@ -370,7 +366,11 @@ section h4 {
     z-index: 1;
     pointer-events: none;/* クリック判定は画像のまま */
 }
-
+@media (max-width: 560px) {
+.card::before {
+        height: 3px;
+    }
+}
 .card.rarity-legend::before {
     background: linear-gradient(90deg, #91e4fb 0%, #ffffff 70%, #91e4fb 100%);
 }

@@ -391,167 +391,6 @@ section h4 {
 /*=======================
     7.カード分析
 =======================*/
-
-/*=======スマホ用=======*/
-
-/*モバイル検索、所持内訳非表示*/
-.owned-search-mobile,
-.owned-summary-mobile {
-    display: none;
-}
-@media (max-width: 700px) {
-/*モバイル検索、所持内訳表示*/
-.owned-search-mobile,
-    .owned-summary-mobile {
-        display: block;
-        width: 100%;
-        padding: 3px;
-        box-sizing: border-box;
-    }
-
-/* モバイル検索 */
-.owned-search-mobile {
-    display: block;
-    background: #f9f9f9;
-    border-bottom: 2px solid #ccc;
-}
-.owned-search-mobile h4 {
-    margin-top: 5px;
-    font-size: clamp(9px, 2.5vw, 18px);
-}
-
-/*モバイル所持枚数内訳*/
-.owned-summary-mobile {
-    overflow-x: auto;
-    background: #f9f9f9;
-    border-top: 2px solid #ccc;
-    font-size: clamp(13px, 3.5vw, 25px);
-}
-
-.owned-summary-mobile h4 {
-    font-size: clamp(9px, 2.5vw, 18px);
-}
-/*所持率反映、リセットボタン*/
-#reset-excess-btn-mobile,
-#apply-to-checker-mobile {
-    flex: 0 0 auto;
-    font-size: clamp(9px, 2.5vw, 18px);
-    padding: 5px;
-}
-/*モバイルレアリティ枚数内訳*/
-.owned-summary-mobile .summary-card {
-    flex: 1 0 auto;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
-    padding: 0.1rem;
-    text-align: center;
-}
-.owned-summary-mobile .summary-card span {
-    font-weight: bold;
-    margin-top: 0.2rem;
-}
-
-/*レアリティ砂種族ブロック*/
-.summary-scroll {
-    display: flex;
-    width: 100%;
-}
-/*（変更予定）*/
-/*種族ブロック*/
-#owned-race-summary-mobile.summary-scroll {
-    display: block;
-}
-/*種族別レアリティブロック*/
-.race-row {
-    display: flex;
-    justify-content: space-between;
-}
-}
-
-@media (max-width: 700px) {
-    .owned-main {
-        max-width: 80%;
-        min-width: 200px;
-    }
-}
-/*==========パソコン===========*/
-
-/* 全体レイアウト */
-.owned-container {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    gap: 3%;
-    position: relative;
-}
-
-/* 左右aside */
-.owned-aside {
-    width: 15%;
-    background: #f7f7f7;
-    padding: 5px;
-    border-radius: 8px;
-    font-size: clamp(10px, 1.4vw, 20px);
-    max-height: 45vw;
-    overflow-y: auto;
-}
-@media (max-width: 1024px) {
-    .owned-aside {
-            max-height: 120vw;
-        }
-    }
-.owned-aside h4 {
-    font-size: clamp(6px, 1.3vw, 19px);
-    padding: 0.6vw 6px;
-}
-.owned-aside p {
-    margin: 0.5vw 0;
-}
-/*所持率反映、リセットボタン*/
-#reset-excess-btn,
-#apply-to-checker {
-    font-size: clamp(6px, 0.95vw, 15px);
-    width: 100%;
-    margin-bottom: 2px;
-    padding: 1px;
-}
-
-/*砂表記*/
-.sand {
-    font-size: clamp(7px, 1.2vw, 14px);
-}
-
-/**/
-#owned-race-summary li {
-    font-size: clamp(10px, 1vw, 15px);
-    margin: 1vw 5px 1vw 0;
-    padding: 5px 0;
-    background: #fff;
-    border-radius: 6px;
-    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
-}
-
-#owned-race-summary div {
-    font-size: clamp(11px, 1.3vw, 18px);
-}
-
-#owned-race-summary p {
-    margin: 2px 0;
-}
-
-/* 中央メイン */
-.owned-main {
-    position: relative;
-    width: 100%;
-}
-@media (max-width: 1024px) {
-.owned-main {
-    max-width: 65%;
-    min-width: 400px;
-}
-}
-
 /*=======共通=========*/
 
 /* カードグリッド */
@@ -594,6 +433,7 @@ section h4 {
     width: 50%;
     height: auto;
 }
+
 /*カード情報*/
 .owned-card-info {
     display: flex;
@@ -603,6 +443,13 @@ section h4 {
     gap: 2px;
     width: 50%;
     min-width: 0;
+}
+
+@media (max-width: 1024px) {
+    .owned-card-info {
+        width: 100%;
+        gap: 1px;
+    }
 }
 
 /*カード名*/
@@ -664,49 +511,257 @@ section h4 {
 
 
 @media (max-width: 1024px) {
-    /*カード*/
-        .owned-card-grid .card {
-            display: block;
-            flex-direction: column;
-            /* 横並びを解除して縦に */
-            align-items: center;
-        }
 
-        /*カード画像*/
-        .owned-card-grid .card img {
-            width: 100%;
-            height: auto;
-        }
+    /*カード*/
+    .owned-card-grid .card {
+        display: block;
+        flex-direction: column;
+        /* 横並びを解除して縦に */
+        align-items: center;
     }
 
+    /*カード画像*/
+    .owned-card-grid .card img {
+        width: 100%;
+        height: auto;
+    }
+}
 
 
-        /* グリッド中央左右矢印 */
-        .grid-page-arrow {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #333;
-            color: #fff;
-            padding: 30px 4px;
-            cursor: pointer;
-            border-radius: 4px;
-            user-select: none;
+
+/* グリッド中央左右矢印 */
+.grid-page-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #333;
+    color: #fff;
+    padding: 30px 4px;
+    cursor: pointer;
+    border-radius: 4px;
+    user-select: none;
+}
+
+.grid-page-arrow.left-arrow {
+    left: -30px;
+}
+
+.grid-page-arrow.right-arrow {
+    right: -30px;
+}
+
+/* 下部ページ送り */
+.pagination-controls {
+    text-align: center;
+    margin-top: 10px;
+}
+
+/*=======スマホ用=======*/
+
+/*モバイル検索、所持内訳非表示*/
+.owned-search-mobile,
+.owned-summary-mobile {
+    display: none;
+}
+@media (max-width: 700px) {
+/*モバイル検索、所持内訳表示*/
+.owned-search-mobile,
+    .owned-summary-mobile {
+        display: block;
+        width: 100%;
+        padding: 3px;
+        box-sizing: border-box;
+    }
+
+/* モバイル検索 */
+.owned-search-mobile {
+    display: block;
+    background: #f9f9f9;
+    border-bottom: 2px solid #ccc;
+}
+.owned-search-mobile h4 {
+    margin-top: 5px;
+    font-size: clamp(9px, 2.5vw, 18px);
+}
+/*キーワード検索*/
+#keyword-input-mobile {
+    width: 100%;
+    font-size: 15px;
+}
+/*フィルター+タイプ*/
+#open-filter-mobile {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+    align-items: center;
+}
+/*フィルターボタン*/
+#open-filter-modal-mobile {
+    flex: 0 0 auto;
+    font-size: clamp(7px, 2vw, 15px);
+}
+/*タイプボタン*/
+#type-toggle-mobile {
+    display: flex;
+    flex-wrap: wrap;
+    /* はみ出す場合折り返し */
+    gap: 0.2rem;
+    flex: 1;
+    /* 残りを全部使う */
+}
+
+#type-toggle-mobile .type-btn {
+    flex: 1 1 auto;
+    white-space: nowrap;
+    /* 文字が折り返さないようにする */
+    padding: 1px;
+    font-size: clamp(7px, 2vw, 15px);
+}
+/*モバイル所持枚数内訳*/
+.owned-summary-mobile {
+    overflow-x: auto;
+    background: #f9f9f9;
+    border-top: 2px solid #ccc;
+    font-size: clamp(13px, 3.5vw, 25px);
+}
+
+.owned-summary-mobile h4 {
+    font-size: clamp(9px, 2.5vw, 18px);
+}
+/*所持率反映、リセットボタン*/
+#reset-excess-btn-mobile,
+#apply-to-checker-mobile {
+    flex: 0 0 auto;
+    font-size: clamp(9px, 2.5vw, 18px);
+    padding: 5px;
+}
+/*モバイルレアリティ枚数内訳*/
+.owned-summary-mobile .summary-card {
+    flex: 1 0 auto;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+    padding: 0.1rem;
+    text-align: center;
+}
+.owned-summary-mobile .summary-card span {
+    font-weight: bold;
+    margin-top: 0.2rem;
+}
+
+/*レアリティ砂種族ブロック*/
+.summary-scroll {
+    display: flex;
+    width: 100%;
+}
+/*（変更予定）*/
+/*種族ブロック*/
+#owned-race-summary-mobile.summary-scroll {
+    display: block;
+}
+/*種族別レアリティブロック*/
+.race-row {
+    display: flex;
+    justify-content: space-between;
+}
+}
+
+
+/*==========パソコン===========*/
+
+/* 全体レイアウト */
+.owned-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 3%;
+    position: relative;
+}
+
+/* 左右aside */
+.owned-aside {
+    width: 15%;
+    background: #f7f7f7;
+    padding: 5px;
+    border-radius: 8px;
+    font-size: clamp(10px, 1.4vw, 20px);
+    max-height: 45vw;
+    overflow-y: auto;
+}
+@media (max-width: 1024px) {
+    .owned-aside {
+            max-height: 120vw;
         }
+    }
+@media (max-width: 700px) {
+    .owned-aside {
+        display: none;
+    }
+}
 
-        .grid-page-arrow.left-arrow {
-            left: -30px;
-        }
+.owned-aside.right {
+    overflow-x: hidden;
+    /* 横スクロールを防ぐ */
+    max-width: 100%;
+    /* はみ出さないようにする */
+}
+.owned-aside h4 {
+    font-size: clamp(6px, 1.3vw, 19px);
+    padding: 0.6vw 6px;
+}
+.owned-aside p {
+    margin: 0.5vw 0;
+}
+/*所持率反映、リセットボタン*/
+#reset-excess-btn,
+#apply-to-checker {
+    font-size: clamp(6px, 0.95vw, 15px);
+    width: 100%;
+    margin-bottom: 2px;
+    padding: 1px;
+}
 
-        .grid-page-arrow.right-arrow {
-            right: -30px;
-        }
+/*砂表記*/
+.sand {
+    font-size: clamp(7px, 1.2vw, 14px);
+}
 
-        /* 下部ページ送り */
-        .pagination-controls {
-            text-align: center;
-            margin-top: 10px;
-        }
+/**/
+#owned-race-summary li {
+    font-size: clamp(10px, 1vw, 15px);
+    margin: 1vw 5px 1vw 0;
+    padding: 5px 0;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+}
+
+#owned-race-summary div {
+    font-size: clamp(11px, 1.3vw, 18px);
+}
+
+#owned-race-summary p {
+    margin: 2px 0;
+}
+
+/* 中央メイン */
+.owned-main {
+    position: relative;
+    width: 100%;
+}
+@media (max-width: 1024px) {
+.owned-main {
+    max-width: 65%;
+    min-width: 400px;
+}
+}
+@media (max-width: 700px) {
+    .owned-main {
+        max-width: 80%;
+        min-width: 200px;
+    }
+}
+
 /*=======================
         .パック枠
 =======================*/

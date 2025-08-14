@@ -22,8 +22,10 @@ function switchTab(id, clickedTab) {
 
   // 特定タブの追加処理
   if (id === "edit") {
-   // rebuildCardMap?.();
-    //renderDeckList?.();
+//同時起動コード
+  renderDeckList();  // デッキに含まれるカード画像を一覧表示
+  updateDeckAnalysis();  // 分析グラフやレアリティ比率などを更新
+  updateExchangeSummary();  // ポイント等のサマリーを更新（未実装の場合はここで呼び出し）
   }
 }
 

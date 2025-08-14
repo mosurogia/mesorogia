@@ -2,10 +2,7 @@
       1.初期設定
 ===================*/
 
-//カード呼び出し
-window.addEventListener('DOMContentLoaded', () => {
-  loadCards();
-});
+
 
 
 // JSON読み込み＆フィルター済み配列取得
@@ -15,7 +12,8 @@ async function fetchLatestCards() {
   return allCards.filter(card => card.is_latest === true);
 }
 
-
+//全カード情報
+const allCardsMap = {};
 
 
 /*====================
@@ -73,14 +71,20 @@ async function loadCards() {
   grid.innerHTML = '';
 
   cards.forEach(card => {
+    // 一覧用カード生成
     const cardElement = generateCardListElement(card);
     grid.appendChild(cardElement);
 
+    // 詳細パネル生成
     const detailHtml = generateDetailHtml(card);
     grid.insertAdjacentHTML('beforeend', detailHtml);
+
+    // ← カードをマップに登録
+    allCardsMap[card.cd] = card;
   });
 
   sortCards(); // 任意：並び替え
+  rebuildCardMap();//カード一覧再読み込み
 }
 
 /*============================
@@ -458,6 +462,9 @@ function applyFilters() {
     const isVisible = matchesKeyword && matchesFilters && matchesCost && matchesPower;
     card.style.display = isVisible ? "" : "none";
   });
+
+//同時に起動コード
+  applyGrayscaleFilter();
 }
 
 // 🔹 選択されたフィルター値（複数選択）を取得

@@ -1,8 +1,28 @@
-// 一覧カード生成
+/*==================
+      1.初期設定
+===================*/
+//#region
+//カード呼び出し
+window.addEventListener('DOMContentLoaded', () => {
+  loadCards();
+});
+
+//#endregion
+/*====================
+      2.一覧カード生成
+===================*/
+
+//#region
+
 function generateCardListElement(card) {
   const cardDiv = document.createElement('div');
   cardDiv.classList.add('card');
 
+  cardDiv.setAttribute('data-cd', card.cd);
+  cardDiv.setAttribute('data-name', card.name);
+  cardDiv.setAttribute('data-effect1', card.effect_name1 ?? "");
+  cardDiv.setAttribute('data-effect2', card.effect_name2 ?? "");
+  cardDiv.setAttribute('data-tribe', card.race);
   cardDiv.setAttribute('data-cd', card.cd);
   cardDiv.setAttribute('data-race', card.race);
   cardDiv.setAttribute('data-category', card.category);
@@ -74,3 +94,23 @@ function generateDetailHtml(card) {
     </div>
   `;
 }
+
+
+//#endregion
+
+
+
+
+/*====================
+      2.デッキ情報
+====================*/
+
+
+//#region
+// デッキ内のカード枚数を管理するマップ
+// キー: カードの cd（番号）、値: 枚数
+const deckMap = {};
+
+
+//#endregion
+

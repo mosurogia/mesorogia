@@ -3,7 +3,7 @@
 ========================*/
 
 #tab1 {
-    background-image: url("img/makertab1.webp");
+    background-image: url("mesorogia/img/makertab1.webp");
     background-size: cover;
     background-position: center;
     color: white;
@@ -11,7 +11,7 @@
 }
 
 #tab2 {
-    background-image: url("img/makertab2.webp");
+    background-image: url("mesorogia/img/makertab2.webp");
     background-size: cover;
     background-position: center;
     color: white;

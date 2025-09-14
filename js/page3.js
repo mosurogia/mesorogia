@@ -1155,7 +1155,7 @@ function attachPackControls(root){
 
 // ========== 全パックをまとめて描画 ==========
 renderAllPacks({
-    jsonUrl: 'public/cards_latest.json',
+    jsonUrl: '/mesorogia//public/cards_latest.json',
     mountSelector: '#packs-root',
     isLatestOnly: true,
     sortInRace: typeCostPowerCd,
@@ -1486,7 +1486,7 @@ async function generateOwnedCards() {
   if (Array.isArray(window.__cardsCache) && window.__cardsCache.length) {
     __ownedCardsData = window.__cardsCache.slice();
   } else {
-    const res = await fetch('public/cards_latest.json');
+    const res = await fetch('/mesorogia//public/cards_latest.json');
     const cards = await res.json();
     window.__cardsCache = cards;           // 他機能と共有
     __ownedCardsData = cards;

@@ -409,7 +409,7 @@ async function getCanonicalOrderForOwned_DM(){
     if (typeof fetchLatestCards === 'function'){
       cards = await fetchLatestCards();
     }else{
-      const res = await fetch('public/cards_latest.json'); // 環境に合わせて
+      const res = await fetch('/mesorogia//public/cards_latest.json'); // 環境に合わせて
       const all = await res.json();
       cards = all.filter(c => c.is_latest);
     }

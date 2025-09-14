@@ -289,20 +289,21 @@ https://mosurogia.github.io/cardcheker/`
   });
 
   // スマホ：現在選択中パックの概要を書き換え
-  if (mobileSelect && mobileSummary){
-    const sel = packs.find(p => p.key === mobileSelect.value) || packs[0];
-    if (sel){
-      const cards = queryCardsByPack(pack);
-      const s = calcSummary(cards);
-      mobileSummary.innerHTML = `
-        <div class="pack-name">${sel.nameMain}</div>
-        <div class="pack-rate">
-          所持率: ${s.ownedTypes}/${s.totalTypes} (${s.typePercent}%)<br>
-          コンプ率: ${s.owned}/${s.total} (${s.percent}%)
-        </div>
-      `;
-    }
+if (mobileSelect && mobileSummary) {
+  const sel = packs.find(p => p.key === mobileSelect.value) || packs[0];
+  if (sel) {
+    // ❌ const cards = queryCardsByPack(pack);
+    const cards = queryCardsByPack(sel); // ← ここを sel に
+    const s = calcSummary(cards);
+    mobileSummary.innerHTML = `
+      <div class="pack-name">${sel.nameMain}</div>
+      <div class="pack-rate">
+        所持率: ${s.ownedTypes}/${s.totalTypes} (${s.typePercent}%)<br>
+        コンプ率: ${s.owned}/${s.total} (${s.percent}%)
+      </div>
+    `;
   }
+}
 }
 
 // スマホのセレクト変更時ハンドラ（HTML側 onchange でもOK）
@@ -1155,7 +1156,7 @@ function attachPackControls(root){
 
 // ========== 全パックをまとめて描画 ==========
 renderAllPacks({
-    jsonUrl: '/mesorogia//public/cards_latest.json',
+    jsonUrl: 'public/cards_latest.json',
     mountSelector: '#packs-root',
     isLatestOnly: true,
     sortInRace: typeCostPowerCd,
@@ -1486,7 +1487,7 @@ async function generateOwnedCards() {
   if (Array.isArray(window.__cardsCache) && window.__cardsCache.length) {
     __ownedCardsData = window.__cardsCache.slice();
   } else {
-    const res = await fetch('/mesorogia//public/cards_latest.json');
+    const res = await fetch('public/cards_latest.json');
     const cards = await res.json();
     window.__cardsCache = cards;           // 他機能と共有
     __ownedCardsData = cards;

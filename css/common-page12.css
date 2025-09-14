@@ -152,7 +152,6 @@ select {
 .card {
     width: calc(100% / 7 - 5px);
     box-sizing: border-box;
-    cursor: pointer;
     position: relative;
 }
 

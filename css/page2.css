@@ -3,7 +3,7 @@
 ========================*/
 
 #tab1 {
-    background-image: url("/img/tab1.2.webp");
+    background-image: url("/img/makertab1.webp");
     background-size: cover;
     background-position: center;
     color: white;
@@ -11,7 +11,7 @@
 }
 
 #tab2 {
-    background-image: url("/img/tab2.webp");
+    background-image: url("/img/makertab2.webp");
     background-size: cover;
     background-position: center;
     color: white;
@@ -19,7 +19,31 @@
 }
 
 /*=========================
-        2.メニューバー
+        3.サーチバー
+==========================*/
+/* ===== ゲストモードの視覚強調 ===== */
+#toggleOwnedBtn.guest-mode {
+    background: #1e88e5;
+    color: #fff;
+    border: 1px solid #1565c0;
+    cursor: default;
+}
+
+#toggleOwnedBtn.guest-mode:disabled {
+    opacity: 1;
+    /* disabled のグレー化を打ち消す */
+}
+
+/*所持マーク色変更*/
+.card .owned-mark.guest-mode {
+    background: #1e88e5;
+    /* 既存の丸バッジ色を置き換え */
+    color: #fff;
+    border-color: #1565c0;
+}
+
+/*=========================
+        3.メニューバー
 ==========================*/
 .fixed-top-bar {
     position: sticky;
@@ -110,9 +134,45 @@
     /* 🔑 固定幅として右に居座る */
     z-index: 2001;
 }
-
+@media (max-width: 768px) {
+    .deck-summary {
+        position: absolute;
+        right: 20px;
+        top: 0;
+        width: 110px;
+        height: 100%;
+        background: #fff;
+        border-left: 1px solid #ccc;
+        font-size: 10px;
+        line-height: 1.3;
+        transform: translateX(120%);
+        transition: transform 0.3s ease;
+        z-index: 10;
+    }
+}
+@media (max-width: 410px) {
+.deck-summary {
+        width: 95px;
+        font-size: 8.5px;
+    }
+}
+@media (max-width: 768px) {
+    .deck-summary.open {
+        transform: translateX(0%);
+    }
+}
 .deck-summary-toggle {
     display: none;
+}
+@media (max-width: 768px) {
+    .deck-summary-toggle {
+        display: inline-block;
+        z-index: 11;
+        background: #ccc;
+        border: 1px solid #999;
+        border-radius: 4px 0 0 4px;
+        font-size: 0.3rem;
+    }
 }
 
 .analyze-button-wrapper {
@@ -130,12 +190,17 @@
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
-
+@media (max-width: 410px) {
+    .analyze-button {
+        margin-top: 0rem;
+        font-size: 0.25rem;
+    }
+}
 .analyze-button:hover {
     background-color: #5a4cb5;
 }
 /*============================
-        3.デッキ構築-カード一覧
+        4.デッキ構築-カード一覧
 =============================*/
 .used-label {
     position: absolute;
@@ -152,7 +217,7 @@
 
 
 /*=======================
-        4.デッキ編集
+        5.デッキ編集
 ========================*/
 /*編集画面全体*/
 #deck-layout {
@@ -312,13 +377,21 @@
     box-sizing: border-box;
 }
 
-
+/*交換ポイント*/
+.exchange-summary{
+    display: none;
+}
 
 /*交換ポイントボタン*/
 #exchange-toggle-btn {
     font-size: 0.65em;
 }
-
+/*不足カード*/
+#shortage-block{
+    display: none;
+    margin-top: 0.4rem;
+    font-size: 0.85rem;
+}
 /*使用タイプ内訳*/
 .deck-type-breakdown {
     display: flex;

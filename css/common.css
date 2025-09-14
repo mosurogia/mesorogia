@@ -9,6 +9,7 @@ body {
     height: auto;
     display: block;
     border-radius: 6px;
+    cursor:pointer;
 }
 /*カードでのダブルタップ防止（スマホ）*/
 button,

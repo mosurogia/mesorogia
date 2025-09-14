@@ -211,9 +211,16 @@
                     <ul style="margin: 0.2rem 0 0 0.5rem;">
                         <li>レジェンドの砂：<span id="sand-leg">0</span>個</li>
                         <li>ゴールドの砂：<span id="sand-gld">0</span>個</li>
+                        <li>シルバーの砂：<span id="sand-sil">0</span>個</li>
+                        <li>ブロンズの砂：<span id="sand-bro">0</span>個</li>
                     </ul>
                 </div>
-                <div style="font-size: 14px;">※採用中のゴールドとレジェンドを全部交換した場合（今後所持カードから反映予定）</div>
+                <div style="font-size: 14px;">※所持率チェッカーでの所持データをもとに計算しています</div>
+            </div>
+            <!--不足カード-->
+            <div id="shortage-block">
+                <div><strong>不足カード：</strong></div>
+                <div id="shortage-list"></div>
             </div>
             <!-- 🔽 デッキ分析結果 -->
             <button id="toggle-analysis-btn" onclick="toggleAnalysis()">🔍 分析を表示</button>
@@ -310,10 +317,10 @@
 
 
 <!-- JS -->
-<script src="js/page2.js"></script>
+<script src="js/common.js"></script>
 <script src="js/common-page12.js"></script>
 <script src="js/common-page23.js"></script>
-<script src="js/common.js"></script>
+<script src="js/page2.js"></script>
 </body>
 
 </html>

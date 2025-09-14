@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="5NzYWNH5_YUg0dUV2iCzg_bSo7M1lLJi6IzOeF2dGXM" />
-    <title>モスロギア 神託のメソロギア デッキメーカー</title>
+    <title>モスロギア 神託のメソロギア 所持率チェッカー</title>
     <link href="favicon.ico" rel="icon" type="image/png" />
 
     <!-- 検索キーワード -->
@@ -39,7 +39,6 @@
 <!--外部リソース-->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lz-string@1.4.4/libs/lz-string.min.js"></script>
 </head>
 
 
@@ -106,6 +105,12 @@
                 コンプ率: 0/0 (0%)
             </div>
         </div>
+
+        <!-- 所持データ操作ボタンエリア -->
+        <div class="menu-mobile">
+            <button id="save-btn-mobile" onclick="saveOwnership()">💾 保存</button>
+            <button class="js-share-owned">🔗 共有コピー</button>
+        </div>
     </div>
 
 
@@ -114,6 +119,11 @@
     <div class="page-wrapper">
         <!-- PC・タブレット用 所持率サマリーサイドバー -->
         <aside class="summary-panel">
+            <!-- 所持データ操作ボタンエリア -->
+            <div class="menu">
+                <button id="save-btn" onclick="saveOwnership()">💾 保存</button>
+                <button class="js-share-owned">🔗 共有コピー</button>
+            </div>
             <!-- 全カード所持率 -->
             <div id="summary" class="summary-block">
                 <h4>全カード</h4>
@@ -171,21 +181,7 @@
 
 <!--メニューボタン+カード一覧-->
         <main class="card-content">
-            <!-- 所持データ操作ボタンエリア -->
-            <div class="menu">
-                <button id="save-btn" onclick="saveOwnership()">
-                    💾 保存
-                <span id="guest-note">
-                ※他人データ表示中</span>
-                </button>
-                <button onclick="exportOwnershipURL()">
-                🔗 共有コピー</button>
-                <button onclick="importOwnership()">
-                📥 他人データ読み込み</button>
-                <button>
-                所持率反映させてデッキメーカーへ
-                </button>
-            </div>
+
 
             <!-- カード一覧（パックごと） -->
 <div id="packs-root"></div>
@@ -225,11 +221,18 @@
 </div>
 
 
+
+
+
+
+
+
 <!-- 所持カード分析タブのコンテンツ -->
+
 <div id="owned" class="tab-content">
 
     <!-- 🔍 スマホ用：検索/フィルター -->
-    <div class="owned-search-mobile">
+    <div class="owned-search-mobile owned-mobile">
         <!-- owned-aside right の中身を丸ごとここへ -->
         <h4>キーワード検索</h4>
         <input type="text" id="keyword-input-mobile" placeholder="カード名・効果など">
@@ -252,24 +255,17 @@
     <div id="owned-container" class="owned-container">
         <!-- 左サイド：総所持枚数や分解ポイント -->
         <aside class="owned-aside left">
-
+            <div class="owned-aside-btn">
+                <button id="apply-to-checker">保存＆反映</button>
+            </div>
             <h4>所持データ</h4>
             <p>総枚数: <span id="owned-total">0</span> 枚</p>
-            <div class="owned-aside-btn">
-                <button id="apply-to-checker">所持率チェッカー反映</button>
-                <button id="reset-excess-btn">余剰分リセット</button>
-            </div>
+
             <h4>レアリティ別</h4>
             <p>レジェンド: <span id="owned-legend">0</span></p>
             <p>ゴールド: <span id="owned-gold">0</span></p>
             <p>シルバー: <span id="owned-silver">0</span></p>
             <p>ブロンズ: <span id="owned-bronze">0</span></p>
-
-            <h4>分解時の砂の量</h4>
-            <p class="sand">ブロンズの砂: <span id="sand-bronze">0</span></p>
-            <p class="sand">シルバーの砂: <span id="sand-silver">0</span></p>
-            <p class="sand">ゴールドの砂: <span id="sand-gold">0</span></p>
-            <p class="sand">レジェンドの砂: <span id="sand-legend">0</span></p>
 
             <h4>種族ごと</h4>
             <div id="owned-race-summary"></div>
@@ -278,10 +274,18 @@
 
         <!--中央：カード所持枚数一覧-->
         <div class="owned-main">
+
             <div id="owned-card-grid" class="owned-card-grid">
-                <!-- JSでここにカードを追加 -->
+            <!--カード生成部分-->
             </div>
 
+            <dialog id="effect-dialog">
+                    <header>
+                        <h3 id="dlg-title" style="margin:.4rem 0;"></h3>
+                        <form method="dialog"><button class="icon-btn">閉じる</button></form>
+                    </header>
+                    <div id="dlg-body"></div>
+            </dialog>
             <!-- グリッド中央左右ページ送りボタン -->
             <div class="grid-page-arrow left-arrow">←</div>
             <div class="grid-page-arrow right-arrow">→</div>
@@ -318,14 +322,13 @@
     </div>
 
     <!-- 🗂️ スマホ用：総所持枚数・内訳 -->
-    <div class="owned-summary-mobile">
+    <div class="owned-summary-mobile owned-mobile">
 
         <h4>所持データ</h4>
         <div class="owned-total-row">
             <p>総枚数: <span id="owned-total-mobile">0</span> 枚</p>
             <div class="owned-total-btn-mobile">
-                <button id="apply-to-checker-mobile">所持率チェッカー反映</button>
-                <button id="reset-excess-btn-mobile">余剰分リセット</button>
+                <button id="apply-to-checker-mobile">保存＆反映</button>
             </div>
 
 
@@ -340,15 +343,6 @@
             <div class="summary-card">ブロンズ<br><span id="owned-bronze-mobile">0</span></div>
         </div>
 
-        <h4>分解時の砂</h4>
-        <div class="summary-scroll">
-            <div class="summary-card">レジェンドの砂<br><span id="sand-legend-mobile">0</span></div>
-            <div class="summary-card">ゴールドの砂<br><span id="sand-gold-mobile">0</span></div>
-            <div class="summary-card">シルバーの砂<br><span id="sand-silver-mobile">0</span></div>
-            <div class="summary-card">ブロンズの砂<br><span id="sand-bronze-mobile">0</span></div>
-
-        </div>
-
         <h4>種族ごと</h4>
         <div id="owned-race-summary-mobile" class="summary-scroll">
             <!-- 種族内訳をJSでカード型で追加 -->
@@ -357,17 +351,28 @@
 
 
 
-    <!-- フィルターモーダル -->
-    <div id="filter-modal" style="display: none;">
-        <h4>種族</h4>
-        <div id="filter-race"></div>
-        <h4>カテゴリ</h4>
-        <div id="filter-category"></div>
-        <h4>レアリティ</h4>
-        <div id="filter-rarity"></div>
+<!-- フィルターモーダル -->
+<div id="filter-modal" style="display:none;">
+    <h4>種族</h4>
+    <div id="filter-race"></div>
+
+    <h4>カテゴリ</h4>
+    <div id="filter-category"></div>
+
+    <h4>レアリティ</h4>
+    <div id="filter-rarity"></div>
+
+    <!-- 追加：パック -->
+    <h4>パック</h4>
+    <div id="filter-pack"></div>
+
+    <div class="filter-actions" style="margin-top:.6rem; display:flex; gap:.4rem; justify-content:flex-end;">
+        <button id="filter-reset">条件リセット</button>
+        <button id="filter-close">閉じる</button>
     </div>
-    <div id="modal-backdrop"
-        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:900;">
+</div>
+
+    <div id="modal-backdrop">
     </div>
 
 

@@ -13,7 +13,12 @@ const cardMap = {};
 
 
 
-
+// JSON読み込み＆フィルター済み配列取得
+async function fetchLatestCards() {
+  const res = await fetch('public/cards_latest.json');
+  const allCards = await res.json();
+  return allCards.filter(card => card.is_latest === true);
+}
 
 
 
@@ -35,6 +40,7 @@ const order = {
 "ドラゴライダー": 12,
 "メイドロボ": 21,
 "アドミラルシップ": 22,
+"テックノイズ": 23,
 "ナチュリア": 31,
 "鬼刹（きせつ）": 32,
 "風花森（ふかしん）":33,
@@ -43,6 +49,7 @@ const order = {
 "愚者愚者（ぐしゃぐしゃ）":43,
 "昏き霊園": 51,
 "マディスキア": 52,
+"炎閻魔": 53,
 "ノーカテゴリ": 999
 };
 return order[category] ?? 9999;
@@ -192,30 +199,6 @@ cards.forEach(card => grid.appendChild(card));
       this.replace(next);
     },
 
-    // 共有URL出力（cardchekerの既存仕様に合わせた互換版）
-    exportShareUrl() {
-      if (!window.LZString) return alert('LZStringが読み込まれていません');
-      const owned = { "1":[], "2":[], "3":[] };
-      for (const cd in cache) {
-        const sum = (cache[cd].normal|0)+(cache[cd].shine|0)+(cache[cd].premium|0);
-        if (sum>=1 && sum<=3) owned[String(sum)].push(parseInt(cd,10).toString(36));
-      }
-      const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(owned));
-      const baseUrl = location.href.split('?')[0];
-      const url = `${baseUrl}?data=${compressed}`;
-      navigator.clipboard.writeText(url).then(()=>alert('所持カード共有URLをコピーしました！'));
-    },
-
-    // 共有URLの ?data= を取り込み（一時表示 or 本保存は呼び出し側で）
-    parseShareParam(param) {
-      if (!param || !window.LZString) return null;
-      try {
-        const raw = JSON.parse(LZString.decompressFromEncodedURIComponent(param));
-        const obj = {};
-        ["1","2","3"].forEach(num => (raw[num]||[]).forEach(id => { obj[parseInt(id,36)] = {normal:parseInt(num,10),shine:0,premium:0}; }));
-        return obj;
-      } catch { return null; }
-    },
 
     // 自動保存のON/OFFを切り替え
   setAutosave(v) { autosave = !!v; },

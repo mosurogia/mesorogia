@@ -6,12 +6,133 @@ if (window.OwnedStore?.setAutosave) {
   window.OwnedStore.setAutosave(false);
 }
 
+// ===== 所持データ保存フロー（未保存検知 & 退避） =====
+(function setupOwnershipSaveFlow() {
+  // 未保存フラグ（このページ限定）
+  window.__ownedDirty = false;
+
+  // ---- OwnedStoreのスナップショット管理 ----
+  function normalizeOwnedMap(src = {}) {
+    const out = {};
+    for (const cd in src) {
+      const v = src[cd];
+      out[cd] = (v && typeof v === 'object')
+        ? { normal: v.normal|0, shine: v.shine|0, premium: v.premium|0 }
+        : { normal: v|0,      shine: 0,           premium: 0 };
+    }
+    return out;
+  }
+  function readPersistedOwned() {
+    try { return JSON.parse(localStorage.getItem('ownedCards') || '{}') || {}; }
+    catch { return {}; }
+  }
+  function takeOwnedSnapshotFromPersist() {
+    window.__ownedSnapshot = normalizeOwnedMap(readPersistedOwned());
+    window.__ownedSnapshotInited = true;
+  }
+  function applyOwnedMapToStore(map) {
+    if (!window.OwnedStore?.set) return;
+    const current = (window.OwnedStore.getAll && window.OwnedStore.getAll()) || {};
+    const keys = new Set([...Object.keys(current), ...Object.keys(map)]);
+    keys.forEach(cd => {
+      const v = map[cd] || { normal:0, shine:0, premium:0 };
+      window.OwnedStore.set(String(cd), { normal: v.normal|0, shine: v.shine|0, premium: v.premium|0 });
+    });
+  }
+  window.revertOwnedToSaved = function() {
+    if (!window.__ownedSnapshotInited) takeOwnedSnapshotFromPersist();
+    applyOwnedMapToStore(window.__ownedSnapshot || {});
+    window.__ownedDirty = false;
+    // 画面同期
+    if (typeof window.applyGrayscaleFilter === 'function') window.applyGrayscaleFilter();
+    if (typeof window.updateOwnedTotal === 'function') window.updateOwnedTotal();
+    if (typeof window.updateSummary === 'function') window.updateSummary();
+  };
+
+  // 起動時：OwnedStoreを掴んでおく
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', takeOwnedSnapshotFromPersist, { once:true });
+  } else {
+    takeOwnedSnapshotFromPersist();
+  }
+
+  // 変更があれば未保存フラグON
+  function markDirty(){ window.__ownedDirty = true; }
+  if (window.OwnedStore?.onChange) {
+    OwnedStore.onChange(markDirty);
+  } else {
+    window.addEventListener('load', () => {
+      if (window.OwnedStore?.onChange) OwnedStore.onChange(markDirty);
+    });
+  }
+
+  // 共通：未保存なら保存するか確認 → OKなら保存・NGなら巻き戻し
+  window.saveOwnedIfDirty = function (reason='') {
+    if (!window.OwnedStore) return;
+    if (!window.__ownedDirty) return;
+    const ok = confirm('所持データに未保存の変更があります。保存しますか？');
+    if (ok) {
+      try {
+        OwnedStore.save();
+        // 保存されたので A を更新
+        takeOwnedSnapshotFromPersist();
+        window.__ownedDirty = false;
+        alert('所持データを保存しました');
+      } catch (e) {
+        console.error(e);
+        alert('保存に失敗しました');
+      }
+    } else {
+      // ★ 保存しない → OwnedStore に巻き戻す
+      window.revertOwnedToSaved();
+    }
+  };
+
+  // ブラウザ離脱（閉じる/リロード等）警告
+  window.addEventListener('beforeunload', (e) => {
+    if (window.__ownedDirty) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
+  // 別ページへのリンククリック時も保存確認（このページ内のみ）
+  document.addEventListener('click', (ev) => {
+    const a = ev.target.closest('a[href]');
+    if (!a) return;
+    const href = a.getAttribute('href');
+    if (!href || href.startsWith('#') || a.target === '_blank') return;
+    try { const u = new URL(href, location.href); if (u.origin !== location.origin) return; } catch {}
+    if (!document.getElementById('checker') && !document.getElementById('owned')) return;
+
+    if (window.__ownedDirty) {
+      const ok = confirm('未保存の所持データがあります。保存しますか？');
+      if (ok) {
+        try { OwnedStore.save(); window.__ownedDirty = false; takeOwnedSnapshotFromPersist(); } catch {}
+      } else {
+        // ★ 保存しない →OwnedStore に巻き戻してから遷移
+        window.revertOwnedToSaved();
+      }
+    }
+  });
+
+  // タブ切替時の保存確認（common-page23.js から呼ばれる）
+  window.beforeTabSwitch = function(fromId, toId) {
+    const leavingOwnedPages =
+      (fromId === 'checker' && toId !== 'checker') ||
+      (fromId === 'owned'   && toId !== 'owned');
+    if (leavingOwnedPages) {
+      window.saveOwnedIfDirty(`tab:${fromId}->${toId}`);
+    }
+  };
+})();
+
 
 document.addEventListener('DOMContentLoaded', () => {
   updateSummary(); // 初回反映
 });
 /*===================
-    .所持率コンプ率
+    2.所持率コンプ率
 ====================*/
 const packs = [
   { key:'awaking',
@@ -20,9 +141,14 @@ const packs = [
     selector:'#pack-awaking'
   },
     { key:'beyond',
-    nameMain:'Beyond the Sanctuary ',
+    nameMain:'Beyond the Sanctuary',
     nameSub:'「聖域の先へ」',
     selector:'#pack-beyond'
+  },
+    { key:'creeping',
+    nameMain:'Creeping Souls',
+    nameSub:'「忍び寄る魂達」',
+    selector:'#pack-creeping'
   },
 ];
 
@@ -91,7 +217,7 @@ https://mosurogia.github.io/cardcheker/`
     const selPack = (Array.isArray(packs) ? packs.find(p=>p.key===selKey) : null) || packs?.[0];
     let selTypePercent = 0;
     if (selPack){
-      const selCards = document.querySelectorAll(`[data-pack*="${selPack.nameMain}"]`);
+      const selCards = queryCardsByPack(selPack);
       selTypePercent = calcSummary(selCards).typePercent;
     }
     const mtxt = encodeURIComponent(
@@ -118,7 +244,7 @@ function updatePackSummary(){
   if (mobileSelect) mobileSelect.innerHTML = '';
 
   (packs || []).forEach(pack => {
-    const cards = document.querySelectorAll(`[data-pack*="${pack.nameMain}"]`);
+    const cards = queryCardsByPack(pack);
     const s = calcSummary(cards);
 
     // === PC側: 指定の構成で生成 ===
@@ -166,7 +292,7 @@ https://mosurogia.github.io/cardcheker/`
   if (mobileSelect && mobileSummary){
     const sel = packs.find(p => p.key === mobileSelect.value) || packs[0];
     if (sel){
-      const cards = document.querySelectorAll(`[data-pack*="${sel.nameMain}"]`);
+      const cards = queryCardsByPack(pack);
       const s = calcSummary(cards);
       mobileSummary.innerHTML = `
         <div class="pack-name">${sel.nameMain}</div>
@@ -192,16 +318,339 @@ function updateSummary(){
   updateOverallSummary();
   updatePackSummary();
 }
+
+
+// === スマホ: プルダウン変更で #mobile-pack-summary を更新 ===
+function selectMobilePack(packKey) {
+  // セレクトの表示値を同期
+  const sel = document.getElementById('pack-selector');
+  if (sel && sel.value !== packKey) sel.value = packKey;
+
+  // packs から該当パックを取得（なければ先頭）
+  const pack = (Array.isArray(packs) ? packs.find(p => p.key === packKey) : null) || (packs?.[0]);
+  if (!pack) return;
+
+  // 対象パックのカード要素を集めて所持率/コンプ率を算出
+  const cards = queryCardsByPack(sel);
+  const s = calcSummary(cards); // { owned, ownedTypes, total, totalTypes, percent, typePercent }
+
+  // モバイル上部サマリーを書き換え
+  const mobileSummary = document.getElementById('mobile-pack-summary');
+  if (mobileSummary) {
+    mobileSummary.innerHTML = `
+      <div class="pack-name">${pack.nameMain}</div>
+      <div class="pack-rate">
+        所持率: ${s.ownedTypes}/${s.totalTypes} (${s.typePercent}%)<br>
+        コンプ率: ${s.owned}/${s.total} (${s.percent}%)
+      </div>
+    `;
+  }
+
+  // モバイルの全体ポスト文言も選択パック率を含めて更新するため再計算
+  // （updateOverallSummary は #pack-selector の値を読んでモバイルTweetを再生成する実装）
+  updateOverallSummary();
+}
+
+// グローバル公開（HTML の onchange="selectMobilePack(this.value)" から呼ぶため）
+window.selectMobilePack = selectMobilePack;
+
 /*===================
-    .メニューボタン
+    3.メニューボタン
 ====================*/
 
-//所持率データ保存
+// 所持率データ保存（保存後は未保存フラグをクリア & A更新）
 function saveOwnership() {
   if (!window.OwnedStore?.save) { alert('保存機能が初期化されていません'); return; }
-  OwnedStore.save();    // ← この瞬間だけ localStorage に書く
-  alert('所持データを保存しました');
+  try {
+    OwnedStore.save();
+    if (typeof localStorage !== 'undefined') {
+      // OwnedStoreを取り直す
+      try { window.__ownedSnapshot = JSON.parse(localStorage.getItem('ownedCards') || '{}') || {}; }
+      catch { window.__ownedSnapshot = {}; }
+      window.__ownedSnapshotInited = true;
+    }
+    window.__ownedDirty = false;
+    alert('所持データを保存しました');
+  } catch (e) {
+    console.error(e);
+    alert('保存に失敗しました');
+  }
 }
+
+
+// カード順の共通化（cd昇順／is_latest優先）
+async function getCanonicalOrderForOwned() {
+  if (window.__CARD_ORDER && window.__CARD_ORDER.length) return window.__CARD_ORDER.slice();
+  let cards = [];
+  try {
+    if (typeof fetchLatestCards === 'function') {
+      cards = await fetchLatestCards(); // あるはず
+    } else {
+      const res = await fetch('./cards_latest.json');
+      const all = await res.json();
+      cards = all.filter(c => c.is_latest);
+    }
+  } catch (e) { console.error(e); }
+
+  cards.sort((a,b) => (parseInt(a.cd,10)||0) - (parseInt(b.cd,10)||0));
+  window.__CARD_ORDER = cards.map(c => String(c.cd));
+  return window.__CARD_ORDER.slice();
+}
+
+// Base64URL（= /+ → _-、=除去）
+function b64urlFromBytes(bytes){
+  let bin = '';
+  for (let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+// 1バイトXORの簡易チェックサム（短くて十分）
+function xorChecksum(bytes){
+  let x=0; for (let i=0;i<bytes.length;i++) x^=bytes[i];
+  return (x & 0xff).toString(16).padStart(2,'0');
+}
+
+
+// 所持枚数（0..3）を2bitでパック
+function pack2bit(counts){
+  const n = counts.length;
+  const out = new Uint8Array(Math.ceil(n/4));
+  for (let i=0;i<n;i++){
+    const q = i >> 2;
+    const r = i & 3;
+    out[q] |= (counts[i] & 3) << (r*2);
+  }
+  return out;
+}
+
+
+
+
+// OwnedStore から正規化して取得（normalのみ使用）
+function getOwnedCountSafe(cd){
+  if (!window.OwnedStore) return 0;
+  const v = (OwnedStore.get && OwnedStore.get(String(cd))) || 0;
+  if (typeof v === 'number') return Math.max(0, Math.min(3, v|0));
+  const n = (v && v.normal != null) ? (v.normal|0) : 0;
+  return Math.max(0, Math.min(3, n));
+}
+
+
+// --- v1: 全カード2bit固定 ---
+async function buildOwnedPayloadV1() {
+  const order = await getCanonicalOrderForOwned();
+  const counts = new Uint8Array(order.length);
+  for (let i = 0; i < order.length; i++) counts[i] = getOwnedCountSafe(order[i]) & 3;
+
+  const bytes = pack2bit(counts); // 既存の pack2bit（4件/byte）を使う
+  const cs = xorChecksum(bytes);
+  return '1' + cs + b64urlFromBytes(bytes);
+}
+
+// --- v2: スパース（bitset + 非0のみ2bit値列） ---
+function packBitsetFromCounts(counts) {
+  const n = counts.length;
+  const out = new Uint8Array(Math.ceil(n / 8));
+  for (let i = 0; i < n; i++) {
+    if ((counts[i] & 3) !== 0) {
+      out[i >> 3] |= (1 << (i & 7)); // LSBファースト
+    }
+  }
+  return out;
+}
+// --- v3: 位置デルタ(Varint) + 値(2bit) ---
+// 構造: [K(varint)] [delta1..deltaK(varint)] [values(2bit packed K個)]
+// delta は  (pos - prev)  をそのまま varint 化（最小値1。prevは開始時-1）
+async function buildOwnedPayloadV3() {
+  const order = await getCanonicalOrderForOwned();
+  const countsAll = new Uint8Array(order.length);
+  for (let i = 0; i < order.length; i++) countsAll[i] = getOwnedCountSafe(order[i]) & 3;
+
+  // 非0の位置と値を抽出
+  const pos = [];
+  const nzv = [];
+  for (let i = 0; i < countsAll.length; i++) {
+    const c = countsAll[i] & 3;
+    if (c !== 0) { pos.push(i); nzv.push(c); }
+  }
+
+  // K
+  const K = pos.length;
+  const head = encodeVarint(K);
+
+  // Δエンコード（gapPlus = pos - prev、prev 初期値は -1）
+  let prev = -1;
+  const gaps = [];
+  for (let i = 0; i < K; i++) {
+    const gapPlus = pos[i] - prev;   // 1以上になる
+    gaps.push(...encodeVarint(gapPlus));
+    prev = pos[i];
+  }
+
+  // 値(2bit)をパック
+  const values = pack2bitCompact(nzv);
+
+  const body = concatBytes([Uint8Array.from(head), Uint8Array.from(gaps), values]);
+  const cs = xorChecksum(body);
+  return '3' + cs + b64urlFromBytes(body);
+}
+
+function pack2bitCompact(values) {
+  // values: 非0の枚数配列（各要素1..3）
+  const n = values.length;
+  const out = new Uint8Array(Math.ceil(n / 4));
+  for (let i = 0; i < n; i++) {
+    const q = i >> 2, r = i & 3;
+    out[q] |= (values[i] & 3) << (r * 2);
+  }
+  return out;
+}
+async function buildOwnedPayloadV2() {
+  const order = await getCanonicalOrderForOwned();
+  const countsAll = new Uint8Array(order.length);
+  for (let i = 0; i < order.length; i++) countsAll[i] = getOwnedCountSafe(order[i]) & 3;
+
+  const bitset = packBitsetFromCounts(countsAll);
+  const nz = [];
+  for (let i = 0; i < countsAll.length; i++) if (countsAll[i] !== 0) nz.push(countsAll[i] & 3);
+  const vals = pack2bitCompact(nz);
+
+  const combined = new Uint8Array(bitset.length + vals.length);
+  combined.set(bitset, 0);
+  combined.set(vals, bitset.length);
+
+  const cs = xorChecksum(combined);
+  return '2' + cs + b64urlFromBytes(combined);
+}
+// ---- varint (base128) helpers ----
+function encodeVarint(n) {
+  n = Math.max(0, n >>> 0);
+  const out = [];
+  while (n >= 0x80) { out.push((n & 0x7f) | 0x80); n >>>= 7; }
+  out.push(n);
+  return out;
+}
+function concatBytes(arrs){
+  let len = 0; arrs.forEach(a => len += a.length);
+  const out = new Uint8Array(len);
+  let off = 0;
+  arrs.forEach(a => { out.set(a, off); off += a.length; });
+  return out;
+}
+function decodeVarint(bytes, offs = 0) {
+  let x = 0, shift = 0, i = offs;
+  for (; i < bytes.length; i++) {
+    const b = bytes[i];
+    x |= (b & 0x7f) << shift;
+    if ((b & 0x80) === 0) { i++; break; }
+    shift += 7;
+  }
+  return [x >>> 0, i - offs]; // [値, 消費バイト数]
+}
+
+// --- 自動（短い方を採用） ---
+async function buildOwnedPayloadAuto() {
+  const [p1, p2, p3] = await Promise.all([
+    buildOwnedPayloadV1(),
+    buildOwnedPayloadV2(),
+    buildOwnedPayloadV3()
+  ]);
+  return [p1, p2, p3].reduce((a, b) => (b.length < a.length ? b : a));
+}
+(async () => {
+  const p1 = await buildOwnedPayloadV1();
+  const p2 = await buildOwnedPayloadV2();
+  const p3 = await buildOwnedPayloadV3();
+  const pa = await buildOwnedPayloadAuto();
+  console.table([
+    { ver:'v1', len:p1.length, sample:p1.slice(0,30)+'…' },
+    { ver:'v2', len:p2.length, sample:p2.slice(0,30)+'…' },
+    { ver:'v3', len:p3.length, sample:p3.slice(0,30)+'…' },
+    { ver:'auto', len:pa.length, sample:pa.slice(0,30)+'…' },
+  ]);
+})();
+
+
+// 共有URL作成（deckmaker.html?o=...）
+async function buildOwnedShareURL(){
+  const payload = await buildOwnedPayloadAuto();
+  const base = (location.href.includes('cardcheker.html'))
+    ? location.href.replace(/cardcheker\.html.*$/,'deckmaker.html')
+    : (location.origin + '/deckmaker.html');
+  return `${base}?o=${payload}`;
+}
+
+
+// 共有コピー（未保存時：1段目=保存&コピー / 2段目=保存せずコピー or 中止）
+(function wireShareOwnedButton(){
+  const btns = Array.from(document.querySelectorAll('.js-share-owned, #share-owned-url, #owned-share-button'));
+  if (btns.length === 0) return;
+
+  async function doCopyShareUrl() {
+    const url = await buildOwnedShareURL(); // v1/v2/v3の最短自動
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url);
+      alert('デッキメーカーでの共有URLを作成しました！\n\n' + url);
+    } else {
+      prompt('このURLをコピーしてください', url);
+    }
+  }
+
+  const handler = async () => {
+    try {
+      if (window.__ownedDirty) {
+        // 1段目：保存してからコピー？
+        const doSave = confirm(
+          '所持データに未保存の変更があります。\n' +
+          '保存してからコピーしますか？\n\n' +
+          'OK：保存してコピー\n' +
+          'キャンセル：他の選択へ'
+        );
+        if (doSave) {
+          try {
+            OwnedStore.save();
+            window.__ownedDirty = false;
+            // Aスナップショット更新
+            try { window.__ownedSnapshot = JSON.parse(localStorage.getItem('ownedCards') || '{}') || {}; } catch {}
+            window.__ownedSnapshotInited = true;
+            // 必要ならUI同期
+            if (typeof window.applyGrayscaleFilter === 'function') window.applyGrayscaleFilter();
+            if (typeof window.updateOwnedTotal === 'function') window.updateOwnedTotal();
+            if (typeof window.updateSummary === 'function') window.updateSummary();
+          } catch (e) {
+            console.error(e);
+            // 保存失敗時はユーザーに選ばせる：保存せずコピー？（失敗でも進めたいことが多い）
+            const copyAnyway = confirm('保存に失敗しました。保存せずにコピーしますか？\n\nOK：保存せずコピー\nキャンセル：中止');
+            if (!copyAnyway) return;
+          }
+          // 保存成功 or 保存失敗でもコピー続行
+          await doCopyShareUrl();
+          return;
+        }
+
+        // 2段目：保存せずコピー？
+        const copyWithoutSave = confirm(
+          '保存せずにコピーしますか？\n\n' +
+          'OK：保存せずコピー（現在の変更内容で共有）\n' +
+          'キャンセル：コピーを中止'
+        );
+        if (!copyWithoutSave) return; // 中止
+        await doCopyShareUrl();
+        return;
+      }
+
+      // 未保存変更が無ければそのままコピー
+      await doCopyShareUrl();
+
+    } catch (e) {
+      console.error(e);
+      alert('共有URLの作成に失敗しました');
+    }
+  };
+
+  btns.forEach(b => b.addEventListener('click', handler));
+})();
+
+
 
 
 
@@ -214,13 +663,15 @@ function saveOwnership() {
 const PACK_ORDER = [
     'Awaking The Oracle',
     'Beyond the Sanctuary',
+    'Creeping Souls',
     // 新パックをここに追加（無くても自動検出されます）
 ];
 
 // パック名→id（スラッグ）化
 const PACK_SLUG_ALIAS = {
     'Awaking The Oracle': 'awaking',
-    'Beyond the Sanctuary': 'beyond'
+    'Beyond the Sanctuary': 'beyond',
+    'Creeping Souls': 'creeping'
 };
 
 // 種族表示順
@@ -256,7 +707,7 @@ const esc = s => String(s ?? '')
   .replace(/</g, '&lt;')    // < → &lt;
   .replace(/>/g, '&gt;')    // > → &gt;
   .replace(/"/g, '&quot;'); // " → &quot;  （属性が " で囲まれてるため必須）
-
+const viewCategory = (s) => String(s ?? '').replace(/\s*[（(][^（）()]*[）)]\s*$/g, '');
 
 /*=================================
     2.所持率チェッカー一覧生成
@@ -578,18 +1029,19 @@ function waitForPacksAndSync() {
   }
   function setTotal(cd, n) {
     ensureStore();
-    const count = Math.max(0, Math.min(3, n|0)); // 0..3
-    // 合計表現に寄せる（checker仕様と同じ運用）
+    const max = maxAllowedCount(cd);
+    const count = Math.max(0, Math.min(max, n|0));
     OwnedStore.set(String(cd), { normal: count, shine: 0, premium: 0 });
   }
-
   // 1枚のカード要素を +times 増やす（上限3）
   function bumpOwnership(el, times = 1) {
     const cd = el?.dataset?.cd;
     if (!cd) return;
+    const max = maxAllowedCount(cd, el?.dataset?.race);
     const now = totalOf(cd);
-    setTotal(cd, now + (times|0));
+    setTotal(cd, Math.min(max, now + (times|0)));
   }
+
 
   // 1枚のカード要素の合計を指定数にする
   function setOwnership(el, count) {
@@ -617,13 +1069,11 @@ function waitForPacksAndSync() {
       const cd = String(el.dataset.cd || '');
       if (!cd || !window.OwnedStore) return;
 
+      const max = maxAllowedCount(cd, el.dataset.race);
       const e = OwnedStore.get(cd);
-      const now = (e.normal | 0) + (e.shine | 0) + (e.premium | 0);
+      const now = (e?.normal|0) + (e?.shine|0) + (e?.premium|0);
+      const next = (now >= max) ? 0 : (now + 1);
 
-      // 3のときだけ0に戻す。それ以外は +1（上限3）
-      const next = (now >= 3) ? 0 : (now + 1);
-
-      // checker運用に合わせて normal に寄せる
       OwnedStore.set(cd, { normal: next, shine: 0, premium: 0 });
     } catch (err) {
       console.error('toggleOwnership failed:', err);
@@ -631,6 +1081,24 @@ function waitForPacksAndSync() {
   };
 
 })();
+// === 共通：カードごとの上限枚数（旧神は1、それ以外は3） ===
+function maxAllowedCount(cd, raceHint) {
+  if (raceHint === '旧神') return 1;
+
+  // race が未指定ならキャッシュ/DOMから引く
+  let race = raceHint || '';
+  if (!race && typeof cd !== 'undefined') {
+    if (Array.isArray(window.__cardsCache)) {
+      const hit = window.__cardsCache.find(c => String(c.cd) === String(cd));
+      if (hit?.race) race = hit.race;
+    }
+    if (!race) {
+      const el = document.querySelector(`#packs-root .card[data-cd="${cd}"]`);
+      race = el?.dataset?.race || '';
+    }
+  }
+  return (race === '旧神') ? 1 : 3;
+}
 
 
 /*========= パック/種族ボタンの挙動 =========
@@ -697,50 +1165,71 @@ renderAllPacks({
   updateSummary();
 });
 
-// チェッカー反映
-{
-  const btn = document.getElementById('apply-to-checker');
-  if (btn) {
-    btn.addEventListener('click', () => {
-      if (typeof window.OwnedStore === 'undefined') { alert('所持データの初期化前です。ページを再読み込みしてください。'); return; }
-      if (!confirm('現在の所持カードデータを保存して所持率チェッカーに反映しますか？')) return;
-      window.OwnedStore.clampForChecker(getCardsForOwnedOps()); // 旧神=1 / 他=3
+// パック抽出の共通ヘルパ（英名で前方一致＋範囲限定）
+function queryCardsByPack(pack) {
+  const key = (pack?.nameMain || '').trim();
+  if (!key) return document.querySelectorAll('#packs-root .card');
+  return document.querySelectorAll(`#packs-root .card[data-pack^="${CSS.escape(key)}"]`);
+}
+
+// チェッカー反映（保存 → 反映 → チェッカータブへ）
+// ※ 保存を拒否した場合は A に巻き戻してからタブ切替（クランプはしない）
+['apply-to-checker', 'apply-to-checker-mobile'].forEach(id => {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    if (!window.OwnedStore) { alert('所持データの初期化前です。ページを再読み込みしてください。'); return; }
+
+    const ok = confirm('現在の所持カードデータを保存して所持率チェッカーに反映しますか？');
+    if (ok) {
+      try { OwnedStore.save(); window.__ownedDirty = false; } catch {}
+      // OwnedStore更新
+      try { window.__ownedSnapshot = JSON.parse(localStorage.getItem('ownedCards') || '{}') || {}; } catch {}
+      window.__ownedSnapshotInited = true;
+
+      // 旧神=1 / 他=3 にクランプしてチェッカー表示に反映
+      try { window.OwnedStore.clampForChecker(getCardsForOwnedOps()); } catch {}
+    } else {
+      // ★ 保存しない → OwnedStore に巻き戻す（変更データは捨てる）
+      window.revertOwnedToSaved();
+    }
+
+    // 同一ページ内のタブをチェッカーに切替
+    const tabBtn = document.querySelector('.tab-bar .tab'); // 先頭タブ＝チェッカー想定
+    if (tabBtn && typeof window.switchTab === 'function') {
+      switchTab('checker', tabBtn);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
       location.href = 'cardcheker.html';
-    });
-  }
-}
-
-// 余剰分リセット
-{
-  const btn = document.getElementById('reset-excess-btn');
-  if (btn) {
-    btn.addEventListener('click', () => {
-      if (typeof window.OwnedStore === 'undefined') { alert('所持データの初期化前です。ページを再読み込みしてください。'); return; }
-      window.OwnedStore.resetExcess(getCardsForOwnedOps());
-      updateOwnedTotal();
-      if (typeof renderOwnedPage === 'function') renderOwnedPage();
-      alert('余剰分を全て制限枚数にリセットしました！');
-    });
-  }
-}
+    }
+  });
+});
 
 
-//総所持枚数反映
+
+
+//総所持枚数（フィルター結果に連動）
 function updateOwnedTotal() {
+  if (!window.OwnedStore) return;
+
+  // いま画面に出す対象 = フィルター後の配列（未生成なら全体）
+const scopeCards = Array.isArray(window.__ownedCardsData)
+  ? window.__ownedCardsData
+  : getCardsForOwnedOps();
+
+  // cd -> { race, rarity } 索引
+  const index = new Map(scopeCards.map(c => [String(c.cd), { race: c.race, rarity: c.rarity }]));
 
   const all = OwnedStore.getAll();
-
-  // cards 相当の索引を用意（cache → DOM の順で取得）
-  const cardsArr = getCardsForOwnedOps();
-  const index = new Map(cardsArr.map(c => [String(c.cd), c]));
-
   let total = 0, legend = 0, gold = 0, silver = 0, bronze = 0;
 
   for (const cd in all) {
-    const sum = (all[cd].normal|0)+(all[cd].shine|0)+(all[cd].premium|0);
-    if (sum<=0) continue;
+    const sum = (all[cd].normal|0) + (all[cd].shine|0) + (all[cd].premium|0);
+    if (sum <= 0) continue;
+    const info = index.get(String(cd));
+    if (!info) continue; // フィルター外は数えない
+
     total += sum;
-    const info = index.get(cd); if (!info) continue;
     switch (info.rarity) {
       case 'レジェンド': legend += sum; break;
       case 'ゴールド'  : gold   += sum; break;
@@ -750,22 +1239,22 @@ function updateOwnedTotal() {
   }
 
   // PC/タブレット
-  document.getElementById('owned-total').textContent   = total;
-  document.getElementById('owned-legend').textContent  = legend;
-  document.getElementById('owned-gold').textContent    = gold;
-  document.getElementById('owned-silver').textContent  = silver;
-  document.getElementById('owned-bronze').textContent  = bronze;
+  document.getElementById('owned-total')?.replaceChildren(document.createTextNode(total));
+  document.getElementById('owned-legend')?.replaceChildren(document.createTextNode(legend));
+  document.getElementById('owned-gold')?.replaceChildren(document.createTextNode(gold));
+  document.getElementById('owned-silver')?.replaceChildren(document.createTextNode(silver));
+  document.getElementById('owned-bronze')?.replaceChildren(document.createTextNode(bronze));
 
   // モバイル
-  document.getElementById('owned-total-mobile').textContent   = total;
-  document.getElementById('owned-legend-mobile').textContent  = legend;
-  document.getElementById('owned-gold-mobile').textContent    = gold;
-  document.getElementById('owned-silver-mobile').textContent  = silver;
-  document.getElementById('owned-bronze-mobile').textContent  = bronze;
+  document.getElementById('owned-total-mobile')?.replaceChildren(document.createTextNode(total));
+  document.getElementById('owned-legend-mobile')?.replaceChildren(document.createTextNode(legend));
+  document.getElementById('owned-gold-mobile')?.replaceChildren(document.createTextNode(gold));
+  document.getElementById('owned-silver-mobile')?.replaceChildren(document.createTextNode(silver));
+  document.getElementById('owned-bronze-mobile')?.replaceChildren(document.createTextNode(bronze));
 
-  //calculateDismantleSand && calculateDismantleSand();
-  //updateOwnedRaceSummary && updateOwnedRaceSummary();
-  //updateOwnedRaceSummaryMobile && updateOwnedRaceSummaryMobile();
+  // フィルター非連動の「種族別」も更新
+  updateOwnedRaceSummary();
+  updateOwnedRaceSummaryMobile();
 }
 
 // ストア変化で自動集計
@@ -775,56 +1264,212 @@ if (window.OwnedStore?.onChange) {
   // 後から初期化される型なら load 後にもう一度呼ぶ等のケアを足してもOK
 }
 
+// ===== 置き換え：PC種族集計 =====
+function updateOwnedRaceSummary() {
+  const root = document.getElementById('owned-race-summary');
+  if (!root || !window.OwnedStore) return;
 
+  const RACES = (typeof RACE_ORDER !== 'undefined') ? RACE_ORDER
+               : ['ドラゴン','アンドロイド','エレメンタル','ルミナス','シェイド','イノセント','旧神'];
+  const RARS  = ['レジェンド','ゴールド','シルバー','ブロンズ'];
+  const ICON  = { 'レジェンド':'🌈','ゴールド':'🟡','シルバー':'⚪️','ブロンズ':'🟤' };
 
+  const cards = getCardsForOwnedOps();
+  const idx = new Map(cards.map(c => [String(c.cd), { race:c.race, rarity:c.rarity }]));
 
+  const table = new Map(RACES.map(r => [r, Object.fromEntries(RARS.map(x => [x,0]))]));
 
-//所持カード分析用
-function bindCardEvents(cardDiv) {
-  const cd = String(cardDiv.dataset.cd);
-  let mode = 'normal'; // 'normal' | 'shine' | 'premium'
-
-  const editionBtn = cardDiv.querySelector('.edition-mode-btn');
-  const decBtn     = cardDiv.querySelector('.decrement-btn');
-  const incBtn     = cardDiv.querySelector('.increment-btn');
-
-  const countSpan   = cardDiv.querySelector('.count-display');
-  const normalSpan  = cardDiv.querySelector('.normal-count');
-  const shineSpan   = cardDiv.querySelector('.shine-count');
-  const premiumSpan = cardDiv.querySelector('.premium-count');
-
-  const modeLabel = (m)=> m==='normal' ? '📇ノーマル' : m==='shine' ? '✨シャイン' : '🔮プレミアム';
-
-  function updateDisplay() {
-    const e = OwnedStore.get(cd);
-    const total = e.normal + e.shine + e.premium;
-    countSpan.textContent   = total;
-    normalSpan.textContent  = `📇${e.normal}`;
-    shineSpan.textContent   = `✨${e.shine}`;
-    premiumSpan.textContent = `🔮${e.premium}`;
-    editionBtn.textContent  = modeLabel(mode);
+  const all = OwnedStore.getAll();
+  for (const cd in all) {
+    const sum = (all[cd].normal|0) + (all[cd].shine|0) + (all[cd].premium|0);
+    if (sum <= 0) continue;
+    const info = idx.get(String(cd)); if (!info) continue;
+    if (!table.has(info.race)) continue;
+    const row = table.get(info.race);
+    if (row[info.rarity] != null) row[info.rarity] += sum;
   }
 
-  editionBtn.addEventListener('click', () => {
-    const next = { normal:'shine', shine:'premium', premium:'normal' };
-    mode = next[mode]; updateDisplay();
+  const ul = document.createElement('ul');
+  ul.className = 'race-summary'; // スコープ用
+
+  RACES.forEach(r => {
+    const row = table.get(r);
+    const li = document.createElement('li');
+    // ★ 種族ごとにクラスを付与（背景色などCSSで当てられる）
+    li.className = `race-summary-item owned-race-${r} race-${r}`;
+
+    li.innerHTML = `
+      <div class="race-summary-title"><strong>${r}</strong></div>
+      <div class="rar-rows">
+        <p class="rar-line">
+          <span class="rar-pair rar-legend"><i>${ICON['レジェンド']}</i><span class="num">${row['レジェンド'] ?? 0}</span></span>
+          <span class="rar-pair rar-gold"><i>${ICON['ゴールド']}</i><span class="num">${row['ゴールド'] ?? 0}</span></span>
+        </p>
+        <p class="rar-line">
+          <span class="rar-pair rar-silver"><i>${ICON['シルバー']}</i><span class="num">${row['シルバー'] ?? 0}</span></span>
+          <span class="rar-pair rar-bronze"><i>${ICON['ブロンズ']}</i><span class="num">${row['ブロンズ'] ?? 0}</span></span>
+        </p>
+      </div>`;
+    ul.appendChild(li);
   });
 
-  incBtn.addEventListener('click', () => {
-    OwnedStore.inc(cd, mode, +1);
+  root.replaceChildren(ul);
+}
+
+// ===== 置き換え：モバイル種族集計（横並びのまま、改行防止だけ反映）
+function updateOwnedRaceSummaryMobile() {
+  const root = document.getElementById('owned-race-summary-mobile');
+  if (!root || !window.OwnedStore) return;
+
+  const RACES = (typeof RACE_ORDER !== 'undefined') ? RACE_ORDER
+               : ['ドラゴン','アンドロイド','エレメンタル','ルミナス','シェイド','イノセント','旧神'];
+  const RARS  = ['レジェンド','ゴールド','シルバー','ブロンズ'];
+  const ICON  = { 'レジェンド':'🌈','ゴールド':'🟡','シルバー':'⚪️','ブロンズ':'🟤' };
+
+  const cards = getCardsForOwnedOps();
+  const idx = new Map(cards.map(c => [String(c.cd), { race:c.race, rarity:c.rarity }]));
+
+  const table = new Map(RACES.map(r => [r, Object.fromEntries(RARS.map(x => [x,0]))]));
+
+  const all = OwnedStore.getAll();
+  for (const cd in all) {
+    const sum = (all[cd].normal|0) + (all[cd].shine|0) + (all[cd].premium|0);
+    if (sum <= 0) continue;
+    const info = idx.get(String(cd)); if (!info) continue;
+    if (!table.has(info.race)) continue;
+    const row = table.get(info.race);
+    if (row[info.rarity] != null) row[info.rarity] += sum;
+  }
+
+  const frag = document.createDocumentFragment();
+  RACES.forEach(r => {
+    const row = table.get(r);
+    const div = document.createElement('div');
+    div.className = `race-row race-${r}`; // ★ 種族クラス付与
+
+    div.innerHTML =
+      `<span class="race-name"><strong>${r}</strong></span>
+       <span class="rar-line">
+         <span class="rar-pair rar-legend"><i>${ICON['レジェンド']}</i><span class="num">${row['レジェンド'] ?? 0}</span></span>
+         <span class="rar-pair rar-gold"><i>${ICON['ゴールド']}</i><span class="num">${row['ゴールド'] ?? 0}</span></span>
+         <span class="rar-pair rar-silver"><i>${ICON['シルバー']}</i><span class="num">${row['シルバー'] ?? 0}</span></span>
+         <span class="rar-pair rar-bronze"><i>${ICON['ブロンズ']}</i><span class="num">${row['ブロンズ'] ?? 0}</span></span>
+       </span>`;
+    frag.appendChild(div);
+  });
+  root.replaceChildren(frag);
+}
+
+
+
+
+// デッキ分析カード部分処理
+// 置き換え：小さな“ポップオーバー風”ダイアログを画像の上下に出す
+function bindOwnedCardEventsSimple(cardDiv) {
+  const cd   = String(cardDiv.dataset.cd);
+  const race = cardDiv.dataset.race || '';
+  const max  = (race === '旧神') ? 1 : 3;
+
+  const decBtn = cardDiv.querySelector('.decrement-btn');
+  const incBtn = cardDiv.querySelector('.increment-btn');
+  const cntEl  = cardDiv.querySelector('.count-display');
+  const imgEl  = cardDiv.querySelector('img');
+
+  const read = ()=> {
+    const e = OwnedStore.get(cd) || { normal:0, shine:0, premium:0 };
+    return (e.normal|0) + (e.shine|0) + (e.premium|0);
+  };
+  const write = (n)=> {
+    const v = Math.max(0, Math.min(max, n|0));
+    OwnedStore.set(cd, { normal:v, shine:0, premium:0 });
+  };
+  const paint = ()=> { cntEl.textContent = String(read()); };
+
+  // ⬇ ここを new：非モーダルで位置指定する openEffect
+  const openEffect = (evt, anchorEl)=> {
+    const name = cardDiv.querySelector('.card-name')?.textContent || `#${cd}`;
+    const n1 = cardDiv.dataset.effectname1 || '';
+    const t1 = cardDiv.dataset.effecttext1 || '';
+    const n2 = cardDiv.dataset.effectname2 || '';
+    const t2 = cardDiv.dataset.effecttext2 || '';
+    const body = [
+      n1 && `【${n1}】`, t1,
+      n2 && `\n【${n2}】`, t2
+    ].filter(Boolean).join('\n');
+
+    const dlg = document.getElementById('effect-dialog');
+    if (!dlg) return;
+
+    // 必要最小情報だけ
+    document.getElementById('dlg-title').textContent = name;
+    document.getElementById('dlg-body').textContent  = body || '（効果テキストなし）';
+
+    // 非モーダルで開く（背面が見える）
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const rect = (anchorEl || cardDiv).getBoundingClientRect();
+
+    // 先に幅だけ決めて open → 高さを測ってから最終座標を計算
+  const desiredW = Math.min(520, Math.max(200, Math.round(vw * 0.6))); // 320〜520px、目安=画面幅の60%
+  dlg.style.width = desiredW + 'px';
+  dlg.style.maxWidth = '90vw'; // 端末が極端に狭い場合の保険（画面の90%まで）
+
+    dlg.show(); // ← showModal() ではなく show()
+
+    const dh = dlg.getBoundingClientRect().height;
+    const below = evt ? (evt.clientY < vh / 2) : (rect.top < vh / 2); // 上下出し分け
+    const gap = 8;
+
+    // 左座標：画像中央に合わせつつ画面内にクランプ
+    let left = rect.left + rect.width / 2 - desiredW / 2;
+    left = Math.max(8, Math.min(left, vw - desiredW - 8));
+
+    // 上座標：下に出す or 上に出す
+    let top = below ? (rect.bottom + gap) : (rect.top - dh - gap);
+    // はみ出し最終クランプ
+    top = Math.max(8, Math.min(top, vh - dh - 8));
+
+    dlg.style.left = Math.round(left) + 'px';
+    dlg.style.top  = Math.round(top)  + 'px';
+  };
+
+  // ±ボタンはバブリング停止（ポップを出さない）
+  decBtn?.addEventListener('click', (e)=> { e.stopPropagation(); write(read()-1); });
+  incBtn?.addEventListener('click', (e)=> { e.stopPropagation(); write(read()+1); });
+
+  // 🔽 画像だけで情報ポップ（非モーダル）
+  imgEl?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openEffect(e, imgEl);
   });
 
-  decBtn.addEventListener('click', () => {
-    const e = OwnedStore.get(cd);
-    if (e[mode] > 0) OwnedStore.inc(cd, mode, -1);
-  });
+  // 画面のどこかをクリックしたら閉じる
+  if (!window.__effectOutsideCloser__) {
+    window.__effectOutsideCloser__ = true;
+    document.addEventListener('click', (ev) => {
+      const dlg = document.getElementById('effect-dialog');
+      if (dlg?.open && !dlg.contains(ev.target) && !ev.target.closest('#owned-card-grid .card img')) {
+        dlg.close();
+      }
+    });
+  }
 
   // ストア変化で自動更新
-  const off = OwnedStore.onChange(updateDisplay);
-  cardDiv.addEventListener('remove', off, { once:true });
+  if (OwnedStore?.onChange) OwnedStore.onChange(paint);
 
-  updateDisplay();
+  // 初期表示
+  paint();
 }
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -874,9 +1519,11 @@ function renderOwnedPage() {
 
   pageCards.forEach(card => {
     const div = document.createElement('div');
-    div.className = 'card';
+    // レアリティ枠線用クラス（CSSで枠線に）
+    div.className ='card ' +(RARITY_CLASS[card.rarity] ? `rarity-${RARITY_CLASS[card.rarity]} ` : '') ;
 
-    // 再構築前の data-* を踏襲
+
+    // 既存 data-* 踏襲
     div.dataset.cd       = card.cd;
     div.dataset.type     = card.type;
     div.dataset.race     = card.race;
@@ -885,47 +1532,49 @@ function renderOwnedPage() {
     div.dataset.cost     = card.cost;
     div.dataset.power    = card.power;
     div.dataset.rarity   = card.rarity;
-    div.dataset.editionMode = 'all';
     if (card.effect_name1) div.dataset.effectname1 = card.effect_name1;
     if (card.effect_name2) div.dataset.effectname2 = card.effect_name2;
     if (card.effect_text1) div.dataset.effecttext1 = card.effect_text1;
     if (card.effect_text2) div.dataset.effecttext2 = card.effect_text2;
 
-    // 再構築前のUI構成
-    div.innerHTML = `
-      <img alt="${card.name}" loading="lazy" src="img/${card.cd}.webp" />
-      <div class="owned-card-info">
-        <div class="card-name" title="${card.name}">${card.name}</div>
+div.innerHTML = `
+  <img alt="${esc(card.name)}" loading="lazy" src="img/${card.cd}.webp" />
+  <div class="owned-card-info">
+    <div class="card-name owned-race-${esc(card.race ?? '-')}" title="${esc(card.name)}">${esc(card.name)}</div>
 
-        <div class="owned-card-controls">
-          <button class="decrement-btn">-</button>
-          <span class="count-display">0</span>
-          <button class="increment-btn">+</button>
-        </div>
+    <div class="owned-card-controls">
+      <button class="decrement-btn">-</button>
+      <span class="count-display">0</span>
+      <button class="increment-btn">+</button>
+    </div>
 
-        <div class="owned-card-edition-counts">
-          <span class="normal-count">📇0</span>
-          <span class="shine-count">✨0</span>
-          <span class="premium-count">🔮0</span>
-        </div>
-
-        <div class="edition-switch">
-          <button class="edition-mode-btn">ノーマル</button>
-        </div>
+    <div class="owned-card-meta">
+      <div class="meta-row">
+        <span class="meta-label">レアリティ：</span>
+        <span class="meta-value">${esc(card.rarity)}</span>
       </div>
-    `;
+      <div class="meta-row">
+        <span class="meta-label">種族：</span>
+        <span class="meta-value">${esc(card.race ?? '-')}</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">カテゴリ：</span>
+        <span class="meta-value">${esc(viewCategory(card.category) ?? '-')}</span>
+      </div>
+    </div>
+  </div>
+`;
 
     grid.appendChild(div);
-
-    // 再構築前のイベント実装を流用（page3.js の bindCardEvents を想定）
-    if (typeof window.bindCardEvents === 'function') {
-      window.bindCardEvents(div);
-    }
+    bindOwnedCardEventsSimple(div);
   });
 
   const info = document.getElementById('page-info');
   if (info) info.textContent = `${__ownedCurrentPage} / ${totalPages}`;
+  if (window.updateOwnedTotal) updateOwnedTotal();
 }
+
+
 
 // 矢印・ボタンのページ送り（存在する場合のみ）
 function initOwnedPager() {
@@ -937,12 +1586,15 @@ function initOwnedPager() {
   function go(delta){
     __ownedCurrentPage += delta;
     renderOwnedPage();
+    if (window.updateOwnedTotal) updateOwnedTotal();
   }
   left  && left .addEventListener('click', ()=>go(-1));
   right && right.addEventListener('click', ()=>go(+1));
   prev  && prev .addEventListener('click', ()=>go(-1));
   next  && next .addEventListener('click', ()=>go(+1));
 }
+
+
 
 // 初期化
 (async function initOwnedGrid(){
@@ -952,4 +1604,238 @@ function initOwnedPager() {
 
   // 所持合計などは OwnedStore の onChange 側で自動集計している想定
   if (window.updateOwnedTotal) window.updateOwnedTotal();
+})();
+
+/* =========================
+   フィルター：条件モデル
+========================= */
+const filterConditions = {
+  keyword: '',
+  type: 'all',
+  race: [],
+  category: [],
+  rarity: [],
+  pack: []
+};
+
+/* すべてのカード配列を取得（JSONキャッシュ優先） */
+function getAllCardsForFilter(){
+  if (Array.isArray(window.__cardsCache) && window.__cardsCache.length) return window.__cardsCache;
+  if (Array.isArray(window.__ownedCardsData) && window.__ownedCardsData.length) return window.__ownedCardsData;
+  return []; // 最悪空
+}
+
+/* ================ 置き換え：フィルター選択肢の生成 ================ */
+function generateFilterOptions() {
+  const cardsAll = getAllCardsForFilter();
+
+  const races = ['ドラゴン', 'アンドロイド', 'エレメンタル', 'ルミナス', 'シェイド', 'イノセント', '旧神'];
+  const categories = [
+    '聖焔龍（フォルティア）','ドラゴライダー','メイドロボ','アドミラルシップ',
+    'ナチュリア','鬼刹（きせつ）','ロスリス','白騎士','昏き霊園','マディスキア','ノーカテゴリ'
+  ];
+  const rarities = ['レジェンド', 'ゴールド', 'シルバー', 'ブロンズ'];
+
+  // JSONからユニークなパック名を抽出
+  const packs = [...new Set(cardsAll.map(c => c.pack || c.pack_name).filter(Boolean))]
+    .sort((a,b)=> String(a).localeCompare(String(b), 'ja'));
+
+  const raceArea     = document.getElementById('filter-race');
+  const categoryArea = document.getElementById('filter-category');
+  const rarityArea   = document.getElementById('filter-rarity');
+  const packArea     = document.getElementById('filter-pack');
+
+  if (!raceArea || !categoryArea || !rarityArea) return;
+
+  raceArea.innerHTML = '';
+  categoryArea.innerHTML = '';
+  rarityArea.innerHTML = '';
+  if (packArea) packArea.innerHTML = '';
+
+  // ボタン生成ヘルパ
+const makeBtns = (area, values, key) => {
+  const group = document.createElement('div');
+  group.className = 'filter-group';
+
+  // まとめて append するためのフラグメント
+  const frag = document.createDocumentFragment();
+
+  values.forEach(v => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'filter-btn';
+    btn.dataset.value = v;
+    btn.textContent = v;
+
+    btn.addEventListener('click', () => {
+      btn.classList.toggle('selected');
+      filterConditions[key] = [...area.querySelectorAll('button.selected')].map(b => b.dataset.value);
+      applyFilterAndSearch();
+    });
+
+    frag.appendChild(btn);
+  });
+
+  group.appendChild(frag);
+  area.appendChild(group);
+};
+
+
+  makeBtns(raceArea, races, 'race');
+  makeBtns(categoryArea, categories, 'category');
+  makeBtns(rarityArea, rarities, 'rarity');
+  if (packArea) makeBtns(packArea, packs, 'pack');
+}
+
+/* ================ 置き換え：絞り込み実行 ================ */
+function applyFilterAndSearch() {
+  const src = getAllCardsForFilter();
+  const kw  = (filterConditions.keyword || '').toLowerCase();
+  const t   = filterConditions.type;
+  const pickR = filterConditions.race;
+  const pickC = filterConditions.category;
+  const pickRy= filterConditions.rarity;
+  const pickP = filterConditions.pack;
+
+  const filtered = src.filter(card => {
+    // キーワード
+    if (kw) {
+      const hay =
+        `${card.name||''}\n${card.effect_name1||''}\n${card.effect_name2||''}\n${card.effect_text1||''}\n${card.effect_text2||''}`
+        .toLowerCase();
+      if (!hay.includes(kw)) return false;
+    }
+    // タイプ
+    if (t !== 'all' && card.type !== t) return false;
+    // 種族
+    if (pickR.length){
+      const races = Array.isArray(card.race) ? card.race : [card.race||''];
+      if (!races.some(r => pickR.includes(r))) return false;
+    }
+    // カテゴリ
+    if (pickC.length && !pickC.includes(card.category)) return false;
+    // レアリティ
+    if (pickRy.length && !pickRy.includes(card.rarity)) return false;
+    // パック
+    if (pickP.length){
+      const p = card.pack || card.pack_name || '';
+      if (!pickP.includes(p)) return false;
+    }
+    return true;
+  });
+  // ★ 並び順：コスト → パワー → cd（すべて昇順）
+  filtered.sort((a, b) => {
+    const ac = Number(a.cost ?? 999), bc = Number(b.cost ?? 999);
+    if (ac !== bc) return ac - bc;
+
+    const ap = Number(a.power ?? 99999), bp = Number(b.power ?? 99999);
+    if (ap !== bp) return ap - bp;
+
+    const aid = Number(a.cd ?? 999999999), bid = Number(b.cd ?? 999999999);
+    return aid - bid;
+  });
+  // ★ 所持カード分析グリッドのデータを書き換えて再描画
+  __ownedCardsData = filtered;
+  __ownedCurrentPage = 1;
+  renderOwnedPage();
+  updateOwnedTotal();
+}
+
+/* ================ 追加：UI初期化（開閉・タイプ・キーワード・リセット） ================ */
+(function initFilterUI(){
+  const modal    = document.getElementById('filter-modal');
+  const backdrop = document.getElementById('modal-backdrop');
+
+  const openBtns = [
+    document.getElementById('open-filter-modal'),
+    document.getElementById('open-filter-modal-mobile')
+  ].filter(Boolean);
+
+  function openModal(){
+    // 初回だけ選択肢を生成
+    if (!modal.dataset.inited){
+      generateFilterOptions();
+      modal.dataset.inited = '1';
+    }
+    modal.style.display = 'block';
+    if (backdrop) backdrop.style.display = 'block';
+  }
+  function closeModal(){
+    modal.style.display = 'none';
+    if (backdrop) backdrop.style.display = 'none';
+  }
+
+  openBtns.forEach(btn => btn.addEventListener('click', openModal));
+  backdrop?.addEventListener('click', closeModal);
+  document.getElementById('filter-close')?.addEventListener('click', closeModal);
+
+  // リセット
+  document.getElementById('filter-reset')?.addEventListener('click', () => {
+    filterConditions.type     = 'all';
+    filterConditions.keyword  = '';
+    filterConditions.race     = [];
+    filterConditions.category = [];
+    filterConditions.rarity   = [];
+    filterConditions.pack     = [];
+
+    // UIリセット
+    document.querySelectorAll('#filter-race button, #filter-category button, #filter-rarity button, #filter-pack button')
+      .forEach(b => b.classList.remove('selected'));
+    // タイプトグル
+    document.querySelectorAll('#type-toggle .type-btn, #type-toggle-mobile .type-btn')
+      .forEach(b => b.classList.remove('selected'));
+    document.querySelector('#type-toggle .type-btn[data-type="all"]')?.classList.add('selected');
+    document.querySelector('#type-toggle-mobile .type-btn[data-type="all"]')?.classList.add('selected');
+    // キーワード
+    const kw1 = document.getElementById('keyword-input');
+    const kw2 = document.getElementById('keyword-input-mobile');
+    if (kw1) kw1.value = '';
+    if (kw2) kw2.value = '';
+
+    applyFilterAndSearch();
+  });
+
+  // タイプ切替（PC/モバイル共通）
+  ['#type-toggle', '#type-toggle-mobile'].forEach(sel => {
+    const wrap = document.querySelector(sel);
+    if (!wrap) return;
+    wrap.addEventListener('click', (e)=>{
+      const b = e.target.closest('.type-btn'); if (!b) return;
+      wrap.querySelectorAll('.type-btn').forEach(x=>x.classList.remove('selected'));
+      b.classList.add('selected');
+      filterConditions.type = b.dataset.type || 'all';
+      applyFilterAndSearch();
+    });
+  });
+
+  // キーワード（PC/モバイル）
+  ['#keyword-input', '#keyword-input-mobile'].forEach(sel=>{
+    const el = document.querySelector(sel); if (!el) return;
+    el.addEventListener('input', (e)=>{
+      filterConditions.keyword = e.target.value.trim();
+      applyFilterAndSearch();
+    });
+  });
+
+})();
+
+
+
+
+// 初期選択（全タイプ）を強制
+(function initTypeDefault(){
+  // モデル側
+  filterConditions.type = 'all';
+
+  // UI側（PC/モバイル両方）
+  ['#type-toggle', '#type-toggle-mobile'].forEach(sel=>{
+    const wrap = document.querySelector(sel); if (!wrap) return;
+    wrap.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('selected'));
+    wrap.querySelector('.type-btn[data-type="all"]')?.classList.add('selected');
+  });
+
+  // データが読めているなら初回フィルタを実行
+  if (typeof getAllCardsForFilter === 'function' && getAllCardsForFilter().length){
+    applyFilterAndSearch();
+  }
 })();

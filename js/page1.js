@@ -50,6 +50,14 @@ function generateCardListElement(card) {
   img.loading = 'lazy';
   img.src = `img/${card.cd}.webp`;
 
+  // フォールバック：個別画像が無いときは 00000.webp を使う
+img.onerror = () => {
+  if (img.dataset.fallbackApplied) return; // 無限ループ防止
+  img.dataset.fallbackApplied = '1';
+  img.src = 'img/00000.webp';
+};
+
+
   cardDiv.appendChild(img);
 
 

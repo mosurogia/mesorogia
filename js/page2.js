@@ -72,6 +72,13 @@ img.alt = card.name;
 img.loading = 'lazy';
 img.src = `img/${card.cd}.webp`;
 
+// フォールバック：個別画像が無いときは 00000.webp を使う
+img.onerror = () => {
+  if (img.dataset.fallbackApplied) return; // 無限ループ防止
+  img.dataset.fallbackApplied = '1';
+  img.src = 'img/00000.webp';
+};
+
 // 左クリックで addCard() を呼ぶ
 img.onclick = (e) => { e.stopPropagation(); addCard(card.cd); };
 
@@ -179,6 +186,107 @@ function applyGrayscaleFilter() {
 }
 //#endregionhiderace
 
+/* =========================
+   所持カードオーバーレイ表示（デッキメーカー用／初期は未反映）
+   ========================= */
+
+// ON/OFF 状態（初期OFF：ボタン初期表示と合わせる）
+let ownedOverlayOn = false;
+
+// 所持データ取得（OwnedStore優先、なければ localStorage）
+function readOwnedMapForDeckmaker() {
+  // 1) 画面の真実は OwnedStore（ゲスト所持や未保存編集を含む）
+  if (window.OwnedStore?.getAll) {
+    return window.OwnedStore.getAll();
+  }
+  // 2) まれに OwnedStore 未初期化なら、最後に保存されたものを読む
+  try {
+    const raw = JSON.parse(localStorage.getItem('ownedCards') || '{}') || {};
+    const norm = {};
+    for (const cd in raw) {
+      const v = raw[cd];
+      norm[cd] = (v && typeof v === 'object')
+        ? { normal: v.normal|0, shine: v.shine|0, premium: v.premium|0 }
+        : { normal: v|0,      shine: 0,            premium: 0 };
+    }
+    return norm;
+  } catch {
+    return {};
+  }
+}
+
+
+// 1枚のカード要素へ所持数を描画（未所持=0も表示）
+function paintOwnedMarkDeckmaker(cardEl, total) {
+  // デッキ構築の上限想定でクランプ（0〜3）
+  const count = Math.max(0, Math.min(3, total|0));
+  const mark = cardEl.querySelector('.owned-mark');
+
+  if (ownedOverlayOn) {
+    cardEl.classList.add('owned'); // CSSで表示トリガー
+    mark.textContent = String(count); // 0 も表示
+    mark.style.display = 'flex';      // 念のため強制表示
+  } else {
+    // OFF時は非表示
+    cardEl.classList.remove('owned', 'owned-1', 'owned-2', 'owned-3');
+    mark.textContent = '';
+    mark.style.display = 'none';
+  }
+
+  if (window.__guestOwnedActive) mark.classList.add('guest-mode'); else mark.classList.remove('guest-mode');
+
+  // 他ページ互換のため（必要なら）
+  cardEl.dataset.count = String(count);
+}
+
+// 画面中のカード全てに反映（#grid を見る）
+function refreshOwnedOverlay() {
+  const ownedMap = readOwnedMapForDeckmaker();
+  document.querySelectorAll('#grid .card').forEach(cardEl => {
+    const cd = cardEl.dataset.cd;
+    const v = ownedMap[cd] || { normal:0, shine:0, premium:0 };
+    const total = (v.normal|0) + (v.shine|0) + (v.premium|0);
+    paintOwnedMarkDeckmaker(cardEl, total);
+  });
+}
+
+// トグル（ボタンと同期）
+function toggleOwned() {
+  if (window.__guestOwnedActive) return; // ゲストモードは操作不可
+  ownedOverlayOn = !ownedOverlayOn;
+  const btn = document.getElementById('toggleOwnedBtn');
+  if (btn) btn.textContent = `所持カード${ownedOverlayOn ? '反映' : '未反映'}`;
+  refreshOwnedOverlay();
+  updateExchangeSummary();          // 数値/不足リストを最新化
+  updateOwnedPanelsVisibility();    // 表示/非表示を反映
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  // 初期は「未反映」ラベルのままにしておく
+  const btn = document.getElementById('toggleOwnedBtn');
+  if (btn) btn.textContent = '所持カード未反映';
+
+  // 初期正規化（非表示のまま整える）
+  refreshOwnedOverlay();
+updateOwnedPanelsVisibility();  // 起動直後の表示状態を同期
+
+  // #grid の再描画にも追従（ONのときのみ即時反映）
+  const root = document.getElementById('grid');
+  if (root) {
+    let busy = false;
+    new MutationObserver(muts => {
+      if (busy || !ownedOverlayOn) return;
+      if (!muts.some(m => m.addedNodes?.length || m.removedNodes?.length)) return;
+      busy = true;
+      requestAnimationFrame(() => { refreshOwnedOverlay(); busy = false; });
+    }).observe(root, { childList: true, subtree: true });
+  }
+});
+
+// グローバル公開（onclick から呼ぶため）
+window.toggleOwned = toggleOwned;
+window.refreshOwnedOverlay = refreshOwnedOverlay;
 
 
 // デッキバー操作（右クリック防止）
@@ -197,7 +305,7 @@ function goToAnalyzeTab() {
   if (tab2) switchTab('edit', tab2);
   renderDeckList();  // デッキに含まれるカード画像を一覧表示
   updateDeckAnalysis();  // 分析グラフやレアリティ比率などを更新
-  updateExchangeSummary();  // ポイント等のサマリーを更新（未実装の場合はここで呼び出し）
+  updateExchangeSummary();  // ポイント等のサマリーを更新
 }
 
 //デッキ情報開閉
@@ -205,6 +313,205 @@ function goToAnalyzeTab() {
     const summary = document.getElementById('deck-summary');
     summary.classList.toggle('open');
   }
+
+
+// =====================
+// 共有URL（?o=...）受信 → ゲスト所持で反映
+// =====================
+
+// --- decoder helpers ---
+function xorChecksumHex(bytes){
+  let x = 0; for (let i = 0; i < bytes.length; i++) x ^= bytes[i];
+  return (x & 0xff).toString(16).padStart(2, '0');
+}
+function decodeVarint(bytes, offs = 0){
+  let x = 0, shift = 0, i = offs;
+  for (; i < bytes.length; i++){
+    const b = bytes[i];
+    x |= (b & 0x7f) << shift;
+    if ((b & 0x80) === 0){ i++; break; }
+    shift += 7;
+  }
+  return [x >>> 0, i - offs];
+}
+function unpack2bitExact(bytes, k){
+  const out = new Uint8Array(k);
+  for (let i = 0; i < k; i++){
+    const q = i >> 2, r = i & 3;
+    out[i] = (bytes[q] >> (r * 2)) & 3;
+  }
+  return out;
+}
+function bitsetGet(bitset, i){ return (bitset[i >> 3] >> (i & 7)) & 1; }
+
+// v1/v2/v3 すべて読める汎用デコーダ
+function decodeOwnedCountsFromPayload(payload, orderLen){
+  if (!payload || payload.length < 3) throw new Error('invalid payload');
+  const ver = payload[0];
+  const csHex = payload.slice(1,3);
+  const b64 = payload.slice(3);
+  const bytes = bytesFromB64url(b64);
+  const now = xorChecksumHex(bytes);
+  if (now !== csHex) console.warn('Checksum mismatch: expected', csHex, 'got', now);
+
+  if (ver === '1'){
+    // 全カード2bit固定
+    return unpack2bitExact(bytes, orderLen);
+
+  } else if (ver === '2'){
+    // bitset + 非0値列(2bit)
+    const bitsetLen = Math.ceil(orderLen / 8);
+    if (bytes.length < bitsetLen) throw new Error('bitset too short');
+    const bitset = bytes.slice(0, bitsetLen);
+    const valuesBytes = bytes.slice(bitsetLen);
+    let K = 0; for (let i = 0; i < orderLen; i++) if (bitsetGet(bitset, i)) K++;
+    const values = unpack2bitExact(valuesBytes, K);
+    const counts = new Uint8Array(orderLen);
+    let p = 0;
+    for (let i = 0; i < orderLen; i++){
+      counts[i] = bitsetGet(bitset, i) ? (values[p++] & 3) : 0;
+    }
+    return counts;
+
+  } else if (ver === '3'){
+    // [K(varint)] [gapPlus varint ×K] [values(2bit K個)]
+    let idx = 0;
+    const [K, used0] = decodeVarint(bytes, idx); idx += used0;
+    const positions = new Array(K);
+    let prev = -1;
+    for (let i = 0; i < K; i++){
+      const [gapPlus, used] = decodeVarint(bytes, idx); idx += used;
+      const pos = prev + gapPlus; // gapPlus = pos - prev
+      positions[i] = pos;
+      prev = pos;
+    }
+    const valuesBytes = bytes.slice(idx);
+    const values = unpack2bitExact(valuesBytes, K);
+    const counts = new Uint8Array(orderLen);
+    for (let i = 0; i < K; i++){
+      const pos = positions[i];
+      if (pos >= 0 && pos < orderLen) counts[pos] = values[i] & 3;
+    }
+    return counts;
+  }
+
+  throw new Error('unsupported version');
+}
+
+
+
+
+// カード順（cd昇順/is_latest）
+async function getCanonicalOrderForOwned_DM(){
+  if (window.__CARD_ORDER && window.__CARD_ORDER.length) return window.__CARD_ORDER.slice();
+  let cards = [];
+  try{
+    if (typeof fetchLatestCards === 'function'){
+      cards = await fetchLatestCards();
+    }else{
+      const res = await fetch('public/cards_latest.json'); // 環境に合わせて
+      const all = await res.json();
+      cards = all.filter(c => c.is_latest);
+    }
+  }catch(e){ console.error(e); }
+  cards.sort((a,b) => (parseInt(a.cd,10)||0) - (parseInt(b.cd,10)||0));
+  window.__CARD_ORDER = cards.map(c => String(c.cd));
+  return window.__CARD_ORDER.slice();
+}
+
+// ゲスト所持を OwnedStore に反映（保存はしない）
+async function applyGuestOwned(payload){
+  const order = await getCanonicalOrderForOwned_DM();
+  const counts = decodeOwnedCountsFromPayload(payload, order.length); // ← v3対応版を使用
+
+  if (!window.OwnedStore?.set){
+    console.warn('OwnedStore未初期化');
+    return;
+  }
+
+  // ゲストモード：オートセーブ無効
+  if (typeof OwnedStore.setAutosave === 'function') OwnedStore.setAutosave(false);
+  window.__guestOwnedActive = true;
+  window.__guestOwnedPayload = payload;
+
+  // 反映
+  for (let i=0;i<order.length;i++){
+    const cd = String(order[i]);
+    const n = counts[i] & 3;
+    OwnedStore.set(cd, { normal: n, shine: 0, premium: 0 });
+  }
+
+  // UI更新（利用側に合わせて調整）
+  if (typeof window.applyGrayscaleFilter === 'function') window.applyGrayscaleFilter();
+  if (typeof window.updateOwnedTotal === 'function') window.updateOwnedTotal();
+  if (typeof window.updateSummary === 'function') window.updateSummary();
+  // ゲストUI適用（ボタン無効化・色変更・所持オーバーレイON）
+  markGuestModeUI();
+}
+
+// ゲストモードのUI反映（ボタン無効化・色変更・所持オーバーレイON）
+function markGuestModeUI() {
+  // ボタンを置き換え＆無効化
+  const btn = document.getElementById('toggleOwnedBtn');
+  if (btn) {
+    btn.textContent = '他人所持データ反映';
+    btn.classList.add('guest-mode');
+    btn.disabled = true;              // 機能オフ
+    btn.title = '他人の所持データを表示中';
+  }
+  // 所持オーバーレイをONにして反映
+  ownedOverlayOn = true;
+  refreshOwnedOverlay();
+
+  updateExchangeSummary();          // ゲスト所持での計算結果に更新
+  updateOwnedPanelsVisibility();    // パネルを表示
+
+  // owned-markに目印クラス
+  document.querySelectorAll('#grid .owned-mark').forEach(el => {
+    el.classList.add('guest-mode');
+  });
+}
+
+
+// 起動時に ?o= を検出（全スクリプト読了後に実行）
+document.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(location.search);
+  const payload = params.get('o');
+  if (!payload) return;
+  (async () => {
+    try{
+      await applyGuestOwned(payload);
+    }catch(e){
+      console.error(e);
+      alert('共有データの読み込みに失敗しました');
+    }
+  })();
+});
+
+// --- Base64URL → bytes（※パディング復元あり） ---
+function bytesFromB64url(s){
+  s = s.replace(/-/g,'+').replace(/_/g,'/');
+  const mod = s.length & 3;
+  if (mod === 2) s += '==';
+  else if (mod === 3) s += '=';
+  else if (mod === 1) s += '===';
+  const bin = atob(s);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+// v1用：フル2bit列を展開
+function unpack2bit(bytes, length){
+  const out = new Uint8Array(length);
+  for (let i=0;i<length;i++){
+    const q = i >> 2, r = i & 3;
+    out[i] = (bytes[q] >> (r*2)) & 3;
+  }
+  return out;
+}
+
+
 //#endregion
 
 
@@ -352,7 +659,8 @@ function updateDeck() {
     // 一覧側のカード状態と deck-info をリセット
     updateCardDisabling();
     updateDeckSummary([]);
-
+    updateExchangeSummary();
+    updateOwnedPanelsVisibility();
     return;
   }
 
@@ -393,6 +701,12 @@ function updateDeck() {
     // 画像は5桁IDで読み込む
     const img = document.createElement("img");
     img.src = `img/${cd.slice(0, 5)}.webp`;
+    // フォールバック：個別画像が無いときは 00000.webp を使う
+    img.onerror = () => {
+      if (img.dataset.fallbackApplied) return; // 無限ループ防止
+      img.dataset.fallbackApplied = '1';
+      img.src = 'img/00000.webp';
+    };
     img.alt = card.name;
     cardEl.appendChild(img);
 
@@ -412,6 +726,72 @@ function updateDeck() {
         addCard(cd);
       }
     });
+    //モバイルの場合：上下フリックで追加/削除
+    (function attachTouchSwipe(el, cd){
+      let startX = 0, startY = 0;
+      const THRESHOLD = 20; // しきい値（px）
+      const MAX_SHIFT = 40; // 視覚アニメ距離（px）
+
+      const cleanUp = () => {
+        el.style.transform = 'translateY(0)';
+        el.style.zIndex = '';
+      };
+
+      el.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        const t = e.touches[0];
+        startX = t.clientX;
+        startY = t.clientY;
+        el.style.transition = '';
+        el.style.zIndex = '2000'; // ヘッダー等より前面
+      }, {passive:true});
+
+      el.addEventListener('touchmove', (e) => {
+        if (e.touches.length !== 1) return;
+        const t = e.touches[0];
+        const dx = t.clientX - startX;
+        const dy = t.clientY - startY;
+
+        // 横が優勢なら（deck-bar の pan-x を妨げない）
+        if (Math.abs(dx) > Math.abs(dy)) return;
+
+        // 視覚フィードバック（±40px に制限）
+        let limited = Math.max(-MAX_SHIFT, Math.min(MAX_SHIFT, dy));
+        el.style.transform = `translateY(${limited}px)`;
+      }, {passive:true});
+
+      el.addEventListener('touchend', (e) => {
+        const endY = e.changedTouches[0].clientY;
+        const diffY = startY - endY; // 上=正、下=負
+        el.style.transition = 'transform 0.2s ease';
+
+        const isSwipe = Math.abs(diffY) > THRESHOLD;
+        if (!isSwipe) {
+          setTimeout(() => { el.style.transition = ''; cleanUp(); }, 200);
+          return;
+        }
+
+        // 方向別に 40px だけスッと動かしてから確定
+        const to = diffY > 0 ? -MAX_SHIFT : MAX_SHIFT;
+        el.style.transform = `translateY(${to}px)`;
+        setTimeout(() => {
+          el.style.transition = '';
+          cleanUp();
+          if (diffY > 0) {
+            // 上フリック：追加（上限/旧神/種族は addCard 内で判定）
+            addCard(cd); // :contentReference[oaicite:9]{index=9}
+          } else {
+            // 下フリック：削除
+            removeCard(cd); // :contentReference[oaicite:10]{index=10}
+          }
+        }, 200);
+      }, {passive:true});
+
+      el.addEventListener('touchcancel', () => {
+        cleanUp();
+      }, {passive:true});
+    })(cardEl, cd);
+
     cardEl.addEventListener("contextmenu", e => e.preventDefault());
 
     deckBarTop.appendChild(cardEl);
@@ -431,6 +811,8 @@ function updateDeck() {
   updateCardDisabling();// カード禁止表示・バッジ更新など
   updateDeckSummary(deckCards);//デッキ分析（タイプ等）
   updateDeckAnalysis();//デッキ詳細情報分析
+  updateExchangeSummary();  // ポイント等のサマリーを更新
+  updateOwnedPanelsVisibility(); //表示/非表示も更新
 }
 
 
@@ -591,6 +973,12 @@ function renderDeckList() {
 
     const img = document.createElement('img');
     img.src = `img/${cd.slice(0, 5)}.webp`;
+    // フォールバック：個別画像が無いときは 00000.webp を使う
+    img.onerror = () => {
+      if (img.dataset.fallbackApplied) return; // 無限ループ防止
+      img.dataset.fallbackApplied = '1';
+      img.src = 'img/00000.webp';
+    };
     img.alt = card.name;
     cardEl.appendChild(img);
 
@@ -908,6 +1296,7 @@ function toggleAnalysis() {
   const isOpen = section.classList.toggle("open");
   if (isOpen) {
     updateDeckAnalysis(); // 開くときだけ分析を更新
+    updateExchangeSummary();// ポイント等のサマリーを更新
     btn.textContent = "⬆ 分析を隠す";
   } else {
     btn.textContent = "🔍 分析を表示";
@@ -918,25 +1307,184 @@ function toggleAnalysis() {
 // マリガン枚数変更時に再計算
 document.getElementById('mulligan-count')?.addEventListener('change', () => updateDeckAnalysis());
 
+/* =========================
+   交換ポイント計算と表示
+   - 不足枚数 = デッキ要求 - 所持合計(normal+shine+premium)
+   - 不足分のみをポイント/ダイヤ/砂に換算
+   - 砂はUIに合わせてレジェンド/ゴールドのみ表示
+========================= */
+
+// 1枚あたりの交換レート（前に入れていた export は不要です）
+const EXCHANGE_RATE = {
+  point:   { LEGEND: 300, GOLD: 150, SILVER: 20,  BRONZE: 10 },
+  diamond: { LEGEND: 4000, GOLD: 1000, SILVER: 250, BRONZE: 150 },
+  sand:    { LEGEND: 300, GOLD: 150, SILVER: 20,  BRONZE: 10 },
+};
+
+function rarityToKey(r) {
+  if (!r) return null;
+  if (r.includes('レジェ')) return 'LEGEND';
+  if (r.includes('ゴールド')) return 'GOLD';
+  if (r.includes('シルバー')) return 'SILVER';
+  if (r.includes('ブロンズ')) return 'BRONZE';
+  if (r === 'レジェンド') return 'LEGEND';
+  if (r === 'ゴールド') return 'GOLD';
+  if (r === 'シルバー') return 'SILVER';
+  if (r === 'ブロンズ') return 'BRONZE';
+  return null;
+}
+function rarityIconJP(rarity) {
+  if (!rarity) return '';
+  if (rarity.includes('レジェ'))  return '🌈';
+  if (rarity.includes('ゴールド')) return '🟡';
+  if (rarity.includes('シルバー')) return '⚪️';
+  if (rarity.includes('ブロンズ')) return '🟤';
+  return '';
+}
+
+// 所持＝OwnedStore優先（未初期化時は localStorage）
+// 既に page2.js にある readOwnedMapForDeckmaker() をそのまま使います
+
+function computeExchangeNeeds() {
+  const owned = readOwnedMapForDeckmaker();
+  let point = 0, diamond = 0;
+  const sand = { LEGEND: 0, GOLD: 0, SILVER: 0, BRONZE: 0 };
+  const shortages = [];
+
+  for (const [cd, need] of Object.entries(deck)) {
+    const info = cardMap[cd];
+    if (!info) continue;
+    const key = rarityToKey(info.rarity);
+    if (!key) continue;
+
+    const v = owned[cd] || { normal:0, shine:0, premium:0 };
+    const have = (v.normal|0) + (v.shine|0) + (v.premium|0);
+    const shortage = Math.max(0, (need|0) - have);
+    if (!shortage) continue;
+
+    point   += EXCHANGE_RATE.point[key]   * shortage;
+    diamond += EXCHANGE_RATE.diamond[key] * shortage;
+    sand[key] += EXCHANGE_RATE.sand[key]  * shortage;
 
 
+    shortages.push({ cd, name: info.name, shortage });
+  }
+  return { point, diamond, sand, shortages };
+}
 
-// ===== ポイント表示の更新（仮実装） =====
 function updateExchangeSummary() {
-  // rarity に応じてポイントを加算する例
-  const pointTable = { 'レジェンド': 1000, 'ゴールド': 500, 'シルバー': 200, 'ブロンズ': 100 };
-  let total = 0;
-  Object.entries(deck).forEach(([cd, count]) => {
-    const rarity = cardMap[cd]?.rarity;
-    const base   = pointTable[rarity] ?? 0;
-    total += base * count;
-  });
-  const pointEl = document.getElementById('point-cost');
-  if (pointEl) pointEl.textContent = total;
+  const els = {
+    point:    document.getElementById('point-cost'),
+    diamond:  document.getElementById('diamond-cost'),
+    sandLeg:  document.getElementById('sand-leg'),
+    sandGld:  document.getElementById('sand-gld'),
+    sandSil:  document.getElementById('sand-sil'),
+    sandBro:  document.getElementById('sand-bro'),
+  };
+  if (!els.point) return;
+
+  const { point, diamond, sand, shortages } = computeExchangeNeeds();
+  const fmt = (n) => String(n);
+
+  // 数値の更新
+  els.point.textContent   = fmt(point);
+  els.diamond.textContent = fmt(diamond);
+  els.sandLeg.textContent = fmt(sand.LEGEND);
+  els.sandGld.textContent = fmt(sand.GOLD);
+  els.sandSil.textContent = fmt(sand.SILVER);
+  els.sandBro.textContent = fmt(sand.BRONZE);
+
+  // 不足カード（HTMLに直接書き込み）
+  const list = document.getElementById('shortage-list');
+  if (!list) return;
+
+  list.innerHTML = '';
+  if (!shortages || shortages.length === 0) {
+    list.textContent = 'なし';
+  } else {
+    // 並び順：タイプ→コスト→パワー→cd
+    const typeOrder = { 'チャージャー': 0, 'アタッカー': 1, 'ブロッカー': 2 };
+
+    const sorted = shortages.slice().sort((a, b) => {
+      const A = cardMap[a.cd] || {};
+      const B = cardMap[b.cd] || {};
+      const tA = typeOrder[A.type] ?? 99;
+      const tB = typeOrder[B.type] ?? 99;
+      if (tA !== tB) return tA - tB;
+
+      const cA = parseInt(A.cost) || 0;
+      const cB = parseInt(B.cost) || 0;
+      if (cA !== cB) return cA - cB;
+
+      const pA = parseInt(A.power) || 0;
+      const pB = parseInt(B.power) || 0;
+      if (pA !== pB) return pA - pB;
+
+      return String(a.cd).localeCompare(String(b.cd));
+    });
+
+    sorted.forEach(({ cd, name, shortage }) => {
+      const info = cardMap[cd] || {};
+      const icon = rarityIconJP(info.rarity);
+      const line = document.createElement('div');
+      // 例）🟡情熱のナチュリア サラ×3
+      line.textContent = `${icon}${name}×${shortage}`;
+      list.appendChild(line);
+    });
+  }
+}
+
+// 所持データ系パネルの表示切替（所持反映ON または ゲストモード時に表示）
+function updateOwnedPanelsVisibility() {
+  const show = ownedOverlayOn || !!window.__guestOwnedActive;
+  const ex = document.querySelector('#deck-info .exchange-summary');
+  const sh = document.getElementById('shortage-block');
+  if (ex) ex.style.display = show ? 'block' : 'none';
+  if (sh) sh.style.display = show ? 'block' : 'none';
 }
 
 
+// 表示切り替え（ボタンの onclick="toggleExchange()" から呼ばれる）
+let __exchangeMode = 'point'; // 'point' | 'diamond' | 'sand'
 
+function setExchangeVisible(mode) {
+  const elPoint = document.getElementById('exchange-point');
+  const elDia   = document.getElementById('exchange-diamond');
+  const elSand  = document.getElementById('exchange-sand');
+  if (elPoint) elPoint.style.display = (mode === 'point'   ? '' : 'none');
+  if (elDia)   elDia.style.display   = (mode === 'diamond' ? '' : 'none');
+  if (elSand)  elSand.style.display  = (mode === 'sand'    ? '' : 'none');
+
+  const btn = document.getElementById('exchange-toggle-btn');
+  if (btn) {
+    btn.textContent =
+      mode === 'point'   ? '🟢 ポイント' :
+      mode === 'diamond' ? '💎 ダイヤ' :
+                           '🪨 砂';
+  }
+}
+
+function toggleExchange() {
+  __exchangeMode = (__exchangeMode === 'point')
+    ? 'diamond'
+    : (__exchangeMode === 'diamond' ? 'sand' : 'point');
+  setExchangeVisible(__exchangeMode);
+}
+
+// 初期表示はポイント
+document.addEventListener('DOMContentLoaded', () => {
+  setExchangeVisible('point');
+  updateExchangeSummary();
+});
+
+// 所持データが変わったら自動で再計算（OwnedStore.onChange があるので利用）
+if (window.OwnedStore?.onChange) {
+  window.OwnedStore.onChange(() => updateExchangeSummary());
+}
+
+// グローバル公開（HTMLの onclick から使う）
+window.toggleExchange = toggleExchange;
+window.updateExchangeSummary = updateExchangeSummary;
 
 window.updateDeckAnalysis = updateDeckAnalysis;
 
@@ -1160,6 +1708,7 @@ function loadDeckFromIndex(index) {
   updateDeck(); // デッキ欄更新
   renderDeckList();//デッキリスト画像更新
   updateDeckSummaryDisplay();//代表カードデッキ情報表示
+  updateExchangeSummary();//交換ポイント数更新
 }
 
 // 🗑 インデックス指定で削除

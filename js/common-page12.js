@@ -5,12 +5,7 @@
 
 
 
-// JSON読み込み＆フィルター済み配列取得
-async function fetchLatestCards() {
-  const res = await fetch('/mesorogia//public/cards_latest.json');
-  const allCards = await res.json();
-  return allCards.filter(card => card.is_latest === true);
-}
+
 
 //全カード情報
 const allCardsMap = {};
@@ -161,6 +156,62 @@ async function generateFilterUI() {
 
 //詳細フィルターデータ
   const packs = getUniqueValues("pack_name");
+// ===== パック名の並び制御（英語→かな。その他特殊カードは最後） =====
+const splitPackLabel = (s) => {
+  const str = String(s || "");
+  const m = str.match(/^([^「]+)(?:「([^」]*)」)?/); // 例: Awaking...「神託者...」
+  return { en: (m?.[1] || "").trim(), kana: (m?.[2] || "").trim() };
+};
+
+// ユーザーが任意の順を指定したい場合は、ここに配列で定義（前の方が優先）
+// 例: window.packCustomOrder = ["Awaking The Oracle「神託者の覚醒」","Beyond the Sanctuary 「聖域の先へ」"];
+window.packCustomOrder = window.packCustomOrder || null;
+
+// 末尾に送りたいラベル（完全一致/部分一致の両方で拾う）
+const isSpecialOthers = (packName) => {
+  const { en, kana } = splitPackLabel(packName);
+  return en === "その他特殊カード" || kana === "その他特殊カード" || /その他特殊カード/.test(packName);
+};
+
+// 英語→かなの基本ソート
+const basicSort = (a, b) => {
+  const A = splitPackLabel(a), B = splitPackLabel(b);
+  const p = A.en.localeCompare(B.en, "en");
+  return p || A.kana.localeCompare(B.kana, "ja");
+};
+
+// カスタム順 → 基本ソート → 「その他特殊カード」を最後へ
+function sortPacksWithRules(list) {
+  const arr = [...list];
+
+  // 1) カスタム順があれば最優先
+  if (Array.isArray(window.packCustomOrder) && window.packCustomOrder.length) {
+    const indexOf = (name) => {
+      const i = window.packCustomOrder.indexOf(name);
+      return i < 0 ? Number.POSITIVE_INFINITY : i;
+    };
+    arr.sort((a, b) => {
+      const ia = indexOf(a), ib = indexOf(b);
+      if (ia !== ib) return ia - ib;
+      return basicSort(a, b);
+    });
+  } else {
+    // 2) デフォルト：英語→かな
+    arr.sort(basicSort);
+  }
+
+  // 3) 最後送り（その他特殊カード）: 安定パーティション
+  const normal = [];
+  const specials = [];
+  for (const name of arr) (isSpecialOthers(name) ? specials : normal).push(name);
+  return [...normal, ...specials];
+}
+
+// 既存の packs を並び替えてからボタン生成
+const sortedPacks = sortPacksWithRules(packs);
+
+
+
 // 効果名（textEffect1 + textEffect2 を統合）
 const effect_name = [...new Set(
   cards.flatMap(card => [card.effect_name1, card.effect_name2]).filter(Boolean)
@@ -298,7 +349,7 @@ const OTHER_BOOLEAN_KEYS = [
 
 
   // 📌 詳細フィルター
-detailFilters.appendChild(createButtonGroup('パック名', packs, 'pack'));
+detailFilters.appendChild(createButtonGroup('パック名', sortedPacks, 'pack'));
 detailFilters.appendChild(createButtonGroup('効果名', effect_name, 'effect'));
 // 📌 フィールドフィルター（表示名は短縮、data値はフルで一致させる）
 const fieldKeys = Object.keys(FIELD_DISPLAY);

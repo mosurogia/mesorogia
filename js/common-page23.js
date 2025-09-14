@@ -11,6 +11,15 @@ function switchTab(id, clickedTab) {
     ? tabGroup.nextElementSibling
     : document; // fallback: 全体対象
 
+  // ★ 追加：切替前フック
+  if (typeof window.beforeTabSwitch === 'function') {
+    const current = contentGroup.querySelector('.tab-content.active');
+    const fromId = current?.id || null;
+    if (fromId && fromId !== id) {
+      try { window.beforeTabSwitch(fromId, id); } catch {}
+    }
+  }
+
   // タブグループ内のタブボタンから active を外す
   tabGroup.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   clickedTab.classList.add('active');

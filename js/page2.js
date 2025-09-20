@@ -1487,6 +1487,219 @@ window.updateExchangeSummary = updateExchangeSummary;
 
 window.updateDeckAnalysis = updateDeckAnalysis;
 
+
+
+//---画像生成--//
+// ==== デッキリストをそのままPNG出力 ====
+
+// ボタンにハンドラ
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('exportPngBtn');
+  if (btn) {
+    btn.replaceWith(btn.cloneNode(true)); // 重複バインド回避
+    document.getElementById('exportPngBtn').addEventListener('click', exportDeckListAsPng);
+  }
+});
+
+async function exportDeckListAsPng() {
+  // 最新の見た目に
+  renderDeckList();
+
+  const node = document.getElementById('deck-card-list');
+  if (!node) { alert('デッキリストが見つかりません'); return; }
+
+  // 画像読み込み待ち
+  await Promise.all(Array.from(node.querySelectorAll('img')).map(img => {
+    if (img.complete) return;
+    return new Promise(res => { img.onload = img.onerror = res; });
+  }));
+
+  // スクロールで欠けないように一時展開
+  const section = node.closest('.deck-section');
+  const restore = {
+    sectionMax: section?.style.maxHeight,
+    nodeOverflow: node.style.overflow,
+    nodeH: node.style.height
+  };
+  if (section) section.style.maxHeight = 'none';
+  node.style.overflow = 'visible';
+  node.style.height   = 'auto';
+
+  // ★ 背景を外してキャプチャ
+// 端末負荷に応じて 1.5〜2.0 に固定（高DPI端末でも上げ過ぎない）
+  const scale = (window.devicePixelRatio >= 2.5) ? 1.75 : 1.5;
+  const listCanvas = await html2canvas(node, {
+    useCORS: true,
+    backgroundColor: null,   // ← 透明で撮る
+    scale,
+    logging: false,
+    removeContainer: true,
+    onclone: (doc) => {
+      const n = doc.getElementById('deck-card-list');
+      if (!n) return;
+
+      // 背景画像/色を強制OFF（親にも念のため適用）
+      const targets = [n, n.parentElement, n.closest('.deck-section')].filter(Boolean);
+      targets.forEach(el => {
+        el.style.setProperty('background', 'none', 'important');
+        el.style.setProperty('backgroundImage', 'none', 'important');
+        el.style.setProperty('backgroundColor', 'transparent', 'important');
+        el.style.setProperty('box-shadow', 'none', 'important');
+        el.style.setProperty('filter', 'none', 'important');
+      });
+
+      // 疑似要素で背景を出している場合の保険
+      const style = doc.createElement('style');
+      style.textContent = `
+        #deck-card-list::before, #deck-card-list::after { display: none !important; }
+        #deck-card-list .deck-entry, #deck-card-list img {
+        box-shadow: none !important;
+        filter: none !important;
+        text-shadow: none !important;
+      }
+      `;
+      doc.head.appendChild(style);
+    }
+  });
+
+  // 展開を元に戻す
+  if (section) section.style.maxHeight = restore.sectionMax || '';
+  node.style.overflow = restore.nodeOverflow || '';
+  node.style.height   = restore.nodeH || '';
+
+  // ─────────────────────────────────
+  // ここから合成：上に情報ヘッダーを載せる
+  // ─────────────────────────────────
+  // デッキ情報（DOMから拾う。なければフォールバック）
+  const deckName = (document.getElementById('deck-name')?.value || '名称未設定').trim();
+  const deckCount = document.getElementById('deck-count')?.textContent || '0';
+// ── メイン種族を deck から直接算出（イノセント・旧神は除外）
+const MAIN_RACES = ['ドラゴン','アンドロイド','エレメンタル','ルミナス','シェイド'];
+let tally = {};
+for (const [cd, n] of Object.entries(deck)) {
+  const r = cardMap[cd]?.race;
+  if (MAIN_RACES.includes(r)) tally[r] = (tally[r] || 0) + (n|0);
+}
+const mainRace = Object.keys(tally).sort((a,b)=> (tally[b]||0)-(tally[a]||0))[0] || null;
+
+// 種族→背景色（所持率チェッカー準拠）
+const RACE_BG = {
+  'ドラゴン':    'rgba(255, 100, 100, 0.16)',   // ほんの少し濃く
+  'アンドロイド':'rgba(100, 200, 255, 0.16)',
+  'エレメンタル':'rgba(100, 255, 150, 0.16)',
+  'ルミナス':    'rgba(255, 250, 150, 0.16)',
+  'シェイド':    'rgba(200, 150, 255, 0.16)',
+};
+const raceBgColor = mainRace ? RACE_BG[mainRace] : null;
+
+const elder = document.getElementById('deck-eldergod')?.textContent || '未採用';
+const nCh   = document.getElementById('count-charger')?.textContent || '0';
+const nAt   = document.getElementById('count-attacker')?.textContent || '0';
+const nBl   = document.getElementById('count-blocker')?.textContent || '0';
+const today = (typeof formatYmd === 'function') ? formatYmd() : new Date().toLocaleDateString('ja-JP');
+
+
+  // レイアウト値（スケールに合わせる）
+  const PAD    = 24 * scale;        // 周囲余白
+  const GAPY   = 10 * scale;        // 行間
+  const TITLE  = 28 * scale;        // タイトル文字サイズ
+  const BODY   = 18 * scale;        // 本文文字サイズ
+  const HEADER_H = (PAD + TITLE + GAPY + BODY*2 + PAD); // ヘッダー高さ（2行本文想定）
+
+  const OUT_W = listCanvas.width + PAD*2;
+  const OUT_H = HEADER_H + listCanvas.height + PAD*2;
+
+  const out = document.createElement('canvas');
+  out.width = OUT_W;
+  out.height = OUT_H;
+  const ctx = out.getContext('2d');
+
+  // ★ 背景の白塗り（透明にしたい場合は TRANSPARENT_BG=true）
+  const TRANSPARENT_BG = false; // 透過PNGにしたいなら true
+  if (!TRANSPARENT_BG) {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, OUT_W, OUT_H);
+  }
+
+  // ★ メイン種族の色を全面に薄くオーバーレイ
+  if (raceBgColor) {
+    ctx.fillStyle = raceBgColor;         // 例: rgba(..., 0.1)
+    ctx.fillRect(0, 0, OUT_W, OUT_H);    // 画像全体に適用
+  }
+
+
+
+  // タイトル（デッキ名）左寄せ
+  ctx.fillStyle = '#111';
+  ctx.font = `${TITLE}px system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(deckName, PAD + 16*scale, PAD + 8*scale);
+
+
+  // 本文1行目：枚数 / 種族 / 旧神
+ctx.font = `${BODY}px system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif`;
+  const line1 = `枚数：${deckCount}　種族：${mainRace || '未選択'}　旧神：${elder}`;
+    // 本文2行目：タイプ内訳
+  const line2 = `タイプ：🔵${nCh}　🟣${nAt}　⚪️${nBl}`;
+  ctx.fillText(line1, PAD + 16*scale, PAD + 8*scale + TITLE + GAPY);
+  ctx.fillText(line2, PAD + 16*scale, PAD + 8*scale + TITLE + GAPY + BODY + 6*scale);
+
+
+  // 背景を外したリスト画像を貼る（透明部分はそのまま透明/白）
+  ctx.drawImage(listCanvas, PAD, HEADER_H);
+
+  // ダウンロード
+  out.toBlob(blob => {
+    const a = document.createElement('a');
+    const name = (deckName || 'deck') + '.png';
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }, 'image/png');
+}
+
+
+// deck & cardMap から並び順に展開（タイプ→コスト→パワー→cd）
+function getDeckCardsArray(){
+  const entries = Object.entries(deck);
+  const TYPE_ORDER = {'チャージャー':0,'アタッカー':1,'ブロッカー':2};
+  entries.sort((a,b)=>{
+    const A = cardMap[a[0]]||{}, B = cardMap[b[0]]||{};
+    const tA = TYPE_ORDER[A.type] ?? 99, tB = TYPE_ORDER[B.type] ?? 99;
+    if (tA !== tB) return tA - tB;
+    const cA = (A.cost|0), cB = (B.cost|0); if (cA !== cB) return cA - cB;
+    const pA = (A.power|0), pB = (B.power|0); if (pA !== pB) return pA - pB;
+    return String(a[0]).localeCompare(String(b[0]));
+  });
+  const out = [];
+  for (const [cd, count] of entries) for (let i=0;i<count;i++) out.push(cd);
+  return out;
+}
+
+// 画像読み込み（フォールバックは 00000.webp）
+function loadCardImage(cd){
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => { img.onerror = null; img.src = 'img/00000.webp'; };
+    img.src = `img/${cd}.webp`;
+  });
+}
+
+// <img>を枠いっぱいに「cover」させるための計算
+function fitCover(sw, sh, dw, dh){
+  const sr = sw/sh, dr = dw/dh;
+  let w, h, dx, dy;
+  if (sr > dr){ h = dh; w = h*sr; dx = -(w-dw)/2; dy = 0; }
+  else       { w = dw; h = w/sr; dx = 0;         dy = -(h-dh)/2; }
+  return {w,h,dx,dy};
+}
+
+
+
+
 //#endregion
 
 

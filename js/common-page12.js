@@ -98,31 +98,22 @@ async function loadCards() {
     return null;
   }
 
-  function openCardZoom(cd, context /* 'list' | 'deckmaker' */){
-    const m = modal(); if (!m) return;
-    const info = findCardByCd(cd); if (!info) return;
+// （IIFE内）画像のみ版
+function openCardZoom(cd){
+  const m = document.getElementById('cardZoomModal'); if (!m) return;
+  const img = document.getElementById('zoomImage');   if (!img) return;
 
-    // 画像とテキスト
-    $('zoomImage').src = `img/${cd}.webp`;
-    $('zoomImage').onerror = function(){
-      if (this.dataset.fallbackApplied) return;
-      this.dataset.fallbackApplied = '1';
-      this.src = 'img/00000.webp';
-    };
-    $('zoomName').textContent = info.name || '';
-    $('zoomRaceCat').textContent = [info.race, info.category].filter(Boolean).join(' / ');
+  img.src = `img/${cd}.webp`;
+  img.onerror = function(){
+    if (this.dataset.fallbackApplied) return;
+    this.dataset.fallbackApplied = '1';
+    this.src = 'img/00000.webp';
+  };
 
-    // 効果テキスト（page1.js/page2.jsのgenerateDetailHtmlと整合）
-    const effectParts = [];
-    if (info.effect_name1) effectParts.push(`■ ${info.effect_name1}\n${info.effect_text1 || ''}`);
-    if (info.effect_name2) effectParts.push(`\n■ ${info.effect_name2}\n${info.effect_text2 || ''}`);
-    $('zoomEffect').textContent = effectParts.join('\n').trim();
+  m.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
 
-
-    // 表示
-    m.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-  }
 
   function closeCardZoom(){
     const m = modal(); if (!m) return;

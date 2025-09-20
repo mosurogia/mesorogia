@@ -51,17 +51,22 @@ button,
 .card.owned .owned-mark {
     display: flex;
 }
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
     .owned-mark {
         min-width: 18px;
         width: 23%;
-        font-size: 0.6em;
+        font-size: 1.5em;
+    }
+}
+@media (max-width: 560px) {
+    .owned-mark {
+        font-size: 1.25em;
     }
 }
 /*ヘッダー関連*/
 .main-header {
     height: 55px;
-    background-image: url("/mesorogia/img/header.webp");
+    background-image: url("../img/header.webp");
     background-repeat: repeat-x;
     /* 横方向に繰り返し */
     background-size: auto 55px;

@@ -14,7 +14,7 @@
 
     <!-- ページの説明（検索結果の下に表示） -->
     <meta name="description" content=
-    "このサイトはアプリ「信託のメソロギア」のカード一覧・デッキ構築・デッキ分析・所持率チェックができる非公式サイトです。カード検索やデッキ管理をスマホでも快適に！">
+    "このサイトはアプリ「神託のメソロギア」のカード一覧・デッキ構築・デッキ分析・所持率チェックができる非公式サイトです。カード検索やデッキ管理をスマホでも快適に！">
 
     <!-- OGP基本 -->
     <meta property="og:title" content="モスロギア | 神託のメソロギア カード一覧">
@@ -26,7 +26,7 @@
     <!-- Twitterカード向け -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="モスロギア | 神託のメソロギア カード一覧">
-    <meta name="twitter:description" content="カード検索とデッキ構築で信託のメソロギアをもっと楽しもう！">
+    <meta name="twitter:description" content="カード検索とデッキ構築で神託のメソロギアをもっと楽しもう！">
     <meta name="twitter:image" content="https://mosurogia.github.io/mesorogia-cards/img/indexogp.webp">
 
     <!-- CSS -->
@@ -45,7 +45,7 @@
         <a href="index.html">📖 一覧</a>
         <a href="deckmaker.html">🃏 デッキメーカー</a>
         <a href="cardcheker.html">📊 所持率チェッカー</a>
-        <a href="#" style="text-decoration: line-through; pointer-events: none; color: #aaa;">📤 デッキ投稿</a>
+        <a href="deck-post.html">📤 デッキ投稿</a>
     </nav>
 </header>
 
@@ -92,6 +92,23 @@
 
 
 
+</div>
+
+<!-- カード拡大モーダル -->
+<div id="cardZoomModal" class="modal" style="display:none;">
+    <div class="modal-content card-zoom">
+        <button id="cardZoomClose" aria-label="閉じる"
+            style="position:absolute;right:.5rem;top:.5rem;font-size:1.25rem;">×</button>
+        <div class="zoom-body" style="display:flex;gap:12px;align-items:flex-start;max-height:80vh;overflow:auto;">
+            <img id="zoomImage" alt="" style="max-width:60vw;max-height:76vh;object-fit:contain;" />
+            <div class="zoom-meta" style="min-width:220px">
+                <div id="zoomName" style="font-weight:700;margin-bottom:.25rem;"></div>
+                <div id="zoomRaceCat" style="opacity:.8;margin-bottom:.5rem;"></div>
+                <div id="zoomEffect" style="white-space:pre-wrap;line-height:1.4;"></div>
+                <div id="zoomActions" class="zoom-actions" style="margin-top:.75rem;display:flex;gap:.5rem;"></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 

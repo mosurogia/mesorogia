@@ -13,20 +13,20 @@
     <meta name="keywords" content="カードゲーム,デッキメーカー,DCG,神託のメソロギア,メソロギア,神託,デッキ分析,一覧,モスロギア">
 
     <!-- ページの説明（検索結果の下に表示） -->
-    <meta name="description" content="このサイトは、アプリ「信託のメソロギア」の所持率チェックができる非公式サイトです。">
+    <meta name="description" content="このサイトは、アプリ「神託のメソロギア」の所持率チェックができる非公式サイトです。">
 
     <!-- OGP基本 -->
     <meta property="og:title" content="モスロギア | 神託のメソロギア 所持率チェッカー">
     <meta property="og:description" content="神託のメソロギアのカード検索・デッキ構築ができる非公式サイトです。">
-    <meta property="og:image" content="https://mosurogia.github.io/mesorogia-cards/img/deckmakerogp.webp">
+    <meta property="og:image" content="https://mosurogia.github.io/mesorogia-cards/img/cardchekerogp.webp">
     <meta property="og:url" content="https://mosurogia.github.io/mesorogia-cards/">
     <meta property="og:type" content="website">
 
     <!-- Twitterカード向け -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="モスロギア | 神託のメソロギア デッキメーカー">
-    <meta name="twitter:description" content="カード検索とデッキ構築で信託のメソロギアをもっと楽しもう！">
-    <meta name="twitter:image" content="https://mosurogia.github.io/mesorogia-cards/img/deckmakerogp.webp">
+    <meta name="twitter:description" content="カード検索とデッキ構築で神託のメソロギアをもっと楽しもう！">
+    <meta name="twitter:image" content="https://mosurogia.github.io/mesorogia-cards/img/cardchekerogp.webp">
 
 
     <!-- CSS -->
@@ -52,7 +52,7 @@
         <a href="index.html">📖 一覧</a>
         <a href="deckmaker.html">🃏 デッキメーカー</a>
         <a href="cardcheker.html">📊 所持率チェッカー</a>
-        <a href="#" style="text-decoration: line-through; pointer-events: none; color: #aaa;">📤 デッキ投稿</a>
+        <a href="deck-post.html">📤 デッキ投稿</a>
     </nav>
 </header>
 
@@ -92,9 +92,7 @@
                 全コンプ率: <span id="mobile-owned-count">0</span>/<span id="mobile-total-count">0</span>
                 (<span id="mobile-owned-percent">0%</span>)
             </span>
-            <select id="pack-selector" onchange="selectMobilePack(this.value)">
-                <option value="awaking">Awaking The Oracle</option>
-            </select>
+            <select id="pack-selector" onchange="selectMobilePack(this.value)"></select>
         </div>
 
         <!-- パック所持率 -->

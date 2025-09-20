@@ -118,20 +118,6 @@ async function loadCards() {
     if (info.effect_name2) effectParts.push(`\n■ ${info.effect_name2}\n${info.effect_text2 || ''}`);
     $('zoomEffect').textContent = effectParts.join('\n').trim();
 
-    // アクション（デッキメーカーでは追加/削除ボタン）
-    const act = $('zoomActions');
-    act.innerHTML = '';
-    if (context === 'deckmaker' && window.addCard && window.removeCard){
-      const addBtn = document.createElement('button');
-      addBtn.textContent = '＋ 追加';
-      addBtn.onclick = () => window.addCard(cd);
-
-      const delBtn = document.createElement('button');
-      delBtn.textContent = '－ 削除';
-      delBtn.onclick = () => window.removeCard(cd);
-
-      act.append(addBtn, delBtn);
-    }
 
     // 表示
     m.style.display = 'flex';

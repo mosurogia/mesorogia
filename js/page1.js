@@ -5,7 +5,9 @@
 //カード呼び出し
 window.addEventListener('DOMContentLoaded', () => {
   loadCards();
+  setTimeout(()=> window.__bindLongPressForCards('list'), 0);
 });
+
 
 //#endregion
 /*====================
@@ -22,8 +24,6 @@ function generateCardListElement(card) {
   cardDiv.setAttribute('data-name', card.name);
   cardDiv.setAttribute('data-effect1', card.effect_name1 ?? "");
   cardDiv.setAttribute('data-effect2', card.effect_name2 ?? "");
-  cardDiv.setAttribute('data-tribe', card.race);
-  cardDiv.setAttribute('data-cd', card.cd);
   cardDiv.setAttribute('data-race', card.race);
   cardDiv.setAttribute('data-category', card.category);
   cardDiv.setAttribute('data-rarity', card.rarity);

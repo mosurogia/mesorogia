@@ -79,8 +79,122 @@ async function loadCards() {
   });
 
   sortCards(); // 任意：並び替え
-  rebuildCardMap();//カード一覧再読み込み
+  if (typeof window.rebuildCardMap === 'function') {
+    rebuildCardMap(); //カード一覧再読み込み
+  }
 }
+
+
+//カード拡大モーダル（長押し）
+(function(){
+  const modal = () => document.getElementById('cardZoomModal');
+  const $ = (id) => document.getElementById(id);
+
+  // cd→カード情報を探す（page1.js は allCardsMap、page2.js は cardMap）
+  function findCardByCd(cd){
+    cd = String(cd);
+    if (window.allCardsMap && window.allCardsMap[cd]) return window.allCardsMap[cd];
+    if (window.cardMap && window.cardMap[cd]) return { cd, ...window.cardMap[cd] };
+    return null;
+  }
+
+  function openCardZoom(cd, context /* 'list' | 'deckmaker' */){
+    const m = modal(); if (!m) return;
+    const info = findCardByCd(cd); if (!info) return;
+
+    // 画像とテキスト
+    $('zoomImage').src = `img/${cd}.webp`;
+    $('zoomImage').onerror = function(){
+      if (this.dataset.fallbackApplied) return;
+      this.dataset.fallbackApplied = '1';
+      this.src = 'img/00000.webp';
+    };
+    $('zoomName').textContent = info.name || '';
+    $('zoomRaceCat').textContent = [info.race, info.category].filter(Boolean).join(' / ');
+
+    // 効果テキスト（page1.js/page2.jsのgenerateDetailHtmlと整合）
+    const effectParts = [];
+    if (info.effect_name1) effectParts.push(`■ ${info.effect_name1}\n${info.effect_text1 || ''}`);
+    if (info.effect_name2) effectParts.push(`\n■ ${info.effect_name2}\n${info.effect_text2 || ''}`);
+    $('zoomEffect').textContent = effectParts.join('\n').trim();
+
+    // アクション（デッキメーカーでは追加/削除ボタン）
+    const act = $('zoomActions');
+    act.innerHTML = '';
+    if (context === 'deckmaker' && window.addCard && window.removeCard){
+      const addBtn = document.createElement('button');
+      addBtn.textContent = '＋ 追加';
+      addBtn.onclick = () => window.addCard(cd);
+
+      const delBtn = document.createElement('button');
+      delBtn.textContent = '－ 削除';
+      delBtn.onclick = () => window.removeCard(cd);
+
+      act.append(addBtn, delBtn);
+    }
+
+    // 表示
+    m.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeCardZoom(){
+    const m = modal(); if (!m) return;
+    m.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  // 背景タップ/×/ESCで閉じる
+  document.addEventListener('click', (e)=>{
+    const m = modal(); if (!m || m.style.display !== 'flex') return;
+    if (e.target === m) closeCardZoom();
+  });
+  document.addEventListener('keydown', (e)=>{
+    const m = modal(); if (!m || m.style.display !== 'flex') return;
+    if (e.key === 'Escape') closeCardZoom();
+  });
+  const closeBtn = document.getElementById('cardZoomClose');
+  if (closeBtn) closeBtn.addEventListener('click', closeCardZoom);
+
+  // #grid 配下の .card に長押しをバインド
+  function bindLongPressForCards(context){
+    const root = document.getElementById('grid');
+    if (!root) return;
+
+    let timer = null, startX=0, startY=0, moved=false;
+    const LONG_MS = 380;   // 体感よいしきい値（350〜450ms 推奨）
+    const MOVE_TOL = 8;    // 長押し中の許容移動
+
+    root.addEventListener('touchstart', (ev)=>{
+      const t = ev.target.closest('.card');
+      if (!t) return;
+      const touch = ev.touches[0];
+      startX = touch.clientX; startY = touch.clientY; moved = false;
+
+      const cd = t.dataset.cd;
+      clearTimeout(timer);
+      timer = setTimeout(()=>{ openCardZoom(cd, context); }, LONG_MS);
+    }, {passive:true});
+
+    root.addEventListener('touchmove', (ev)=>{
+      const touch = ev.touches[0];
+      if (Math.hypot(touch.clientX - startX, touch.clientY - startY) > MOVE_TOL){
+        moved = true; clearTimeout(timer);
+      }
+    }, {passive:true});
+
+    root.addEventListener('touchend', ()=>{
+      if (!moved){ /* タップは既存のonclick(=行間展開)へ任せる */ }
+      clearTimeout(timer);
+    }, {passive:true});
+
+    root.addEventListener('touchcancel', ()=> clearTimeout(timer), {passive:true});
+
+  }
+
+  // 公開（各ページで呼ぶ）
+  window.__bindLongPressForCards = bindLongPressForCards;
+})();
 
 /*============================
       3.フィルター生成・表示
@@ -224,7 +338,7 @@ const FIELD_DISPLAY = {
   'エレメンタルフィールド': 'エレメンタル',
   'ルミナスフィールド': 'ルミナス',
   'シェイドフィールド': 'シェイド',
-  'フィールドリセット': 'フィールドリセット',
+  'ノーマルフィールド': 'ノーマル',
 };
 
 const SPECIAL_ABILITIES = ['特殊効果未所持', '燃焼', '拘束', '沈黙'];
@@ -363,7 +477,7 @@ fieldWrapper.querySelectorAll('.filter-btn').forEach(btn => {
 
 detailFilters.appendChild(fieldWrapper);
 
-detailFilters.appendChild(createRangeStyleWrapper('BP要素', ['true', 'false'], 'bp'));
+detailFilters.appendChild(createRangeStyleWrapper('BP（ブレッシングポイント）要素', ['true', 'false'], 'bp'));
 detailFilters.appendChild(createRangeStyleWrapper('特殊効果', SPECIAL_ABILITIES, 'ability'));
 
 // ✅ boolean 条件 → まとめて「その他」タイトルの下に表示

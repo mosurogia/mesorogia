@@ -11,11 +11,18 @@ const deck = {};
 // カード情報　例: { "10001": { name: "...", race: "...", type: "...", cost: 3, power: 2, ... }, ... }
 const cardMap = {};
 
+window.deck = deck;
+window.cardMap = cardMap;
 
+// common.js などグローバルに置く
+// ローカル開発なら '', GitHub Pages なら '/mesorogia-cards/' などに調整
+const BASE_PATH = '';
 
-// JSON読み込み＆フィルター済み配列取得
 async function fetchLatestCards() {
-  const res = await fetch('/mesorogia//public/cards_latest.json');
+  const res = await fetch('public/cards_latest.json');
+  if (!res.ok) {
+    throw new Error(`HTTP error ${res.status} - ${res.statusText}`);
+  }
   const allCards = await res.json();
   return allCards.filter(card => card.is_latest === true);
 }
@@ -46,10 +53,10 @@ const order = {
 "風花森（ふかしん）":33,
 "ロスリス": 41,
 "白騎士": 42,
-"愚者愚者（ぐしゃぐしゃ）":43,
-"昏き霊園": 51,
+"愚者愚者（クラウンクラウド）":43,
+"昏き霊園（スレイヴヤード）": 51,
 "マディスキア": 52,
-"炎閻魔": 53,
+"炎閻魔（えんえんま）": 53,
 "ノーカテゴリ": 999
 };
 return order[category] ?? 9999;

@@ -7,6 +7,7 @@
 window.addEventListener('DOMContentLoaded', async () => {
   await loadCards(); // カードデータ読み込み
   updateSavedDeckList();  // その後に保存デッキ一覧を表示
+  setTimeout(()=> window.__bindLongPressForCards('deckmaker'), 0);
 });
 
 // 日付フォーマット
@@ -35,8 +36,6 @@ function generateCardListElement(card) {
   cardDiv.setAttribute('data-name', card.name);
   cardDiv.setAttribute('data-effect1', card.effect_name1 ?? "");
   cardDiv.setAttribute('data-effect2', card.effect_name2 ?? "");
-  cardDiv.setAttribute('data-tribe', card.race);
-  cardDiv.setAttribute('data-cd', card.cd);
   cardDiv.setAttribute('data-race', card.race);
   cardDiv.setAttribute('data-category', card.category);
   cardDiv.setAttribute('data-rarity', card.rarity);
@@ -409,7 +408,7 @@ async function getCanonicalOrderForOwned_DM(){
     if (typeof fetchLatestCards === 'function'){
       cards = await fetchLatestCards();
     }else{
-      const res = await fetch('/mesorogia//public/cards_latest.json'); // 環境に合わせて
+      const res = await fetch('public/cards_latest.json'); // 環境に合わせて
       const all = await res.json();
       cards = all.filter(c => c.is_latest);
     }
@@ -779,10 +778,10 @@ function updateDeck() {
           cleanUp();
           if (diffY > 0) {
             // 上フリック：追加（上限/旧神/種族は addCard 内で判定）
-            addCard(cd); // :contentReference[oaicite:9]{index=9}
+            addCard(cd);
           } else {
             // 下フリック：削除
-            removeCard(cd); // :contentReference[oaicite:10]{index=10}
+            removeCard(cd);
           }
         }, 200);
       }, {passive:true});

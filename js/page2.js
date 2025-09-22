@@ -794,6 +794,7 @@ function updateDeck() {
     cardEl.addEventListener("contextmenu", e => e.preventDefault());
 
     deckBarTop.appendChild(cardEl);
+    autoscaleBadgeForCardEl(cardEl);//枚数表示サイズ調整
   });
 
 
@@ -1002,11 +1003,60 @@ function renderDeckList() {
     });
 
     container.appendChild(cardEl);
+    autoscaleBadgeForCardEl(cardEl);//枚数表示サイズ調整
   }
 
   representativeCd = nextRepresentative;  // 代表カードの最終確定
   updateDeckSummaryDisplay();//代表カードデッキ情報表示
 }
+
+
+//枚数表示サイズ調整
+function autoscaleBadgeForCardEl(cardEl){
+  const img   = cardEl.querySelector('img');
+  const badge = cardEl.querySelector('.count-badge');
+  if (!img || !badge) return;
+
+  const apply = () => {
+    const W   = img.clientWidth || img.naturalWidth || 220; // カードの表示幅
+    // ← 好みで係数調整（初期: 幅18% / 高さ12% / 文字7%）
+    const bW  = Math.max(20, Math.round(W * 0.18)); // バッジ幅
+    const bH  = Math.max(14, Math.round(W * 0.18)); // バッジ高
+    const fz  = Math.max(10, Math.round(W * 0.12)); // フォント
+    const gap = Math.max(2,  Math.round(W * 0.02)); // 右上の余白
+
+    Object.assign(badge.style, {
+      width:        `${bW}px`,
+      height:       `${bH}px`,
+      fontSize:     `${fz}px`,
+      borderRadius: `${Math.round(bH * 0.6)}px`,
+      padding:      `0 ${Math.round(bW * 0.15)}px`,
+      display:      'flex',
+      alignItems:   'center',
+      justifyContent:'center',
+      top:          `${gap}px`,
+      right:        `${gap}px`,
+    });
+  };
+
+  if (img.complete) apply();
+  else img.addEventListener('load', apply, { once: true });
+}
+
+function autoscaleAllBadges(){
+  document.querySelectorAll('.deck-entry, .deck-card').forEach(autoscaleBadgeForCardEl);
+}
+
+// リサイズやレイアウト変化で再計算
+window.addEventListener('resize', () => requestAnimationFrame(autoscaleAllBadges));
+if (window.ResizeObserver) {
+  const target = document.getElementById('deck-card-list');
+  if (target) {
+    new ResizeObserver(() => requestAnimationFrame(autoscaleAllBadges))
+      .observe(target);
+  }
+}
+
 
 
 //代表カードクラス付与
@@ -1026,7 +1076,7 @@ function renderDeckList() {
     document.getElementById("deck-representative").textContent = name;
   }
 
-  //デッキリスト「デッキをここに表示」
+//デッキリスト「デッキをここに表示」
   function updateDeckEmptyMessage() {
     const deck = document.getElementById("deck-card-list");
     const msg = document.getElementById("deckcard-empty-message");

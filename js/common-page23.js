@@ -36,6 +36,7 @@ function switchTab(id, clickedTab) {
   updateDeckAnalysis();  // 分析グラフやレアリティ比率などを更新
   updateExchangeSummary();  // ポイント等のサマリーを更新（未実装の場合はここで呼び出し）
   }
+
 }
 
 

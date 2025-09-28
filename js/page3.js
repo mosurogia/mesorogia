@@ -799,6 +799,8 @@ function buildPackSectionHTML(packEn, packJp, cardsGroupedByRace){
   html += `  <div class="race-controls">`;
   html += `    <button class="pack-select-all-btn">シルバーブロンズ+3</button>`;
   html += `    <button class="pack-clear-all-btn">全て選択解除</button>`;
+  html += `<button class="missing-pack-btn">不足カード</button>
+            `;
   html += `  </div>`;
   html += `  <div id="card-list-${packSlug}">`;
 
@@ -905,6 +907,295 @@ async function renderAllPacks({
   // 生成後にコントロールイベントを委譲で付与
     attachPackControls(mount);
 }
+
+// 所持合計を読む（OwnedStore 優先）
+function ownedTotal(cd){
+  if (!window.OwnedStore) return 0;
+  const e = OwnedStore.get(String(cd));
+  return (e?.normal|0) + (e?.shine|0) + (e?.premium|0);
+}
+
+// 不足カード収集（scope='all' or pack オブジェクト）
+function collectMissing(scope='all'){
+  // 対象集合
+  let list = [];
+  if (scope === 'all'){
+    list = Array.isArray(window.__cardsCache) ? window.__cardsCache : [];
+  } else {
+    const els = queryCardsByPack(scope); // 既存ヘルパ
+    const byCd = new Set(Array.from(els).map(el => String(el.dataset.cd)));
+    list = (Array.isArray(window.__cardsCache) ? window.__cardsCache : [])
+            .filter(c => byCd.has(String(c.cd)));
+  }
+
+  const missing = [];
+  for (const c of list){
+    const max = (c.race === '旧神') ? 1 : 3;
+    const own = ownedTotal(c.cd);
+    const need = Math.max(0, max - own);
+    missing.push({
+      cd:String(c.cd),
+      name:c.name,
+      need,
+      max,
+      rarity:c.rarity,
+      cost:c.cost|0,
+      power:c.power|0,
+      type:c.type||'',
+      race:c.race || ''
+ });
+  }
+
+  // 並び順：パック → 種族 → タイプ → コスト → パワー → cd
+  const packIdx = getPackOrderIndex();
+  missing.sort((a,b)=>{
+    // 1) パック順
+    const pa = packIdx[packEnOf(a)] ?? 9999;
+    const pb = packIdx[packEnOf(b)] ?? 9999;
+    if (pa !== pb) return pa - pb;
+
+    // 2) 種族
+    const ra = raceRankOf(a.race || ''), rb = raceRankOf(b.race || '');
+    if (ra !== rb) return ra - rb;
+
+    // 3) タイプ
+    const ta = TYPE_ORDER[a.type] ?? 999;
+    const tb = TYPE_ORDER[b.type] ?? 999;
+    if (ta !== tb) return ta - tb;
+
+    // 4) コスト
+    const ca = Number.isFinite(a.cost) ? a.cost : Number.MAX_SAFE_INTEGER;
+    const cb = Number.isFinite(b.cost) ? b.cost : Number.MAX_SAFE_INTEGER;
+    if (ca !== cb) return ca - cb;
+
+    // 5) パワー
+    const pa2 = Number.isFinite(a.power) ? a.power : Number.MAX_SAFE_INTEGER;
+    const pb2 = Number.isFinite(b.power) ? b.power : Number.MAX_SAFE_INTEGER;
+    if (pa2 !== pb2) return pa2 - pb2;
+
+    // 6) cd
+    const cda = Number.isFinite(+a.cd) ? +a.cd : Number.MAX_SAFE_INTEGER;
+    const cdb = Number.isFinite(+b.cd) ? +b.cd : Number.MAX_SAFE_INTEGER;
+    return cda - cdb;
+  });
+  return missing;
+}
+
+function openMissingDialog(title, items){
+  const dlg  = document.getElementById('missing-dialog');
+  const body = document.getElementById('missing-body');
+  const ttl  = document.getElementById('missing-title');
+  if (!dlg || !body || !ttl) return;
+
+  ttl.textContent = title;
+  if (!items.length){
+    body.innerHTML = '<p>不足カードはありません。</p>';
+  } else {
+    const ul = document.createElement('ul');
+    items.forEach(it=>{
+      const li = document.createElement('li');
+      li.textContent = `${it.name}x${it.need}`;
+      li.dataset.cd  = String(it.cd || '');
+      li.classList.add('missing-item');
+      // 種族クラス付与（小文字対応済み）
+      const race = it.race || '';
+      if (race) li.classList.add(`race-${race}`);
+      ul.appendChild(li);
+    });
+    body.replaceChildren(ul);
+  }
+
+  const copyBtn = document.getElementById('missing-copy');
+  const text = items.map(it => `${it.name}x${it.need}`).join('\n');
+  copyBtn.onclick = async ()=>{
+    try{
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+      else prompt('以下をコピーしてください', text);
+      copyBtn.textContent = 'コピーしました';
+      setTimeout(()=> copyBtn.textContent = '一覧をコピー', 1400);
+    }catch{ alert('コピーに失敗しました'); }
+  };
+
+  dlg.style.left = '50%';
+  dlg.style.top  = '15vh';
+  dlg.style.transform = 'translateX(-50%)';
+  dlg.showModal();
+}
+
+// 画像プレビュー
+if (!window.__wiredMissingPreview){
+  window.__wiredMissingPreview = true;
+
+  // マウス：ホバーで表示、外れたら隠す
+  document.addEventListener('mouseover', (e)=>{
+    const li = e.target.closest('#missing-body li.missing-item');
+    if (!li || !li.dataset.cd) return;
+    showCardPreviewNextTo(li, li.dataset.cd);
+  });
+  document.addEventListener('mousemove', (e)=>{
+    const li = e.target.closest('#missing-body li.missing-item');
+    if (!li || !li.dataset.cd) { hideCardPreview(); return; }
+    // 追従したい場合はカーソル付近に
+    showCardPreviewAt(e.clientX, e.clientY, li.dataset.cd);
+  });
+  document.addEventListener('mouseout', (e)=>{
+    if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('#card-preview-pop')) return;
+    if (e.target.closest && e.target.closest('#missing-body')) {
+      // missing-body内から外へ出たら隠す
+      if (!e.relatedTarget || !e.relatedTarget.closest('#missing-body')) hideCardPreview();
+    }
+  });
+
+  // タッチ：長押し(500ms)で表示、離したら隠す
+  let pressTimer = 0;
+  let pressTarget = null;
+  document.addEventListener('touchstart', (e)=>{
+    const li = e.target.closest && e.target.closest('#missing-body li.missing-item');
+    if (!li || !li.dataset.cd) return;
+    pressTarget = li;
+    const touch = e.touches[0];
+    pressTimer = window.setTimeout(()=>{
+      showCardPreviewAt(touch.clientX, touch.clientY, li.dataset.cd);
+    }, 500); // 長押し閾値
+  }, {passive:true});
+
+  ['touchend','touchcancel','touchmove'].forEach(type=>{
+    document.addEventListener(type, ()=>{
+      if (pressTimer){ clearTimeout(pressTimer); pressTimer = 0; }
+      hideCardPreview();
+      pressTarget = null;
+    }, {passive:true});
+  });
+
+  // モーダルを閉じたらプレビューも隠す
+  document.getElementById('missing-dialog')?.addEventListener('close', hideCardPreview);
+}
+
+
+// === パック順インデックス（PACK_ORDER優先→残りは英字→仮名字で自然順） ===
+let __PACK_INDEX_CACHE = null;
+function getPackOrderIndex() {
+  if (__PACK_INDEX_CACHE) return __PACK_INDEX_CACHE;
+
+  // ① JSONから英名（en）リスト抽出
+  const cards = Array.isArray(window.__cardsCache) ? window.__cardsCache : [];
+  const byEn = new Map(); // en -> jp
+  for (const c of cards) {
+    const pn = splitPackName(c.pack_name || c.pack || '');
+    if (!pn.en) continue;
+    if (!byEn.has(pn.en)) byEn.set(pn.en, pn.jp || '');
+  }
+
+  // ② 既定順（PACK_ORDER）→残りは英名のアルファベット順
+  const rest = [...byEn.keys()]
+    .filter(en => !PACK_ORDER.includes(en))
+    .sort((a,b)=> String(a).localeCompare(String(b), 'ja')); // 英字→仮名の自然順
+
+  const ordered = [...PACK_ORDER.filter(en => byEn.has(en)), ...rest];
+
+  // ③ en -> index の辞書
+  const idx = {};
+  ordered.forEach((en, i) => { idx[en] = i; });
+  __PACK_INDEX_CACHE = idx;
+  return idx;
+}
+
+// カードからパック英名(en)を取り出す
+function packEnOf(card){
+  const pn = splitPackName(card.pack_name || card.pack || '');
+  return pn.en || '';
+}
+
+// 種族→数値順位
+function raceRankOf(r){
+  return (RACE_ORDER.indexOf(r) >= 0) ? RACE_ORDER.indexOf(r) : 999;
+}
+
+// 全カード（PC/モバイル共通）
+['show-missing-all','show-missing-all-mobile'].forEach(id=>{
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('click', ()=>{
+    const items = collectMissing('all');
+    openMissingDialog('不足カード（全カード）', items);
+  });
+});
+
+// パックごと（パック名直下の単体ボタン）
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest('.missing-pack-btn');
+  if (!btn) return;
+  const section = btn.closest('.pack-section');
+  const slug = section?.id?.replace(/^pack-/, '');
+  const pack = Array.isArray(window.packs) ? window.packs.find(p => makePackSlug(p.nameMain) === slug) : null;
+  const items = collectMissing(pack || 'all');
+  openMissingDialog(pack ? `不足カード（${pack.nameMain}）` : '不足カード', items);
+});
+
+// ===== 不足リスト：カード画像プレビュー =====
+function ensurePreviewEl(){
+  let el = document.getElementById('card-preview-pop');
+  const dlg = document.getElementById('missing-dialog');
+  if (dlg && dlg.open && el.parentElement !== dlg) {
+    dlg.appendChild(el);
+    // モーダル内では dialog 相対に置く
+    el.style.position = 'absolute';
+  } else if ((!dlg || !dlg.open) && el.parentElement !== document.body) {
+    // 念のため：モーダルが閉じているときは body 直下へ戻す
+    document.body.appendChild(el);
+    // body 直下では画面基準
+    el.style.position = 'fixed';
+  }
+  return el;
+}
+
+function showCardPreviewAt(x, y, cd){
+  const box = ensurePreviewEl();
+  const img = box.querySelector('img');
+  img.removeAttribute('data-fallback');
+  img.src = `img/${cd}.webp`;
+
+  const dlg = document.getElementById('missing-dialog');
+  const w  = img.clientWidth || 180;
+  const h  = img.clientHeight || 256;
+  const pad = 12;
+  let left, top;
+
+  if (dlg && dlg.open && box.parentElement === dlg) {
+    // dialog 内：dialog の矩形を基準に absolute 配置
+    const dr = dlg.getBoundingClientRect();
+    const vw = dr.width, vh = dr.height;
+    // 受け取った x,y は viewport 座標なので dialog 相対に変換
+    left = (x - dr.left) + pad;
+    top  = (y - dr.top)  + pad;
+    // はみ出しクランプ（dialog 内）
+    if (left + w + 16 > vw) left = Math.max(pad, left - w - pad*2);
+    if (top  + h + 16 > vh) top  = Math.max(pad, vh - h - 16);
+  } else {
+    // body 直下：画面基準（fixed）
+    const vw = window.innerWidth, vh = window.innerHeight;
+    left = x + pad; top = y + pad;
+    if (left + w + 16 > vw) left = Math.max(pad, x - w - pad);
+    if (top  + h + 16 > vh) top  = Math.max(pad, vh - h - 16);
+  }
+
+  box.style.left = `${Math.round(left)}px`;
+  box.style.top  = `${Math.round(top)}px`;
+  box.style.display = 'block';
+}
+
+function showCardPreviewNextTo(el, cd){
+  const rect = el.getBoundingClientRect();
+  showCardPreviewAt(rect.right, rect.top, cd);
+}
+
+function hideCardPreview(){
+  const box = document.getElementById('card-preview-pop');
+  if (box) box.style.display = 'none';
+}
+
+
+
 
 //#endregionroot
 /*====================================
@@ -1752,17 +2043,39 @@ function applyFilterAndSearch() {
     }
     return true;
   });
-  // ★ 並び順：コスト → パワー → cd（すべて昇順）
-  filtered.sort((a, b) => {
-    const ac = Number(a.cost ?? 999), bc = Number(b.cost ?? 999);
-    if (ac !== bc) return ac - bc;
+ // ★ 並び順：
+ //   （全カード＝パック未選択）→ パック順 → 種族 → タイプ → コスト → パワー → cd
+ //   （パック選択あり）        → 種族 → タイプ → コスト → パワー → cd
+ const hasPackFilter = (pickP && pickP.length > 0);
+ const packIdx = hasPackFilter ? null : getPackOrderIndex();
+ filtered.sort((a, b) => {
+   if (!hasPackFilter) {
+     // 1) パック順（PACK_ORDER優先＋残りは英字→仮名字順）
+     const pa = packIdx[packEnOf(a)] ?? 9999;
+     const pb = packIdx[packEnOf(b)] ?? 9999;
+     if (pa !== pb) return pa - pb;
+   }
+   // 2) 種族
+   const ra = raceRankOf(a.race || ''), rb = raceRankOf(b.race || '');
+   if (ra !== rb) return ra - rb;
+   // 3) タイプ（チャージャー→アタッカー→ブロッカー）
+   const ta = TYPE_ORDER[a.type] ?? 999;
+   const tb = TYPE_ORDER[b.type] ?? 999;
+   if (ta !== tb) return ta - tb;
+   // 4) コスト
+   const ac = Number.isFinite(a.cost) ? a.cost : Number.MAX_SAFE_INTEGER;
+   const bc = Number.isFinite(b.cost) ? b.cost : Number.MAX_SAFE_INTEGER;
+   if (ac !== bc) return ac - bc;
+   // 5) パワー
+   const ap = Number.isFinite(a.power) ? a.power : Number.MAX_SAFE_INTEGER;
+   const bp = Number.isFinite(b.power) ? b.power : Number.MAX_SAFE_INTEGER;
+   if (ap !== bp) return ap - bp;
+   // 6) cd（数値昇順）
+   const aid = Number.isFinite(+a.cd) ? +a.cd : Number.MAX_SAFE_INTEGER;
+   const bid = Number.isFinite(+b.cd) ? +b.cd : Number.MAX_SAFE_INTEGER;
+   return aid - bid;
+ });
 
-    const ap = Number(a.power ?? 99999), bp = Number(b.power ?? 99999);
-    if (ap !== bp) return ap - bp;
-
-    const aid = Number(a.cd ?? 999999999), bid = Number(b.cd ?? 999999999);
-    return aid - bid;
-  });
   // ★ 所持カード分析グリッドのデータを書き換えて再描画
   __ownedCardsData = filtered;
   __ownedCurrentPage = 1;

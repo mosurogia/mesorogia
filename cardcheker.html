@@ -108,6 +108,7 @@
         <div class="menu-mobile">
             <button id="save-btn-mobile" onclick="saveOwnership()">💾 保存</button>
             <button class="js-share-owned">🔗 共有コピー</button>
+            <button id="show-missing-all-mobile">🧩 不足カード</button>
         </div>
     </div>
 
@@ -121,6 +122,7 @@
             <div class="menu">
                 <button id="save-btn" onclick="saveOwnership()">💾 保存</button>
                 <button class="js-share-owned">🔗 共有コピー</button>
+                <button id="show-missing-all">🧩 不足カード</button>
             </div>
             <!-- 全カード所持率 -->
             <div id="summary" class="summary-block">
@@ -213,6 +215,25 @@
                     @192837465aruneo
                 </a>
             </footer>
+
+            <!--不足カードモーダル-->
+            <dialog id="missing-dialog">
+                <header style="display:flex;justify-content:space-between;align-items:center;">
+                    <h3 id="missing-title" style="margin:.4rem 0; font-size: 20px;">不足カード</h3>
+                    <form method="dialog"><button class="icon-btn">閉じる</button></form>
+                </header>
+                <div id="missing-body" style="max-height:50vh;overflow:auto;"></div>
+                <div style="display:flex;gap:.4rem;justify-content:flex-end;margin-top:.5rem;">
+                    <button id="missing-copy">一覧をコピー</button>
+                </div>
+            </dialog>
+            <!--不足カードポップアップ画像-->
+            <div id="card-preview-pop">
+                <img alt="preview" src="img/00000.webp"
+                    onerror="if(!this.dataset.fallback){this.dataset.fallback=1;this.src='img/00000.webp';}">
+            </div>
+
+
         </main>
 
     </div>
@@ -228,6 +249,35 @@
 <!-- 所持カード分析タブのコンテンツ -->
 
 <div id="owned" class="tab-content">
+
+    <!-- 🗂️ スマホ用：総所持枚数・内訳 -->
+    <div class="owned-summary-mobile owned-mobile">
+
+        <h4>所持データ</h4>
+        <div class="owned-total-row">
+            <p>総枚数: <span id="owned-total-mobile">0</span> 枚</p>
+            <div class="owned-total-btn-mobile">
+                <button id="apply-to-checker-mobile">保存＆反映</button>
+            </div>
+
+
+        </div>
+
+
+        <h4>レアリティ別</h4>
+        <div class="summary-scroll">
+            <div class="summary-card">レジェンド<br><span id="owned-legend-mobile">0</span></div>
+            <div class="summary-card">ゴールド<br><span id="owned-gold-mobile">0</span></div>
+            <div class="summary-card">シルバー<br><span id="owned-silver-mobile">0</span></div>
+            <div class="summary-card">ブロンズ<br><span id="owned-bronze-mobile">0</span></div>
+        </div>
+
+        <h4>種族ごと</h4>
+        <div id="owned-race-summary-mobile" class="summary-scroll">
+            <!-- 種族内訳をJSでカード型で追加 -->
+        </div>
+    </div>
+
 
     <!-- 🔍 スマホ用：検索/フィルター -->
     <div class="owned-search-mobile owned-mobile">
@@ -319,33 +369,7 @@
 
     </div>
 
-    <!-- 🗂️ スマホ用：総所持枚数・内訳 -->
-    <div class="owned-summary-mobile owned-mobile">
 
-        <h4>所持データ</h4>
-        <div class="owned-total-row">
-            <p>総枚数: <span id="owned-total-mobile">0</span> 枚</p>
-            <div class="owned-total-btn-mobile">
-                <button id="apply-to-checker-mobile">保存＆反映</button>
-            </div>
-
-
-        </div>
-
-
-        <h4>レアリティ別</h4>
-        <div class="summary-scroll">
-            <div class="summary-card">レジェンド<br><span id="owned-legend-mobile">0</span></div>
-            <div class="summary-card">ゴールド<br><span id="owned-gold-mobile">0</span></div>
-            <div class="summary-card">シルバー<br><span id="owned-silver-mobile">0</span></div>
-            <div class="summary-card">ブロンズ<br><span id="owned-bronze-mobile">0</span></div>
-        </div>
-
-        <h4>種族ごと</h4>
-        <div id="owned-race-summary-mobile" class="summary-scroll">
-            <!-- 種族内訳をJSでカード型で追加 -->
-        </div>
-    </div>
 
 
 

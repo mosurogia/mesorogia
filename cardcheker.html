@@ -52,7 +52,8 @@
         <a href="index.html">📖 一覧</a>
         <a href="deckmaker.html">🃏 デッキメーカー</a>
         <a href="cardcheker.html">📊 所持率チェッカー</a>
-        <a href="deck-post.html">📤 デッキ投稿</a>
+        <a href="#" style="text-decoration: line-through; pointer-events: none; color: #aaa;">📤 デッキ投稿</a>
+        <!--<a href="deck-post.html">📤 デッキ投稿</a>-->
     </nav>
 </header>
 
@@ -72,45 +73,26 @@
 
     <!-- スマホ用 所持率サマリー上部バー -->
     <div class="top-summary">
-
-        <!-- 所持率 + ツイート -->
         <div class="summary-bar">
-            <span>
-                全所持率: <span id="mobile-owned-type-count">0</span>/<span id="mobile-total-type-count">0</span>
-                (<span id="mobile-owned-type-percent">0%</span>)
-            </span>
+            <select id="pack-selector" onchange="selectMobilePack(this.value)"></select>
+
+            <button id="jump-pack-btn" class="jump-pack-btn" onclick="jumpToSelectedPack()">移動</button>
+
             <a id="mobile-tweet-link" href="#" target="_blank" rel="noopener" class="custom-tweet-button">
                 <img src="img/x-logo.svg" alt="Post" class="tweet-icon">
                 <span>ポスト</span>
             </a>
         </div>
 
+        <div id="mobile-pack-summary"></div>
 
-        <!-- コンプ率 + プルダウン -->
-        <div class="summary-bar">
-            <span>
-                全コンプ率: <span id="mobile-owned-count">0</span>/<span id="mobile-total-count">0</span>
-                (<span id="mobile-owned-percent">0%</span>)
-            </span>
-            <select id="pack-selector" onchange="selectMobilePack(this.value)"></select>
-        </div>
-
-        <!-- パック所持率 -->
-        <div id="mobile-pack-summary">
-            <div class="pack-name">Awaking The Oracle</div>
-            <div class="pack-rate">
-                所持率: 0/0 (0%)<br>
-                コンプ率: 0/0 (0%)
-            </div>
-        </div>
-
-        <!-- 所持データ操作ボタンエリア -->
         <div class="menu-mobile">
             <button id="save-btn-mobile" onclick="saveOwnership()">💾 保存</button>
-            <button class="js-share-owned">🔗 共有コピー</button>
+            <button class="js-share-owned">📋 リスト共有</button>
             <button id="show-missing-all-mobile">🧩 不足カード</button>
         </div>
     </div>
+
 
 
 
@@ -121,7 +103,7 @@
             <!-- 所持データ操作ボタンエリア -->
             <div class="menu">
                 <button id="save-btn" onclick="saveOwnership()">💾 保存</button>
-                <button class="js-share-owned">🔗 共有コピー</button>
+                <button class="js-share-owned">📋 リスト共有</button>
                 <button id="show-missing-all">🧩 不足カード</button>
             </div>
             <!-- 全カード所持率 -->

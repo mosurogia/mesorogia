@@ -152,6 +152,9 @@ const packs = [
   },
 ];
 
+// ★ クリックハンドラで参照するため公開
+window.packs = packs;
+
 function calcSummary(nodeList){
   let owned = 0, ownedTypes = 0, total = 0, totalTypes = 0;
   nodeList.forEach(card => {
@@ -213,26 +216,61 @@ if (pcTweet){
 const mobileTweet = document.getElementById('mobile-tweet-link');
 if (mobileTweet){
   const selKey = (document.getElementById('pack-selector')||{}).value;
-  const selPack = (Array.isArray(packs) ? packs.find(p=>p.key===selKey) : null) || packs?.[0];
 
   let packName = '';
   let packSum = null;
-  if (selPack){
-    packName = selPack.nameMain;
-    const selCards = queryCardsByPack(selPack);
-    packSum = calcSummary(selCards);
+  if (selKey && selKey !== 'all') {
+    const selPack = Array.isArray(packs) ? packs.find(p=>p.key===selKey) : null;
+    if (selPack){
+      packName = selPack.nameMain;
+      const selCards = queryCardsByPack(selPack);
+      packSum = calcSummary(selCards);
+    }
   }
 
-  const mtxt = buildShareText({
-    header: '全カード',
-    sum: s,         // 全体
-    packName,       // 選択パック名
-    packSum         // 選択パックのサマリー
-  });
+// モバイル：パック選択時は「全カード」を出さず、そのパックのみをポスト
+  let mtxt;
+  if (selKey && selKey !== 'all' && packSum && packName) {
+    // パックが選ばれているとき → そのパックだけ
+    mtxt = buildShareText({
+      header: packName,
+      sum: packSum
+    });
+  } else {
+    // 「全カード」選択時 → 全体だけ
+    mtxt = buildShareText({
+      header: '全カード',
+      sum: s
+    });
+  }
   mobileTweet.href = `https://twitter.com/intent/tweet?text=${mtxt}`;
 }
 
 }
+
+  // モバイル：進捗バー付きサマリーHTMLを返す
+  function renderMobilePackSummaryHTML(s){
+    return `
+      <div class="pack-meters">
+        <div class="meter">
+          <div class="meter-label">所持率</div>
+          <div class="meter-track" role="progressbar"
+              aria-valuemin="0" aria-valuemax="100" aria-valuenow="${s.typePercent}">
+            <span class="meter-bar" style="width:${s.typePercent}%"></span>
+          </div>
+          <div class="meter-val">${s.ownedTypes}/${s.totalTypes} (${s.typePercent}%)</div>
+        </div>
+        <div class="meter">
+          <div class="meter-label">コンプ率</div>
+          <div class="meter-track" role="progressbar"
+              aria-valuemin="0" aria-valuemax="100" aria-valuenow="${s.percent}">
+            <span class="meter-bar -comp" style="width:${s.percent}%"></span>
+          </div>
+          <div class="meter-val">${s.owned}/${s.total} (${s.percent}%)</div>
+        </div>
+      </div>`;
+  }
+
 
 // === 各パック所持率（PCの #pack-summary-list は li を使わず、指定の div 構成で生成） ===
 function updatePackSummary(){
@@ -243,7 +281,16 @@ function updatePackSummary(){
   if (!pcList) return;
 
   pcList.innerHTML = '';
-  if (mobileSelect) mobileSelect.innerHTML = '';
+  if (mobileSelect) {
+    // 既存の選択値を保持
+    const prev = mobileSelect.value;
+    mobileSelect.innerHTML = '';
+    // 先頭に「全カード」
+    const optAll = document.createElement('option');
+    optAll.value = 'all';
+    optAll.textContent = '全カード';
+    mobileSelect.appendChild(optAll);
+  }
 
   (packs || []).forEach(pack => {
     const cards = queryCardsByPack(pack);
@@ -286,24 +333,28 @@ share.innerHTML = `
   });
 
   // ★ 初期値が空なら先頭を選ぶ（.value が空のままの環境対策）
-  if (mobileSelect && !mobileSelect.value && packs?.length) {
-    mobileSelect.value = packs[0].key;
+  if (mobileSelect) {
+    // 既存選択があれば維持、なければ "all"
+    if (!mobileSelect.value) mobileSelect.value = 'all';
   }
 
   // スマホ: 現在選択中パックの概要
   if (mobileSelect && mobileSummary) {
-    const sel = packs.find(p => p.key === mobileSelect.value) || packs[0];
-    if (sel) {
+    const key = mobileSelect.value;
+    let s;
+    if (key === 'all') {
+      const all = document.querySelectorAll('#packs-root .card');
+      s = calcSummary(all);
+    } else {
+      const sel = packs.find(p => p.key === key) || packs[0];
       const cards = queryCardsByPack(sel);
-      const s = calcSummary(cards);
-      mobileSummary.innerHTML = `
-        <div class="pack-name">${sel.nameMain}</div>
-        <div class="pack-rate">
-          所持率: ${s.ownedTypes}/${s.totalTypes} (${s.typePercent}%)<br>
-          コンプ率: ${s.owned}/${s.total} (${s.percent}%)
-        </div>
-      `;
+      s = calcSummary(cards);
     }
+    mobileSummary.innerHTML = renderMobilePackSummaryHTML(s);
+
+    // 初期ロード時もジャンプボタンを制御
+    const jumpBtn = document.getElementById('jump-pack-btn');
+    if (jumpBtn) jumpBtn.style.display = (key==='all' ? 'none' : 'inline-block');
   }
 }
 
@@ -323,28 +374,43 @@ function selectMobilePack(packKey) {
   if (sel && sel.value !== packKey) sel.value = packKey;
 
   // packs から該当パックを取得（なければ先頭）
-  const pack = (Array.isArray(packs) ? packs.find(p => p.key === packKey) : null) || (packs?.[0]);
-  if (!pack) return;
-
-  // ✅ ここを修正：select 要素ではなく pack オブジェクトを渡す
-  const cards = queryCardsByPack(pack);
-  const s = calcSummary(cards); // { owned, ownedTypes, total, totalTypes, percent, typePercent }
+  let s;
+  if (packKey === 'all') {
+    const allCards = document.querySelectorAll('#packs-root .card');    s = calcSummary(allCards);
+  } else {
+    const pack = (Array.isArray(packs) ? packs.find(p => p.key === packKey) : null) || (packs?.[0]);
+    if (!pack) return;
+    const cards = queryCardsByPack(pack);
+    s = calcSummary(cards);
+  }
 
   // モバイル上部サマリーを書き換え
   const mobileSummary = document.getElementById('mobile-pack-summary');
   if (mobileSummary) {
-    mobileSummary.innerHTML = `
-      <div class="pack-name">${pack.nameMain}</div>
-      <div class="pack-rate">
-        所持率: ${s.ownedTypes}/${s.totalTypes} (${s.typePercent}%)<br>
-        コンプ率: ${s.owned}/${s.total} (${s.percent}%)
-      </div>
-    `;
+    mobileSummary.innerHTML = renderMobilePackSummaryHTML(s);
   }
+
+  //全カード時ジャンプボタン非表示
+  document.getElementById('jump-pack-btn').style.display = (packKey==='all'?'none':'inline-block');
 
   // ツイート文言の選択パック率も更新
   updateOverallSummary();
 }
+
+//パックへジャンプ
+function jumpToSelectedPack(){
+  const sel = document.getElementById('pack-selector');
+  const key = sel?.value;
+  if(!key || key === 'all') return;
+
+  // パックセクションに id="pack-〇〇" を振っている想定
+  const target = document.querySelector(`#pack-${key}`);
+  if(target){
+    target.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+}
+
+
 
 
 // グローバル公開（HTML の onchange="selectMobilePack(this.value)" から呼ぶため）
@@ -915,7 +981,7 @@ function ownedTotal(cd){
   return (e?.normal|0) + (e?.shine|0) + (e?.premium|0);
 }
 
-// 不足カード収集（scope='all' or pack オブジェクト）
+// 不足カード収集（scope === 'all' か pack オブジェクト）
 function collectMissing(scope='all'){
   // 対象集合
   let list = [];
@@ -933,6 +999,7 @@ function collectMissing(scope='all'){
     const max = (c.race === '旧神') ? 1 : 3;
     const own = ownedTotal(c.cd);
     const need = Math.max(0, max - own);
+    if (need <= 0) continue;
     missing.push({
       cd:String(c.cd),
       name:c.name,
@@ -994,7 +1061,7 @@ function openMissingDialog(title, items){
     const ul = document.createElement('ul');
     items.forEach(it=>{
       const li = document.createElement('li');
-      li.textContent = `${it.name}x${it.need}`;
+      li.innerHTML = `<span class="missing-name">${it.name}x${it.need}</span>`;
       li.dataset.cd  = String(it.cd || '');
       li.classList.add('missing-item');
       // 種族クラス付与（小文字対応済み）
@@ -1028,14 +1095,16 @@ if (!window.__wiredMissingPreview){
 
   // マウス：ホバーで表示、外れたら隠す
   document.addEventListener('mouseover', (e)=>{
-    const li = e.target.closest('#missing-body li.missing-item');
+    const span = e.target.closest('#missing-body li.missing-item .missing-name');
+    const li = span ? span.closest('li.missing-item') : null;
     if (!li || !li.dataset.cd) return;
     showCardPreviewNextTo(li, li.dataset.cd);
   });
-  document.addEventListener('mousemove', (e)=>{
-    const li = e.target.closest('#missing-body li.missing-item');
+    document.addEventListener('mousemove', (e)=>{
+    const span = e.target.closest('#missing-body li.missing-item .missing-name');
+    if (!span) { hideCardPreview(); return; }
+    const li = span.closest('li.missing-item');
     if (!li || !li.dataset.cd) { hideCardPreview(); return; }
-    // 追従したい場合はカーソル付近に
     showCardPreviewAt(e.clientX, e.clientY, li.dataset.cd);
   });
   document.addEventListener('mouseout', (e)=>{
@@ -1047,10 +1116,12 @@ if (!window.__wiredMissingPreview){
   });
 
   // タッチ：長押し(500ms)で表示、離したら隠す
-  let pressTimer = 0;
-  let pressTarget = null;
-  document.addEventListener('touchstart', (e)=>{
-    const li = e.target.closest && e.target.closest('#missing-body li.missing-item');
+    let pressTimer = 0;
+    let pressTarget = null;
+    document.addEventListener('touchstart', (e)=>{
+    const span = e.target.closest && e.target.closest('#missing-body li.missing-item .missing-name');
+    if (!span) return;
+    const li = span.closest('li.missing-item');
     if (!li || !li.dataset.cd) return;
     pressTarget = li;
     const touch = e.touches[0];
@@ -1135,19 +1206,15 @@ document.addEventListener('click', (e)=>{
 // ===== 不足リスト：カード画像プレビュー =====
 function ensurePreviewEl(){
   let el = document.getElementById('card-preview-pop');
+  // ★ モーダルが開いているときはモーダルにぶら下げる
   const dlg = document.getElementById('missing-dialog');
   if (dlg && dlg.open && el.parentElement !== dlg) {
     dlg.appendChild(el);
-    // モーダル内では dialog 相対に置く
-    el.style.position = 'absolute';
-  } else if ((!dlg || !dlg.open) && el.parentElement !== document.body) {
-    // 念のため：モーダルが閉じているときは body 直下へ戻す
-    document.body.appendChild(el);
-    // body 直下では画面基準
-    el.style.position = 'fixed';
   }
+  // 位置は viewport 基準にしたいので fixed
+  el.style.position = 'fixed';
   return el;
-}
+  }
 
 function showCardPreviewAt(x, y, cd){
   const box = ensurePreviewEl();
@@ -1158,26 +1225,27 @@ function showCardPreviewAt(x, y, cd){
   const dlg = document.getElementById('missing-dialog');
   const w  = img.clientWidth || 180;
   const h  = img.clientHeight || 256;
-  const pad = 12;
+  const pad = 40;
   let left, top;
 
   if (dlg && dlg.open && box.parentElement === dlg) {
     // dialog 内：dialog の矩形を基準に absolute 配置
     const dr = dlg.getBoundingClientRect();
     const vw = dr.width, vh = dr.height;
-    // 受け取った x,y は viewport 座標なので dialog 相対に変換
-    left = (x - dr.left) + pad;
-    top  = (y - dr.top)  + pad;
-    // はみ出しクランプ（dialog 内）
-    if (left + w + 16 > vw) left = Math.max(pad, left - w - pad*2);
-    if (top  + h + 16 > vh) top  = Math.max(pad, vh - h - 16);
-  } else {
-    // body 直下：画面基準（fixed）
-    const vw = window.innerWidth, vh = window.innerHeight;
-    left = x + pad; top = y + pad;
-    if (left + w + 16 > vw) left = Math.max(pad, x - w - pad);
-    if (top  + h + 16 > vh) top  = Math.max(pad, vh - h - 16);
-  }
+   // 横方向
+    left = window.innerWidth - w - pad -20;
+    if (left + w + 16 > vw) left = (x - dr.left) + pad + 100;
+
+    // 縦方向：下に余裕があればカーソルの下、無ければ上
+ if (y + h +280  < window.innerHeight) {
+   top = y - pad*3;
+ } else {
+   top = y - h - pad*2;
+   if (top < pad) top = pad;
+ }
+}
+
+
 
   box.style.left = `${Math.round(left)}px`;
   box.style.top  = `${Math.round(top)}px`;

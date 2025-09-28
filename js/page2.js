@@ -8,7 +8,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadCards(); // カードデータ読み込み
   updateSavedDeckList();  // その後に保存デッキ一覧を表示
   setTimeout(()=> window.__bindLongPressForCards('deckmaker'), 0);
-  tryRestoreAutosaveOnStartup();
 });
 
 // 日付フォーマット
@@ -75,57 +74,69 @@ function hasFreshParamOff() {
   return sp.get('fresh') === '1';
 }
 
-function tryRestoreAutosaveOnStartup() {
-  if (hasFreshParamOff()) return false;     // 明示的に復元しない
-  if (!isDeckEmpty()) return false;         // 既に何か入ってるなら触らない
+/*デッキ復元確認トースト*/
+function loadAutosave(data){
+  if (!data || !data.cardCounts) return;
 
-  let data = null;
-  try { data = JSON.parse(localStorage.getItem(AUTOSAVE_KEY) || 'null'); } catch {}
-  if (!data || !data.cardCounts) return false;
-
-  // 復元
+  // デッキを入れ替え
   Object.keys(deck).forEach(k => delete deck[k]);
   Object.entries(data.cardCounts).forEach(([cd, n]) => { deck[cd] = n|0; });
+
+  // 代表カード
   representativeCd = (data.m && deck[data.m]) ? data.m : null;
   writeDeckNameInput(data.name || '');
 
-  // UI更新（横スクロール保持）
+  // UI更新（スクロール保持）
   withDeckBarScrollKept(() => {
     updateDeck();
     renderDeckList();
   });
   updateDeckSummaryDisplay();
   updateExchangeSummary();
-
-  showRestoreToast();  // トースト表示（任意）
-  return true;
 }
 
-// ちょい表示（任意）
-function showRestoreToast() {
-  if (document.getElementById('restore-toast')) return;
-  const bar = document.createElement('div');
-  bar.id = 'restore-toast';
-  bar.textContent = '編集中のデッキを復元しました';
-  const undo = document.createElement('button');
-  undo.textContent = '取り消す';
-  undo.style.marginLeft = '8px';
-  undo.onclick = () => {
-    // オートセーブを消してリセット（新規）
-    clearAutosave();
-    Object.keys(deck).forEach(k => delete deck[k]);
-    representativeCd = null;
-    withDeckBarScrollKept(() => {
-      updateDeck(); renderDeckList();
-    });
-    updateDeckSummaryDisplay(); updateExchangeSummary();
-    bar.remove();
-  };
-  bar.appendChild(undo);
-  document.body.appendChild(bar);
-  setTimeout(() => bar.remove(), 4000);
-}
 
+  function showToast(message, opts={}){
+  const toast = document.createElement('div');
+  toast.id = 'restore-toast';
+
+  const msgSpan = document.createElement('span');
+  msgSpan.className = 'msg';
+  msgSpan.textContent = message;
+  toast.appendChild(msgSpan);
+
+  if (opts.action) {
+    const btn = document.createElement('button');
+    btn.textContent = opts.action.label;
+    btn.onclick = () => { opts.action.onClick?.(); toast.remove(); };
+    toast.appendChild(btn);
+  }
+  if (opts.secondary) {
+    const btn2 = document.createElement('button');
+    btn2.textContent = opts.secondary.label;
+    btn2.onclick = () => { opts.secondary.onClick?.(); toast.remove(); };
+    toast.appendChild(btn2);
+  }
+
+  document.body.appendChild(toast);
+  setTimeout(()=>toast.remove(), 15000);
+  }
+
+ // オートセーブ復元確認
+  if (!window.location.search.includes('fresh=1')) {
+    const autosave = localStorage.getItem('deck_autosave_v1');
+    if (autosave && isDeckEmpty()) {
+      try {
+        const data = JSON.parse(autosave);
+        if (data && Object.keys(data.cardCounts || {}).length) {
+          showToast("以前のデッキを復元しますか？", {
+            action: { label: "復元する", onClick: () => loadAutosave(data) },
+            secondary: { label: "削除する", onClick: () => clearAutosave() }
+          });
+        }
+      } catch(e){}
+    }
+  }
 //#endregion
 /*===================
     2.一覧カード生成
@@ -781,10 +792,10 @@ function updateDeck() {
   if (Object.keys(deck).length === 0) {
     deckBarTop.innerHTML = `
       <div id="deck-empty-text">
-        <div style="font-size: 0.7rem;">デッキバー操作</div>
+        <div style="font-size: 0.7rem;">カード操作</div>
         <div class="deck-help" id="deckHelp">
           <div>【PC】<br>・左クリック：追加<br>・右クリック：削除</div>
-          <div>【スマホ】<br>・上フリック：追加<br>・下フリック：削除</div>
+          <div>【スマホ】<br>・タップ,上フリック：追加<br>・下フリック：削除<br>・長押し：拡大表示</div>
         </div>
       </div>
     `;
@@ -1253,19 +1264,29 @@ function updateDeckCardListBackground(){
 
   if (!hasCards){
     lastMainRace = null;
-    listEl.style.backgroundImage = 'url(../img/cardlist.webp)';
-    listEl.style.backgroundColor = '';
-    listEl.style.background = '';
+    // 一度リセットしてからデフォルト画像
+    listEl.style.removeProperty('backgroundImage');
+    listEl.style.removeProperty('backgroundColor');
+    listEl.style.backgroundImage = 'url("../img/cardlist.webp")';
     return;
+
   }
 
   const mainRace = getMainRace();
-  if (mainRace === lastMainRace) return; // 変化なしなら早期リターン
-  lastMainRace = mainRace;
-
-  const color = mainRace ? RACE_BG[mainRace] : null;
-  listEl.style.backgroundImage = 'none';
-  listEl.style.backgroundColor = color || 'transparent';
+  if (mainRace) {
+  if (mainRace !== lastMainRace) {
+    lastMainRace = mainRace;
+    const color = RACE_BG[mainRace] || 'transparent';
+    listEl.style.backgroundImage = 'none';
+    listEl.style.backgroundColor = color;
+  }
+  } else {
+  // カードはあるがメイン種族が無い場合 → デフォ背景に戻す
+  lastMainRace = null;
+  listEl.style.removeProperty('backgroundImage');
+    listEl.style.removeProperty('backgroundColor');
+    listEl.style.backgroundImage = 'url("../img/cardlist.webp")';
+  }
 }
 
 

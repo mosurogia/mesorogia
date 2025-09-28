@@ -34,12 +34,6 @@ async function fetchLatestCards() {
 
 
 
-
-
-
-
-
-
 // カテゴリ順を定義（番号は飛び飛びでもOK）
 const getCategoryOrder = (category) => {
 const order = {

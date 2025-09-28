@@ -279,6 +279,84 @@
     position: relative;
 }
 
+/* 不足カードモーダル */
+#missing-dialog {
+    position: fixed;
+    margin: 0;
+    padding: .6rem .8rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .18);
+    z-index: 4000;
+    width: min(560px, 92vw);
+}
+
+#missing-dialog::backdrop {
+    background: rgba(0, 0, 0, .2);
+}
+
+#missing-body ul {
+    margin: .2rem 0 0;
+    padding-left: 1.1em;
+    list-style: disc inside;
+    padding-left: 1em;
+}
+
+#missing-body li {
+    line-height: 1.5;
+    position: relative;
+    padding-left: 0.4em;
+}
+/*黒丸のみ色付け*/
+#missing-body li::marker {
+    color: currentColor;
+}
+/* テキストは黒 */
+#missing-body li {
+    color: #000;
+    border: none;
+}
+
+
+/* 各種族色で上書き */
+#missing-body li.race-ドラゴン::marker   { color: var(--race-dragon); }
+#missing-body li.race-アンドロイド::marker { color: var(--race-android); }
+#missing-body li.race-エレメンタル::marker { color: var(--race-elemental); }
+#missing-body li.race-ルミナス::marker   { color: var(--race-luminous); }
+#missing-body li.race-シェイド::marker   { color: var(--race-shade); }
+#missing-body li.race-イノセント::marker { color: var(--race-innocent); }
+#missing-body li.race-旧神::marker       { color: var(--race-accent); }
+
+/* 不足リスト用：カード画像プレビュー */
+#card-preview-pop {
+    position: fixed;
+    z-index: 5000;
+    display: none;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .18);
+    border-radius: 8px;
+    padding: 6px;
+    pointer-events: none;
+    /* マウス操作を邪魔しない */
+}
+
+#card-preview-pop img {
+    width: 180px;
+    /* お好みで */
+    height: auto;
+    display: block;
+    border-radius: 4px;
+}
+
+@media (max-width: 480px) {
+    #card-preview-pop img {
+        width: 140px;
+    }
+}
+
+
 /*=======================
         6.カード一覧
 =======================*/

@@ -328,6 +328,10 @@
 #missing-body li.race-イノセント::marker { color: var(--race-innocent); }
 #missing-body li.race-旧神::marker       { color: var(--race-accent); }
 
+/*カードプレビュー判定サイズ調整*/
+#missing-body .missing-name {
+    display: inline-block;
+}
 /* 不足リスト用：カード画像プレビュー */
 #card-preview-pop {
     position: fixed;

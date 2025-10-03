@@ -100,7 +100,7 @@ select {
 
 .modal-content {
     background: #fff;
-    padding: 20px;
+    padding: 0px 15px 10px 15px;
     border-radius: 10px;
     max-width: 950px;
     width: 90%;
@@ -111,8 +111,12 @@ select {
     margin: auto;
 }
 
+.filter-title{
+    font-size: clamp(5px, 3.5vw, 18px);
+}
 .filter-btn {
     margin: 4px 0px;
+    font-size: clamp(5px, 3vw, 18px);
 }
 
 .filter-btn.selected {
@@ -123,7 +127,8 @@ select {
 .filter-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.8vw;
+        font-size: clamp(17px, 3.5vw, 20px);
 }
 /*コストパワー横並び*/
 .filter-range-wrapper {
@@ -133,14 +138,21 @@ select {
 }
 /*コストパワーボタン幅調整*/
 .filter-group select{
-    width: 4rem;
-    font-size: 0.8rem;
+    width: 5rem;
+    height: 1.3rem;
+
+    font-size: clamp(5px, 3vw, 18px);
 }
 /*詳細フィルター*/
 #extra-conditions {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
+}
+
+/*絞り込みリセットボタン*/
+.modal-buttun{
+    font-size:18px;
 }
 /*=====カード一覧======*/
 .grid {

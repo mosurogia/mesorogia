@@ -410,7 +410,10 @@
 #missing-dialog::backdrop {
     background: rgba(0, 0, 0, .2);
 }
-
+/*不足カードモーダル注意文*/
+.missing-info{
+    margin: 0;
+}
 #missing-body ul {
     margin: .2rem 0 0;
     padding-left: 1.1em;

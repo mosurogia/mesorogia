@@ -154,7 +154,7 @@
         position: absolute;
         right: 20px;
         top: 0;
-        width: 110px;
+        width: 120px;
         height: 100%;
         background: #fff;
         border-left: 1px solid #ccc;
@@ -209,10 +209,15 @@
     flex: 1;/* 均等に広がる */
     text-align: center;
 }
+@media (max-width: 768px) {
+    .analyze-button {
+            margin-top: 0rem;
+            font-size: 8px;
+        }
+}
 @media (max-width: 410px) {
     .analyze-button {
-        margin-top: 0rem;
-        font-size: 0.25rem;
+        font-size: 6px;
     }
 }
 .analyze-button:hover {
@@ -308,7 +313,6 @@
 /*編集セクション*/
 .deck-section {
     background: #fff;
-    padding: 0.5rem 0px;
     border: 1px solid #ccc;
     border-radius: 6px;
     max-height: 25rem;
@@ -394,6 +398,49 @@
     font-size: 0.65rem;
 }
 
+/* サブタブバー */
+.subtab-bar {
+    --subtab-active: #6a5acd;
+    background: #fff;
+    color: #222;
+    border-bottom: 1px solid #eee;
+    position: relative;
+    gap: 0;
+}
+
+.subtab-bar .tab {
+    padding: 8px 12px;
+}
+
+.subtab-bar .tab span {
+    background: none;
+    text-shadow: none;
+    font-size: clamp(12px, 2.6vw, 15px);
+    padding: 2px 4px;
+    position: relative;
+}
+
+.subtab-bar .tab.active span::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -8px;
+    height: 3px;
+    background: var(--subtab-active);
+    border-radius: 3px;
+}
+
+.subtab-bar .tab:not(.active):hover span {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.subtab-bar .tab.active {
+    border-bottom: none;
+    background: #fff;
+}
+
+
 #deck-info label {
     font-weight: bold;
     margin-right: 0.5rem;
@@ -443,10 +490,6 @@
 
 
 
-
-
-
-
 /*デッキ名入力画面*/
 #deck-info .deck-name-row {
     margin-bottom: 0.5rem;
@@ -476,7 +519,6 @@
 }
 /*使用タイプ内訳*/
 .deck-type-breakdown {
-    display: flex;
     flex-wrap: wrap;
     gap: 0.5rem 1rem;
     /* 行と列に少し余白 */
@@ -603,3 +645,66 @@
 
 
 
+/*========デッキ投稿ゾーン=======*/
+
+/* 投稿フォーム */
+#deck-post-form input[type="text"],
+#deck-post-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.tag-chips .chip {
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 999px;
+    cursor: pointer;
+    user-select: none;
+    font-size: .8rem;
+    background: #fff;
+}
+
+.tag-chips .chip.active {
+    background: #6a5acd;
+    color: #fff;
+    border-color: #5a4cb5;
+}
+
+.post-summary {
+    font-size: .85rem;
+    display: grid;
+    gap: 2px;
+    color: #333;
+}
+
+.post-opts {
+    display: grid;
+    gap: 6px;
+    font-size: .85rem;
+}
+
+.post-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: .25rem;
+}
+
+.post-actions .primary {
+    background: #6a5acd;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+}
+
+.post-status {
+    font-size: .85rem;
+    color: #555;
+}

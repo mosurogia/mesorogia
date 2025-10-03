@@ -95,15 +95,15 @@
 
                 </div>
                 <div>
-                    <button onclick="toggleDetailFilters()">詳細フィルター開閉</button>
+                    <button style="width: 100%;" onclick="toggleDetailFilters()">さらに詳しく絞り込む</button>
                     <div id="detail-filters" style="display: none;">
 
                     </div>
 
                 </div>
-                <div style="margin-top: 1rem;">
-                    <button id="applyFilterBtn">この条件で絞り込む</button>
-                    <button onclick="resetFilters()">リセット</button>
+                <div style="margin-top: 0.8vw;">
+                    <button class="modal-buttun" id="applyFilterBtn">この条件で絞り込む</button>
+                    <button class="modal-buttun" onclick="resetFilters()">リセット</button>
                 </div>
             </div>
         </div>
@@ -188,113 +188,186 @@
 
         <!--デッキ情報ゾーン-->
         <div id="deck-info" class="deck-section">
-            <h3 style="margin: 0px 0px 0.5em; font-size: 0.8em;">デッキ情報</h3>
-            <!-- デッキ名入力欄 -->
-            <div class="deck-name-row">
-                <input type="text" id="deck-name" placeholder="デッキ名を入力" />
+            <!-- サブタブ -->
+            <div class="tab-bar subtab-bar">
+                <div class="tab active" onclick="switchTab('info-tab', this)"><span>📋 デッキ情報</span></div>
+                <div class="tab" onclick="switchTab('post-tab', this)"><span>📤 デッキ投稿</span></div>
             </div>
 
-            <!-- デッキ枚数 -->
-            <div class="deck-count">
-                デッキ枚数：<span id="deck-count">0</span> /30~40
-            </div>
+            <!--タブ内-->
+            <div class="tab-contents-group">
+                <!-- デッキ情報タブ -->
+                <div class="tab-content active" id="info-tab">
 
-            <!-- 使用種族 -->
-            <div class="deck-race">
-                使用種族：<span id="deck-races">未選択</span>
-            </div>
-
-            <!-- 旧神状況 -->
-            <div class="deck-eldergod">
-                旧神：<span id="deck-eldergod">未採用</span>
-            </div>
-            <!-- 代表カード -->
-            <div class="deck-representative">
-                代表カード：<span id="deck-representative">未選択</span>
-                <div style="font-size: 14px;">タップで変更可能</div>
-            </div>
-            <!-- 使用タイプ内訳 -->
-            <div class="deck-type-breakdown">
-                <span class="type-count">🔵 チャージャー：<span id="count-charger">0</span></span>
-                <span class="type-count">🟣 アタッカー：<span id="count-attacker">0</span></span>
-                <span class="type-count">⚪️️️️️ ブロッカー：<span id="count-blocker">0</span></span>
-            </div>
-            <!--交換ポイント-->
-            <div class="exchange-summary" style="margin-top: 0.5rem; font-size: 0.85rem;">
-                <button id="exchange-toggle-btn" onclick="toggleExchange()">🟢 ポイント</button>
-                <div id="exchange-point">🟢 必要ポイント：<span id="point-cost">0</span></div>
-                <div id="exchange-diamond" style="display:none;">💎 必要ダイヤ：<span id="diamond-cost">0</span></div>
-                <div id="exchange-sand" style="display:none;">
-                    🪨 必要砂
-                    <ul style="margin: 0.2rem 0 0 0.5rem;">
-                        <li>レジェンドの砂：<span id="sand-leg">0</span>個</li>
-                        <li>ゴールドの砂：<span id="sand-gld">0</span>個</li>
-                        <li>シルバーの砂：<span id="sand-sil">0</span>個</li>
-                        <li>ブロンズの砂：<span id="sand-bro">0</span>個</li>
-                    </ul>
-                </div>
-                <div style="font-size: 14px;">※所持率チェッカーでの所持データをもとに計算しています</div>
-            </div>
-            <!--不足カード-->
-            <div id="shortage-block">
-                <div><strong>不足カード：</strong></div>
-                <div id="shortage-list"></div>
-            </div>
-            <!-- 🔽 デッキ分析結果 -->
-            <button id="toggle-analysis-btn" onclick="toggleAnalysis()">🔍 分析を表示</button>
-            <div id="analysis-section" class="deck-analysis" style="margin-top: 0.5rem; font-size: 0.85rem;">
-                <div>
-                    <strong>レアリティ内訳：</strong>
-                    <span id="rarity-legend">🌈0</span> /
-                    <span id="rarity-gold">🟡 0</span> /
-                    <span id="rarity-silver">⚪️ 0</span> /
-                    <span id="rarity-bronze">🟤 0</span>
-                </div>
-                <!--メイン種族リスト-->
-                <div>
-                    <strong>メイン種族率：</strong>
-                    <span id="race-rate"> 0%</span>
-                </div>
-                <!--コスト、パワー分布グラフ-->
-                    <!-- コスト分布 -->
-                    <div class="chart">
-                        <strong>コスト分布：</strong>
-                        <canvas id="costChart"></canvas>
+                    <!-- デッキ名入力欄 -->
+                    <div class="deck-name-row">
+                        <input type="text" id="deck-name" placeholder="デッキ名を入力" />
                     </div>
 
-                    <!-- パワー分布 -->
-                    <div class="chart">
-                        <strong>パワー分布：</strong>
-                        <canvas id="powerChart"></canvas>
+                    <!-- デッキ枚数 -->
+                    <div class="deck-count">
+                        <label>
+                        デッキ枚数：<span id="deck-count">0</span> /30~40
+                        </label>
                     </div>
-                <div>
-                    <!--総コスト、パワー-->
-                    <strong>総コスト：</strong><span id="total-cost">0</span> <strong>総パワー：</strong><span
-                        id="total-power">🔵0 / 🟣0</span>
+
+                    <!-- 使用種族 -->
+                    <div class="deck-race">
+                        <label>
+                        使用種族：<span id="deck-races">未選択</span>
+                        </label>
+                    </div>
+
+                    <!-- 旧神状況 -->
+                    <div class="deck-eldergod">
+                        <label>
+                        旧神：<span id="deck-eldergod">未採用</span>
+                        </label>
+                    </div>
+
+                    <!-- 代表カード -->
+                    <div class="deck-representative">
+                        <label>
+                        代表カード：<span id="deck-representative">未選択</span>
+                        </label>
+                        <div style="font-size: 14px;">タップで変更可能</div>
+
+                    </div>
+
+                    <!-- 使用タイプ内訳 -->
+                    <div class="deck-type-breakdown">
+                        <label>
+                        <span class="type-count">🔵 チャージャー：<span id="count-charger">0</span></span><br>
+                        <span class="type-count">🟣 アタッカー：<span id="count-attacker">0</span></span><br>
+                        <span class="type-count">⚪️️️️️ ブロッカー：<span id="count-blocker">0</span></span>
+                        </label>
+                    </div>
+
+                    <!-- 交換ポイント -->
+                    <div class="exchange-summary" style="margin-top: 0.5rem; font-size: 0.85rem;">
+                        <button id="exchange-toggle-btn" onclick="toggleExchange()">🟢 ポイント</button>
+                        <div id="exchange-point">🟢 必要ポイント：<span id="point-cost">0</span></div>
+                        <div id="exchange-diamond" style="display:none;">💎 必要ダイヤ：<span id="diamond-cost">0</span></div>
+                        <div id="exchange-sand" style="display:none;">
+                            🪨 必要砂
+                            <ul style="margin: 0.2rem 0 0 0.5rem;">
+                                <li>レジェンドの砂：<span id="sand-leg">0</span>個</li>
+                                <li>ゴールドの砂：<span id="sand-gld">0</span>個</li>
+                                <li>シルバーの砂：<span id="sand-sil">0</span>個</li>
+                                <li>ブロンズの砂：<span id="sand-bro">0</span>個</li>
+                            </ul>
+                        </div>
+                        <div style="font-size: 14px;">※所持率チェッカーでの所持データをもとに計算しています</div>
+                    </div>
+
+                    <!-- 不足カード -->
+                    <div id="shortage-block">
+                        <div><strong>不足カード：</strong></div>
+                        <div id="shortage-list"></div>
+                    </div>
+
+                    <!-- デッキ分析 -->
+                    <button id="toggle-analysis-btn" onclick="toggleAnalysis()">🔍 分析を表示</button>
+                    <div id="analysis-section" class="deck-analysis" style="margin-top: 0.5rem; font-size: 0.85rem;">
+                        <div>
+                            <strong>レアリティ内訳：</strong>
+                            <span id="rarity-legend">🌈0</span> /
+                            <span id="rarity-gold">🟡 0</span> /
+                            <span id="rarity-silver">⚪️ 0</span> /
+                            <span id="rarity-bronze">🟤 0</span>
+                        </div>
+                        <div>
+                            <strong>メイン種族率：</strong>
+                            <span id="race-rate"> 0%</span>
+                        </div>
+                        <div class="chart">
+                            <strong>コスト分布：</strong>
+                            <canvas id="costChart"></canvas>
+                        </div>
+                        <div class="chart">
+                            <strong>パワー分布：</strong>
+                            <canvas id="powerChart"></canvas>
+                        </div>
+                        <div>
+                            <strong>総コスト：</strong><span id="total-cost">0</span>
+                            <strong>総パワー：</strong><span id="total-power">🔵0 / 🟣0</span>
+                        </div>
+                        <div>
+                            <label for="mulligan-count">マリガン枚数：</label>
+                            <select id="mulligan-count">
+                                <option value="0" selected>マリガンなし</option>
+                                <option value="1">1枚マリガン</option>
+                                <option value="2">2枚マリガン</option>
+                                <option value="3">3枚マリガン</option>
+                                <option value="4">4枚マリガン</option>
+                            </select>
+                            <strong>初手事故率：</strong>
+                            <span id="bad-hand-rate">0.0%</span>
+                            <span id="bad-hand-frequency">（ほぼ事故なし）</span>
+                            <div style="font-size: 14px;">※４コス以下のカードが初手に１枚も来ない確率</div>
+                        </div>
+                    </div>
+
+                    <!-- 出力・保存 -->
+                    <div class="deck-code-controls">
+                        <button onclick="saveDeckToLocalStorage()">💾デッキ保存</button>
+                        <button id="resetDeckButton">デッキリセット</button>
+                        <button id="exportPngBtn">画像生成</button>
+                    </div>
+                    <!-- 👆ここまで“元の #deck-info 中身” -->
                 </div>
-                <!--マリガンボタン-->
-                <div>
-                    <label for="mulligan-count">マリガン枚数：</label>
-                    <select id="mulligan-count">
-                        <option value="0" selected>マリガンなし</option>
-                        <option value="1">1枚マリガン</option>
-                        <option value="2">2枚マリガン</option>
-                        <option value="3">3枚マリガン</option>
-                        <option value="4" >4枚マリガン</option>
-                    </select>
-                    <strong>初手事故率：</strong>
-                    <span id="bad-hand-rate">0.0%</span>
-                    <span id="bad-hand-frequency">（ほぼ事故なし）</span>
-                    <div style="font-size: 14px;">※４コス以下のカードが初手に１枚も来ない確率</div>
+
+                <!-- デッキ投稿タブ -->
+                <div class="tab-content" id="post-tab">
+                    <form id="deck-post-form" onsubmit="submitDeckPost(event)">
+                        <div style="display:grid; gap:.5rem; max-width:520px;">
+                            <label>
+                                デッキ名（必須）
+                                <input type="text" id="post-deck-name" placeholder="デッキ名" required />
+                            </label>
+
+                            <label>
+                                コメント（任意）
+                                <textarea id="post-comment" rows="4" placeholder="コンセプト、回し方、注意点など"></textarea>
+                            </label>
+
+                            <label>
+                                タグ（複数可）
+                                <div id="post-tags" class="tag-chips">
+                                    <!-- JSで候補を生成（例：アグロ/コントロール/コンボ/初心者向け/格安/旧神/高速…） -->
+                                </div>
+                            </label>
+
+                            <div class="post-summary">
+                                <div>📦 枚数：<span id="post-deck-count">0</span></div>
+                                <div>🧬 種族：<span id="post-deck-races">-</span></div>
+                                <div>⭐ レア内訳：<span id="post-rarity">-</span></div>
+                                <div>🃏 代表：<span id="post-representative">-</span></div>
+                            </div>
+
+                            <div class="post-opts">
+                                <label><input type="checkbox" id="post-include-image" checked /> 画像も保存（後で一覧に使う想定）</label>
+                                <label><input type="checkbox" id="post-agree" required /> 投稿ガイドラインに同意する</label>
+                            </div>
+
+                            <div class="post-actions">
+                                <button type="button" id="post-preview" onclick="previewDeckPost()">プレビュー</button>
+                                <button type="submit" id="post-submit" class="primary">投稿</button>
+                                <span id="post-status" class="post-status"></span>
+                            </div>
+                        </div>
+
+                        <!-- 送信用の隠しデータ（JSで埋める） -->
+                        <input type="hidden" id="post-deck-code">
+                        <input type="hidden" id="post-rep-img">
+                        <input type="hidden" id="post-races-hidden">
+                        <input type="hidden" id="post-types-hidden">
+                    </form>
                 </div>
-            </div>
-            <!-- 🔽 コード出力・入力ボタン群 -->
-            <div class="deck-code-controls">
-                <button onclick="saveDeckToLocalStorage()">💾デッキ保存</button>
-                <button id="resetDeckButton">デッキリセット</button>
-                <button id="exportPngBtn">画像生成</button>
+
             </div>
         </div>
+
     </div>
 
     <!-- 保存デッキ一覧表示用 -->

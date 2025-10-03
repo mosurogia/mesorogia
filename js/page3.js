@@ -1058,18 +1058,27 @@ function openMissingDialog(title, items){
   if (!items.length){
     body.innerHTML = '<p>不足カードはありません。</p>';
   } else {
+    const info = document.createElement('p');
+    info.className = 'missing-info';
+    // PC/モバイル判定して文言を変える
+    if (/Mobi|Android/i.test(navigator.userAgent)) {
+      info.textContent = '📱 タップで画像表示';
+    } else {
+      info.textContent = '🖱️ カーソル合わせて画像表示';
+    }
+
     const ul = document.createElement('ul');
     items.forEach(it=>{
       const li = document.createElement('li');
       li.innerHTML = `<span class="missing-name">${it.name}x${it.need}</span>`;
       li.dataset.cd  = String(it.cd || '');
       li.classList.add('missing-item');
-      // 種族クラス付与（小文字対応済み）
       const race = it.race || '';
       if (race) li.classList.add(`race-${race}`);
       ul.appendChild(li);
     });
-    body.replaceChildren(ul);
+
+    body.replaceChildren(info, ul); // ← 先に説明、次にリスト
   }
 
   const copyBtn = document.getElementById('missing-copy');

@@ -437,10 +437,10 @@ const OTHER_BOOLEAN_KEYS = [
   mainFilters.appendChild(createRangeStyleWrapper('レアリティ', rarities, 'rarity'));
   mainFilters.appendChild(createRangeSelector('コスト', 'cost', costs));
   mainFilters.appendChild(createRangeSelector('パワー', 'power', powers));
-
+  mainFilters.appendChild(createButtonGroup('パック名', sortedPacks, 'pack'));
 
   // 📌 詳細フィルター
-detailFilters.appendChild(createButtonGroup('パック名', sortedPacks, 'pack'));
+
 detailFilters.appendChild(createButtonGroup('効果名', effect_name, 'effect'));
 // 📌 フィールドフィルター（表示名は短縮、data値はフルで一致させる）
 const fieldKeys = Object.keys(FIELD_DISPLAY);

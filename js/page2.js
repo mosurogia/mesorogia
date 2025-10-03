@@ -21,7 +21,13 @@ function formatYmd(d = new Date()) {
 // 代表カードのグローバル変数
 let representativeCd = null;
 
-
+// iOS判定（画像生成時使用）
+function isiOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+function isIOSChrome() {
+  return isiOS() && /CriOS/.test(navigator.userAgent);
+}
 
 
 // === オートセーブ ===//
@@ -1267,7 +1273,7 @@ function updateDeckCardListBackground(){
     // 一度リセットしてからデフォルト画像
     listEl.style.removeProperty('backgroundImage');
     listEl.style.removeProperty('backgroundColor');
-    listEl.style.backgroundImage = 'url("../img/cardlist.webp")';
+    listEl.style.backgroundImage = 'url("./img/cardlist.webp")';
     return;
 
   }
@@ -1285,7 +1291,7 @@ function updateDeckCardListBackground(){
   lastMainRace = null;
   listEl.style.removeProperty('backgroundImage');
     listEl.style.removeProperty('backgroundColor');
-    listEl.style.backgroundImage = 'url("../img/cardlist.webp")';
+    listEl.style.backgroundImage = 'url("./img/cardlist.webp")';
   }
 }
 
@@ -1751,6 +1757,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function exportDeckListAsPng() {
+    // ★ クリック直後（await前）に、iOSなら空タブを確保
+  const preWin = isiOS() ? window.open('', '_blank') : null;
   // 最新の見た目に
   renderDeckList();
 
@@ -1762,6 +1770,7 @@ async function exportDeckListAsPng() {
     if (img.complete) return;
     return new Promise(res => { img.onload = img.onerror = res; });
   }));
+
 
   // スクロールで欠けないように一時展開
   const section = node.closest('.deck-section');
@@ -1777,10 +1786,11 @@ async function exportDeckListAsPng() {
   // ★ 背景を外してキャプチャ
 // 端末負荷に応じて 1.5〜2.0 に固定（高DPI端末でも上げ過ぎない）
   const scale = (window.devicePixelRatio >= 2.5) ? 1.75 : 1.5;
+  const scaleForCanvas = isiOS() ? 1 : Math.min(2, window.devicePixelRatio || 1);
   const listCanvas = await html2canvas(node, {
     useCORS: true,
-    backgroundColor: null,   // ← 透明で撮る
-    scale,
+    backgroundColor: null,
+    scale: scaleForCanvas,
     logging: false,
     removeContainer: true,
     onclone: (doc) => {
@@ -1816,7 +1826,6 @@ async function exportDeckListAsPng() {
   node.style.overflow = restore.nodeOverflow || '';
   node.style.height   = restore.nodeH || '';
 
-// （中略）listCanvas 生成～復元の後
 
 // ─────────────────────────────────
 // ここから合成：上に情報ヘッダーを載せる
@@ -1895,15 +1904,32 @@ drawReadableText(ctx, line2, PAD + 16*scale, baseY + BODY + 6*scale, BODY, scale
 // リスト画像を貼る
 ctx.drawImage(listCanvas, PAD, HEADER_H);
 
-// ダウンロード（未設定時は 'deck.png'）
-out.toBlob(blob => {
-  const a = document.createElement('a');
-  const name = (deckName || 'deck') + '.png';
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}, 'image/png');
+
+  const fileName = (deckNameRaw.trim() || 'deck') + '.png';
+
+  if (isiOS() && preWin) {
+    // ★ iPad：Data URL を新規タブに表示（長押し→“写真に追加”）
+    const dataUrl = out.toDataURL('image/png');
+    preWin.document.title = fileName;
+    preWin.document.body.style.margin = '0';
+    preWin.document.body.innerHTML =
+      `<img src="${dataUrl}" alt="deck" style="width:100%;height:auto;display:block">`;
+    return; // ここで終了
+  }
+
+
+  // それ以外（PC/Android等）は Blob + download（Safari安定化のため DOM 追加してから click）
+  out.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, 'image/png');
 }
 
 
@@ -2208,3 +2234,202 @@ document.addEventListener('click', (e) => {
 
 
 //#endregion
+
+
+
+/*=================================
+      8.デッキ投稿
+================================*/
+
+/** =========================
+ *  デッキ投稿UI 初期化
+ *  ========================= */
+const POST_TAG_CANDIDATES = ["アグロ","ミッドレンジ","コントロール","コンボ","テンポ",
+                             "初心者向け","格安","旧神","高速","重め","ドラゴン","アンドロイド",
+                             "エレメンタル","ルミナス","シェイド"];
+
+
+// ===== デッキ投稿で使う簡易ヘルパー =====
+function getDeckCount() {
+  try { return Object.values(deck || {}).reduce((a, b) => a + (b|0), 0); }
+  catch { return 0; }
+}
+
+function getDeckAsArray() {
+  // [{cd, count}] 形式
+  return Object.entries(deck || {}).map(([cd, n]) => ({ cd, count: n|0 }));
+}
+
+function getRepresentativeImageUrl() {
+  return representativeCd ? `img/${String(representativeCd).slice(0,5)}.webp` : '';
+}
+
+function exportDeckCode() {
+  // まずは簡易：デッキmapをBase64化（後で独自コードに差し替え可）
+  try { return btoa(unescape(encodeURIComponent(JSON.stringify(deck || {})))); }
+  catch { return ''; }
+}
+
+
+function initDeckPostTab() {
+  // タグ生成
+  const wrap = document.getElementById('post-tags');
+  if (wrap && !wrap.dataset.initialized) {
+    POST_TAG_CANDIDATES.forEach(tag=>{
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip';
+      b.textContent = tag;
+      b.onclick = ()=> b.classList.toggle('active');
+      wrap.appendChild(b);
+    });
+    wrap.dataset.initialized = '1';
+  }
+  // デッキ名を反映
+  const srcName = document.getElementById('deck-name')?.value || "";
+  const nameInput = document.getElementById('post-deck-name');
+  if (nameInput && !nameInput.value) nameInput.value = srcName;
+
+  // サマリー同期
+  updateDeckAnalysis();
+  refreshPostSummary();
+}
+
+function refreshPostSummary() {
+  const count = typeof getDeckCount === 'function'
+  ? getDeckCount()
+  : Object.values(deck || {}).reduce((a, b) => a + (b|0), 0);
+
+  const races = typeof getMainRacesInDeck==='function' ? getMainRacesInDeck() : [];
+  const rep = document.getElementById('deck-representative')?.textContent || '未選択';
+  const rLegend = document.getElementById('rarity-legend')?.textContent ?? '0';
+  const rGold   = document.getElementById('rarity-gold')?.textContent   ?? '0';
+  const rSilver = document.getElementById('rarity-silver')?.textContent ?? '0';
+  const rBronze = document.getElementById('rarity-bronze')?.textContent ?? '0';
+
+  document.getElementById('post-deck-count')?.replaceChildren(document.createTextNode(count));
+  document.getElementById('post-deck-races')?.replaceChildren(document.createTextNode(races.join(' / ') || '-'));
+  document.getElementById('post-representative')?.replaceChildren(document.createTextNode(rep));
+  document.getElementById('post-rarity')?.replaceChildren(document.createTextNode(`${rLegend} / ${rGold} / ${rSilver} / ${rBronze}`));
+
+  // 隠し値（送信用）
+  document.getElementById('post-deck-code')?.setAttribute('value', typeof exportDeckCode==='function' ? exportDeckCode() : '');
+  document.getElementById('post-races-hidden')?.setAttribute('value', races.join(','));
+  // 代表カードの画像URLなど（あなたの実装に合わせて取得）
+  const repImg = typeof getRepresentativeImageUrl==='function' ? getRepresentativeImageUrl() : '';
+  document.getElementById('post-rep-img')?.setAttribute('value', repImg);
+}
+
+/** タブ遷移時に同期（既に afterTabSwitched があるなら post-tab を足す） */
+if (typeof window.afterTabSwitched === 'function') {
+  const _orig = window.afterTabSwitched;
+  window.afterTabSwitched = function(targetId){
+    _orig(targetId);
+    if (targetId === 'post-tab') initDeckPostTab();
+  };
+} else {
+  // 念のため
+  window.afterTabSwitched = function(targetId){
+    if (targetId === 'post-tab') initDeckPostTab();
+  };
+}
+
+/** プレビュー（最低限：payloadをconsoleに & 画面に軽く表示） */
+function previewDeckPost(){
+  refreshPostSummary();
+  const payload = buildDeckPostPayload();
+  console.log('DeckPost Preview:', payload);
+  const el = document.getElementById('post-status');
+  if (el) { el.textContent = 'プレビューOK（コンソールに詳細）'; setTimeout(()=>el.textContent='',2000); }
+}
+
+/** 送信 */
+async function submitDeckPost(e) {
+  e.preventDefault();
+  refreshPostSummary();
+
+  // 簡易バリデーション
+  const errors = validateDeckBeforePost();
+  const status = document.getElementById('post-status');
+  if (errors.length) {
+    status.textContent = '⚠ ' + errors.join(' / ');
+    return;
+  }
+
+  const btn = document.getElementById('post-submit');
+  btn.disabled = true;
+  status.textContent = '送信中…';
+
+  const payload = buildDeckPostPayload();
+
+  try {
+    // 送信（プリフライト回避版）
+    const res = await fetch(GAS_POST_ENDPOINT, {
+        method: 'POST',
+        body: new URLSearchParams({
+          payload: JSON.stringify(payload) // ← 文字列1個
+        })
+      });
+      const text = await res.text();
+      let json = {};
+      try { json = JSON.parse(text); } catch {}
+      if (json.ok) {
+        status.textContent = '✅ 投稿しました';
+      } else {
+        status.textContent = '❌ エラー：' + (json.error || '不明');
+      }
+  } catch (err) {
+    console.error('POST failed:', err);
+    status.textContent = '❌ 通信失敗：' + (err?.message || err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function validateDeckBeforePost(){
+  const msgs = [];
+  // 30〜40枚
+  const n = typeof getDeckCount==='function' ? getDeckCount() : 0;
+  if (n < 30 || n > 40) msgs.push(`枚数が範囲外(${n})`);
+  // 同名3枚/旧神1種1枚/種族制限は、あなたの既存ロジックがあればそれを利用して判定メッセージをpush
+  if (typeof validateDeckConstraints==='function') {
+    const more = validateDeckConstraints(); // 例：配列で返す
+    if (Array.isArray(more)) msgs.push(...more);
+  }
+  // タイトル
+  const title = document.getElementById('post-deck-name')?.value.trim();
+  if (!title) msgs.push('デッキ名が未入力');
+  // 同意
+  if (!document.getElementById('post-agree')?.checked) msgs.push('ガイドライン未同意');
+  return msgs;
+}
+
+function buildDeckPostPayload(){
+  const title = document.getElementById('post-deck-name')?.value.trim() || '';
+  const comment = document.getElementById('post-comment')?.value.trim() || '';
+  const tags = Array.from(document.querySelectorAll('#post-tags .chip.active')).map(b=>b.textContent);
+  const code = document.getElementById('post-deck-code')?.value || '';
+  const races = document.getElementById('post-races-hidden')?.value || '';
+  const repImg = document.getElementById('post-rep-img')?.value || '';
+  const count = typeof getDeckCount==='function' ? getDeckCount() : 0;
+
+  // 必要に応じてカード配列・代表カードcdなども付与
+  const cards = typeof getDeckAsArray==='function' ? getDeckAsArray() : []; // [{cd, count}, ...] を想定
+
+  return {
+    title,
+    comment,
+    tags,
+    code,
+    count,
+    races,
+    repImg,
+    cards,
+    includeImage: !!document.getElementById('post-include-image')?.checked,
+    ua: navigator.userAgent,
+    ts: Date.now()
+  };
+}
+
+const GAS_POST_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxDi1ymeMAT-RKA9DszfI1jOAfgh00zU60TPUltLsiLkXvIlRyFkvDmKUTvN-AYCDjp/exec';
+

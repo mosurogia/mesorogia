@@ -6,6 +6,7 @@
 //初期呼び出し
 window.addEventListener('DOMContentLoaded', async () => {
   await loadCards(); // カードデータ読み込み
+
   updateSavedDeckList();  // その後に保存デッキ一覧を表示
   setTimeout(()=> window.__bindLongPressForCards('deckmaker'), 0);
 });
@@ -39,11 +40,11 @@ function isDeckEmpty() {
 }
 
 function readDeckNameInput() {
-  return document.getElementById('deck-name')?.value?.trim() || '';
+  return document.getElementById('info-deck-name')?.value?.trim() || '';
 }
 
 function writeDeckNameInput(name) {
-  const el = document.getElementById('deck-name');
+  const el = document.getElementById('info-deck-name');
   if (el) el.value = name || '';
 }
 
@@ -91,6 +92,9 @@ function loadAutosave(data){
   // 代表カード
   representativeCd = (data.m && deck[data.m]) ? data.m : null;
   writeDeckNameInput(data.name || '');
+
+    // デッキ名（２つのタブ同期）
+  if (typeof window.syncDeckNameFields === 'function') window.syncDeckNameFields();
 
   // UI更新（スクロール保持）
   withDeckBarScrollKept(() => {
@@ -275,6 +279,7 @@ function rebuildCardMap() {
     cardMap[cd] = {
       name: cardEl.querySelector('img')?.alt || "",
       race: cardEl.dataset.race || "",
+      category: cardEl.dataset.category || "",
       type: cardEl.dataset.type || "",
       cost: parseInt(cardEl.dataset.cost) || 0,
       power: parseInt(cardEl.dataset.power) || 0,
@@ -967,6 +972,10 @@ function updateDeck() {
   updateOwnedPanelsVisibility(); //表示/非表示も更新
   updateDeckCardListBackground();//リスト背景変更
   scheduleAutosave();  //オートセーブ
+  updateAutoTags();//自動タグ設定
+  // ▼ デッキ由来カテゴリでタグ候補を更新（投稿タブがある時だけ）
+if (document.getElementById('select-tags')) renderPostSelectTags();
+
 }
 
 // === デッキバーの横スクロールを保持したまま処理を実行 ===
@@ -1341,6 +1350,8 @@ function updateDeckSummary(deckCards) {
   document.getElementById("count-charger").textContent = countByType("チャージャー");
   document.getElementById("count-attacker").textContent = countByType("アタッカー");
   document.getElementById("count-blocker").textContent = countByType("ブロッカー");
+
+  updateAutoTags();//自動タグ
 }
 
 
@@ -1363,29 +1374,21 @@ function updateDeckAnalysis() {
     }
   });
 
-  // レアリティ集計
-  const rarityCounts = { 'レジェンド': 0, 'ゴールド': 0, 'シルバー': 0, 'ブロンズ': 0 };
-  deckCards.forEach(c => {
-    if (rarityCounts.hasOwnProperty(c.rarity)) rarityCounts[c.rarity]++;
-  });
-  document.getElementById('rarity-legend').textContent = `🌈${rarityCounts['レジェンド']}`;
-  document.getElementById('rarity-gold').textContent   = `🟡 ${rarityCounts['ゴールド']}`;
-  document.getElementById('rarity-silver').textContent = `⚪️ ${rarityCounts['シルバー']}`;
-  document.getElementById('rarity-bronze').textContent = `🟤 ${rarityCounts['ブロンズ']}`;
-
-//メイン種族率計算
-let mainRaceCount = 0;
+// レアリティ集計
+const rarityCounts = { 'レジェンド': 0, 'ゴールド': 0, 'シルバー': 0, 'ブロンズ': 0 };
 deckCards.forEach(c => {
-  if (MAIN_RACES.includes(c.race)) {
-    mainRaceCount++;
-  }
+  if (rarityCounts.hasOwnProperty(c.rarity)) rarityCounts[c.rarity]++;
 });
-let mainRaceRate = 0;
-if (deckCards.length > 0) {
-  mainRaceRate = (mainRaceCount / deckCards.length) * 100;
-}
-document.getElementById('race-rate').textContent = `${mainRaceRate.toFixed(1)}%`;
 
+// 1行表示（🌈 / 🟡 / ⚪️ / 🟤）
+const raritySummary = document.getElementById("rarity-summary");
+if (raritySummary) {
+  const legend = rarityCounts['レジェンド'];
+  const gold   = rarityCounts['ゴールド'];
+  const silver = rarityCounts['シルバー'];
+  const bronze = rarityCounts['ブロンズ'];
+  raritySummary.textContent = `🌈${legend}枚/ 🟡${gold}枚/ ⚪️${silver}枚 / 🟤${bronze}枚`;
+}
 
   // コスト・パワーの棒グラフを生成
   // ===== コスト／パワー分布グラフ =====
@@ -1525,6 +1528,7 @@ if (powerCtx) {
   powerChart = new Chart(powerCtx,{ type: 'bar', data: { labels: powerLabels, datasets: powerDatasets }, options: commonOptions });
 }
 
+  updateAutoTags();//自動タグ設定
 }
 
 // ===== 初手事故率計算用 =====
@@ -1830,7 +1834,7 @@ async function exportDeckListAsPng() {
 // ─────────────────────────────────
 // ここから合成：上に情報ヘッダーを載せる
 // ─────────────────────────────────
-const deckNameRaw = document.getElementById('deck-name')?.value ?? '';
+const deckNameRaw = document.getElementById('info-deck-name')?.value ?? '';
 const deckName    = deckNameRaw.trim();         // ← 既定名は入れない
 const hasTitle    = deckName.length > 0;        // ← タイトル有無
 
@@ -1971,6 +1975,32 @@ function fitCover(sw, sh, dw, dh){
 
 
 
+/*デッキ名同期
+*デッキ情報のデッキ名とデッキ投稿のデッキ名が同じになるようにする
+*/
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const infoNameEl = $('info-deck-name');
+  const postNameEl = $('post-deck-name');
+
+  function setBoth(val) {
+    if (infoNameEl && infoNameEl.value !== val) infoNameEl.value = val;
+    if (postNameEl && postNameEl.value !== val) postNameEl.value = val;
+  }
+
+  // どちらかが入力されたら相互に反映
+  infoNameEl?.addEventListener('input', () => setBoth(infoNameEl.value));
+  postNameEl?.addEventListener('input', () => setBoth(postNameEl.value));
+
+  // タブ切替や外部からも呼べる同期関数を公開
+  window.syncDeckNameFields = function () {
+    const cur = (postNameEl?.value?.trim()) || (infoNameEl?.value?.trim()) || '';
+    setBoth(cur);
+  };
+
+  // 初期同期（片方が空で片方に値があるケースの吸収）
+  window.addEventListener('DOMContentLoaded', () => window.syncDeckNameFields?.());
+})();
 
 //#endregion
 
@@ -2120,7 +2150,7 @@ function saveDeckToLocalStorage() {
 
   const g = raceCodeMap[getMainRace()] || 1;
 
-  let deckNameInput = document.getElementById("deck-name")?.value.trim();
+  let deckNameInput = document.getElementById("info-deck-name")?.value.trim();
 
   // 未入力なら「デッキ〇」形式で採番
   if (!deckNameInput) {
@@ -2185,10 +2215,14 @@ function loadDeckFromIndex(index) {
   representativeCd = data.m && deck[data.m] ? data.m : null;
 
   // 🔽 デッキ名入力欄に反映
-  const nameInput = document.getElementById("deck-name");
+  const nameInput = document.getElementById("info-deck-name");
   if (nameInput) {
     nameInput.value = data.name || ""; // ない場合は空に
   }
+
+    // デッキ名（２つのタブ同期）
+  if (typeof window.syncDeckNameFields === 'function') window.syncDeckNameFields();
+
   withDeckBarScrollKept(() => {
   updateDeck(); // デッキ欄更新
   renderDeckList();//デッキリスト画像更新
@@ -2244,9 +2278,135 @@ document.addEventListener('click', (e) => {
 /** =========================
  *  デッキ投稿UI 初期化
  *  ========================= */
-const POST_TAG_CANDIDATES = ["アグロ","ミッドレンジ","コントロール","コンボ","テンポ",
-                             "初心者向け","格安","旧神","高速","重め","ドラゴン","アンドロイド",
-                             "エレメンタル","ルミナス","シェイド"];
+
+/*選択タグ設定*/
+const POST_TAG_CANDIDATES = [
+  "アグロ","ミッドレンジ","コントロール","コンボ","バーン","初心者向け","格安","趣味"
+];
+
+// ===== カード読み込み完了後のフック =====
+// common-page12.js の loadCards() 完了時に呼ばれる
+window.onCardsLoaded = function() {
+  if (typeof rebuildCardMap === 'function') rebuildCardMap();
+  if (document.getElementById('select-tags')) renderPostSelectTags();
+};
+
+
+/* ✅ 保存キー（選択状態を保持） */
+const SELECT_TAGS_KEY = 'dm_post_select_tags_v1';
+
+
+/* 既存の選択状態 読み書き */
+function readSelectedTags() {
+  try { return new Set(JSON.parse(localStorage.getItem(SELECT_TAGS_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+function writeSelectedTags(setOrArray) {
+  const arr = Array.isArray(setOrArray) ? setOrArray : Array.from(setOrArray);
+  localStorage.setItem(SELECT_TAGS_KEY, JSON.stringify(arr));
+}
+
+/* cards データの取得（既にグローバルがあればそれを使う / なければ fetch） */
+async function getAllCardsForTags() {
+  // グローバルに置いてあるケースを広めに拾う
+  const candidates = [window.cards, window.allCards, window.cardData, window.CARDS];
+  for (const c of candidates) if (Array.isArray(c) && c.length) return c;
+
+  // それでも無ければJSONから読む
+  const res = await fetch('public/cards_latest.json', { cache: 'no-store' });
+  const data = await res.json();
+  // is_latest がある前提なら最新のみ
+  const latest = Array.isArray(data) ? data.filter(x => x?.is_latest !== false) : [];
+  return latest.length ? latest : (Array.isArray(data) ? data : []);
+}
+
+/* デッキに含まれるカテゴリ候補を抽出*/
+function getDeckCategoryTags() {
+  const bad = new Set(['ノーカテゴリ', 'なし', '-', '', null, undefined]);
+  const set = new Set();
+  Object.entries(deck || {}).forEach(([cd, n]) => {
+    if (!n) return;
+    const cat = cardMap[cd]?.category;
+    if (!bad.has(cat)) set.add(String(cat).trim());
+  });
+  return Array.from(set); // 例：["アドミラルシップ","テックノイズ", ...]
+}
+
+/* 重複除去
+  基本タグ + カテゴリタグ 並べ替え（基本→カテゴリの順）
+  */
+function buildMergedTagList(baseTags, categoryTags) {
+  const merged = [];
+  const seen = new Set();
+  baseTags.forEach(t => { if (!seen.has(t)) { merged.push(t); seen.add(t); } });
+  categoryTags.sort((a,b)=>a.localeCompare(b,'ja')).forEach(t => {
+    if (!seen.has(t)) { merged.push(t); seen.add(t); }
+  });
+  return merged;
+}
+
+
+/* 実描画 */
+async function renderPostSelectTags() {
+  const wrap = document.getElementById('select-tags');
+  if (!wrap) return;
+
+  // いまの選択を保持
+  const selected = readSelectedTags();
+
+  // デッキに含まれるカテゴリのみ（デッキが空なら[]）
+  const categoryTags = getDeckCategoryTags();
+
+  // 基本タグ + カテゴリ（五十音）
+  const merged = buildMergedTagList(POST_TAG_CANDIDATES, categoryTags);
+
+  // 画面再構築
+  wrap.innerHTML = '';
+  const frag = document.createDocumentFragment();
+
+  merged.forEach(label=> {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.textContent = label;
+    chip.dataset.tag = label;
+
+    // 復元（存在しないカテゴリは消すため、後で整合性をとる）
+    if (selected.has(label)) chip.classList.add('active');
+
+    chip.addEventListener('click', () => {
+      const now = readSelectedTags();
+      if (chip.classList.toggle('active')) now.add(label);
+      else now.delete(label);
+      writeSelectedTags(now);
+    });
+
+    frag.appendChild(chip);
+  });
+
+  wrap.appendChild(frag);
+
+  // いま表示していない（=デッキから消えた）カテゴリは掃除（基本タグは残す）
+  const visible = new Set(merged);
+  const cleaned = Array.from(selected).filter(t => visible.has(t) || POST_TAG_CANDIDATES.includes(t));
+  writeSelectedTags(cleaned);
+
+  // 取得APIは据え置き
+  window.getSelectedPostTags = () => Array.from(readSelectedTags());
+}
+
+
+/* タブ表示前に先に描画してもOK（非表示でも動きます） */
+document.addEventListener('DOMContentLoaded', () => {
+  // post-tab があるページだけで動く
+  if (document.getElementById('post-tab')) {
+    renderPostSelectTags().catch(console.error);
+  }
+});
+
+
+
+
+
 
 
 // ===== デッキ投稿で使う簡易ヘルパー =====
@@ -2271,29 +2431,52 @@ function exportDeckCode() {
 }
 
 
-function initDeckPostTab() {
-  // タグ生成
-  const wrap = document.getElementById('post-tags');
-  if (wrap && !wrap.dataset.initialized) {
-    POST_TAG_CANDIDATES.forEach(tag=>{
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'chip';
-      b.textContent = tag;
-      b.onclick = ()=> b.classList.toggle('active');
-      wrap.appendChild(b);
-    });
-    wrap.dataset.initialized = '1';
-  }
+async function initDeckPostTab() {
+
   // デッキ名を反映
-  const srcName = document.getElementById('deck-name')?.value || "";
+  const srcName = document.getElementById('info-deck-name')?.value || "";
   const nameInput = document.getElementById('post-deck-name');
   if (nameInput && !nameInput.value) nameInput.value = srcName;
 
   // サマリー同期
   updateDeckAnalysis();
   refreshPostSummary();
+  renderPostSelectTags();
+
+
 }
+
+// --- 骨組みコメント（初回のみ自動挿入） ---
+function ensurePostCommentSkeleton() {
+  const ta = document.getElementById('post-comment');
+  if (!ta) return;
+  const SKELETON =
+`【デッキの狙い】
+・
+
+【キーカード／採用理由】
+・
+
+【マリガンの基準】
+・
+
+【立ち回りのコツ】
+・
+
+【弱点・苦手対面】
+・`;
+  if (!ta.value.trim()) ta.value = SKELETON;
+}
+
+// デッキ投稿タブが開かれたタイミングで一度だけ
+document.addEventListener('DOMContentLoaded', () => {
+  // post-tab が存在するページのみ
+  if (document.getElementById('post-tab')) {
+    ensurePostCommentSkeleton();
+  }
+});
+
+
 
 function refreshPostSummary() {
   const count = typeof getDeckCount === 'function'
@@ -2310,7 +2493,6 @@ function refreshPostSummary() {
   document.getElementById('post-deck-count')?.replaceChildren(document.createTextNode(count));
   document.getElementById('post-deck-races')?.replaceChildren(document.createTextNode(races.join(' / ') || '-'));
   document.getElementById('post-representative')?.replaceChildren(document.createTextNode(rep));
-  document.getElementById('post-rarity')?.replaceChildren(document.createTextNode(`${rLegend} / ${rGold} / ${rSilver} / ${rBronze}`));
 
   // 隠し値（送信用）
   document.getElementById('post-deck-code')?.setAttribute('value', typeof exportDeckCode==='function' ? exportDeckCode() : '');
@@ -2333,6 +2515,55 @@ if (typeof window.afterTabSwitched === 'function') {
     if (targetId === 'post-tab') initDeckPostTab();
   };
 }
+
+// ===== 自動タグ生成 =====
+function updateAutoTags() {
+  const autoWrap = document.getElementById('auto-tags');
+  if (!autoWrap) return;
+
+    // 🟣 デッキが空ならタグを生成しない
+  const deckCount = Object.values(deck).reduce((sum, n) => sum + n, 0);
+  if (deckCount === 0) {
+    autoWrap.innerHTML = '';
+    return;
+  }
+
+  const autoTags = [];
+
+  // === 1.メイン種族 ===
+  const mainRace = computeMainRace?.();
+  if (mainRace) autoTags.push(mainRace);
+
+  // === 2.レアリティ関連 ===
+  const rarityCounts = { 'レジェンド': 0, 'ゴールド': 0, 'シルバー': 0, 'ブロンズ': 0 };
+  Object.entries(deck).forEach(([cd, n]) => {
+    const r = cardMap[cd]?.rarity;
+    if (r && rarityCounts[r] != null) rarityCounts[r] += n;
+  });
+
+  const legendNone = rarityCounts['レジェンド'] === 0;
+  const goldNone = rarityCounts['ゴールド'] === 0;
+  if (legendNone && goldNone) {
+    autoTags.push('レジェンドゴールドなし');
+  } else if (legendNone) {
+    autoTags.push('レジェンドなし');
+  }
+
+  // === 3.旧神 ===
+  const hasOldGod = Object.keys(deck).some(cd => cardMap[cd]?.race === '旧神');
+  if (!hasOldGod) autoTags.push('旧神なし');
+
+  // === 出力 ===
+  autoWrap.innerHTML = '';
+  autoTags.forEach(tag => {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.textContent = tag;
+    chip.dataset.auto = "true";
+    autoWrap.appendChild(chip);
+  });
+}
+
 
 /** プレビュー（最低限：payloadをconsoleに & 画面に軽く表示） */
 function previewDeckPost(){
@@ -2396,8 +2627,14 @@ function validateDeckBeforePost(){
     const more = validateDeckConstraints(); // 例：配列で返す
     if (Array.isArray(more)) msgs.push(...more);
   }
-  // タイトル
-  const title = document.getElementById('post-deck-name')?.value.trim();
+  // デッキ名の取得（info/postどちらからでもOK）
+  const infoNameEl = document.getElementById('info-deck-name');
+  const postNameEl = document.getElementById('post-deck-name');
+  const title =
+    (postNameEl?.value?.trim()) ||
+    (infoNameEl?.value?.trim()) ||
+    ''; // 両方空なら空文字
+
   if (!title) msgs.push('デッキ名が未入力');
   // 同意
   if (!document.getElementById('post-agree')?.checked) msgs.push('ガイドライン未同意');

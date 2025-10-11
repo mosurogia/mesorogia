@@ -82,6 +82,10 @@ async function loadCards() {
   if (typeof window.rebuildCardMap === 'function') {
     rebuildCardMap(); //カード一覧再読み込み
   }
+  // カード読み込み完了後に deckmaker 側へ通知
+if (typeof window.onCardsLoaded === 'function') {
+  window.onCardsLoaded();
+}
 }
 
 
@@ -224,6 +228,9 @@ const DISPLAY_LABELS = {
   cardsearch: 'サーチ',
   destroy_opponent: '相手破壊',
   destroy_self: '自己破壊',
+  heal: '回復',
+  power_up: 'バフ',
+  power_down: 'デバフ',
 };
 
 // フィルター生成
@@ -326,6 +333,10 @@ const OTHER_BOOLEAN_KEYS = [
   'graveyard_recovery',
   'destroy_opponent',
   'destroy_self',
+  'heal',
+  'power_up',
+  'power_down'
+
 ];
 
 
@@ -496,6 +507,123 @@ return otherWrapper;
 
 }
 
+// ===== 0.3秒デバウンス =====
+function debounce(fn, ms = 300) {
+  let t = 0;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+// ===== 選択中フィルターのチップ表示 =====
+function renderActiveFilterChips() {
+  const grid = document.getElementById('grid');
+  if (!grid) return;
+
+  // 固定バー（無ければ作る）
+  let bar = document.getElementById('active-chips-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'active-chips-bar';
+    const sc = document.createElement('div');
+    sc.className = 'chips-scroll';
+    bar.appendChild(sc);
+    const sb = document.querySelector('.search-bar');
+    if (sb && sb.parentNode) sb.insertAdjacentElement('afterend', bar);
+    else grid.parentNode.insertBefore(bar, grid); // フォールバック
+  }
+  const scroll = bar.querySelector('.chips-scroll');
+  scroll.innerHTML = '';
+
+  const chips = [];
+
+  // ① キーワード
+  const kwEl = document.getElementById('keyword');
+  const kw = (kwEl?.value || '').trim();
+  if (kw) chips.push({ label: `検索:${kw}`, onRemove: () => { kwEl.value=''; applyFilters(); } });
+
+  // ② 範囲（コスト/パワー）
+  const cminEl = document.getElementById('cost-min');
+  const cmaxEl = document.getElementById('cost-max');
+  const pminEl = document.getElementById('power-min');
+  const pmaxEl = document.getElementById('power-max');
+
+  const cmin = cminEl?.value, cmax = cmaxEl?.value;
+  const pmin = pminEl?.value, pmax = pmaxEl?.value;
+
+  if (cminEl && cmaxEl) {
+    const isDefault = (cmin|0) === (cminEl.options[0]?.value|0) && cmax === '上限なし';
+    if (!isDefault) chips.push({
+      label: `コスト:${cmin}–${cmax === '上限なし' ? '∞' : cmax}`,
+      onRemove: () => { cminEl.selectedIndex = 0; cmaxEl.selectedIndex = cmaxEl.options.length-1; applyFilters(); }
+    });
+  }
+  if (pminEl && pmaxEl) {
+    const isDefault = (pmin|0) === (pminEl.options[0]?.value|0) && pmax === '上限なし';
+    if (!isDefault) chips.push({
+      label: `パワー:${pmin}–${pmax === '上限なし' ? '∞' : pmax}`,
+      onRemove: () => { pminEl.selectedIndex = 0; pmaxEl.selectedIndex = pmaxEl.options.length-1; applyFilters(); }
+    });
+  }
+
+  // ③ ボタン系
+  const GROUPS = [
+    ['種族','race'], ['カテゴリ','category'], ['タイプ','type'],
+    ['レア','rarity'], ['パック','pack'],
+    ['効果名','effect'], ['フィールド','field'],
+    ['BP','bp'], ['特効','ability'],
+    // boolean（その他）
+    ['その他','draw'], ['その他','cardsearch'], ['その他','graveyard_recovery'],
+    ['その他','destroy_opponent'], ['その他','destroy_self'],
+    ['その他','heal'], ['その他','power_up'], ['その他','power_down'],
+  ];
+  GROUPS.forEach(([title, key])=>{
+    document.querySelectorAll(`.filter-btn.selected[data-${key}]`).forEach(btn=>{
+      const val = btn.dataset[key];
+      const labelText = (window.DISPLAY_LABELS && window.DISPLAY_LABELS[val] != null)
+        ? window.DISPLAY_LABELS[val] : val;
+      chips.push({
+        label: `${title}:${labelText}`,
+        onRemove: () => { btn.classList.remove('selected'); applyFilters(); }
+      });
+    });
+  });
+
+  // 生成（横スクロール1行）
+  chips.forEach(({label,onRemove})=>{
+    const chip = document.createElement('span');
+    chip.className = 'chip-mini';
+    chip.textContent = label;
+
+    const x = document.createElement('button');
+    x.className = 'x'; x.type='button'; x.textContent='×';
+    x.addEventListener('click', (e)=>{ e.stopPropagation(); onRemove(); });
+    chip.appendChild(x);
+
+    scroll.appendChild(chip);
+  });
+
+  // 全解除
+  if (chips.length){
+    const clr = document.createElement('span');
+    clr.className = 'chip-mini chip-clear';
+    clr.textContent = 'すべて解除';
+    clr.addEventListener('click', ()=>{
+      // キーワード
+      if (kwEl) kwEl.value = '';
+      // ボタン
+      document.querySelectorAll('.filter-btn.selected').forEach(b=>b.classList.remove('selected'));
+      // 範囲
+      if (cminEl && cmaxEl){ cminEl.selectedIndex=0; cmaxEl.selectedIndex=cmaxEl.options.length-1; }
+      if (pminEl && pmaxEl){ pminEl.selectedIndex=0; pmaxEl.selectedIndex=pmaxEl.options.length-1; }
+      applyFilters();
+    });
+    scroll.appendChild(clr);
+  }
+
+  // 表示/非表示
+  bar.style.display = chips.length ? '' : 'none';
+}
+
+
 
 // 🔁 DOM読み込み後に実行
 document.addEventListener("DOMContentLoaded", () => {
@@ -508,6 +636,28 @@ document.addEventListener("DOMContentLoaded", () => {
       el.addEventListener("change", applyFilters);
     }
   });
+
+  // キーワード入力：0.3秒デバウンスで即時絞り込み
+  const kw = document.getElementById('keyword');
+  if (kw) kw.addEventListener('input', debounce(() => applyFilters(), 300));
+
+function updateChipsOffset() {
+  // 必要ならここに他の固定要素を足す（例: '.main-header', '.subtab-bar'）
+  const parts = [
+    //document.querySelector('.search-bar'),
+    // document.querySelector('.main-header'),
+    // document.querySelector('.subtab-bar'),
+  ].filter(Boolean);
+
+  const sum = parts.reduce((h, el) => h + el.offsetHeight, 0);
+  document.documentElement.style.setProperty('--chips-offset', `${sum}px`);
+}
+
+// 起動時とリサイズで反映
+document.addEventListener('DOMContentLoaded', updateChipsOffset);
+window.addEventListener('resize', updateChipsOffset);
+
+
 });
 
 
@@ -609,7 +759,8 @@ function applyFilters() {
   });
 
 //同時に起動コード
-  applyGrayscaleFilter();
+  if (typeof applyGrayscaleFilter === 'function') applyGrayscaleFilter();
+  renderActiveFilterChips();
 }
 
 // 🔹 選択されたフィルター値（複数選択）を取得

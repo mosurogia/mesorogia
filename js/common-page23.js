@@ -65,6 +65,11 @@ function afterTabSwitched(targetId) {
     if (typeof updateDeckSummaryDisplay === 'function') updateDeckSummaryDisplay();
     if (typeof updateExchangeSummary === 'function') updateExchangeSummary();
   }
+    // info/post サブタブ間の移動時に名前欄を同期
+  if (targetId === 'info-tab' || targetId === 'post-tab') {
+    if (typeof window.syncDeckNameFields === 'function') window.syncDeckNameFields();
+  }
+
 }
 
 

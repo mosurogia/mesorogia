@@ -154,6 +154,71 @@ select {
 .modal-buttun{
     font-size:18px;
 }
+
+/* ===== 選択中フィルタの固定バー ===== */
+#active-chips-bar {
+    position: sticky;
+    top: var(--chips-offset, 0px);
+    z-index: 90;
+    /* ← search-bar(100) より低く、modal(2002) より遥かに低い */
+    background: linear-gradient(180deg, #fff 0%, #fff 70%, rgba(255, 255, 255, .85) 100%);
+    border-bottom: 1px solid #e7e7e7;
+    backdrop-filter: saturate(120%) blur(2px);
+
+}
+
+#active-chips-bar .chips-scroll {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    /* 1行固定 */
+    scrollbar-width: thin;
+}
+
+#active-chips-bar .chip-mini {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 6px;
+    padding: 3px 8px;
+    font-size: clamp(10px, 2.6vw, 12px);
+    /* 小さめに */
+    line-height: 1;
+    border-radius: 999px;
+    border: 1px solid #ffb7c9;
+    background: #fff6f9;
+    color: #9b355e;
+    user-select: none;
+}
+
+#active-chips-bar .chip-mini .x {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    padding: 0;
+}
+
+/* クリア全解除 */
+#active-chips-bar .chip-clear {
+    border-color: #bbb;
+    color: #444;
+    background: #f7f7f7;
+}
+
+/* モバイルはさらに控えめに */
+@media (max-width: 768px) {
+    #active-chips-bar {
+        top: var(--chips-offset, 0px);
+    }
+
+    #active-chips-bar .chip-mini {
+        gap: 4px;
+    }
+}
+
+
 /*=====カード一覧======*/
 .grid {
     display: flex;

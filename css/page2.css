@@ -104,21 +104,11 @@
     flex: 1;
 }
 
-
-#deckHelp {
-    white-space: nowrap;
-    font-size: 14px;
-    display: flex;
-    color: #555;
-    padding: 4px;
-    border-radius: 6px;
-    gap: 8px;
+.deck-bar-content {
+    overflow: visible;
+    /* ← transform の飛び出しを切らない！ */
+    position: relative;
 }
-        @media (max-width: 768px) {
-            #deckHelp {
-                font-size: 10px;
-            }
-        }
 
 .deck-bar-top {
     min-height: 80px;
@@ -130,11 +120,44 @@
     align-items: flex-start;
 }
 
-.deck-bar-content {
-    overflow: visible;
-    /* ← transform の飛び出しを切らない！ */
+/*デッキバーカードレイアウト*/
+.deck-card {
+    width: 100px;
+    background: #ccc;
+    border: 2px solid #666;
     position: relative;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    border-radius: 6px;
+    z-index: 2000;
 }
+@media (max-width: 768px) {
+    .deck-card {
+        width: 70px;
+        /* スマホではこのサイズに */
+        height: auto;
+        /* 縦幅は画像サイズに任せる or 調整 */
+    }
+}
+
+
+#deckHelp {
+    white-space: nowrap;
+    font-size: 14px;
+    display: flex;
+    color: #555;
+    padding: 4px;
+    border-radius: 6px;
+    gap: 8px;
+}
+@media (max-width: 768px) {
+    #deckHelp {
+        font-size: 10px;
+    }
+}
+
+
+
 
 
 .deck-summary {
@@ -226,6 +249,8 @@
 /*============================
         4.デッキ構築-カード一覧
 =============================*/
+
+/*カード使用状況ラベル*/
 .used-label {
     position: absolute;
     top: 50%;
@@ -239,7 +264,28 @@
     z-index: 5;
 }
 
-/* 復元トースト（任意） */
+/*枚数表示*/
+.count-badge {
+    position: absolute;
+    top: 0;
+    /* 位置とサイズは JS が上書き */
+    right: 0;
+    background: rgba(0, 0, 0, .65);
+    color: #fff;
+    font-weight: 700;
+    line-height: 1;
+    /* 文字の縦詰めだけ指定 */
+    z-index: 3;
+    display: flex;
+    /* 中央寄せの土台だけ */
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    /* クリック透過（必要なら外してOK） */
+}
+
+
+/* 復元トースト*/
 #restore-toast {
     position: fixed;
     left: 50%;
@@ -307,7 +353,7 @@
 #deck-layout {
         flex-direction: row;
         height: 100%;
-        max-height: 25rem;
+        max-height: 23rem;
     }
 }
 /*編集セクション*/
@@ -381,7 +427,10 @@
     box-shadow: 0 0 10px limegreen;
 }
 
-/*========デッキ情報ゾーン=======*/
+
+
+
+/*========デッキ情報ゾーン-全体-====*/
 /*情報ゾーンレイアウト*/
 #deck-info {
     overflow-y: auto;
@@ -400,11 +449,13 @@
 
 /* サブタブバー */
 .subtab-bar {
+    position: sticky;
+    top: 0;
+    z-index: 2000;
     --subtab-active: #6a5acd;
     background: #fff;
     color: #222;
     border-bottom: 1px solid #eee;
-    position: relative;
     gap: 0;
 }
 
@@ -439,68 +490,109 @@
     border-bottom: none;
     background: #fff;
 }
+/*タブ全体レイアウト*/
+.info-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1rem;
+}
+.info-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+}
 
+.info-label {
+    width: 7rem;
+    font-weight: 600;
+    color: #333;
+    flex-shrink: 0;
+}
 
+.info-value {
+    flex: 1;
+}
+/*デッキ名入力*/
+.info-value input[type="text"],
+.info-value textarea {
+    width: 100%;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.65rem;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    resize: vertical;
+}
+
+/* ===== デッキ情報＆投稿のボタンを統一 ===== */
+.deck-code-controls,
+.post-actions{
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    align-items: center;
+    margin-top: .25rem;
+}
+.deck-code-controls button,
+.post-actions button {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.85em;
+    display: flex;
+    justify-content: flex-end;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.deck-code-controls button:hover,
+.post-actions button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+/*========デッキ情報ゾーン-デッキ情報タブ-====*/
+/*デッキ情報タブ　ラベル*/
 #deck-info label {
     font-weight: bold;
     margin-right: 0.5rem;
 }
-.deck-card {
-    width: 100px;
-    background: #ccc;
-    border: 2px solid #666;
-    position: relative;
-    flex-shrink: 0;
-    box-sizing: border-box;
-    border-radius: 6px;
+
+/*デッキ情報タブのボタン（緑系）*/
+.deck-code-controls {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    border-top: 1px solid #ddd;
+    padding: 0.6rem 0.8rem;
     z-index: 2000;
 }
-@media (max-width: 768px) {
-    .deck-card {
-        width: 70px;
-        /* スマホではこのサイズに */
-        height: auto;
-        /* 縦幅は画像サイズに任せる or 調整 */
-    }
+.deck-code-controls button {
+        background: linear-gradient(90deg, #6bc96b, #a0e4a0);
+        box-shadow: 0 2px 6px rgba(107, 201, 107, 0.25);
+}
+.deck-code-controls button:hover {
+    box-shadow: 0 3px 8px rgba(107, 201, 107, 0.35);
+}
+
+
+.status-text {
+    margin-top: 0.5rem;
+    color: #444;
+    font-size: 0.9rem;
 }
 
 .deck-card img {
     width: 100%;
     display: block;
 }
-/*枚数表示*/
-.count-badge {
-    position: absolute;
-    top: 0;/* 位置とサイズは JS が上書き */
-    right: 0;
-    background: rgba(0, 0, 0, .65);
-    color: #fff;
-    font-weight: 700;
-    line-height: 1;
-    /* 文字の縦詰めだけ指定 */
-    z-index: 3;
-    display: flex;
-    /* 中央寄せの土台だけ */
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-    /* クリック透過（必要なら外してOK） */
-}
 
 
 
-
-/*デッキ名入力画面*/
-#deck-info .deck-name-row {
-    margin-bottom: 0.5rem;
-}
-#deck-info input[type="text"] {
-    width: 100%;
-    max-width: 240px;
-    padding: 4px 8px;
-    font-size: 0.65rem;
-    box-sizing: border-box;
-}
 
 /*交換ポイント*/
 .exchange-summary{
@@ -517,43 +609,9 @@
     margin-top: 0.4rem;
     font-size: 0.85rem;
 }
-/*使用タイプ内訳*/
-.deck-type-breakdown {
-    flex-wrap: wrap;
-    gap: 0.5rem 1rem;
-    /* 行と列に少し余白 */
-    font-size: 0.9rem;
-}
-
-.deck-type-breakdown .type-count {
-    white-space: nowrap;/* タイプごとに折り返しを防ぐ */
-}
 
 
-/*=====デッキ分析結果======*/
-/*分析表示ボタン*/
-#toggle-analysis-btn {
-    font-size: 0.6em;
-}
 
-#analysis-section {
-    overflow: hidden;
-    max-height: 0;
-    opacity: 0;
-    transition: max-height 0.5s ease, opacity 0.5s ease;
-}
-
-#analysis-section.open {
-    max-height: 700px;
-    /* 必要に応じて調整 */
-    opacity: 1;
-}
-
-
-/*====コード入力出力ボタン欄=====*/
-.deck-code-controls button {
-    font-size: 0.85em;
-}
 
 
 /*=======グラフ=========*/
@@ -561,7 +619,6 @@
     max-width: 100%;
     position: relative;
     height: 200px;
-    margin-top: 20px;
     margin-bottom: 20px;
 }
 
@@ -647,33 +704,70 @@
 
 /*========デッキ投稿ゾーン=======*/
 
-/* 投稿フォーム */
-#deck-post-form input[type="text"],
-#deck-post-form textarea {
-    width: 100%;
-    box-sizing: border-box;
+/* デッキ投稿  */
+#post-comment {
+    min-height: 10rem;
+    resize: vertical;
+    line-height: 1.6;
 }
 
+/* モバイルは少しだけ低めの初期高さに */
+@media (max-width: 768px) {
+    #post-comment {
+        min-height: 10rem;
+    }
+}
+
+
+/* タグの共通デザイン */
 .tag-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    margin-bottom: 4px;
 }
 
 .tag-chips .chip {
     padding: 4px 8px;
-    border: 1px solid #ccc;
+    background: linear-gradient(90deg, #ffb86c, #ff9966);
+    color: #fff;
+    border: 1px solid #ffa876;
+    box-shadow: 0 0 6px rgba(255, 170, 110, 0.4);
+    transition: box-shadow 0.2s ease, transform 0.1s ease;
     border-radius: 999px;
     cursor: pointer;
     user-select: none;
-    font-size: .8rem;
-    background: #fff;
+    font-size: 0.8rem;
+    font-weight: 500;
 }
 
+.tag-chips .chip:hover {
+    box-shadow: 0 0 10px rgba(255, 180, 120, 0.6);
+    transform: translateY(-1px);
+}
+
+/* アクティブ状態 */
 .tag-chips .chip.active {
-    background: #6a5acd;
+    background: linear-gradient(90deg, #ff9040, #ff6a3d);
+    border-color: #ff6333;
+    box-shadow: 0 0 10px rgba(255, 100, 60, 0.8);
     color: #fff;
-    border-color: #5a4cb5;
+
+}
+
+#auto-tags{
+    margin-bottom: 1rem;
+}
+
+/* 自動タグはクリック無効＆別の見た目 */
+#auto-tags .chip {
+    background: linear-gradient(90deg, #a08fff, #8268ff);
+    color: #fff;
+    border: 1px solid #c0b6ff;
+    box-shadow: 0 0 6px rgba(160, 140, 255, 0.5);
+    cursor: default;
+    pointer-events: none;
+
 }
 
 .post-summary {
@@ -688,12 +782,10 @@
     gap: 6px;
     font-size: .85rem;
 }
-
-.post-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-top: .25rem;
+.tag-chips .chip {
+    background: #fff5f8;
+    border: 1px solid #f4a2c2;
+    color: #9b355e;
 }
 
 .post-actions .primary {
@@ -702,6 +794,16 @@
     border: none;
     padding: 6px 12px;
     border-radius: 6px;
+}
+
+/*デッキ投稿タブボタン（水色系）*/
+.post-actions button {
+    background: linear-gradient(90deg, #68a6ff, #a4d0ff);
+    box-shadow: 0 2px 6px rgba(104, 166, 255, 0.25);
+}
+
+.post-actions button:hover {
+    box-shadow: 0 3px 8px rgba(104, 166, 255, 0.35);
 }
 
 .post-status {

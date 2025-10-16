@@ -51,7 +51,7 @@
     </div>
     <nav class="header-nav">
         <a href="index.html">📖 一覧</a>
-        <a href="deckmaker.html">🃏 デッキメーカー</a>
+        <a class="active-page" href="deckmaker.html">🃏 デッキメーカー</a>
         <a href="cardcheker.html">📊 所持率チェッカー</a>
         <a href="#" style="text-decoration: line-through; pointer-events: none; color: #aaa;">📤 デッキ投稿</a>
         <!--<a href="deck-post.html">📤 デッキ投稿</a>-->
@@ -91,21 +91,21 @@
         <!--フィルターモーダル-->
         <div class="modal" id="filterModal">
             <div class="modal-content">
+                <h3 class="filter-maintitle">フィルター内容</h3>
                 <div id="main-filters">
-
+                    <!--フィルターボタン内容-->
                 </div>
-                <div>
-                    <button style="width: 100%;" onclick="toggleDetailFilters()">さらに詳しく絞り込む</button>
-                    <div id="detail-filters" style="display: none;">
+                <!-- 詳細フィルター -->
+                <h4 class="filter-subtitle">さらに詳しい条件フィルター</h4>
+                <div id="detail-filters"></div>
 
-                    </div>
-
-                </div>
-                <div style="margin-top: 0.8vw;">
+                <!--下部ボタン-->
+                <div class="modal-footer">
                     <button class="modal-buttun" id="applyFilterBtn">この条件で絞り込む</button>
                     <button class="modal-buttun" onclick="resetFilters()">リセット</button>
                 </div>
             </div>
+        </div>
         </div>
 
 <!--デッキバー-->
@@ -151,10 +151,6 @@
 <div class="deck-filter-bar">
     <button id="toggle-invalid-race" class="filter-toggle-button">✅使用不可種族を表示(モノクロ)</button>
 </div>
-
-</div>
-
-
 
 
     <!--カード一覧-->
@@ -209,7 +205,7 @@
 
                     <!-- デッキ枚数 -->
                     <div class="info-row">
-                        <label class="info-label">デッキ枚数</label>
+                        <div class="info-label">デッキ枚数</div>
                         <div class="info-value">
                             <span id="deck-count">0</span> /30~40
                         </div>
@@ -217,20 +213,20 @@
 
                     <!-- 代表カード -->
                     <div class="info-row">
-                        <label class="info-label">メインカード</label>
+                        <div class="info-label">メインカード</div>
                         <div class="info-value">
                             <span id="deck-representative">未選択</span>(カード画像を選択)</div>
                     </div>
 
                     <!-- 旧神状況 -->
                     <div class="info-row">
-                        <label class="info-label">旧神</label>
+                        <div class="info-label">旧神</div>
                         <div class="info-value" id="deck-eldergod">未採用</div>
                     </div>
 
                     <!-- 使用種族 -->
                     <div class="info-row">
-                        <label class="info-label">メイン種族</label>
+                        <div class="info-label">メイン種族</div>
                         <div class="info-value" id="deck-races">未選択</div>
                     </div>
 
@@ -261,30 +257,6 @@
                         <div class="info-value" id="total-power">🔵0 / 🟣0</div>
                     </div>
 
-                    <!-- 交換ポイント -->
-                    <div class="exchange-summary" style="margin-top: 0.5rem; font-size: 0.85rem;">
-                        <button id="exchange-toggle-btn" onclick="toggleExchange()">🟢 ポイント</button>
-                        <div id="exchange-point">🟢 必要ポイント：<span id="point-cost">0</span></div>
-                        <div id="exchange-diamond" style="display:none;">💎 必要ダイヤ：<span id="diamond-cost">0</span></div>
-                        <div id="exchange-sand" style="display:none;">
-                            🪨 必要砂
-                            <ul style="margin: 0.2rem 0 0 0.5rem;">
-                                <li>レジェンドの砂：<span id="sand-leg">0</span>個</li>
-                                <li>ゴールドの砂：<span id="sand-gld">0</span>個</li>
-                                <li>シルバーの砂：<span id="sand-sil">0</span>個</li>
-                                <li>ブロンズの砂：<span id="sand-bro">0</span>個</li>
-                            </ul>
-                        </div>
-                        <div style="font-size: 14px;">※所持率チェッカーでの所持データをもとに計算しています</div>
-                    </div>
-
-                    <!-- 不足カード -->
-                    <div id="shortage-block">
-                        <div><strong>不足カード：</strong></div>
-                        <div id="shortage-list"></div>
-                    </div>
-
-
                     <!--グラフ分布-->
                     <div class="chart">
                         <div class="info-label">コスト分布</div>
@@ -295,20 +267,65 @@
                         <canvas id="powerChart"></canvas>
                     </div>
 
-                    <div>
-                        <label for="mulligan-count">マリガン枚数：</label>
-                        <select id="mulligan-count">
-                            <option value="0" selected>マリガンなし</option>
-                            <option value="1">1枚マリガン</option>
-                            <option value="2">2枚マリガン</option>
-                            <option value="3">3枚マリガン</option>
-                            <option value="4">4枚マリガン</option>
-                        </select>
-                        <strong>初手事故率：</strong>
-                        <span id="bad-hand-rate">0.0%</span>
-                        <span id="bad-hand-frequency">（ほぼ事故なし）</span>
-                        <div style="font-size: 14px;">※４コス以下のカードが初手に１枚も来ない確率</div>
+                    <!--マリガン練習 -->
+                <div class="mulligan-trainer" id="mulligan-trainer">
+                    <div class="info-label">マリガンシミュレーション</div>
+
+                    <!-- デッキ不足メッセージ -->
+                    <div class="mull-warning" id="mull-warning" hidden>
+                        デッキにカードを追加してください（30枚以上が必要です）
                     </div>
+
+                    <div class="mull-layout">
+                        <!-- 手札4枚 -->
+                        <div class="hand-area" id="mull-hand">
+                            <!-- JSで4枚分のカードが入ります -->
+                        </div>
+
+                        <!-- 操作画面 -->
+                    <div class="mull-actions">
+                        <button type="button" id="btn-mull-or-reset" class="btn-mulligan" disabled>手札リセット</button>
+                        <div class="mull-hint">画像をタップで選択／解除できます。</div>
+                        <div class="mull-note">※選択したカードはマリガン対象から除外されます。</div>
+                        <div class="mull-remaining">
+                            <strong>残りの山札（タイプ別）</strong>
+                            <ul id="mull-remaining-by-type" class="mull-remaining-list"></ul>
+                        </div>
+
+                    </div>
+
+                    </div>
+                </div>
+
+
+
+                <div class="owned-info" id="owned-info">
+                    <div class="owned-head">所持データ反映部分</div>
+                    <div class="owned-note">※所持率チェッカーでの所持データをもとに計算しています</div>
+
+                    <!-- 不足カード -->
+                    <div class="info-row" style="justify-content:flex-start;">
+                        <div class="info-label">不足枚数</div>
+                        <div class="button-info">
+                        <div id="shortage-summary-line">🌈0枚 / 🟡0枚 / ⚪️0枚 / 🟤0枚</div>
+                        <button id="shortage-toggle-btn" type="button">不足カードリスト</button>
+                        </div>
+
+                    </div>
+                    <div id="shortage-collapsible" class="shortage-collapsible" hidden>
+                    </div><!-- ← 開閉式リスト -->
+
+                    <!-- 必要ポイント/ダイヤ/砂 -->
+                    <div class="info-row" style="justify-content:flex-start;">
+                        <div class="info-label">必要ポイント</div>
+                        <div class="button-info" >
+                            <button id="exchange-toggle-btn-compact" type="button">🟢 ポイント</button>
+                            <div id="exchange-values-compact" class="exchange-values">
+                                <!-- ここに数値が入る（ポイント/ダイヤ/砂） -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
 
 
@@ -368,7 +385,16 @@
                         <div class="info-row">
                             <label class="info-label">投稿同意</label>
                             <div class="info-value">
-                                <label><input type="checkbox" id="post-agree"> ガイドラインに同意する</label>
+                                <label class="agree-label">
+                                    <input type="checkbox" id="post-agree">
+                                    投稿内容の公開にあたって、内容にご配慮いただけることに同意します。
+                                </label>
+                                <small class="agree-note">
+                                    ※本サイトは非公式のファンサイトです。<br>
+                                    他の利用者が気持ちよく閲覧できるようご協力をお願いします。
+                                </small>
+
+
                             </div>
                         </div>
 

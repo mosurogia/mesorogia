@@ -394,7 +394,7 @@ function toggleOwned() {
   if (btn) btn.textContent = `所持カード${ownedOverlayOn ? '反映' : '未反映'}`;
   refreshOwnedOverlay();
   updateExchangeSummary();          // 数値/不足リストを最新化
-  updateOwnedPanelsVisibility();    // 表示/非表示を反映
+
 }
 
 
@@ -405,7 +405,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 初期正規化（非表示のまま整える）
   refreshOwnedOverlay();
-updateOwnedPanelsVisibility();  // 起動直後の表示状態を同期
 
   // #grid の再描画にも追従（ONのときのみ即時反映）
   const root = document.getElementById('grid');
@@ -600,7 +599,6 @@ function markGuestModeUI() {
   refreshOwnedOverlay();
 
   updateExchangeSummary();          // ゲスト所持での計算結果に更新
-  updateOwnedPanelsVisibility();    // パネルを表示
 
   // owned-markに目印クラス
   document.querySelectorAll('#grid .owned-mark').forEach(el => {
@@ -814,7 +812,6 @@ function updateDeck() {
     updateCardDisabling();
     updateDeckSummary([]);
     updateExchangeSummary();
-    updateOwnedPanelsVisibility();
     requestAnimationFrame(autoscaleAllBadges);
 
     return;
@@ -969,7 +966,6 @@ function updateDeck() {
   updateDeckSummary(deckCards);//デッキ分析（タイプ等）
   updateDeckAnalysis();//デッキ詳細情報分析
   updateExchangeSummary();  // ポイント等のサマリーを更新
-  updateOwnedPanelsVisibility(); //表示/非表示も更新
   updateDeckCardListBackground();//リスト背景変更
   scheduleAutosave();  //オートセーブ
   updateAutoTags();//自動タグ設定
@@ -1579,18 +1575,18 @@ const EXCHANGE_RATE = {
   sand:    { LEGEND: 300, GOLD: 150, SILVER: 20,  BRONZE: 10 },
 };
 
-function rarityToKey(r) {
+/** レアリティ文字列 → キー/アイコン */
+function rarityToKeyJP(r) {
   if (!r) return null;
-  if (r.includes('レジェ')) return 'LEGEND';
+  if (r.includes('レジェ'))  return 'LEGEND';
   if (r.includes('ゴールド')) return 'GOLD';
   if (r.includes('シルバー')) return 'SILVER';
   if (r.includes('ブロンズ')) return 'BRONZE';
-  if (r === 'レジェンド') return 'LEGEND';
-  if (r === 'ゴールド') return 'GOLD';
-  if (r === 'シルバー') return 'SILVER';
-  if (r === 'ブロンズ') return 'BRONZE';
   return null;
 }
+const RARITY_ICON = { LEGEND:'🌈', GOLD:'🟡', SILVER:'⚪️', BRONZE:'🟤' };
+
+
 function rarityIconJP(rarity) {
   if (!rarity) return '';
   if (rarity.includes('レジェ'))  return '🌈';
@@ -1598,6 +1594,17 @@ function rarityIconJP(rarity) {
   if (rarity.includes('シルバー')) return '⚪️';
   if (rarity.includes('ブロンズ')) return '🟤';
   return '';
+}
+
+/** 不足カード（配列）をレアリティ別に合計 {LEGEND:n,...} */
+function groupShortageByRarity(shortages){
+  const sum = { LEGEND:0, GOLD:0, SILVER:0, BRONZE:0 };
+  shortages.forEach(s=>{
+    const info = cardMap[s.cd] || {};
+    const key = rarityToKeyJP(info.rarity);
+    if (key) sum[key] += (s.shortage|0);
+  });
+  return sum;
 }
 
 // 所持＝OwnedStore優先（未初期化時は localStorage）
@@ -1612,7 +1619,7 @@ function computeExchangeNeeds() {
   for (const [cd, need] of Object.entries(deck)) {
     const info = cardMap[cd];
     if (!info) continue;
-    const key = rarityToKey(info.rarity);
+    const key = rarityToKeyJP(info.rarity);
     if (!key) continue;
 
     const v = owned[cd] || { normal:0, shine:0, premium:0 };
@@ -1641,65 +1648,19 @@ function updateExchangeSummary() {
   };
   if (!els.point) return;
 
-  const { point, diamond, sand, shortages } = computeExchangeNeeds();
+  const { point, diamond, sand, } = computeExchangeNeeds();
   const fmt = (n) => String(n);
 
   // 数値の更新
-  els.point.textContent   = fmt(point);
-  els.diamond.textContent = fmt(diamond);
-  els.sandLeg.textContent = fmt(sand.LEGEND);
-  els.sandGld.textContent = fmt(sand.GOLD);
-  els.sandSil.textContent = fmt(sand.SILVER);
-  els.sandBro.textContent = fmt(sand.BRONZE);
+  els.point.textContent   = String(point);
+  els.diamond.textContent = String(diamond);
+  els.sandLeg.textContent = String(sand.LEGEND);
+  els.sandGld.textContent = String(sand.GOLD);
+  els.sandSil.textContent = String(sand.SILVER);
+  els.sandBro.textContent = String(sand.BRONZE);
 
-  // 不足カード（HTMLに直接書き込み）
-  const list = document.getElementById('shortage-list');
-  if (!list) return;
-
-  list.innerHTML = '';
-  if (!shortages || shortages.length === 0) {
-    list.textContent = 'なし';
-  } else {
-    // 並び順：タイプ→コスト→パワー→cd
-    const typeOrder = { 'チャージャー': 0, 'アタッカー': 1, 'ブロッカー': 2 };
-
-    const sorted = shortages.slice().sort((a, b) => {
-      const A = cardMap[a.cd] || {};
-      const B = cardMap[b.cd] || {};
-      const tA = typeOrder[A.type] ?? 99;
-      const tB = typeOrder[B.type] ?? 99;
-      if (tA !== tB) return tA - tB;
-
-      const cA = parseInt(A.cost) || 0;
-      const cB = parseInt(B.cost) || 0;
-      if (cA !== cB) return cA - cB;
-
-      const pA = parseInt(A.power) || 0;
-      const pB = parseInt(B.power) || 0;
-      if (pA !== pB) return pA - pB;
-
-      return String(a.cd).localeCompare(String(b.cd));
-    });
-
-    sorted.forEach(({ cd, name, shortage }) => {
-      const info = cardMap[cd] || {};
-      const icon = rarityIconJP(info.rarity);
-      const line = document.createElement('div');
-      // 例）🟡情熱のナチュリア サラ×3
-      line.textContent = `${icon}${name}×${shortage}`;
-      list.appendChild(line);
-    });
-  }
 }
 
-// 所持データ系パネルの表示切替（所持反映ON または ゲストモード時に表示）
-function updateOwnedPanelsVisibility() {
-  const show = ownedOverlayOn || !!window.__guestOwnedActive;
-  const ex = document.querySelector('#deck-info .exchange-summary');
-  const sh = document.getElementById('shortage-block');
-  if (ex) ex.style.display = show ? 'block' : 'none';
-  if (sh) sh.style.display = show ? 'block' : 'none';
-}
 
 
 // 表示切り替え（ボタンの onclick="toggleExchange()" から呼ばれる）
@@ -1721,7 +1682,6 @@ function setExchangeVisible(mode) {
                            '🪨 砂';
   }
 }
-
 function toggleExchange() {
   __exchangeMode = (__exchangeMode === 'point')
     ? 'diamond'
@@ -1735,10 +1695,497 @@ document.addEventListener('DOMContentLoaded', () => {
   updateExchangeSummary();
 });
 
+
+/* =========================
+   🆕 マリガン練習ロジック
+   ========================= */
+
+(() => {
+  const HAND_SIZE = 4;
+
+    const els = {
+    trainer:   document.getElementById('mulligan-trainer'),
+    warning:   document.getElementById('mull-warning'),
+    hand:      document.getElementById('mull-hand'),
+    btn:       document.getElementById('btn-mull-or-reset'),
+    remainList:document.getElementById('mull-remaining-by-type'),
+  };
+
+  if (!els.trainer) return; // 他ページ安全化
+
+   // 共有（common.js）
+  const getDeckObject = () => (window.deck || {});
+  const getCardInfo   = (cd) => (window.cardMap?.[String(cd)] || window.allCardsMap?.[String(cd)]);
+
+    // 状態
+  const state = {
+    pool: [],  // 山札（手札４枚以外のデッキリスト）
+    hand: [],  // { cd, selected }
+  };
+
+  // cd→枚数 のMapを作る
+  function buildDeckCountMap(){
+    const deckObj = getDeckObject();
+    const map = {};
+    for (const cd in deckObj) map[String(cd)] = (deckObj[cd]|0);
+    return map;
+  }
+
+
+  // countMap を実カード配列に展開
+  function expandFromCountMap(counts){
+    const arr = [];
+    for (const cd in counts) {
+      for (let i=0;i<(counts[cd]|0);i++) arr.push(String(cd));
+    }
+    return arr;
+  }
+  // 「現在の手札4枚を除いた山」を作る
+  function buildPoolExcludingCurrentHand(){
+    const counts = buildDeckCountMap();
+    // 手札分を引いて除外（同名が複数あればその枚数ぶん引く）
+    state.hand.forEach(h => {
+      const cd = String(h.cd);
+      if (counts[cd] > 0) counts[cd]--;
+    });
+    return shuffleInPlace(expandFromCountMap(counts));
+  }
+
+    // シャッフル＆1枚引く
+  function shuffleInPlace(arr){
+    for (let i=arr.length-1; i>0; i--){
+      const j = (Math.random()* (i+1))|0;
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+  function drawOne(){
+    // state.pool から1枚引く
+    if (!state.pool.length) return null;
+    return state.pool.pop();
+  }
+
+  // 初期配り（※毎回の「手札リセット」でdiscardedはリセット）
+  function dealInitialHand(){
+    // 初期はデッキ全体から引く
+  state.pool = shuffleInPlace(expandFromCountMap(buildDeckCountMap()));
+    state.hand = [];
+
+    for (let i=0; i<HAND_SIZE; i++){
+      const cd = drawOne();
+      if (!cd) break;
+      state.hand.push({ cd, selected:false });
+    }
+    renderHand();
+    refreshUI();
+  }
+
+    // 手札描画
+  function renderHand(){
+    els.hand.innerHTML = '';
+    state.hand.forEach((slot) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'card-thumb';
+      wrap.dataset.selected = slot.selected ? 'true' : 'false';
+
+      const img = document.createElement('img');
+      img.alt = '';
+      img.decoding = 'async';
+      img.loading  = 'lazy';
+      img.src      = `img/${slot.cd}.webp`;
+      img.onerror  = function(){
+        this.remove();
+        const title = document.createElement('div');
+        title.className = 'title-fallback';
+        const info = getCardInfo(slot.cd);
+        title.textContent = info?.name ? `${info.name}（${slot.cd}）` : `No Image (${slot.cd})`;
+        wrap.appendChild(title);
+
+        const errImg = document.createElement('img');
+        errImg.alt = '';
+        errImg.src = 'img/00000.webp';
+        errImg.style.display = 'none';
+        wrap.appendChild(errImg);
+      };
+
+      // タップで選択トグル
+      wrap.addEventListener('click', () => {
+        slot.selected = !slot.selected;
+        wrap.dataset.selected = slot.selected ? 'true' : 'false';
+        refreshUI();
+      });
+
+      wrap.appendChild(img);
+      els.hand.appendChild(wrap);
+    });
+  }
+
+
+  // タイプ別：残り山枚数
+  function tallyPoolByType() {
+  // 手札を除いた最新の山で集計
+  const livePool = buildPoolExcludingCurrentHand();
+  const counts = { 'チャージャー': 0, 'アタッカー': 0, 'ブロッカー': 0, 'その他': 0 };
+
+  const map = window.cardMap || window.allCardsMap || {};
+  for (const cd of livePool) {
+      const t = map[String(cd)]?.type || 'その他';
+      if (counts[t] == null) counts['その他']++; else counts[t]++;
+    }
+    return counts;
+  }
+
+function renderRemainingByType() {
+  if (!els.remainList) return;
+  const order = ['チャージャー', 'アタッカー', 'ブロッカー', 'その他'];
+  const counts = tallyPoolByType();
+  els.remainList.innerHTML = '';
+  for (const t of order) {
+    const n = counts[t] | 0;
+    if (n === 0) continue; // 0も表示したければこの行を削除
+    const li = document.createElement('li');
+    li.className = 'mrt-chip';
+    li.dataset.type = t;
+    li.textContent = `${t}：${n}枚`;
+    els.remainList.appendChild(li);
+  }
+}
+
+
+
+  // UI活性とボタン文言切替（単一ボタン仕様）
+  function refreshUI(){
+    const deckSize    = Object.values(getDeckObject()).reduce((a,b)=>a+(b|0),0);
+    const hasDeck     = deckSize >= 30;
+    const anySelected = state.hand.some(h => h.selected);
+    const canReset    = hasDeck && deckSize >= HAND_SIZE;
+    const canMull     = hasDeck && anySelected && state.pool.length > 0;
+
+    // 警告
+    if (els.warning) els.warning.hidden = hasDeck;
+
+    // 文言
+    if (els.btn) {
+      els.btn.textContent = anySelected
+        ? `${state.hand.filter(h => h.selected).length}枚マリガンする`
+        : '手札リセット';
+      // 活性
+      els.btn.disabled = anySelected ? !canMull : !canReset;
+    }
+
+    renderRemainingByType();
+  }
+
+  // マリガン（“今回”返したカードだけ抽選から除外）
+  function doMulligan(){
+    // 現在手札を除いた山を作り直す
+  let pool = buildPoolExcludingCurrentHand();
+  // 置き換え対象のインデックスを先に列挙
+  const targets = [];
+  for (let i=0;i<state.hand.length;i++) if (state.hand[i].selected) targets.push(i);
+  // 選択枚数ぶん、poolから順番に補充（同一回の重複を避けるためpop）
+  for (const pos of targets) {
+    const next = pool.pop(); // 無ければ undefined
+    if (!next) break;        // 引けなければそこで終了（見た目は据え置き）
+    state.hand[pos].cd = next;
+    state.hand[pos].selected = false;
+  }
+
+    renderHand();
+    refreshUI();
+  }
+
+  // 手札リセット（discardedをクリア → デッキから再配り）
+  function resetHand(){ dealInitialHand(); }
+
+  // 単一ボタン：選択0→リセット / 1〜4→マリガン
+  els.btn?.addEventListener('click', () => {
+    const anySelected = state.hand.some(h => h.selected);
+    if (anySelected) doMulligan();
+    else resetHand();
+  });
+
+  // デッキ側の更新に追従
+  const hookOnce = (name, wrapper) => {
+    const fn = window[name];
+    if (typeof fn === 'function' && !fn.__mull_hooked){
+      const orig = fn;
+      window[name] = function(...args){
+        const r = orig.apply(this, args);
+        try { wrapper(); } catch {}
+        return r;
+      };
+      window[name].__mull_hooked = true;
+    }
+  };
+  hookOnce('renderDeckList',        () => dealInitialHand());
+  hookOnce('updateDeckAnalysis',    () => dealInitialHand());
+  hookOnce('updateDeckSummaryDisplay', () => dealInitialHand());
+
+  // カードロード完了時
+  window.onCardsLoaded = (function(prev){
+    return function(...args){
+      if (typeof prev === 'function') prev.apply(this, args);
+      dealInitialHand();
+    };
+  })(window.onCardsLoaded);
+
+  // タブ移動（情報タブに入ったら更新）
+  const origAfter = window.afterTabSwitched;
+  window.afterTabSwitched = function(targetId){
+    if (typeof origAfter === 'function') origAfter(targetId);
+    if (targetId === 'info-tab' || targetId === 'edit') {
+      dealInitialHand();
+    }
+  };
+
+  // 初回
+  dealInitialHand();
+})();
+
+
+
+
 // 所持データが変わったら自動で再計算（OwnedStore.onChange があるので利用）
 if (window.OwnedStore?.onChange) {
   window.OwnedStore.onChange(() => updateExchangeSummary());
 }
+
+
+/** コンパクト不足UIの描画 */
+function renderShortageCompact(shortages){
+  const line  = document.getElementById('shortage-summary-line');
+  const list  = document.getElementById('shortage-collapsible');
+  if (!line || !list) return;
+
+  const sum = groupShortageByRarity(shortages);
+  line.textContent = `${RARITY_ICON.LEGEND}${sum.LEGEND}枚 / ${RARITY_ICON.GOLD}${sum.GOLD}枚 / ${RARITY_ICON.SILVER}${sum.SILVER}枚 / ${RARITY_ICON.BRONZE}${sum.BRONZE}枚`;
+
+  // リスト再描画
+  list.innerHTML = '';
+
+  // ▼ ここから追記：先頭にヒント行を入れる
+  const hint = document.createElement('div');
+  hint.className = 'shortage-hint';
+  hint.textContent = 'タップ/クリックでカード表示';
+  list.appendChild(hint);
+  // ▲ ここまで追記
+
+  if (!shortages.length) {
+    const div = document.createElement('div');
+    div.textContent = '不足はありません';
+    list.appendChild(div);
+    return;
+  }
+
+  const typeOrder = { 'チャージャー':0, 'アタッカー':1, 'ブロッカー':2 };
+  const sorted = shortages.slice().sort((a,b)=>{
+    const A = cardMap[a.cd] || {}, B = cardMap[b.cd] || {};
+    const tA = typeOrder[A.type] ?? 99, tB = typeOrder[B.type] ?? 99;
+    if (tA !== tB) return tA - tB;
+    const cA = (parseInt(A.cost)||0), cB = (parseInt(B.cost)||0); if (cA !== cB) return cA - cB;
+    const pA = (parseInt(A.power)||0), pB = (parseInt(B.power)||0); if (pA !== pB) return pA - pB;
+    return String(a.cd).localeCompare(String(b.cd));
+  });
+
+  sorted.forEach(({cd, name, shortage}) => {
+  const info = cardMap[cd] || {};
+  const rkey = rarityToKeyJP(info.rarity);
+  const icon = rkey ? RARITY_ICON[rkey] : '';
+  const row  = document.createElement('div');
+  row.className = 'shortage-item';
+  row.dataset.cd = cd; // ← 5桁cdで画像を出すためココに保持
+    row.innerHTML = `
+    <span class="rar">${icon}</span>
+    <span class="title" role="button" tabindex="0">${name || cd}</span>
+    <span class="need">×${shortage}</span>
+  `;
+  list.appendChild(row);
+});
+
+  // ==== 画像プレビュー（デリゲーションで一度だけ結線）====
+
+  const pop = document.getElementById('card-preview-pop');
+
+  if (!window.__shortagePreviewWired) {
+  window.__shortagePreviewWired = true;
+
+  // クリックは「.title」だけをトリガー
+  list.addEventListener('click', (e) => {
+    // ★ クリック元が .title かどうかを厳密に判定
+    const titleEl = e.target.closest('.title');
+    if (!titleEl) return;
+
+    e.stopPropagation();
+
+    const item = titleEl.closest('.shortage-item');
+    const cd = item?.dataset.cd;
+    if (!cd) return;
+
+    const x = e.clientX ?? (e.touches && e.touches[0]?.clientX) ?? 0;
+    const y = e.clientY ?? (e.touches && e.touches[0]?.clientY) ?? 0;
+
+    showCardPreviewAt(x, y, cd);
+  }, { passive: true });
+
+  // キーボード操作（Enter/Space）でも .title から開けるように
+  list.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const titleEl = e.target.closest('.title');
+    if (!titleEl) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const item = titleEl.closest('.shortage-item');
+    const cd = item?.dataset.cd;
+    if (!cd) return;
+
+    // キー操作時はタイトル要素の位置周辺に出す
+    const rect = titleEl.getBoundingClientRect();
+    const x = rect.right;
+    const y = rect.bottom;
+    showCardPreviewAt(x, y, cd);
+    const vw = window.innerWidth, vh = window.innerHeight, r = pop.getBoundingClientRect();
+    let nx = Math.min(Math.max(x, 8), vw - r.width - 8);
+    let ny = Math.min(Math.max(y, 8), vh - r.height - 8);
+    pop.style.left = nx + 'px'; pop.style.top = ny + 'px';
+  });
+}
+
+}
+/*不足リスト閉じるorタブ切り替え時にプレビュー閉じる*/
+document.getElementById('shortage-toggle-btn')?.addEventListener('click', ()=> hideCardPreview());
+document.addEventListener('deckTabSwitched', ()=> hideCardPreview()); // 既存フックが無ければ afterTabSwitched 内で直接呼んでもOK
+
+
+
+/** 必要ポイント（コンパクト）の描画 */
+let __exchangeModeCompact = 'point'; // 'point'|'diamond'|'sand'
+function setExchangeCompact(values){
+  const wrap = document.getElementById('exchange-values-compact');
+  const btn  = document.getElementById('exchange-toggle-btn-compact');
+  if (!wrap || !btn) return;
+
+  const { point, diamond, sand } = values;
+  const html =
+    (__exchangeModeCompact === 'point')
+      ? `🟢 必要ポイント：<strong>${point}</strong>`
+      : (__exchangeModeCompact === 'diamond')
+        ? `💎 必要ダイヤ：<strong>${diamond}</strong>`
+        : `🪨 必要砂：<ul>
+             <li>レジェンド：${sand.LEGEND}個</li>
+             <li>ゴールド：${sand.GOLD}個</li>
+             <li>シルバー：${sand.SILVER}個</li>
+             <li>ブロンズ：${sand.BRONZE}個</li>
+           </ul>`;
+
+  wrap.innerHTML = html;
+  btn.textContent =
+    (__exchangeModeCompact === 'point')   ? '🟢 ポイント' :
+    (__exchangeModeCompact === 'diamond') ? '💎 ダイヤ' : '🪨 砂';
+}
+function toggleExchangeCompact(){
+  __exchangeModeCompact =
+    (__exchangeModeCompact === 'point')   ? 'diamond' :
+    (__exchangeModeCompact === 'diamond') ? 'sand'    : 'point';
+  // 値は直近の計算結果から再描画
+  const { point, diamond, sand } = computeExchangeNeeds();
+  setExchangeCompact({ point, diamond, sand });
+}
+window.toggleExchangeCompact = toggleExchangeCompact;
+
+/** まとめ：計算→新UI描画 */
+function renderOwnedInfoCompact(){
+  const ownedBox = document.getElementById('owned-info');
+  if (!ownedBox) return;
+
+  const { point, diamond, sand, shortages } = computeExchangeNeeds();
+  renderShortageCompact(shortages);
+  setExchangeCompact({ point, diamond, sand });
+}
+
+// 所持データがあるか？（OwnedStore優先、なければ localStorage）
+function hasOwnedData() {
+  // 1) OwnedStore
+  if (window.OwnedStore?.getAll) {
+    const all = window.OwnedStore.getAll() || {};
+    for (const cd in all) {
+      const v = all[cd] || {};
+      const total = (v.normal|0) + (v.shine|0) + (v.premium|0);
+      if (total > 0) return true;
+    }
+  }
+  // 2) localStorage フォールバック
+  try {
+    const raw = JSON.parse(localStorage.getItem('ownedCards') || '{}') || {};
+    for (const cd in raw) {
+      const v = raw[cd];
+      if (typeof v === 'object') {
+        if ((v.normal|0) + (v.shine|0) + (v.premium|0) > 0) return true;
+      } else if ((v|0) > 0) {
+        return true;
+      }
+    }
+  } catch {}
+  return false;
+}
+
+/** 所持データの有無に合わせた表示制御 */
+function updateOwnedInfoVisibility(){
+  const box = document.getElementById('owned-info');
+  if (!box) return;
+  const show = hasOwnedData();   // ← ownedOverlayOn ではなく所持データの有無で判定
+  box.style.display = show ? '' : 'none';
+}
+
+/* 初期化：ボタンイベントと初期描画 */
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('shortage-toggle-btn')?.addEventListener('click', ()=>{
+    const area = document.getElementById('shortage-collapsible');
+    if (!area) return;
+    const now = area.hasAttribute('hidden');
+    if (now) area.removeAttribute('hidden'); else area.setAttribute('hidden','');
+  });
+  document.getElementById('exchange-toggle-btn-compact')?.addEventListener('click', toggleExchangeCompact);
+
+  // 初期表示
+  renderOwnedInfoCompact();
+  updateOwnedInfoVisibility();
+});
+
+/* 所持ON/OFF・計算更新のたびに同期 */
+const _oldToggleOwned = window.toggleOwned;
+window.toggleOwned = function(){
+  _oldToggleOwned?.();
+  renderOwnedInfoCompact();
+  updateOwnedInfoVisibility();
+};
+const _oldUpdateExchangeSummary = window.updateExchangeSummary;
+window.updateExchangeSummary = function(){
+  _oldUpdateExchangeSummary?.();
+  renderOwnedInfoCompact();
+  updateOwnedInfoVisibility();
+};
+
+/* 分析タブへ移動したときも同期 */
+const _goToAnalyzeTab = window.goToAnalyzeTab;
+window.goToAnalyzeTab = function(){
+  _goToAnalyzeTab?.();
+  renderOwnedInfoCompact();
+  updateOwnedInfoVisibility();
+};
+
+/* 所持データ変更イベント（OwnedStoreがあれば） */
+if (window.OwnedStore?.onChange) {
+  window.OwnedStore.onChange(()=>{
+    renderOwnedInfoCompact();
+    updateOwnedInfoVisibility();
+  });
+}
+
+
+
 
 // グローバル公開（HTMLの onclick から使う）
 window.toggleExchange = toggleExchange;
@@ -2242,9 +2689,10 @@ function deleteDeckFromIndex(index) {
   renderDeckList();//デッキリスト画像更新
 }
 
-// デッキリセット（委譲で拾う：再描画に強い）
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('#resetDeckButton');
+ // デッキリセット（委譲で拾う：再描画に強い）
+  document.addEventListener('click', (e) => {
+   // どちらのボタンでも拾う（下部/上部）
+  const btn = e.target.closest('#resetDeckButton, #resetDeckButtonTop');
   if (!btn) return;
 
   if (!confirm('現在のデッキを全てリセットします。よろしいですか？')) return;
@@ -2262,7 +2710,6 @@ document.addEventListener('click', (e) => {
   // 付随パネルや数値も同期
   updateDeckSummaryDisplay();
   updateExchangeSummary();
-  updateOwnedPanelsVisibility();
   scheduleAutosave();  //オートセーブ
 });
 
@@ -2280,9 +2727,13 @@ document.addEventListener('click', (e) => {
  *  ========================= */
 
 /*選択タグ設定*/
-const POST_TAG_CANDIDATES = [
+window.POST_TAG_CANDIDATES ??= [
   "アグロ","ミッドレンジ","コントロール","コンボ","バーン","初心者向け","格安","趣味"
 ];
+
+// その後に通常の定数定義（必要なら）
+const POST_TAG_CANDIDATES = window.POST_TAG_CANDIDATES;
+
 
 // ===== カード読み込み完了後のフック =====
 // common-page12.js の loadCards() 完了時に呼ばれる
@@ -2564,15 +3015,78 @@ function updateAutoTags() {
   });
 }
 
+/*同意チェック*/
+function bindMinimalAgreeCheck() {
+  const agree = document.getElementById('post-agree');
+  const submit = document.getElementById('post-submit');
+  const preview = document.querySelector('#post-tab .post-actions button[type="button"]');
+  if (!agree || !submit) return;
 
-/** プレビュー（最低限：payloadをconsoleに & 画面に軽く表示） */
-function previewDeckPost(){
-  refreshPostSummary();
-  const payload = buildDeckPostPayload();
-  console.log('DeckPost Preview:', payload);
-  const el = document.getElementById('post-status');
-  if (el) { el.textContent = 'プレビューOK（コンソールに詳細）'; setTimeout(()=>el.textContent='',2000); }
+  const sync = () => {
+    const ok = !!agree.checked;
+    submit.disabled = !ok;
+    if (preview) preview.disabled = !ok;
+    submit.classList.toggle('is-disabled', !ok);
+    if (preview) preview.classList.toggle('is-disabled', !ok);
+  };
+
+  agree.addEventListener('change', sync);
+  sync();
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (document.getElementById('post-tab')) bindMinimalAgreeCheck();
+});
+
+
+
+// ==== 不足カード画像プレビュー共通層 ====
+function ensureCardPreviewLayer() {
+  if (document.getElementById('card-preview-pop')) return;
+  const el = document.createElement('div');
+  el.id = 'card-preview-pop';
+  el.style.position = 'fixed';
+  el.style.display = 'none';
+  el.style.zIndex = 3000;
+  el.innerHTML = `<img style="max-width:200px;border-radius:6px;box-shadow:0 0 8px rgba(0,0,0,.5);" />`;
+  document.body.appendChild(el);
+}
+function showCardPreviewAt(x, y, cd) {
+  ensureCardPreviewLayer();
+  const box = document.getElementById('card-preview-pop');
+  const img = box.querySelector('img');
+
+  // 画像セット（5桁→webp、なければ 00000 へフォールバック）
+  const src = `img/${String(cd).slice(0,5)}.webp`;
+  img.onload = null;
+  img.onerror = () => { img.onerror = null; img.src = 'img/00000.webp'; };
+  img.src = src;
+
+  // 位置計算（はみ出し防止）
+  const PAD = 8;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const W  = 200, H = 280; // だいたいの最大想定
+  let left = x + PAD, top = y + PAD;
+  if (left + W > vw) left = Math.max(PAD, x - W - PAD);
+  if (top + H > vh) top = Math.max(PAD, vh - H - PAD);
+
+  box.style.left = `${left}px`;
+  box.style.top  = `${top}px`;
+  box.style.display = 'block';
+}
+function hideCardPreview() {
+  const box = document.getElementById('card-preview-pop');
+  if (box) box.style.display = 'none';
+}
+// 画面のどこかをクリックしたら閉じる（プレビュー上のクリックは除外）
+document.addEventListener('click', (e) => {
+  const pop = document.getElementById('card-preview-pop');
+  if (pop && pop.style.display !== 'none' && !e.target.closest('#card-preview-pop')) {
+    hideCardPreview();
+  }
+});
+
+
 
 /** 送信 */
 async function submitDeckPost(e) {

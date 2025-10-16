@@ -3,13 +3,30 @@
 ===================*/
 
 
+// ▼ どのページでも安全に所持データを読むヘルパ
+function readOwnedDataSafe() {
+  // OwnedStore 優先
+  try {
+    if (window.OwnedStore?.getAll) {
+      const s = window.OwnedStore.getAll();
+      if (s && typeof s === 'object') return s;
+    }
+  } catch {}
+  // localStorage フォールバック
+  try {
+    const raw = localStorage.getItem('ownedCards');
+    const obj = raw ? JSON.parse(raw) : {};
+    if (obj && typeof obj === 'object') return obj;
+  } catch {}
+  return {};
+}
 
 
 
 
 //全カード情報
 const allCardsMap = {};
-
+window.allCardsMap = allCardsMap;
 
 /*====================
       2.カード詳細
@@ -184,9 +201,8 @@ function openCardZoom(cd){
   // ✅ フィルターモーダルを開く
   function openFilterModal() {
     document.getElementById("filterModal").style.display = "flex";
-    const detail = document.getElementById("detail-filters");
-    if (detail) detail.style.display = "none";
   }
+
 
   // ✅ フィルターモーダルを閉じる
   function closeFilterModal() {
@@ -340,9 +356,60 @@ const OTHER_BOOLEAN_KEYS = [
 ];
 
 
+
+
+
+// デッキメーカー限定、所持フィルター（所持データが無いときは非表示＝生成しない）
+if (location.pathname.includes('deckmaker')) {
+  const ownedData = readOwnedDataSafe();
+  const hasOwned = ownedData && Object.keys(ownedData).length > 0;
+
+  if (hasOwned) {
+    const ownWrap = document.createElement('div');
+    ownWrap.className = 'filter-block';
+
+    const strong = document.createElement('strong');
+    strong.className = 'filter-title';
+    strong.textContent = '所持フィルター';
+    ownWrap.appendChild(strong);
+
+    const g = document.createElement('div');
+    g.className = 'filter-group';
+    g.dataset.key = '所持フィルター';
+
+    // ① 所持カードのみ表示（1枚でも所持していれば表示）
+    const ownedBtn = document.createElement('button');
+    ownedBtn.className = 'filter-btn';
+    ownedBtn.type = 'button';
+    ownedBtn.dataset.mode = 'owned';
+    ownedBtn.textContent = '所持カードのみ表示';
+
+
+    // ② コンプカードのみ表示（通常3枚 / 旧神1枚）
+    const compBtn = document.createElement('button');
+    compBtn.className = 'filter-btn';
+    compBtn.type = 'button';
+    compBtn.dataset.mode = 'complete';
+    compBtn.textContent = 'コンプカードのみ表示';
+
+
+    g.appendChild(ownedBtn);
+    g.appendChild(compBtn);
+    ownWrap.appendChild(g);
+
+    // 他のメインフィルターより上に置く
+    const mainFilters = document.getElementById('main-filters');
+    if (mainFilters) mainFilters.prepend(ownWrap);
+  }
+}
+
+
+
+
   // 🧩 共通ボタン生成（修正版）
   function createButtonGroup(title, list, filterKey) {
     const wrapper = document.createElement('div');
+    wrapper.className = 'filter-block';
 
     // タイトル
     const strong = document.createElement('strong');
@@ -371,12 +438,12 @@ const OTHER_BOOLEAN_KEYS = [
   // 🧩 範囲選択（コスト・パワー）
   function createRangeSelector(title, filterKey, list) {
     const wrapper = document.createElement('div');
-    wrapper.className = 'filter-range-wrapper';
+    wrapper.className = 'filter-block filter-range-wrapper';
 
     // タイトル
     const strong = document.createElement('strong');
     strong.className = 'filter-title';
-    strong.textContent = title+'：';
+    strong.textContent = title;
     wrapper.appendChild(strong);
 
     // セレクトボックスグループ
@@ -408,19 +475,22 @@ const OTHER_BOOLEAN_KEYS = [
     });
 
     groupDiv.appendChild(selectMin);
-    groupDiv.appendChild(document.createTextNode(' ～ '));
+    const wave = document.createElement('span');
+    wave.className = 'tilde'; wave.textContent = '～';
+    groupDiv.appendChild(wave);
     groupDiv.appendChild(selectMax);
     wrapper.appendChild(groupDiv);
     return wrapper;
   }
+
   // 🧩 範囲選択（タイプ、レアリティ、BP要素、特殊効果）
     function createRangeStyleWrapper(title, list, filterKey) {
     const wrapper = document.createElement('div');
-    wrapper.className = 'filter-range-wrapper';
+    wrapper.className = 'filter-block filter-range-wrapper';
 
     const strong = document.createElement('strong');
     strong.className = 'filter-title';
-    strong.textContent = title + '：';
+    strong.textContent = title;
     wrapper.appendChild(strong);
 
     const groupDiv = document.createElement('div');
@@ -474,7 +544,7 @@ otherWrapper.className = 'filter-range-wrapper';
 
 const strong = document.createElement('strong');
 strong.className = 'filter-title';
-strong.textContent = 'その他：';
+strong.textContent = 'その他';
 otherWrapper.appendChild(strong);
 
 const groupDiv = document.createElement('div');
@@ -493,17 +563,8 @@ OTHER_BOOLEAN_KEYS.forEach(key => {
 otherWrapper.appendChild(groupDiv);
 
 
-["cost-min", "cost-max", "power-min", "power-max"].forEach(id => {
-  const el = document.getElementById(id);
-  if (el) {
-    el.addEventListener("change", applyFilters);
-  }
-});
-
 
 detailFilters.appendChild(otherWrapper);
-return otherWrapper;
-
 
 }
 
@@ -578,8 +639,8 @@ function renderActiveFilterChips() {
   GROUPS.forEach(([title, key])=>{
     document.querySelectorAll(`.filter-btn.selected[data-${key}]`).forEach(btn=>{
       const val = btn.dataset[key];
-      const labelText = (window.DISPLAY_LABELS && window.DISPLAY_LABELS[val] != null)
-        ? window.DISPLAY_LABELS[val] : val;
+      const labelText = (DISPLAY_LABELS && DISPLAY_LABELS[val] != null)
+      ? DISPLAY_LABELS[val] : val;
       chips.push({
         label: `${title}:${labelText}`,
         onRemove: () => { btn.classList.remove('selected'); applyFilters(); }
@@ -653,8 +714,16 @@ function updateChipsOffset() {
   document.documentElement.style.setProperty('--chips-offset', `${sum}px`);
 }
 
+const df = document.getElementById('detail-filters');
+  if (df && !document.querySelector('.filter-subtitle')) {
+    const h = document.createElement('h4');
+    h.className = 'filter-subtitle';
+    h.textContent = 'さらに詳しい条件フィルター';
+    df.parentNode.insertBefore(h, df);
+  }
+
+
 // 起動時とリサイズで反映
-document.addEventListener('DOMContentLoaded', updateChipsOffset);
 window.addEventListener('resize', updateChipsOffset);
 
 
@@ -710,6 +779,18 @@ function applyFilters() {
   const powerMaxVal = document.getElementById("power-max")?.value;
   const powerMax = powerMaxVal === "上限なし" ? Infinity : parseInt(powerMaxVal);
 
+    // --- 所持/コンプ フィルター ---
+  const ownedFilterGroup = document.querySelector('.filter-group[data-key="所持フィルター"]');
+  let ownedBtnOn = false, compBtnOn = false;
+  if (ownedFilterGroup) {
+    ownedBtnOn = ownedFilterGroup.querySelector('[data-mode="owned"]')?.classList.contains('selected') || false;
+    compBtnOn  = ownedFilterGroup.querySelector('[data-mode="complete"]')?.classList.contains('selected') || false;
+  }
+
+  // 所持データ（都度読むが軽い）
+  const ownedDataMap = readOwnedDataSafe();
+
+
   document.querySelectorAll(".card").forEach(card => {
     const haystack =
       (card.dataset.keywords?.toLowerCase()) // ← ここに名＋効果名＋効果本文が入る
@@ -754,14 +835,33 @@ function applyFilters() {
     const matchesCost = cardData.cost >= costMin && cardData.cost <= costMax;
     const matchesPower = cardData.power >= powerMin && cardData.power <= powerMax;
 
-    const isVisible = matchesKeyword && matchesFilters && matchesCost && matchesPower;
-    card.style.display = isVisible ? "" : "none";
+  let visible = matchesKeyword && matchesFilters && matchesCost && matchesPower;
+
+    if (ownedBtnOn || compBtnOn) {
+    const cd = String(card.dataset.cd || '');
+    const entry = ownedDataMap[cd];
+    let total = 0;
+    if (typeof entry === 'number') {
+      total = entry;
+    } else if (entry && typeof entry === 'object') {
+      total = (entry.normal|0) + (entry.shine|0) + (entry.premium|0);
+    }
+
+    if (ownedBtnOn && total <= 0) visible = false;
+    if (compBtnOn) {
+      const isOldGod = (card.dataset.race === '旧神');
+      const need = isOldGod ? 1 : 3;
+      if (total < need) visible = false;
+    }
+  }
+
+  card.style.display = visible ? "" : "none";
   });
 
-//同時に起動コード
-  if (typeof applyGrayscaleFilter === 'function') applyGrayscaleFilter();
-  renderActiveFilterChips();
-}
+  //同時に起動コード
+    if (typeof applyGrayscaleFilter === 'function') applyGrayscaleFilter();
+    renderActiveFilterChips();
+  }
 
 // 🔹 選択されたフィルター値（複数選択）を取得
 function getSelectedFilterValues(key) {

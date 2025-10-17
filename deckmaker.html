@@ -257,6 +257,36 @@
                         <div class="info-value" id="total-power">🔵0 / 🟣0</div>
                     </div>
 
+                    <!--マリガン練習 -->
+                    <div class="mulligan-trainer" id="mulligan-trainer">
+                        <div class="info-label">マリガンシミュレーション</div>
+
+                        <!-- デッキ不足メッセージ -->
+                        <div class="mull-warning" id="mull-warning" hidden>
+                            デッキにカードを追加してください（30枚以上が必要です）
+                        </div>
+
+                        <div class="mull-layout">
+                            <!-- 手札4枚 -->
+                            <div class="hand-area" id="mull-hand">
+                                <!-- JSで4枚分のカードが入ります -->
+                            </div>
+
+                            <!-- 操作画面 -->
+                            <div class="mull-actions">
+                                <button type="button" id="btn-mull-or-reset" class="btn-mulligan" disabled>手札リセット</button>
+                                <div class="mull-hint">画像をタップで選択／解除できます。※選択したカードはマリガン対象から除外されます。</div>
+                                <div class="mull-remaining">
+                                    <div class="mull-remaining-title">残りの山札（タイプ別）</div>
+                                    <ul id="mull-remaining-by-type" class="mull-remaining-list"></ul>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+
                     <!--グラフ分布-->
                     <div class="chart">
                         <div class="info-label">コスト分布</div>
@@ -267,35 +297,7 @@
                         <canvas id="powerChart"></canvas>
                     </div>
 
-                    <!--マリガン練習 -->
-                <div class="mulligan-trainer" id="mulligan-trainer">
-                    <div class="info-label">マリガンシミュレーション</div>
 
-                    <!-- デッキ不足メッセージ -->
-                    <div class="mull-warning" id="mull-warning" hidden>
-                        デッキにカードを追加してください（30枚以上が必要です）
-                    </div>
-
-                    <div class="mull-layout">
-                        <!-- 手札4枚 -->
-                        <div class="hand-area" id="mull-hand">
-                            <!-- JSで4枚分のカードが入ります -->
-                        </div>
-
-                        <!-- 操作画面 -->
-                    <div class="mull-actions">
-                        <button type="button" id="btn-mull-or-reset" class="btn-mulligan" disabled>手札リセット</button>
-                        <div class="mull-hint">画像をタップで選択／解除できます。</div>
-                        <div class="mull-note">※選択したカードはマリガン対象から除外されます。</div>
-                        <div class="mull-remaining">
-                            <strong>残りの山札（タイプ別）</strong>
-                            <ul id="mull-remaining-by-type" class="mull-remaining-list"></ul>
-                        </div>
-
-                    </div>
-
-                    </div>
-                </div>
 
 
 
@@ -421,11 +423,14 @@
     <!-- 保存デッキ一覧表示用 -->
     <h3 id="saved-deck">保存デッキ一覧</h3>
     <div id="savedDeckCount"></div>
-    <p class="saved-deck-massage">
-        ⚠️ デッキはブラウザに保存されます。キャッシュを削除するとデータが消えるのでご注意ください。
-    </p>
-    <div id="savedDeckList"></div>
 
+    <div id="savedDeckList">
+        <!--保存デッキリスト-->
+    </div>
+
+        <p class="saved-deck-massage">
+            ⚠️ デッキはブラウザに保存されます。キャッシュを削除するとデータが消えるのでご注意ください。
+        </p>
 </div>
 
 <!--上部に戻るボタン-->

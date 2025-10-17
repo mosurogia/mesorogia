@@ -1822,34 +1822,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // タイプ別：残り山枚数
-  function tallyPoolByType() {
+function tallyPoolByType() {
   // 手札を除いた最新の山で集計
   const livePool = buildPoolExcludingCurrentHand();
-  const counts = { 'チャージャー': 0, 'アタッカー': 0, 'ブロッカー': 0, 'その他': 0 };
-
+  const counts = { 'チャージャー': 0, 'アタッカー': 0, 'ブロッカー': 0 };
   const map = window.cardMap || window.allCardsMap || {};
   for (const cd of livePool) {
-      const t = map[String(cd)]?.type || 'その他';
-      if (counts[t] == null) counts['その他']++; else counts[t]++;
-    }
-    return counts;
+    const t = map[String(cd)]?.type;
+    if (t === 'チャージャー' || t === 'アタッカー' || t === 'ブロッカー') counts[t]++;
   }
+  return counts;
+}
 
 function renderRemainingByType() {
   if (!els.remainList) return;
-  const order = ['チャージャー', 'アタッカー', 'ブロッカー', 'その他'];
+  const types = [
+    { key: 'チャージャー', emoji: '🔵', label: 'チャ' },
+    { key: 'アタッカー',   emoji: '🟣', label: 'アタ' },
+    { key: 'ブロッカー',   emoji: '⚪️', label: 'ブロ' },
+  ];
   const counts = tallyPoolByType();
   els.remainList.innerHTML = '';
-  for (const t of order) {
-    const n = counts[t] | 0;
-    if (n === 0) continue; // 0も表示したければこの行を削除
+
+  for (const t of types) {
+    const n = counts[t.key] ?? 0;
     const li = document.createElement('li');
-    li.className = 'mrt-chip';
-    li.dataset.type = t;
-    li.textContent = `${t}：${n}枚`;
+    li.className = 'mrt-chip compact';
+    li.dataset.type = t.key;
+    li.textContent = `${t.emoji}${t.label}${n}`;
     els.remainList.appendChild(li);
   }
 }
+
+
 
 
 

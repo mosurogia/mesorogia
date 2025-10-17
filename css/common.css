@@ -162,7 +162,7 @@ button,
 /* ======== フッター ======== */
 footer {
     text-align: center;
-    font-size: clamp(5px, 1vw, 1rem);
+    font-size: clamp(10px, 1vw, 1rem);
     color: #666;
     padding: 3vw 0;
     background-color: #f9f9f9;

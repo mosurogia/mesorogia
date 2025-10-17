@@ -346,25 +346,32 @@
 /*編集画面全体*/
 #deck-layout {
     display: flex;
-    flex-direction: column;
     gap: 0.2rem;
+    flex-direction: row;
+    height: 100%;
+        max-height: clamp(22rem, calc(4 * ((50vw - 16px) / 5) * 1.255 + 2vw), 70vh);
 }
-@media (min-width: 700px) {
-#deck-layout {
-        flex-direction: row;
-        height: 100%;
-        max-height: 23rem;
+@media (max-width: 1024px) {
+    #deck-layout {
+        max-height: clamp(18rem, calc(4 * ((50vw - 16px) / 5) * 1.255 + 1.5vw), 70vh);
     }
 }
+
+@media (max-width: 700px) {
+    #deck-layout {
+        flex-direction: column;
+        height: auto;
+        max-height: none;
+    }
+}
+
+
 /*編集セクション*/
 .deck-section {
     background: #fff;
     border: 1px solid #ccc;
     border-radius: 6px;
-    max-height: 25rem;
 }
-
-
 
 /*=======デッキリストゾーン=======*/
 /*カードリスト画面*/
@@ -383,7 +390,9 @@
     align-content: start;
     justify-content: start;
     overflow-y: auto;
+    max-height: none;
 }
+
 @media (min-width: 700px) {
 #deck-card-list {
         flex: 1;
@@ -405,12 +414,13 @@
     z-index: 1;
 }
 
-/*代表カード*/
+/*各カード*/
 .deck-entry {
     position: relative;
     width: 100%;
     box-sizing: border-box;
     cursor: pointer;
+    aspect-ratio: 424 / 532;
 }
 
 .deck-entry img {
@@ -419,7 +429,7 @@
     display: block;
     border-radius: 6px;
 }
-
+/*代表カード*/
 .deck-entry.representative {
     outline: 3px solid crimson;
     outline-offset: -2px;
@@ -434,21 +444,24 @@
 /*情報ゾーンレイアウト*/
 #deck-info {
     overflow-y: auto;
+    flex: 1;
+    max-width: 50%;
 }
-@media (min-width: 700px) {
+
+@media (max-width: 700px) {
 #deck-info {
-        flex: 1;
-        max-width: 50%;
-        /* ← 適宜調整可能 */
-        min-height: 5rem;
+    max-width: 100%;
+    max-height: 150vw;
     }
 }
+
+
 #deck-info div {
     font-size: 0.65rem;
 }
-@media (max-width: 768px) {
+@media (max-width: 700px) {
 #deck-info div {
-        font-size: 0.5rem;
+    font-size: 0.5rem;
     }
 }
 
@@ -502,7 +515,7 @@
     gap: 0.6rem;
     padding: 1rem;
 }
-@media (max-width: 768px) {
+@media (max-width: 700px) {
 /* 全体の余白を少し詰める */
     .info-section {
         padding: .5rem;
@@ -514,11 +527,17 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 0.8rem;
+    gap: 0.4rem;
 }
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
+    .info-row {
+        display: block;
+    }
+}
+@media (max-width: 700px) {
 /* ラベルを上・値を下の縦レイアウトに（横スクロール防止） */
 .info-row {
+    display: flex;
     gap: .05rem;
 }
 }
@@ -530,17 +549,26 @@
     color: #333;
     flex-shrink: 0;
 }
-@media (max-width: 768px) {
+
+@media (max-width: 700px) {
     #deck-info .info-label {
     font-size: clamp(12px, 3.2vw, 17px);
     }
 }
 
-
 .info-value {
     flex: 1;
 }
-
+@media (max-width: 1024px) {
+    .info-value {
+        margin-top: .2rem;
+    }
+}
+@media (max-width: 700px) {
+    .info-value {
+        margin-top: 0;
+    }
+}
 /*デッキ名入力*/
 .info-value input[type="text"],
 .info-value textarea {
@@ -552,7 +580,7 @@
     border-radius: 6px;
     resize: vertical;
 }
-@media (max-width: 768px) {
+@media (max-width: 700px) {
 /* 入力のタップ領域と読みやすさ */
 .info-value input[type="text"],
 .info-value textarea {
@@ -631,7 +659,15 @@
         background: linear-gradient(90deg, #6bc96b, #a0e4a0);
         box-shadow: 0 2px 6px rgba(107, 201, 107, 0.25);
 }
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
+
+    .deck-code-controls button {
+        font-size: 0.45rem;
+        padding: .6rem .3rem;
+    }
+}
+
+@media (max-width: 700px) {
     /* 投稿/保存ボタンは縦積み・全幅にしてタップしやすく */
     .deck-code-controls button {
         font-size: 0.45rem;
@@ -674,21 +710,26 @@
 .chart{
     max-width: 100%;
     position: relative;
-    height: 200px;
+    height: 190px;
     margin-bottom: 20px;
 }
-@media (max-width: 768px) {
-/* グラフは高さを少し低めにして縦スクロール短縮 */
+@media (max-width: 1024px) {
+    .chart {
+        height: 140px;
+        margin-bottom: 15px;
+    }
+}
+@media (max-width: 700px) {
 .chart {
-        height: 150px;
-        margin-bottom: 12px;
+        height: 30vw;
     }
 }
 
-/* === Mulligan Trainer (new) === */
+/* ===============
+====マリガン========
+================= */
 .mulligan-trainer {
-    margin-top: 12px;
-    padding: 12px;
+    padding: 12px 3px 0;
     border: 1px solid #e5e7eb;
     border-radius: 10px;
     background: #f9fafb;
@@ -701,7 +742,7 @@
 .mull-layout {
     display: grid;
     grid-template-columns: 1fr;
-    margin: 10px 0;
+    margin: 10px 0 5px;
     gap: 12px;
     align-items: start;
 }
@@ -719,7 +760,8 @@
 .hand-area {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
+    gap: 5px;
+    padding: 0 5px;
 }
 
 .card-thumb {
@@ -750,8 +792,7 @@
 
 .card-thumb[data-selected="true"] {
     border-color: #7c3aed;
-    /* 基調の紫 */
-    box-shadow: 0 0 0 3px rgba(124, 58, 237, .2);
+    box-shadow: 0 0 0 5px rgba(124, 58, 237, .2);
 }
 
 .card-thumb:active {
@@ -760,12 +801,13 @@
 
 .mull-actions {
     display: grid;
+    padding: 0 5px;
     gap: 8px;
     min-width: 180px;
 }
 
-.mull-actions .btn-mulligan,
-.mull-actions .btn-reset {
+.mull-actions .btn-mulligan {
+    font-size: .5rem;
     padding: 10px 12px;
     border-radius: 8px;
     border: 1px solid #c7d2e3;
@@ -780,17 +822,11 @@
     cursor: not-allowed;
 }
 
-.mull-actions .btn-mulligan:active,
-.mull-actions .btn-reset:active {
+.mull-actions .btn-mulligan:active{
     transform: scale(0.98);
 }
 
-.mull-hint {
-    font-size: 12px;
-    color: #6b7280;
-}
-
-.mull-note {
+#deck-info .mull-hint{
     font-size: 12px;
     color: #6b7280;
 }
@@ -800,42 +836,46 @@
     margin-top: 2px;
 }
 
+#deck-info .mull-remaining-title{
+    font-size: 0.6rem;
+}
+
 .mull-remaining-list {
     display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin: 4px 0 0;
     padding: 0;
-    list-style: none;
+    gap: 8px;
+    flex-wrap: nowrap;
+    margin: 6px 0 0;
 }
 
-.mrt-chip {
-    padding: 2px 8px;
+.mrt-chip.compact {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 13px;
+    padding: 3px 8px;
     border-radius: 9999px;
-    font-size: 12px;
     border: 1px solid #e5e7eb;
-    background: #fff;
     color: #2d3b4f;
     white-space: nowrap;
+    line-height: 1.2;
 }
 
-/* タイプ色（控えめトーン） */
+/* タイプごとの淡色背景 */
 .mrt-chip[data-type="チャージャー"] {
-    background: rgba(119, 170, 212, .15);
-    border-color: rgba(119, 170, 212, .40);
+    background: rgba(119, 170, 212, .2);
+    border-color: rgba(119, 170, 212, .4);
 }
 
 .mrt-chip[data-type="アタッカー"] {
-    background: rgba(125, 91, 155, .15);
-    border-color: rgba(125, 91, 155, .40);
+    background: rgba(125, 91, 155, .2);
+    border-color: rgba(125, 91, 155, .4);
 }
 
 .mrt-chip[data-type="ブロッカー"] {
-    background: rgba(214, 212, 204, .35);
-    border-color: rgba(214, 212, 204, .80);
+    background: rgba(214, 212, 204, .5);
+    border-color: rgba(214, 212, 204, .8);
 }
-
-
 
 /* ===== 所持データ（コンパクト版） ===== */
 .owned-info {

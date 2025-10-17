@@ -10,19 +10,40 @@
     padding: 4px;
     border-bottom: 1px solid #ccc;
 }
+@media (max-width: 768px) {
+        .search-bar {
+                gap: 3px;
+                align-items: center;
+            }
+        }
+
+@media (max-width: 768px) {
+    /* 共通寸法（高さ・文字） */
+    .search-bar #keyword,
+    .search-bar #toggleOwnedBtn,
+    .search-bar #sort-select,
+    .search-bar button[onclick*="openFilterModal"] {
+        height: 1.5rem;
+        line-height: 1.2rem;
+    }
+}
 
 /*キーワード検索*/
 .search-bar input {
     order: 1;
     flex: 1;
-    padding: 0.5rem;
-    font-size: 1rem;
-    box-sizing: border-box;
-}
-input[type="text"] {
     font-size: 16px;
     padding: 6px 12px;
     height: 36px;
+    box-sizing: border-box;
+}
+@media (max-width: 768px) {
+    .search-bar input {
+        font-size: clamp(5px, 2.5vw, 18px);
+        padding: 5px;
+        grid-area: kw;
+        min-width: 0;
+    }
 }
 
 
@@ -33,10 +54,9 @@ select {
 #sort-select {
     order: 3;
     white-space: nowrap;
-    max-width: none;
     width: auto;
     flex: 0 0 auto;
-    min-width: 6rem;
+    min-width: 4rem;
     font-size: clamp(5px, 3vw, 18px);
 }
 
@@ -65,8 +85,11 @@ select {
     transition: filter .15s ease, transform .06s ease, box-shadow .15s ease;
     padding: 0;
 }
-
-
+@media (max-width: 768px) {
+        .search-bar button {
+            font-size: clamp(12px, 2vw, 18px);
+        }
+    }
 /* フィルター＆所持ボタン同一デザイン */
 #toggleOwnedBtn:hover ,.search-bar button[onclick*="openFilterModal"]:hover {
     filter: brightness(0.98);
@@ -77,62 +100,7 @@ select {
     transform: translateY(1px);
 }
 
-/*スマホ版*/
-@media (max-width: 768px) {
-    .search-bar {
-        display: grid !important;
-        grid-template-columns: 2fr 1fr;
-        grid-template-areas:
-                "kw owned"
-                "sort filter";
-        gap: 3px;
-        align-items: center;
-        width: 100%;
-        box-sizing: border-box;
-        padding: 0;
-        flex-wrap: wrap;
-    }
 
-    /* 共通寸法（高さ・文字） */
-    .search-bar #keyword,
-    .search-bar #toggleOwnedBtn,
-    .search-bar #sort-select,
-    .search-bar button[onclick*="openFilterModal"] {
-        height: 1.9rem;
-        line-height: 1.2rem;
-        padding: .35rem .5rem;
-    }
-
-    .search-bar input {
-        flex: 2;
-        font-size: clamp(5px, 2.5vw, 18px);
-        padding: 5px;
-        grid-area: kw;
-        min-width: 0;
-    }
-
-    .search-bar #toggleOwnedBtn {
-        grid-area: owned;
-        min-width: 0;
-    }
-
-    .search-bar #sort-select {
-        grid-area: sort;
-        min-width: 0;
-        width: 100%;
-        white-space: nowrap;
-        /* 項目名を省略しない */
-        overflow: visible;
-    }
-
-    .search-bar button {
-        flex: 0 0 auto;
-        font-size: clamp(12px, 2vw, 18px);
-        padding: 1vw 5px;
-        white-space: nowrap;
-        grid-area: filter;
-    }
-}
 
 
 /*======モーダル======*/

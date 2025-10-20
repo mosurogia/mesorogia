@@ -161,6 +161,7 @@ select {
 
 /* ボタン群 */
 .filter-group {
+    display: grid;
     grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
     grid-auto-flow: dense;
     gap: 8px;
@@ -197,7 +198,7 @@ select {
     border: 1px solid rgba(0, 0, 0, .12);
     background: #f7f7f9;
     color: #222;
-    font-size: clamp(12px, 2.8vw, 15px);
+    font-size: clamp(9px, 2.5vw, 15px);
     line-height: 1.1;
     letter-spacing: .02em;
     text-overflow: ellipsis;
@@ -259,7 +260,7 @@ select {
 
 @media (max-width: 480px) {
     .filter-group[data-key="カテゴリ"] {
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     }
 }
 

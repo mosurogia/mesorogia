@@ -185,7 +185,10 @@
         /* 縦幅は画像サイズに任せる or 調整 */
     }
 }
-
+.deck-card img {
+    width: 100%;
+    display: block;
+}
 
 #deckHelp {
     white-space: nowrap;
@@ -501,16 +504,6 @@
     }
 }
 
-
-#deck-info div {
-    font-size: 0.65rem;
-}
-@media (max-width: 700px) {
-#deck-info div {
-    font-size: 0.5rem;
-    }
-}
-
 /* サブタブバー */
 .subtab-bar {
     position: sticky;
@@ -558,13 +551,12 @@
 .info-section {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
-    padding: 1rem;
+    gap: .6rem;
+    padding: .3rem;
 }
 @media (max-width: 700px) {
 /* 全体の余白を少し詰める */
     .info-section {
-        padding: .5rem;
         gap: .5rem;
     }
 }
@@ -573,7 +565,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 0.4rem;
+    gap: .4rem;
 }
 @media (max-width: 1024px) {
     .info-row {
@@ -584,13 +576,17 @@
 /* ラベルを上・値を下の縦レイアウトに（横スクロール防止） */
 .info-row {
     display: flex;
-    gap: .05rem;
+    gap: 2px;
+}
+#info-tab .info-row{
+        align-items: center;
 }
 }
 
 
-#deck-info .info-label {
-    width: 5rem;
+.info-label {
+    font-size: 0.65rem;
+    width: 110px;
     font-weight: 600;
     color: #333;
     flex-shrink: 0;
@@ -598,12 +594,14 @@
 
 @media (max-width: 700px) {
     #deck-info .info-label {
-    font-size: clamp(12px, 3.2vw, 17px);
+    font-size: clamp(11px, 3vw, 21px);
+    width: 24%;
     }
 }
 
 .info-value {
     flex: 1;
+    font-size: 0.6rem;
 }
 @media (max-width: 1024px) {
     .info-value {
@@ -613,6 +611,7 @@
 @media (max-width: 700px) {
     .info-value {
         margin-top: 0;
+        font-size: clamp(11px, 2.8vw, 21px);
     }
 }
 /*デッキ名入力*/
@@ -630,8 +629,8 @@
 /* 入力のタップ領域と読みやすさ */
 .info-value input[type="text"],
 .info-value textarea {
-    font-size: .5rem;
-    padding: .55rem .6rem;
+    font-size: clamp(11px, 2.8vw, 21px);
+    padding: .2rem .3rem;
 }
 }
 
@@ -659,17 +658,24 @@
     border: none;
     color: #fff;
     font-weight: 600;
-    font-size: 0.85em;
+    font-size: 0.7rem;
     display: flex;
     justify-content: flex-end;
     cursor: pointer;
     transition: all 0.2s ease;
 }
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
+.deck-code-controls button,
+.post-actions button{
+        font-size: 0.5rem;
+}
+}
+@media (max-width: 700px) {
 .deck-code-controls button,
     .post-actions button {
+        font-size: clamp(11px, 3vw, 21px);
         width: 100%;
-        padding: .65rem 1rem;
+        padding: .5rem 1rem;
         display: block;
     }
 }
@@ -692,7 +698,7 @@
     background: #fff;
     border-top: 1px solid #ddd;
     padding: 0.6rem 0.8rem;
-    z-index: 2000;
+    z-index: 1000;
 }
 @media (max-width: 768px) {
     /* 投稿/保存ボタンは縦積み・全幅にしてタップしやすく */
@@ -725,16 +731,13 @@
 }
 
 
-.status-text {
-    margin-top: 0.5rem;
-    color: #444;
-    font-size: 0.9rem;
-}
 
-.deck-card img {
-    width: 100%;
-    display: block;
-}
+
+
+
+
+
+
 
 /*交換ポイント*/
 .exchange-summary{
@@ -799,8 +802,13 @@
     border: 1px solid #fed7aa;
     color: #9a3412;
     border-radius: 8px;
-    margin-bottom: 8px;
-    font-size: 0.95rem;
+    margin: 8px 0;
+    font-size: 0.7rem;
+}
+@media (max-width: 700px) {
+    .mull-warning {
+    font-size: clamp(11px, 3vw, 21px);
+    }
 }
 
 .hand-area {
@@ -837,8 +845,24 @@
 }
 
 .card-thumb[data-selected="true"] {
-    border-color: #7c3aed;
-    box-shadow: 0 0 0 5px rgba(124, 58, 237, .2);
+    border: 3px solid #5b9bff;
+    box-shadow: 0 0 8px rgba(91, 155, 255, 0.6);
+    transform: scale(1.05);
+}
+/* 選択時オーバーレイ */
+.card-thumb[data-selected="true"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.25);
+    /* 画像を少し暗くする */
+    border-radius: 8px;
+    pointer-events: none;
+}
+/* 非選択カードとのコントラストも上げる */
+.card-thumb:not([data-selected="true"]):hover {
+    border-color: #a0aec0;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.15);
 }
 
 .card-thumb:active {
@@ -882,8 +906,13 @@
     margin-top: 2px;
 }
 
-#deck-info .mull-remaining-title{
+.mull-remaining-title{
     font-size: 0.6rem;
+}
+@media (max-width: 700px) {
+    .mull-remaining-title {
+        font-size: clamp(11px, 3vw, 21px);
+    }
 }
 
 .mull-remaining-list {
@@ -898,7 +927,7 @@
     display: inline-flex;
     align-items: center;
     gap: 2px;
-    font-size: 13px;
+    font-size: 14px;
     padding: 3px 8px;
     border-radius: 9999px;
     border: 1px solid #e5e7eb;
@@ -932,19 +961,26 @@
 }
 
 .owned-info .owned-head {
+    font-size: .65rem;
     font-weight: 700;
     margin-bottom: .25rem;
+
 }
 
 .owned-info .owned-note {
-    font-size: .75rem;
+    font-size: .4rem;
     color: #666;
-    margin-bottom: .4rem;
+    margin-bottom: 5px;
 }
 .button-info{
     display: flex;
     flex-wrap: wrap;
     gap: 0.3rem;
+    align-items: center;
+}
+
+#shortage-summary-line{
+    font-size: .6rem;
 }
 
 /* 不足カード：開閉エリア */
@@ -1026,7 +1062,7 @@
 }
 
 .exchange-values {
-    font-size: .9rem;
+    font-size: .6rem;
     line-height: 1.5;
 }
 .exchange-values ul{
@@ -1047,29 +1083,181 @@
 
 /*========デッキ情報ゾーン-デッキ投稿タブ-====*/
 
-/* デッキ投稿  */
-#post-comment {
+/* デッキ解説  */
+#post-note {
     min-height: 10rem;
     resize: vertical;
     line-height: 1.6;
     font-size: 0.6rem;
 }
-@media (max-width: 768px) {
-/* コメント欄はやや高めスタート（伸縮OK） */
-    #post-comment {
+@media (max-width: 700px) {
+    #post-note {
         min-height: 12rem;
-        line-height: 1.6;
     }
 }
 
-
-/* モバイルは少しだけ低めの初期高さに */
-@media (max-width: 768px) {
-    #post-comment {
-        min-height: 10rem;
+/* カード解説 1行 */
+.post-card-note {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+        "left pick"
+        "left note";
+    gap: .5rem .75rem;
+    align-items: stretch;
+    padding: .5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fafafa;
+    margin-bottom: .5rem;
+}
+@media (max-width: 700px) {
+    .post-card-note {
+        grid-template-columns: 70px 1fr;
+        gap: .25rem;
     }
 }
+/* 左カラム全体 */
+.post-card-note .left {
+    grid-area: left;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .4rem;
+}
 
+/* 画像 */
+.post-card-note .thumb {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.post-card-note .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 左下の操作ボタン（↑↓削除） */
+.post-card-note .left .actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    /* 2列固定 */
+    grid-auto-rows: auto;
+    gap: .25rem;
+    width: 100%;
+    justify-items: stretch;
+}
+
+.post-card-note .note-move {
+    padding: .35rem .5rem;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: clamp(11px, 2.5vw, 15px);
+    width: 100%;
+    /* 1列ぶんをしっかり占有 */
+}
+.post-card-note .note-remove {
+    padding: .35rem .5rem;
+    border: 1px solid #fecaca;
+    background: #fff;
+    color: #b91c1c;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: clamp(11px, 2.5vw, 15px);
+    grid-column: 1 / -1;
+    /* 2列ぶち抜き（下段で全幅） */
+}
+
+.post-card-note .note-remove {
+    color: #b91c1c;
+    border-color: #fecaca;
+    width: 100%;
+}
+
+/* 右上のカード選択ボタン */
+.post-card-note .pick-btn {
+    grid-area: pick;
+    width: 100%;
+    padding: .45rem .6rem;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: clamp(12px, 2vw, 15px);
+    text-align: left;
+    box-sizing: border-box;
+}
+
+
+/* 右下の解説欄 */
+.post-card-note textarea.note {
+    height: 100%;
+    resize: vertical;
+}
+/*カード解説追加*/
+.add-note-btn {
+    padding: .4rem .7rem;
+    border: 1px solid #d1d5db;
+    background: #f3f4f6;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: .6rem;
+    white-space: nowrap;/* ← 改行を禁止 */
+    flex-shrink: 0;/* ← 折り返し防止（テキストを押し出さない） */
+}
+@media (max-width: 700px) {
+}
+
+/* カード解説：候補モーダル */
+.cardnote-modal {
+    max-width: 700px;
+}
+
+/*カード解説リスト内*/
+.cardnote-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    padding: 6px;
+    max-height: 65vh;
+    overflow-y: auto;
+}
+
+/*各カード*/
+.cardnote-grid .item {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    aspect-ratio: 424 / 532;
+}
+.cardnote-grid .item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+/*選択済みカード*/
+.cardnote-grid .item.disabled {
+    opacity: 0.4;
+    filter: grayscale(1);
+    pointer-events: none;
+}
+
+
+.post-card-note .selected-label {
+    font-size: .85rem;
+    opacity: .8;
+}
 
 /* タグの共通デザイン */
 .tag-chips {
@@ -1085,8 +1273,6 @@
 }
 
 
-
-
 .tag-chips .chip {
     padding: 4px 8px;
     background: #fff5f8;
@@ -1097,12 +1283,10 @@
     border-radius: 999px;
     cursor: pointer;
     user-select: none;
-    font-size: 0.8rem;
     font-weight: 500;
 }
-@media (max-width: 768px) {
+@media (max-width: 700px) {
 .tag-chips .chip {
-        font-size: .75rem;
         padding: 4px 7px;
     }
 }
@@ -1122,6 +1306,7 @@
 
 #auto-tags{
     margin-bottom: 1rem;
+
 }
 
 /* 自動タグはクリック無効＆別の見た目 */
@@ -1132,8 +1317,44 @@
     color: #fff;
     cursor: default;
     pointer-events: none;
-
+    min-width: 125px;
 }
+
+/* ︙選択タグ（#select-tags）をグリッド化してサイズを揃える */
+#select-tags {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 6px;
+    align-items: stretch;
+}
+@media (max-width: 700px) {
+#select-tags{
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+}
+}
+/* 自動タグと選択タグの見た目を横並びで揃えやすくする */
+#select-tags .chip,
+#auto-tags .chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    box-sizing: border-box;
+    text-align: center;
+    word-break: keep-all;
+    /* タグ語の途中改行を回避 */
+}
+
+/* ヒント行（1列にまたがる） */
+#select-tags .tags-hint {
+    grid-column: 1 / -1;
+    font-size: .7rem;
+    color: #666;
+    margin: 0 0 2px 2px;
+    user-select: none;
+    pointer-events: none;
+}
+
 
 .post-summary {
     font-size: .85rem;
@@ -1149,6 +1370,7 @@
 }
 
 
+
 .post-actions .primary {
     background: #6a5acd;
     color: #fff;
@@ -1157,7 +1379,12 @@
     border-radius: 6px;
 }
 
-
+/*投稿＆プレビューボタン欄*/
+.status-text {
+    margin-top: 0.5rem;
+    color: #444;
+    font-size: 0.9rem;
+}
 
 /* 投稿同意チェックの軽量デザイン */
 .agree-label {
@@ -1210,14 +1437,22 @@
 
 /*======デッキ保存リスト=========*/
 /*保存デッキ一覧*/
-#saved-deck {
-    margin: 0;
-}
 
+#saved-deck {
+    margin: 10px 0 5px;
+    justify-content: space-between;
+    font-size: 25px;
+    display: flex;
+    align-items: end;
+}
+.saved-deck-title{
+    margin: 0;
+    font-size: clamp(24px,5vw,35px);
+}
 /*デッキ数カウント*/
 #savedDeckCount {
-    margin-bottom: 0.3em;
-    font-size: 20px;
+    font-size: clamp(16px, 2.5vw, 25px);
+    font-weight: bold;
     color: #333;
 }
 
@@ -1226,7 +1461,7 @@
     color: red;
     font-weight: bold;
     font-size: 15px;
-    margin: 0px;
+    margin-top: 10px;
 }
 
 /*保存デッキリスト*/

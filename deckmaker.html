@@ -53,8 +53,7 @@
         <a href="index.html">📖 一覧</a>
         <a class="active-page" href="deckmaker.html">🃏 デッキメーカー</a>
         <a href="cardcheker.html">📊 所持率チェッカー</a>
-        <a href="#" style="text-decoration: line-through; pointer-events: none; color: #aaa;">📤 デッキ投稿</a>
-        <!--<a href="deck-post.html">📤 デッキ投稿</a>-->
+        <a href="deck-post.html">📤 デッキ投稿</a>
     </nav>
 </header>
 
@@ -106,7 +105,7 @@
                 </div>
             </div>
         </div>
-        </div>
+
 
 <!--デッキバー-->
 <!-- 🔽 デッキバー全体のラッパーを追加 -->
@@ -151,7 +150,7 @@
 <div class="deck-filter-bar">
     <button id="toggle-invalid-race" class="filter-toggle-button">✅使用不可種族を表示(モノクロ)</button>
 </div>
-
+</div>
 
     <!--カード一覧-->
     <div class="grid" id="grid">
@@ -370,9 +369,23 @@
                         </div>
 
                         <div class="info-row">
-                            <label class="info-label">コメント</label>
+                            <label class="info-label">デッキ解説</label>
                             <div class="info-value">
-                                <textarea id="post-comment" rows="3" placeholder="デッキの特徴など（任意）"></textarea>
+                                <textarea id="post-note" rows="3" placeholder="デッキの特徴など（任意）"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- ▼ カード解説（複数可） -->
+                        <div class="info-row">
+                            <label class="info-label">カード解説</label>
+                            <div class="info-value" style="width:100%">
+                                <div id="post-card-notes">
+                                    <!-- JSで行を生成 -->
+                                </div>
+                                <div style="display:flex; gap:.5rem; align-items:center;">
+                                    <button type="button" id="add-card-note" class="add-note-btn">カード解説を追加</button>
+                                    <small style="opacity:.8">※カードを選んで簡単な解説や採用理由を書けます</small>
+                                </div>
                             </div>
                         </div>
 
@@ -406,10 +419,23 @@
                             <button id="post-submit" type="submit">投稿</button>
                         </div>
 
+        <!-- ▼ カード解説：候補選択モーダル -->
+        <div class="modal" id="cardNoteSelectModal" style="display:none;">
+            <div class="modal-content cardnote-modal">
+                <h3 class="filter-maintitle">カードを選択</h3>
+                <div id="cardNoteCandidates" class="cardnote-grid"><!-- JSで5列グリッド生成 --></div>
+
+                <div class="modal-footer" style="gap:.5rem;">
+                    <button type="button" id="cardNoteClose" class="modal-buttun">閉じる</button>
+                </div>
+            </div>
+        </div>
+
                         <!-- Hidden values -->
                         <input type="hidden" id="post-deck-code" name="deckCode">
                         <input type="hidden" id="post-races-hidden" name="races">
                         <input type="hidden" id="post-rep-img" name="repImg">
+                        <input type="hidden" id="post-card-notes-hidden" name="cardNotes">
 
                     </div>
                 </form>
@@ -420,10 +446,12 @@
 
     </div>
 
-    <!-- 保存デッキ一覧表示用 -->
-    <h3 id="saved-deck">保存デッキ一覧</h3>
-    <div id="savedDeckCount"></div>
 
+    <!-- 保存デッキ一覧表示用 -->
+    <div id="saved-deck">
+            <h3 class="saved-deck-title">保存デッキ一覧</h3>
+            <div id="savedDeckCount"></div>
+    </div>
     <div id="savedDeckList">
         <!--保存デッキリスト-->
     </div>
@@ -466,6 +494,7 @@
 <script src="js/common.js"></script>
 <script src="js/common-page12.js"></script>
 <script src="js/common-page23.js"></script>
+<script src="js/common-page24.js"></script>
 <script src="js/page2.js"></script>
 </body>
 

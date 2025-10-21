@@ -23,7 +23,7 @@
     .search-bar #toggleOwnedBtn,
     .search-bar #sort-select,
     .search-bar button[onclick*="openFilterModal"] {
-        height: 1.5rem;
+        height: 1.8rem;
         line-height: 1.2rem;
     }
 }

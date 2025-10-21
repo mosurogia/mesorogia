@@ -402,7 +402,7 @@
 }
 @media (max-width: 1024px) {
     #deck-layout {
-        max-height: clamp(18rem, calc(4 * ((50vw - 16px) / 5) * 1.255 + 1.5vw), 70vh);
+        max-height: clamp(50vh, calc(4 * ((50vw - 16px) / 5) * 1.255 + 1.5vw), 70vh);
     }
 }
 
@@ -1203,18 +1203,24 @@
     height: 100%;
     resize: vertical;
 }
-/*カード解説追加*/
+/* カード解説追加ボタン */
 .add-note-btn {
-    padding: .4rem .7rem;
+    padding: .45rem .8rem;
     border: 1px solid #d1d5db;
     background: #f3f4f6;
     border-radius: 8px;
     cursor: pointer;
-    font-size: .6rem;
-    white-space: nowrap;/* ← 改行を禁止 */
-    flex-shrink: 0;/* ← 折り返し防止（テキストを押し出さない） */
-}
-@media (max-width: 700px) {
+    font-size: .65rem;
+    white-space: nowrap;
+    /* ← 改行を禁止 */
+    flex-shrink: 0;
+    /* ← 折り返し防止 */
+    display: inline-flex;
+    /* ← インラインブロックにしてテキスト中央 */
+    align-items: center;
+    justify-content: center;
+    max-height: 2rem;
+    /* ← 高さを安定化 */
 }
 
 /* カード解説：候補モーダル */
@@ -1356,28 +1362,6 @@
 }
 
 
-.post-summary {
-    font-size: .85rem;
-    display: grid;
-    gap: 2px;
-    color: #333;
-}
-
-.post-opts {
-    display: grid;
-    gap: 6px;
-    font-size: .85rem;
-}
-
-
-
-.post-actions .primary {
-    background: #6a5acd;
-    color: #fff;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 6px;
-}
 
 /*投稿＆プレビューボタン欄*/
 .status-text {

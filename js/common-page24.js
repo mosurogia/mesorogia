@@ -1,9 +1,13 @@
 /* =============================
- * common-page24.js
- * デッキ投稿と共有向け「紹介画像」生成（高解像度・1:1固定）
- * - deckmaker.html に読み込む想定（common-page23.js, page2.js 依存）
+ * common-page24.js (rewrite)
+ * デッキ投稿/共有向け「紹介画像」生成（3:4 縦 / 4:3 横）
+ * - deckmaker.html に読み込む想定
  * - #exportPngBtn クリックで html2canvas によりPNG保存
  * - 生成中はオーバーレイで「画像生成中…」を表示
+ * - コンソールAPI:
+ *     DeckImg.getAspect(), DeckImg.setAspect('3:4'|'4:3')
+ *     DeckImg.getCols(),   DeckImg.setCols(n)   // 横長時のみ有効
+ *     DeckImg.getBg(),     DeckImg.setBg('dark'|'light'|'#f7f7fb'等)
  * ============================= */
 
 (function(){
@@ -11,12 +15,72 @@
   const FALLBACK_IMG = IMG_DIR + '00000.webp';
   const BRAND_URL = 'https://mosurogia.github.io/mesorogia-cards/deckmaker.html';
 
+  // ローカル保存キー
+  const LS_KEY_ASPECT = 'deckimg_aspect_v2'; // 1:1 廃止後のv2
+  const LS_KEY_COLS   = 'deckimg_cols_v1';   // 横長用の列数
+  const LS_KEY_BG     = 'deckimg_bg_v1';     // 背景テーマ
+
+  const VALID_ASPECTS = new Set(['3:4','4:3']);
+
+  // ================= 公開API =================
+  const DeckImg = {
+    // 比率
+    getAspect(){ return readAspect(); },
+    setAspect(aspect){
+      if (!VALID_ASPECTS.has(aspect)) { console.warn('Use "3:4" or "4:3".'); return; }
+      localStorage.setItem(LS_KEY_ASPECT, aspect);
+      console.log(`Aspect set to ${aspect}`);
+    },
+    // 横長の列数（縦長は常に5固定）
+    getCols(){ return readCols(); },
+    setCols(n){
+      const v = Math.max(3, Math.min(10, parseInt(n,10)||0));
+      localStorage.setItem(LS_KEY_COLS, String(v));
+      console.log(`Cols set to ${v} (effective on 4:3)`);
+    },
+    // 背景（'dark'|'light'|任意カラー）
+    getBg(){ return readBg(); },
+    setBg(v){
+      if (!v) return;
+      localStorage.setItem(LS_KEY_BG, String(v));
+      console.log(`Background set to ${v}`);
+    },
+    help(){
+      console.log([
+        'DeckImg.getAspect() / DeckImg.setAspect("3:4"|"4:3")',
+        'DeckImg.getCols()   / DeckImg.setCols(3..10)   // 4:3時のみ適用',
+        "DeckImg.getBg()     / DeckImg.setBg('dark'|'light'|'#f7f7fb'等)",
+        'exportDeckImage()   // 直接呼び出しも可'
+      ].join('\n'));
+    }
+  };
+  window.DeckImg = DeckImg;
+
+  function readAspect(){
+    const v = localStorage.getItem(LS_KEY_ASPECT) || '3:4';
+    return VALID_ASPECTS.has(v) ? v : '3:4';
+  }
+  function readCols(){
+    return Math.max(3, Math.min(10, parseInt(localStorage.getItem(LS_KEY_COLS) || '7', 10)));
+  }
+  function readBg(){
+    return localStorage.getItem(LS_KEY_BG) || 'dark';
+  }
+
   // ============ 初期化 ============
   window.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('exportPngBtn');
     if (!btn) return;
     btn.addEventListener('click', () => exportDeckImage());
   });
+
+//画像アスペクト確認
+async function chooseAspectByPrompt() {
+  // スマホでも確実に動く原始的UI：OK=縦 / Cancel=横
+  const okIsPortrait = window.confirm('縦長（3:4）で出力しますか？\nOK：縦長（3:4） / キャンセル：横長（4:3）');
+  return okIsPortrait ? '3:4' : '4:3';
+}
+
 
   // ============ 画像生成メイン ============
   async function exportDeckImage(){
@@ -28,25 +92,18 @@
       return;
     }
     if (total > 40){
-    alert('デッキ枚数が多すぎます（40枚以内にしてください）');
-    return;
+      alert('デッキ枚数が多すぎます（40枚以内にしてください）');
+      return;
     }
 
-    // 高解像度設計：DOM実寸は大きめ + html2canvas の scale も上げる
-    // まずデッキ情報を収集し、そのデータに基づいてキャンバス仕様を計算する
+    const aspect = await chooseAspectByPrompt(); // その場で選択（スマホ実機OK）
+    window.DeckImg?.setAspect?.(aspect);         // ついでに保存（任意）
     const data = buildDeckSummaryData();
-    const spec = getCanvasSpec(data);
+    const spec = getCanvasSpec(aspect);
 
 
-    // 種類数や枚数でcolsを動的変更
-    try {
-        const kinds = data.uniqueList?.length || 0;
-    if (kinds <= 16)      spec.cols = 8;
-    else                  spec.cols = 10;
-    } catch (e) {
-      console.warn('生成中断:', e.message);
-      return; // 制限違反時は生成しない
-    }
+    // 列数: 縦=5固定 / 横=コンソール可変
+    spec.cols = (aspect === '3:4') ? 5 : readCols();
 
     const node = await buildShareNode(data, spec);
     document.body.appendChild(node);
@@ -54,31 +111,26 @@
     const loader = showLoadingOverlay('画像生成中…');
 
     try {
-      // レイアウト安定を2フレーム待機
-      await nextFrame();
-      await nextFrame();
+      await nextFrame(); await nextFrame(); // レイアウト安定待ち
 
       const scale = getPreferredScale();
       const canvas = await html2canvas(node, {
-        backgroundColor: '#0b0b10',
-        scale,                 // 2〜3倍を推奨（環境で自動）
+        backgroundColor: null,
+        scale,
         useCORS: true,
         logging: false,
       });
 
-      // 保存
-      const name = (data.deckName || 'deck')
-        .replace(/[\/:*?"<>|]+/g,'_')
-        .slice(0,40);
-      const fileName = `${name}.png`;
+      const name = (data.deckName || 'deck').replace(/[\/:*?"<>|]+/g,'_').slice(0,40);
+      const suffix = (aspect === '3:4' ? '3x4' : '4x3');
+      const fileName = `${name}_${suffix}.png`;
       downloadCanvas(canvas, fileName);
     } finally {
       node.remove();
       hideLoadingOverlay(loader);
     }
   }
-
-  window.exportDeckImage = exportDeckImage; // ほかからも呼べるよう公開
+  window.exportDeckImage = exportDeckImage;
 
   // ============ データ収集 ============
   function buildDeckSummaryData(){
@@ -115,55 +167,72 @@
       if (t && typeCounts[t] != null) typeCounts[t] += (n|0);
     });
 
-    // カード配列（同名カード重複版）
     const uniqueList = entries.map(([cd]) => cd);
     const countMap   = Object.fromEntries(entries.map(([cd, n]) => [String(cd), n|0]));
-    // レアリティ集計
-    const rarityMap = { 'レジェンド':0,'ゴールド':0,'シルバー':0,'ブロンズ':0 };
+    const rarityMap  = { 'レジェンド':0,'ゴールド':0,'シルバー':0,'ブロンズ':0 };
     entries.forEach(([cd, n])=>{
       const r = cardMap[cd]?.rarity; if (r && rarityMap[r] != null) rarityMap[r] += (n|0);
     });
 
-    // 代表画像（最初のカード or 代表指定）
-    const representativeCd = window.representativeCd && deck[window.representativeCd]
+    // 代表カード: 指定が有効でデッキ内にある → それ以外は先頭カード
+    const repCd = (window.representativeCd && deck[window.representativeCd])
       ? window.representativeCd
       : (entries[0]?.[0] || null);
 
     return {
-      deckName,
-      total,
-      mainRace,
-      elderGodName,
-      typeCounts,
-      rarityMap,
-      representativeCd,
-      uniqueList,
-      countMap,
+      deckName, total, mainRace, elderGodName,
+      typeCounts, rarityMap,
+      representativeCd: repCd,
+      uniqueList, countMap,
     };
   }
 
-
-
-  /**
- * キャンバス寸法やヘッダーサイズなどを計算。
- * @param {Object} data - buildDeckSummaryData() の結果
- * @returns {{width:number,height:number,padding:number,cols:number,headerH:number,footerH:number}}
- */
   // ============ レイアウト仕様 ============
-  function getCanvasSpec(data) {
-  // 種類数が多いとき（31〜40枚）は4:3比率に変更
-    const kinds = data?.uniqueList?.length || 0;
-    const isTall = kinds >= 31;
-    const width  = isTall ? 1440 : 1920;  // 4:3 比率
-    const height = 1080;                  // 高さは固定
+  function getCanvasSpec(aspect, bgChoice){
+    let width, height, headerH, footerH;
+    if (aspect === '3:4') { // 縦
+      width  = 1350;
+      height = 1800;
+      headerH = 520;
+      footerH = 84;
+    } else { // 4:3 横
+      width  = 1800;
+      height = 1350;
+      headerH = 360;
+      footerH = 84;
+    }
+
+    const theme = resolveTheme();
+
+
     return {
-      width, height,
-      padding: 20,
-      cols: 8,
-      headerH: 300,
-      footerH: 72,
+      aspect, width, height,
+      padding: 24,
+      cols: 5, // デフォは後で上書き
+      headerH, footerH,
+      gap: 12,
+      theme
     };
   }
+
+function resolveTheme() {
+  // 柔らかいライト系グラデ + 透明感のあるカードパネル
+  return {
+    // 角度を付けたうっすらグラデーション
+    canvasBg: 'linear-gradient(160deg, #f7f8fb 0%, #ffffff 45%, #f3f6fb 100%)',
+    // “カード置き場”っぽい半透明ホワイト
+    panelBg: 'rgba(255,255,255,0.88)',
+    panelEdge: 'rgba(15,23,42,0.10)',         // = #0f172a の10%
+    text: '#0f172a',
+    subText: 'rgba(15,23,42,0.72)',
+    chipBg: 'rgba(2,6,23,0.04)',             // ごく薄いチップ背景
+    chipEdge: 'rgba(2,6,23,0.10)',
+    chipText: '#0f172a',
+    badgeBg: 'rgba(3,7,18,0.78)',            // 濃色バッジ（白地で映える）
+    shadow: '0 14px 34px rgba(2,6,23,0.10)'  // ふわっとした影
+  };
+}
+
 
 
   // ============ DOMビルド ============
@@ -173,162 +242,175 @@
     Object.assign(root.style, {
       position: 'fixed', left: '-9999px', top: '0',
       width: spec.width + 'px', height: spec.height + 'px',
-      background: 'linear-gradient(180deg, #0b0b10 0%, #161621 100%)',
-      color: '#fff', fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, sans-serif',
+      background: spec.theme.canvasBg,
+      color: spec.theme.text,
+      fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, sans-serif',
       boxSizing: 'border-box',
       padding: spec.padding + 'px',
       display: 'grid',
       gridTemplateRows: `${spec.headerH}px 1fr ${spec.footerH}px`,
-      gap: '5px',
+      gap: '6px',
     });
 
-    // ---- ヘッダー（タイトル・要約）----
+    // ---- ヘッダー ----
     const header = document.createElement('div');
     header.style.display = 'grid';
-    header.style.gridTemplateColumns = '260px 1fr';       header.style.gap = '18px';
+    header.style.gridTemplateColumns = (spec.aspect==='3:4' ? '260px 1fr' : '220px 1fr');
+    header.style.gap = '18px';
     header.style.alignItems = 'center';
+    header.style.background = spec.theme.panelBg;
+    header.style.border = `1px solid ${spec.theme.panelEdge}`;
+    header.style.borderRadius = '16px';
+    header.style.padding = '16px';
+    header.style.boxShadow = spec.theme.shadow;
 
     const rep = await buildRepThumb(data.representativeCd, spec);
 
-
-
     const headRight = document.createElement('div');
     headRight.style.display = 'grid';
-    headRight.style.gridTemplateRows = 'min-content 1fr';
-    headRight.style.gap = '10px';
+    headRight.style.gridTemplateRows = 'min-content repeat(3, min-content)';
+    headRight.style.gap = '8px';
 
     const title = document.createElement('div');
     title.textContent = data.deckName || 'デッキ';
     Object.assign(title.style, {
-    fontSize: '60px', fontWeight: '900', letterSpacing: '.4px',
-    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+      fontSize: (spec.aspect==='3:4' ? '60px' : '48px'),
+      fontWeight: '900', letterSpacing: '.4px',
+      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+      color: spec.theme.text,
     });
 
-    // 右側3列（1: デッキ＆種族 / 2: タイプ / 3: レアリティ）
-
     const row1 = document.createElement('div');
-    row1.innerHTML =
-    badge(`デッキ ${data.total}枚`) + ' ' +
-    badge(`種族 ${data.mainRace}`);
+    row1.innerHTML = badge(spec, undefined, `デッキ ${data.total}枚`) + ' ' + badge(spec, undefined, `種族 ${data.mainRace}`);
 
     const row2 = document.createElement('div');
     row2.innerHTML =
-    badge('🔵', `チャージャー ${data.typeCounts['チャージャー']||0}枚`) + ' ' +
-    badge('🟣', `アタッカー ${data.typeCounts['アタッカー']||0}枚`) + ' ' +
-    badge('⚪️', `ブロッカー ${data.typeCounts['ブロッカー']||0}枚`);
+      badge(spec, '🔵', `チャージャー ${data.typeCounts['チャージャー']||0}枚`) + ' ' +
+      badge(spec, '🟣', `アタッカー ${data.typeCounts['アタッカー']||0}枚`) + ' ' +
+      badge(spec, '⚪️', `ブロッカー ${data.typeCounts['ブロッカー']||0}枚`);
 
     const r = data.rarityMap;
     const row3 = document.createElement('div');
     row3.innerHTML =
-      badge('🌈', `レジェンド ${r['レジェンド']||0}枚`) + ' ' +
-      badge('🟡', `ゴールド ${r['ゴールド']||0}枚`)   + ' '+
-      badge('⚪️', `シルバー ${r['シルバー']||0}枚`)  + ' ' +
-      badge('🟤', `ブロンズ ${r['ブロンズ']||0}枚`);
+      badge(spec, '🌈', `レジェンド ${r['レジェンド']||0}枚`) + ' ' +
+      badge(spec, '🟡', `ゴールド ${r['ゴールド']||0}枚`)   + ' '+
+      badge(spec, '⚪️', `シルバー ${r['シルバー']||0}枚`)  + ' ' +
+      badge(spec, '🟤', `ブロンズ ${r['ブロンズ']||0}枚`);
 
-    // 組み立て
-      headRight.appendChild(title);
-      headRight.appendChild(row1);
-      headRight.appendChild(row2);
-      headRight.appendChild(row3);
+    headRight.appendChild(title);
+    headRight.appendChild(row1);
+    headRight.appendChild(row2);
+    headRight.appendChild(row3);
 
-      header.appendChild(rep);
-      header.appendChild(headRight);
+    header.appendChild(rep);
+    header.appendChild(headRight);
 
     // ---- グリッド（カード一覧） ----
     const grid = document.createElement('div');
     let gridHost = grid;
+    const gap = spec.gap;
     grid.style.display = 'grid';
     grid.style.gridTemplateColumns = `repeat(${spec.cols}, 1fr)`;
-    grid.style.gap = '10px';
+    grid.style.gap = gap + 'px';
     grid.style.alignContent = 'start';
 
+    // パネル化（ライトでも視認性）
+    const gridPanel = document.createElement('div');
+    gridPanel.style.background = spec.theme.panelBg;
+    gridPanel.style.border = `1px solid ${spec.theme.panelEdge}`;
+    gridPanel.style.borderRadius = '16px';
+    gridPanel.style.padding = '12px';
+    gridPanel.style.boxShadow = spec.theme.shadow;
 
-  // 🔹31〜40種類：ラッパー方式で縦方向圧縮
-  const kinds = data.uniqueList?.length || 0;
-  if (kinds >= 31) {
-    const gap = 10;
-    const usableWidth  = spec.width  - spec.padding * 2;
-    const usableHeight = spec.height - spec.headerH - spec.footerH - spec.padding * 2;
-    const cols = spec.cols;
-    const rows = Math.ceil(kinds / cols);
-    const cardW = (usableWidth - gap * (cols - 1)) / cols;
+    // すべてのカードをキャンバス内に収めるスケール計算
+    const kinds = data.uniqueList?.length || 0;
+    const rows = Math.ceil(kinds / spec.cols);
+
+    const usableWidth  = spec.width  - spec.padding * 2 - 24; // gridPanel padding相当
+    const usableHeight = spec.height - spec.headerH - spec.footerH - spec.padding * 2 - 24;
+
+    const cardW = (usableWidth - gap * (spec.cols - 1)) / spec.cols;
     const cardH = cardW * (532 / 424);
     const naturalGridH = rows * cardH + gap * (rows - 1);
 
-    const targetRows = 4;
-    const targetRowH = (usableHeight - gap * (targetRows - 1)) / targetRows;
-    const scale = Math.min(1, (targetRows * targetRowH + gap * (targetRows - 1)) / naturalGridH) * 0.995;
+    const scale = Math.min(1, (usableHeight / naturalGridH) * 0.995);
 
-    const wrap = document.createElement('div');
-    wrap.style.height = `${usableHeight}px`;
-    wrap.style.overflow = 'hidden';
-    wrap.style.position = 'relative';
-    wrap.style.transformOrigin = 'top center';
-    wrap.style.display = 'block';
+    if (scale < 1) {
+      const wrap = document.createElement('div');
+      wrap.style.height = `${usableHeight}px`;
+      wrap.style.overflow = 'hidden';
+      wrap.style.position = 'relative';
+      wrap.style.transformOrigin = 'top center';
+      wrap.style.display = 'block';
 
-    grid.style.transformOrigin = 'top center';
-    grid.style.transform = `scale(${scale})`;
+      grid.style.transformOrigin = 'top center';
+      grid.style.transform = `scale(${scale})`;
 
-    wrap.appendChild(grid);
-    gridHost = wrap;
-  }
+      wrap.appendChild(grid);
+      gridHost = wrap;
+    }
 
-
-
-    const tiles = await buildCardTilesUnified(data.uniqueList, data.countMap);
+    const tiles = await buildCardTilesUnified(data.uniqueList, data.countMap, spec);
     tiles.forEach(t => grid.appendChild(t));
 
-    // ---- フッター（URLのみ） ----
+    gridPanel.appendChild(gridHost);
+
+    // ---- フッター（URL） ----
     const footer = document.createElement('div');
     footer.style.display = 'flex';
     footer.style.alignItems = 'center';
     footer.style.justifyContent = 'flex-end';
     footer.style.fontSize = '22px';
+    footer.style.background = spec.theme.panelBg;
+    footer.style.border = `1px solid ${spec.theme.panelEdge}`;
+    footer.style.borderRadius = '12px';
+    footer.style.padding = '8px 12px';
+    footer.style.boxShadow = spec.theme.shadow;
 
     const brand = document.createElement('div');
     brand.textContent = BRAND_URL;
     brand.style.opacity = '.9';
-
+    brand.style.color = spec.theme.subText;
     footer.appendChild(brand);
 
     // まとめ
     root.appendChild(header);
-    root.appendChild(gridHost);
+    root.appendChild(gridPanel);
     root.appendChild(footer);
 
     return root;
   }
 
-  function badge(emoji, text){
+  function badge(spec, emoji, text){
     const span = document.createElement('span');
     span.style.display = 'inline-flex';
     span.style.alignItems = 'center';
     span.style.gap = '8px';
-    span.style.background = 'rgba(255,255,255,.08)';
-    span.style.border = '1px solid rgba(255,255,255,.14)';
+    span.style.background = spec.theme.chipBg;
+    span.style.border = `1px solid ${spec.theme.chipEdge}`;
     span.style.padding = '8px 12px';
     span.style.marginRight = '8px';
     span.style.borderRadius = '999px';
-    span.style.fontSize = '22px';
-    span.style.backdropFilter = 'blur(2px)';
+    span.style.fontSize = '20px';
+    span.style.color = spec.theme.chipText;
 
     const hasText = (text !== undefined);
-    const e = document.createElement('span'); e.textContent = hasText ? emoji : ''; // アイコン無し許可
-    const t = document.createElement('span'); t.textContent = hasText ? text : emoji; // 単一引数なら本文扱い
+    const e = document.createElement('span'); e.textContent = hasText ? (emoji || '') : '';
+    const t = document.createElement('span'); t.textContent = hasText ? text : (emoji || '');
     span.appendChild(e); span.appendChild(t);
     return span.outerHTML;
   }
 
   // 代表カードの角丸サムネ
   async function buildRepThumb(cd, spec){
-    const h = Math.min(280, Math.floor(spec.headerH * 0.9));
+    const h = Math.min((spec.aspect==='3:4'? 280:220), Math.floor(spec.headerH * 0.9));
     const wrap = document.createElement('div');
     wrap.style.height = h + 'px';
     wrap.style.aspectRatio = '424 / 532';
     wrap.style.borderRadius = '16px';
     wrap.style.overflow = 'hidden';
-    wrap.style.boxShadow = '0 8px 20px rgba(0,0,0,.45)';
-    wrap.style.background = '#111';
+    wrap.style.background = '#fff';
+    wrap.style.boxShadow = spec.theme.shadow;
 
     const img = await loadCardImageSafe(cd);
     img.style.width = '100%';
@@ -338,41 +420,41 @@
     return wrap;
   }
 
-    // 各カード（カード + 角丸 + 影 + 重複バッジ　重複版）
-  async function buildCardTilesUnified(uniqueList, countMap){
-  const out = [];
-  for (let i=0; i<uniqueList.length; i++){
-    const cd = String(uniqueList[i]);
-    const wrap = document.createElement('div');
-    wrap.style.position = 'relative';
-    wrap.style.borderRadius = '12px';
-    wrap.style.overflow = 'hidden';
-    wrap.style.background = '#111';
-    wrap.style.boxShadow = '0 4px 12px rgba(0,0,0,.35)';
-    wrap.style.aspectRatio = '424 / 532';
+  // 各カード（角丸＋影＋重複バッジ）
+  async function buildCardTilesUnified(uniqueList, countMap, spec){
+    const out = [];
+    for (let i=0; i<uniqueList.length; i++){
+      const cd = String(uniqueList[i]);
+      const wrap = document.createElement('div');
+      wrap.style.position = 'relative';
+      wrap.style.borderRadius = '12px';
+      wrap.style.overflow = 'hidden';
+      wrap.style.background = (spec.theme.panelBg.includes('linear-gradient') ? '#111' : '#fff');
+      wrap.style.aspectRatio = '424 / 532';
+      wrap.style.boxShadow = spec.theme.shadow;
 
-    const img = await loadCardImageSafe(cd);
-    img.style.width = '100%';
-    img.style.height = '100%';
-    img.style.objectFit = 'cover';
-    wrap.appendChild(img);
+      const img = await loadCardImageSafe(cd);
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'cover';
+      wrap.appendChild(img);
 
-    const badgeDiv = document.createElement('div');
-    badgeDiv.textContent = `×${countMap[cd]||1}`;
-    Object.assign(badgeDiv.style, {
-      position: 'absolute', right: '8px', top: '8px',
-      background: 'rgba(0,0,0,.65)', color: '#fff', fontWeight: '800',
-      padding: '6px 10px', borderRadius: '999px', fontSize: '18px',
-    });
-    wrap.appendChild(badgeDiv);
+      const badgeDiv = document.createElement('div');
+      badgeDiv.textContent = `×${countMap[cd]||1}`;
+      Object.assign(badgeDiv.style, {
+        position: 'absolute', right: '8px', top: '8px',
+        background: spec.theme.badgeBg, color: '#fff', fontWeight: '900',
+        padding: '10px 14px', borderRadius: '999px', fontSize: '30px',
+        lineHeight: '1',
+      });
+      wrap.appendChild(badgeDiv);
 
-    out.push(wrap);
+      out.push(wrap);
+    }
+    return out;
   }
-  return out;
-}
 
-
-  // 安全な画像ロード（5桁化→失敗でフォールバック）
+  // 安全な画像ロード
   function loadCardImageSafe(cd){
     return new Promise((resolve)=>{
       const code5 = (cd && String(cd).slice(0,5)) || '';
@@ -458,11 +540,8 @@
   }
 
   function getPreferredScale(){
-    // 高解像度を優先。DPRが高ければそのまま、低ければ2以上に底上げ
     const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
-    return Math.max(2, Math.min(3, dpr)); // 2〜3 に丸める
+    return Math.max(2, Math.min(3, dpr)); // 2〜3
   }
 
 })();
-
-

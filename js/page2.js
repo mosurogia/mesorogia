@@ -1168,19 +1168,15 @@ function renderDeckList() {
     cardEl.appendChild(badge);
 
     // クリックで代表カードを切替
-    cardEl.addEventListener('click', () => {
-      if (representativeCd === cd) return;
+  cardEl.addEventListener('click', () => {
+  if (representativeCd === cd) return;
+  // 新代表に付与＆変数更新
+  representativeCd = cd;
+  // グローバルにもコピーする
+  window.representativeCd = representativeCd;
+  updateDeckSummaryDisplay();
+});
 
-      // 以前の代表からクラス剥がし（必要最小限）
-      const prev = container.querySelector('.deck-entry.representative');
-      if (prev) prev.classList.remove('representative');
-
-      // 新代表に付与＆変数更新
-      cardEl.classList.add('representative');
-      representativeCd = cd;
-
-      updateDeckSummaryDisplay();//代表カードデッキ情報表示
-    });
 
     container.appendChild(cardEl);
     autoscaleBadgeForCardEl(cardEl);//枚数表示サイズ調整

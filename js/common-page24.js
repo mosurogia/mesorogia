@@ -680,27 +680,81 @@ function downloadCanvas(canvas, fileName){
     hint.textContent = '右クリックで「名前を付けて保存」できます';
   bar.appendChild(hint);
 
-  // 画像
-  const img = document.createElement('img');
-  img.src = dataUrl;
-  Object.assign(img.style, {
-    maxWidth: 'min(80vw, 500px)',
-    height: 'auto',
-    borderRadius: '12px',
-    boxShadow: '0 0 24px rgba(0,0,0,0.6)',
-    objectFit: 'contain',
-  });
+  // 画像と同じ幅のボタンバー（画像の“上”に置く）
+    const btnBar = document.createElement('div');
+    Object.assign(btnBar.style, {
+      width: 'min(80vw, 500px)',   // ★ 画像と同じ幅
+      maxWidth: 'min(80vw, 500px)',
+      display: 'flex',
+      gap: '8px',
+      margin: '8px auto 12px',     // 上部少し空けて画像の直前に
+    });
 
-  // 🔹 背景クリックで閉じる（×ボタンと同処理）
-  modal.addEventListener('click', e => {
-    if (e.target === modal && e.clientY < window.innerHeight * 0.9) {
-      modal.remove();
-      document.body.style.overflow = '';
+    // ボタン共通スタイル
+    const mkBtn = (label) => {
+      const el = document.createElement('a');
+      el.textContent = label;
+      Object.assign(el.style, {
+        flex: '1 1 0',             // ★ 2つで横幅を等分
+        display: 'inline-block',
+        textAlign: 'center',
+        textDecoration: 'none',
+        background: '#fff',
+        color: '#111',
+        padding: '10px 12px',
+        borderRadius: '10px',
+        fontWeight: '800',
+        fontSize: '14px',
+        boxShadow: '0 2px 8px rgba(0,0,0,.25)',
+      });
+      return el;
+    };
+
+    // 保存（どの端末でも確実に使える）
+    const saveBtn = mkBtn('保存');
+    saveBtn.href = dataUrl;          // ★ toDataURL をそのまま
+    saveBtn.download = fileName;     // PC なら即保存、モバイルは新規DL
+
+    // 共有（対応端末のみ表示）
+    const shareBtn = mkBtn('共有');
+    if (navigator.share) {
+      shareBtn.href = 'javascript:void(0)';
+      shareBtn.onclick = async () => {
+        try {
+          const b = await (await fetch(dataUrl)).blob();
+          const f = new File([b], fileName, { type: 'image/png' });
+          await navigator.share({ files: [f], title: fileName, text: 'デッキ画像' });
+        } catch (_) { /* キャンセルは無視 */ }
+      };
+    } else {
+      shareBtn.style.display = 'none'; // 未対応環境では非表示（保存ボタンが全幅に）
     }
-  });
 
-  modal.appendChild(bar);
-  modal.appendChild(img);
+        btnBar.appendChild(saveBtn);
+        btnBar.appendChild(shareBtn);
+        modal.appendChild(bar);
+        modal.appendChild(btnBar);
+
+      // 画像
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      Object.assign(img.style, {
+        maxWidth: 'min(80vw, 500px)',
+        height: 'auto',
+        borderRadius: '12px',
+        boxShadow: '0 0 24px rgba(0,0,0,0.6)',
+        objectFit: 'contain',
+      });
+
+      // 🔹 背景クリックで閉じる（×ボタンと同処理）
+      modal.addEventListener('click', e => {
+        if (e.target === modal && e.clientY < window.innerHeight * 0.9) {
+          modal.remove();
+          document.body.style.overflow = '';
+        }
+      });
+
+      modal.appendChild(img);
   document.body.appendChild(modal);
 }
 

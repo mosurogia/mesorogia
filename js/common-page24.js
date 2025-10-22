@@ -110,6 +110,8 @@ async function chooseAspectByPrompt() {
     const modal = document.getElementById('deckimg-preview-modal');
     const prevOverflow = modal.style.overflow;
     modal.style.overflow = 'visible';     // 一時解除
+    modal.style.paddingRight = '20px';
+    modal.style.paddingBottom = '20px';
     modal.scrollTop = 0;                  // 一番上に戻す
 
     const canvas = await html2canvas(modal, {
@@ -118,9 +120,15 @@ async function chooseAspectByPrompt() {
       backgroundColor: '#fff',
       scrollX: 0,
       scrollY: 0,
-      windowWidth: modal.scrollWidth,
-      windowHeight: modal.scrollHeight,
+      width: modal.scrollWidth,        // ← 追加
+      height: modal.scrollHeight,      // ← 追加
+      windowWidth: document.documentElement.scrollWidth,   // ← ページ全体を対象に
+      windowHeight: document.documentElement.scrollHeight, // ← 同上
+      x: 0,
+      y: 0,
+      allowTaint: false,
     });
+
 
     modal.style.overflow = prevOverflow;
 

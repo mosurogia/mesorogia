@@ -107,12 +107,23 @@ async function chooseAspectByPrompt() {
   try {
     await nextFrame(); // 1回でOK
     const scale = getPreferredScale();
-    const canvas = await html2canvas(node, {
-      backgroundColor: null, // DOMグラデをそのまま撮る
-      scale,
+    const modal = document.getElementById('deckimg-preview-modal');
+    const prevOverflow = modal.style.overflow;
+    modal.style.overflow = 'visible';     // 一時解除
+    modal.scrollTop = 0;                  // 一番上に戻す
+
+    const canvas = await html2canvas(modal, {
+      scale: 2,
       useCORS: true,
-      logging: false,
+      backgroundColor: '#fff',
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: modal.scrollWidth,
+      windowHeight: modal.scrollHeight,
     });
+
+    modal.style.overflow = prevOverflow;
+
 
     const name = (data.deckName || 'deck').replace(/[\/:*?"<>|]+/g,'_').slice(0,40);
     const fileName = `${name}_3x4.png`;

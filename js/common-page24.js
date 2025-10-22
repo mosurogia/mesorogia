@@ -84,6 +84,9 @@ async function chooseAspectByPrompt() {
 
   // ============ 画像生成メイン ============
   async function exportDeckImage(){
+
+  // ユーザー操作直後に先に空タブを開く（ポップアップブロック回避）
+  const preTab = window.open('', '_blank');
   const deckObj = window.deck || {};
   const total = Object.values(deckObj).reduce((a,b)=>a+(b|0),0);
   if (total === 0){ alert('デッキが空です。カードを追加してください。'); return; }
@@ -116,7 +119,7 @@ async function chooseAspectByPrompt() {
 
     const name = (data.deckName || 'deck').replace(/[\/:*?"<>|]+/g,'_').slice(0,40);
     const fileName = `${name}_3x4.png`;
-    downloadCanvas(canvas, fileName);
+    downloadCanvas(canvas, fileName, preTab);
   } finally {
     node.remove();
     hideLoadingOverlay(loader);

@@ -20,7 +20,7 @@
   const LS_KEY_COLS   = 'deckimg_cols_v1';   // 横長用の列数
   const LS_KEY_BG     = 'deckimg_bg_v1';     // 背景テーマ
 
-  const VALID_ASPECTS = new Set(['3:4','4:3']);
+  const VALID_ASPECTS = new Set(['3:4']);
 
   // ================= 公開API =================
   const DeckImg = {
@@ -84,52 +84,45 @@ async function chooseAspectByPrompt() {
 
   // ============ 画像生成メイン ============
   async function exportDeckImage(){
-    // デッキが空ならアラート
-    const deckObj = window.deck || {};
-    const total = Object.values(deckObj).reduce((a,b)=>a+(b|0),0);
-    if (total === 0){
-      alert('デッキが空です。カードを追加してください。');
-      return;
-    }
-    if (total > 40){
-      alert('デッキ枚数が多すぎます（40枚以内にしてください）');
-      return;
-    }
+  const deckObj = window.deck || {};
+  const total = Object.values(deckObj).reduce((a,b)=>a+(b|0),0);
+  if (total === 0){ alert('デッキが空です。カードを追加してください。'); return; }
+  if (total > 40){ alert('デッキ枚数が多すぎます（40枚以内にしてください）'); return; }
 
-    const aspect = await chooseAspectByPrompt(); // その場で選択（スマホ実機OK）
-    window.DeckImg?.setAspect?.(aspect);         // ついでに保存（任意）
-    const data = buildDeckSummaryData();
-    const spec = getCanvasSpec(aspect);
+  const aspect = '3:4';                        // 縦固定
+  window.DeckImg?.setAspect?.('3:4');
+  const data = buildDeckSummaryData();
 
+  // ← ここがポイント：カード種類数から“ちょうど収まる高さ”を決める
+  const kinds = data.uniqueList?.length || 0;
+  const spec  = getCanvasSpec(aspect, kinds);  // ★ 引数に kinds を渡す
 
-    // 列数: 縦=5固定 / 横=コンソール可変
-    spec.cols = (aspect === '3:4') ? 5 : readCols();
+  spec.cols = 5;                                // 5列固定
 
-    const node = await buildShareNode(data, spec);
-    document.body.appendChild(node);
+  const node = await buildShareNode(data, spec);
+  document.body.appendChild(node);
 
-    const loader = showLoadingOverlay('画像生成中…');
+  const loader = showLoadingOverlay('画像生成中…');
 
-    try {
-      await nextFrame(); await nextFrame(); // レイアウト安定待ち
+  try {
+    await nextFrame(); // 1回でOK
+    const scale = getPreferredScale();
+    const canvas = await html2canvas(node, {
+      backgroundColor: null, // DOMグラデをそのまま撮る
+      scale,
+      useCORS: true,
+      logging: false,
+    });
 
-      const scale = getPreferredScale();
-      const canvas = await html2canvas(node, {
-        backgroundColor: null,
-        scale,
-        useCORS: true,
-        logging: false,
-      });
-
-      const name = (data.deckName || 'deck').replace(/[\/:*?"<>|]+/g,'_').slice(0,40);
-      const suffix = (aspect === '3:4' ? '3x4' : '4x3');
-      const fileName = `${name}_${suffix}.png`;
-      downloadCanvas(canvas, fileName);
-    } finally {
-      node.remove();
-      hideLoadingOverlay(loader);
-    }
+    const name = (data.deckName || 'deck').replace(/[\/:*?"<>|]+/g,'_').slice(0,40);
+    const fileName = `${name}_3x4.png`;
+    downloadCanvas(canvas, fileName);
+  } finally {
+    node.remove();
+    hideLoadingOverlay(loader);
   }
+}
+
   window.exportDeckImage = exportDeckImage;
 
   // ============ データ収集 ============
@@ -188,32 +181,56 @@ async function chooseAspectByPrompt() {
   }
 
   // ============ レイアウト仕様 ============
-  function getCanvasSpec(aspect, bgChoice){
-    let width, height, headerH, footerH;
-    if (aspect === '3:4') { // 縦
-      width  = 1350;
-      height = 1800;
-      headerH = 520;
-      footerH = 84;
-    } else { // 4:3 横
-      width  = 1800;
-      height = 1350;
-      headerH = 360;
-      footerH = 84;
-    }
+  function getCanvasSpec(aspect, kinds){
+    // ---- 基本定数（縦固定・5列）----
+    const WIDTH        = 1350;     // 横幅（固定）
+    const PADDING      = 24;       // 外枠パディング
+    const GRID_PAD_SUM = 24;       // グリッドパネル内の左右合計パディング（12px×2）
+    const COLS         = 5;
+    const GAP          = 12;       // カード間の隙間
+    const CARD_AR      = 532/424;  // カード縦横比（縦/横）
 
-    const theme = resolveTheme();
+    // ヘッダー/フッター（基準）
+    const HEADER_H_STD = 320;      // 標準ヘッダー高さ
+    const FOOTER_H     = 84;
 
+    // 使える横幅
+    const usableW = WIDTH - PADDING*2 - GRID_PAD_SUM;
+    // カード1枚の横幅（横余白ゼロで割り切り）
+    const cardW   = (usableW - GAP*(COLS-1)) / COLS;
+    const cardH   = cardW * CARD_AR;
+
+    // 行数
+    const rows    = Math.max(1, Math.ceil((kinds||0) / COLS));
+    const rowsStd = 4;                       // ★標準：20種＝4行
+
+    // グリッドの高さ（行数ぶんぴったり）
+    const gridH   = rows * cardH + GAP * (rows - 1);
+
+    // ヘッダーのタイトルサイズを行数に応じて微調整
+    // 4行なら 60px、1行多いごとに 2px ずつ小さく（下限48）
+    const titleSize = Math.max(48, 60 - Math.max(0, rows - rowsStd) * 2);
+
+    // 最終高さ：上下パディング＋ヘッダー＋グリッド＋フッター＋パネル余白
+const height = PADDING + HEADER_H_STD + gridH + FOOTER_H + GRID_PAD_SUM;
+
+    const theme = resolveTheme(); // スタイリッシュ薄色グラデ
 
     return {
-      aspect, width, height,
-      padding: 24,
-      cols: 5, // デフォは後で上書き
-      headerH, footerH,
-      gap: 12,
+      aspect,
+      width: WIDTH,
+      height,
+      padding: PADDING,
+      cols: COLS,
+      headerH: HEADER_H_STD,
+      footerH: FOOTER_H,
+      gap: GAP,
+      cardW, cardH, rows, // デバッグ・将来調整用
+      titleSize,
       theme
     };
   }
+
 
 function resolveTheme() {
   // 柔らかいライト系グラデ + 透明感のあるカードパネル
@@ -233,6 +250,38 @@ function resolveTheme() {
   };
 }
 
+// タイプごとの淡色背景
+const TYPE_BG = {
+  'チャージャー': { bg:'rgba(119, 170, 212, .2)', border:'rgba(119, 170, 212, .4)' },
+  'アタッカー'  : { bg:'rgba(125,  91, 155, .2)', border:'rgba(125,  91, 155, .4)' },
+  'ブロッカー'  : { bg:'rgba(214, 212, 204, .5)', border:'rgba(214, 212, 204, .8)' },
+};
+
+// メイン種族背景色
+const RACE_BG = {
+  'ドラゴン'   : 'rgba(255, 100, 100, 0.16)',
+  'アンドロイド': 'rgba(100, 200, 255, 0.16)',
+  'エレメンタル': 'rgba(100, 255, 150, 0.16)',
+  'ルミナス'   : 'rgba(255, 250, 150, 0.16)',
+  'シェイド'   : 'rgba(200, 150, 255, 0.16)',
+};
+
+function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}){
+  const span = document.createElement('span');
+  span.style.display = 'inline-flex';
+  span.style.alignItems = 'center';
+  span.style.gap = '8px';
+  span.style.background = bg || 'rgba(2,6,23,0.04)';
+  span.style.border = `1px solid ${border || 'rgba(2,6,23,0.10)'}`;
+  span.style.padding = pad;
+  span.style.marginRight = '10px';
+  span.style.borderRadius = '999px';
+  span.style.fontSize = `${fz}px`;
+  span.style.color = color;
+  span.style.fontWeight = '700';
+  span.textContent = text;
+  return span.outerHTML;
+}
 
 
   // ============ DOMビルド ============
@@ -248,7 +297,7 @@ function resolveTheme() {
       boxSizing: 'border-box',
       padding: spec.padding + 'px',
       display: 'grid',
-      gridTemplateRows: `${spec.headerH}px 1fr ${spec.footerH}px`,
+      gridTemplateRows: `${spec.headerH}px auto ${spec.footerH}px`,
       gap: '6px',
     });
 
@@ -267,54 +316,96 @@ function resolveTheme() {
     const rep = await buildRepThumb(data.representativeCd, spec);
 
     const headRight = document.createElement('div');
-    headRight.style.display = 'grid';
-    headRight.style.gridTemplateRows = 'min-content repeat(3, min-content)';
-    headRight.style.gap = '8px';
 
+    // 2列グリッド：左=タイプ/レア、右=枚数/種族
+    headRight.style.display = 'grid';
+    headRight.style.gridTemplateColumns = '1fr auto';
+    headRight.style.gridTemplateRows = 'min-content min-content min-content';
+    headRight.style.columnGap = '18px';
+    headRight.style.rowGap = '0';
+    headRight.style.alignItems = 'center'; // 各セル内は中央寄せ
+    headRight.style.alignContent = 'space-evenly';// 3行を上下含め均等配分
+    headRight.style.height = '100%';  // 親の高さにフィット
+    headRight.style.alignSelf = 'stretch';  // 自身も伸ばす
+
+    // タイトル
     const title = document.createElement('div');
     title.textContent = data.deckName || 'デッキ';
     Object.assign(title.style, {
-      fontSize: (spec.aspect==='3:4' ? '60px' : '48px'),
-      fontWeight: '900', letterSpacing: '.4px',
-      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+      gridColumn: '1 / -1', // タイトルは2列ぶち抜き
+      fontSize: `${spec.titleSize}px`,
+      fontWeight: '900',
+      letterSpacing: '.4px',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
       color: spec.theme.text,
     });
 
-    const row1 = document.createElement('div');
-    row1.innerHTML = badge(spec, undefined, `デッキ ${data.total}枚`) + ' ' + badge(spec, undefined, `種族 ${data.mainRace}`);
+    // 左列：タイプ構成（絵文字を無くし色チップに）
+    const leftRow1 = document.createElement('div');
+    leftRow1.style.whiteSpace = 'nowrap';
+    leftRow1.innerHTML =
+      coloredChip(`チャージャー ${data.typeCounts['チャージャー']||0}枚`, TYPE_BG['チャージャー']) +
+      coloredChip(`アタッカー ${data.typeCounts['アタッカー']||0}枚`, TYPE_BG['アタッカー']) +
+      coloredChip(`ブロッカー ${data.typeCounts['ブロッカー']||0}枚`, TYPE_BG['ブロッカー']);
 
-    const row2 = document.createElement('div');
-    row2.innerHTML =
-      badge(spec, '🔵', `チャージャー ${data.typeCounts['チャージャー']||0}枚`) + ' ' +
-      badge(spec, '🟣', `アタッカー ${data.typeCounts['アタッカー']||0}枚`) + ' ' +
-      badge(spec, '⚪️', `ブロッカー ${data.typeCounts['ブロッカー']||0}枚`);
-
+    // 左列：レアリティ構成（従来チップのままでもOK）
     const r = data.rarityMap;
-    const row3 = document.createElement('div');
-    row3.innerHTML =
+    const leftRow2 = document.createElement('div');
+    leftRow2.style.whiteSpace = 'nowrap';
+    leftRow2.innerHTML =
       badge(spec, '🌈', `レジェンド ${r['レジェンド']||0}枚`) + ' ' +
       badge(spec, '🟡', `ゴールド ${r['ゴールド']||0}枚`)   + ' '+
       badge(spec, '⚪️', `シルバー ${r['シルバー']||0}枚`)  + ' ' +
       badge(spec, '🟤', `ブロンズ ${r['ブロンズ']||0}枚`);
 
-    headRight.appendChild(title);
-    headRight.appendChild(row1);
-    headRight.appendChild(row2);
-    headRight.appendChild(row3);
+    // 右列：デッキ枚数（大きめチップ）
+    const rightRow1 = document.createElement('div');
+    rightRow1.style.display = 'flex';
+    rightRow1.style.justifyContent = 'flex-end';
+    rightRow1.innerHTML = coloredChip(`📘${data.total} / 30`, {
+    bg:'rgba(2,6,23,0.04)',
+    border:'rgba(2,6,23,0.10)',
+    fz:24,
+    pad:'12px 16px'
+    });
 
+
+    // 右列：メイン種族（背景色で表現）
+    const rightRow2 = document.createElement('div');
+    rightRow2.style.display = 'flex';
+    rightRow2.style.justifyContent = 'flex-end';
+    const raceBg = RACE_BG[data.mainRace] || 'rgba(2,6,23,0.04)';
+    rightRow2.innerHTML = coloredChip(`${data.mainRace}`, { bg: raceBg, border:'rgba(2,6,23,0.10)', fz:24, pad:'12px 16px' });
+
+    // 配置
+    // 1行目：タイトル（2列）
+    headRight.appendChild(title);
+    // 2行目：左=タイプ、右=枚数
+    leftRow1.style.gridColumn = '1 / 2';
+    rightRow1.style.gridColumn = '2 / 3';
+    headRight.appendChild(leftRow1);
+    headRight.appendChild(rightRow1);
+    // 3行目：左=レア、右=種族
+    leftRow2.style.gridColumn = '1 / 2';
+    rightRow2.style.gridColumn = '2 / 3';
+    headRight.appendChild(leftRow2);
+    headRight.appendChild(rightRow2);
+
+    // 既存の append
     header.appendChild(rep);
     header.appendChild(headRight);
 
+
     // ---- グリッド（カード一覧） ----
     const grid = document.createElement('div');
-    let gridHost = grid;
-    const gap = spec.gap;
     grid.style.display = 'grid';
     grid.style.gridTemplateColumns = `repeat(${spec.cols}, 1fr)`;
-    grid.style.gap = gap + 'px';
+    grid.style.gap = spec.gap + 'px';
     grid.style.alignContent = 'start';
 
-    // パネル化（ライトでも視認性）
+    // パネル
     const gridPanel = document.createElement('div');
     gridPanel.style.background = spec.theme.panelBg;
     gridPanel.style.border = `1px solid ${spec.theme.panelEdge}`;
@@ -322,45 +413,20 @@ function resolveTheme() {
     gridPanel.style.padding = '12px';
     gridPanel.style.boxShadow = spec.theme.shadow;
 
-    // すべてのカードをキャンバス内に収めるスケール計算
-    const kinds = data.uniqueList?.length || 0;
-    const rows = Math.ceil(kinds / spec.cols);
-
-    const usableWidth  = spec.width  - spec.padding * 2 - 24; // gridPanel padding相当
-    const usableHeight = spec.height - spec.headerH - spec.footerH - spec.padding * 2 - 24;
-
-    const cardW = (usableWidth - gap * (spec.cols - 1)) / spec.cols;
-    const cardH = cardW * (532 / 424);
-    const naturalGridH = rows * cardH + gap * (rows - 1);
-
-    const scale = Math.min(1, (usableHeight / naturalGridH) * 0.995);
-
-    if (scale < 1) {
-      const wrap = document.createElement('div');
-      wrap.style.height = `${usableHeight}px`;
-      wrap.style.overflow = 'hidden';
-      wrap.style.position = 'relative';
-      wrap.style.transformOrigin = 'top center';
-      wrap.style.display = 'block';
-
-      grid.style.transformOrigin = 'top center';
-      grid.style.transform = `scale(${scale})`;
-
-      wrap.appendChild(grid);
-      gridHost = wrap;
-    }
-
+    // タイル生成
     const tiles = await buildCardTilesUnified(data.uniqueList, data.countMap, spec);
     tiles.forEach(t => grid.appendChild(t));
 
-    gridPanel.appendChild(gridHost);
+    // そのまま入れる（スケールやラップなし）
+    gridPanel.appendChild(grid);
+
 
     // ---- フッター（URL） ----
     const footer = document.createElement('div');
     footer.style.display = 'flex';
     footer.style.alignItems = 'center';
     footer.style.justifyContent = 'flex-end';
-    footer.style.fontSize = '22px';
+    footer.style.fontSize = '24px';
     footer.style.background = spec.theme.panelBg;
     footer.style.border = `1px solid ${spec.theme.panelEdge}`;
     footer.style.borderRadius = '12px';
@@ -391,8 +457,9 @@ function resolveTheme() {
     span.style.padding = '8px 12px';
     span.style.marginRight = '8px';
     span.style.borderRadius = '999px';
-    span.style.fontSize = '20px';
+    span.style.fontSize = '24px';
     span.style.color = spec.theme.chipText;
+    span.style.fontWeight = '700';
 
     const hasText = (text !== undefined);
     const e = document.createElement('span'); e.textContent = hasText ? (emoji || '') : '';

@@ -107,30 +107,30 @@ async function chooseAspectByPrompt() {
   try {
     await nextFrame(); // 1回でOK
     const scale = getPreferredScale();
-    const modal = document.getElementById('deckimg-preview-modal');
-    const prevOverflow = modal.style.overflow;
-    modal.style.overflow = 'visible';     // 一時解除
-    modal.style.paddingRight = '20px';
-    modal.style.paddingBottom = '20px';
-    modal.scrollTop = 0;                  // 一番上に戻す
+      const target = node;  // 生成ノードを直接キャプチャ
+      const prevOverflow = target.style.overflow;
+      target.style.overflow = 'visible';
+      target.style.paddingRight = '20px';
+      target.style.paddingBottom = '20px';
+      target.scrollTop = 0;
 
-    const canvas = await html2canvas(modal, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#fff',
-      scrollX: 0,
-      scrollY: 0,
-      width: modal.scrollWidth,        // ← 追加
-      height: modal.scrollHeight,      // ← 追加
-      windowWidth: document.documentElement.scrollWidth,   // ← ページ全体を対象に
-      windowHeight: document.documentElement.scrollHeight, // ← 同上
-      x: 0,
-      y: 0,
-      allowTaint: false,
-    });
+      const canvas = await html2canvas(target, {
+        scale: getPreferredScale(),               // ← 端末に合わせたスケール
+        useCORS: true,
+        backgroundColor: '#fff',
+        scrollX: 0,
+        scrollY: 0,
+        width:  target.scrollWidth,               // ← 修正：modal → target
+        height: target.scrollHeight,              // ← 修正：modal → target
+        windowWidth:  document.documentElement.scrollWidth,
+        windowHeight: document.documentElement.scrollHeight,
+        x: 0,
+        y: 0,
+        allowTaint: false,
+      });
 
+      target.style.overflow = prevOverflow;
 
-    modal.style.overflow = prevOverflow;
 
 
     const name = (data.deckName || 'deck').replace(/[\/:*?"<>|]+/g,'_').slice(0,40);
@@ -684,7 +684,7 @@ function downloadCanvas(canvas, fileName){
   const img = document.createElement('img');
   img.src = dataUrl;
   Object.assign(img.style, {
-    maxWidth: 'min(95vw, 1350px)',
+    maxWidth: 'min(80vw, 500px)',
     height: 'auto',
     borderRadius: '12px',
     boxShadow: '0 0 24px rgba(0,0,0,0.6)',

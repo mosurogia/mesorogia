@@ -304,8 +304,8 @@ function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}
     // ---- ヘッダー ----
     const header = document.createElement('div');
     header.style.display = 'grid';
-    header.style.gridTemplateColumns = (spec.aspect==='3:4' ? '260px 1fr' : '220px 1fr');
-    header.style.gap = '18px';
+    header.style.gridTemplateColumns = (spec.aspect==='3:4' ? '240px 1fr' : '220px 1fr');
+    header.style.gap = '10px';
     header.style.alignItems = 'center';
     header.style.background = spec.theme.panelBg;
     header.style.border = `1px solid ${spec.theme.panelEdge}`;
@@ -319,7 +319,7 @@ function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}
 
     // 2列グリッド：左=タイプ/レア、右=枚数/種族
     headRight.style.display = 'grid';
-    headRight.style.gridTemplateColumns = '1fr auto';
+    headRight.style.gridTemplateColumns = '1fr 180px';
     headRight.style.gridTemplateRows = 'min-content min-content min-content';
     headRight.style.columnGap = '18px';
     headRight.style.rowGap = '0';
@@ -596,16 +596,114 @@ function downloadCanvas(canvas, fileName){
     if (!blob) return;
     const url = URL.createObjectURL(blob);
 
-    // 📱💡 生成後に新しいタブで画像を開く
-    const newTab = window.open(url, '_blank');
+    const newTab = window.open('', '_blank');
     if (!newTab) {
       alert('画像を開けませんでした。ポップアップブロックを解除してください。');
       URL.revokeObjectURL(url);
       return;
     }
 
-    // メモリ解放（10秒後）
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    newTab.document.write(`
+      <!DOCTYPE html>
+      <html lang="ja">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1.0">
+        <title>${fileName}</title>
+        <style>
+          body {
+            margin: 0;
+            background: #0f1115;
+            color: #fff;
+            text-align: center;
+            font-family: "Segoe UI", "Hiragino Sans", system-ui, sans-serif;
+          }
+
+          .top-bar {
+            background: rgba(0,0,0,0.6);
+            padding: 10px 0 8px;
+            position: sticky;
+            top: 0;
+            backdrop-filter: blur(8px);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+          }
+
+          .top-bar button {
+            background: #fff;
+            color: #111;
+            font-weight: 700;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+          }
+
+          .top-bar button:hover {
+            background: #e5e5e5;
+          }
+
+          .hint {
+            font-size: 14px;
+            opacity: 0.85;
+            letter-spacing: .02em;
+            color: #ddd;
+          }
+
+          img {
+            max-width: 100vw;
+            height: auto;
+            margin: 16px auto 32px;
+            display: block;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.4);
+          }
+
+          /* ===============================
+             📱 モバイル：現状維持
+          =============================== */
+          @media (max-width: 599px) {
+            .top-bar button { font-size: 16px; padding: 8px 16px; }
+            .hint { font-size: 14px; }
+          }
+
+          /* ===============================
+             💻 タブレット：少し拡大
+          =============================== */
+          @media (min-width: 600px) and (max-width: 1023px) {
+            .top-bar { gap: 8px; padding: 14px 0 10px; }
+            .top-bar button { font-size: 18px; padding: 10px 20px; }
+            .hint { font-size: 16px; }
+          }
+
+          /* ===============================
+             🖥️ PC：さらに大きく
+          =============================== */
+          @media (min-width: 1024px) {
+            .top-bar { gap: 10px; padding: 18px 0 12px; }
+            .top-bar button { font-size: 50px; padding: 12px 26px; border-radius: 10px; }
+            .hint { font-size: 45px; }
+            img { margin-top: 24px; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="top-bar">
+          <button onclick="window.close()">← 元のデッキに戻る</button>
+          <div class="hint">長押しで保存・共有できます ↓</div>
+        </div>
+        <img src="${url}" alt="Deck Image">
+      </body>
+      </html>
+    `);
+    newTab.document.close();
+
+    setTimeout(() => URL.revokeObjectURL(url), 15000);
   }, 'image/png', 1.0);
 }
 

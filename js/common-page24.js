@@ -592,22 +592,63 @@ function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}
   function nextFrame(){ return new Promise(r=>requestAnimationFrame(()=>r())); }
 
 function downloadCanvas(canvas, fileName){
-  canvas.toBlob((blob)=>{
-    if (!blob) return;
-    const url = URL.createObjectURL(blob);
+  // Base64化（iPad/Safari対策：blobだと保存できない）
+  const dataUrl = canvas.toDataURL('image/png');
 
-    // 📱💡 生成後に新しいタブで画像を開く
-    const newTab = window.open(url, '_blank');
-    if (!newTab) {
-      alert('画像を開けませんでした。ポップアップブロックを解除してください。');
-      URL.revokeObjectURL(url);
-      return;
-    }
+  // 既に開いてたら消す
+  document.getElementById('deckimg-preview-modal')?.remove();
 
-    // メモリ解放（10秒後）
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
-  }, 'image/png', 1.0);
+  // モーダル本体
+  const modal = document.createElement('div');
+  modal.id = 'deckimg-preview-modal';
+  Object.assign(modal.style, {
+    position: 'fixed', inset: 0, zIndex: 9999,
+    background: 'rgba(0,0,0,0.8)',
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center',
+    color: '#fff', fontFamily: 'system-ui, sans-serif',
+  });
+
+  // 操作バー
+  const bar = document.createElement('div');
+  Object.assign(bar.style, {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    maxWidth: '800px', marginBottom: '10px',
+    fontSize: 'clamp(14px, 2vw, 18px)',
+  });
+
+
+  // 保存案内（デバイス別）
+  const hint = document.createElement('div');
+  const ua = navigator.userAgent.toLowerCase();
+  if (/iphone|ipad|ipod/.test(ua))
+    hint.textContent = '長押しで「写真に追加」や「共有」ができます';
+  else if (/android/.test(ua))
+    hint.textContent = '長押しで「画像をダウンロード」や「共有」ができます';
+  else
+    hint.textContent = '右クリックで「名前を付けて保存」できます';
+
+  bar.appendChild(hint);
+
+  // 画像
+  const img = document.createElement('img');
+  img.src = dataUrl;
+  Object.assign(img.style, {
+    maxWidth: '90vw', maxHeight: '80vh',
+    borderRadius: '12px', boxShadow: '0 0 24px rgba(0,0,0,0.6)',
+    objectFit: 'contain',
+  });
+
+  // 背景クリックで閉じる
+  modal.addEventListener('click', e => {
+    if (e.target === modal) modal.remove();
+  });
+
+  modal.appendChild(bar);
+  modal.appendChild(img);
+  document.body.appendChild(modal);
 }
+
 
 
   function getPreferredScale(){

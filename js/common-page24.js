@@ -605,20 +605,52 @@ function downloadCanvas(canvas, fileName){
     position: 'fixed', inset: 0, zIndex: 9999,
     background: 'rgba(0,0,0,0.8)',
     display: 'flex', flexDirection: 'column',
-    alignItems: 'center', justifyContent: 'center',
-    color: '#fff', fontFamily: 'system-ui, sans-serif',
+    alignItems: 'center', justifyContent: 'flex-start',
+    overflowY: 'auto',
+    padding: '40px 0',
+    color: '#fff',
+    fontFamily: 'system-ui, sans-serif',
   });
 
-  // 操作バー
+  // 🔹 背景スクロール抑制
+  document.body.style.overflow = 'hidden';
+
+  // 閉じるボタン
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '×';
+  Object.assign(closeBtn.style, {
+    position: 'absolute',
+    top: '16px',
+    right: '16px',
+    background: 'rgba(255,255,255,0.9)',
+    color: '#111',
+    border: 'none',
+    borderRadius: '50%',
+    width: '36px',
+    height: '36px',
+    fontSize: '22px',
+    fontWeight: '700',
+    lineHeight: '1',
+    cursor: 'pointer',
+    boxShadow: '0 0 6px rgba(0,0,0,0.3)',
+  });
+  closeBtn.addEventListener('click', () => {
+    modal.remove();
+    document.body.style.overflow = ''; // 🔹 背景スクロール再許可
+  });
+  modal.appendChild(closeBtn);
+
+  // 操作バー（保存案内）
   const bar = document.createElement('div');
   Object.assign(bar.style, {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    maxWidth: '800px', marginBottom: '10px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: '12px',
     fontSize: 'clamp(14px, 2vw, 18px)',
+    textAlign: 'center',
   });
 
-
-  // 保存案内（デバイス別）
   const hint = document.createElement('div');
   const ua = navigator.userAgent.toLowerCase();
   if (/iphone|ipad|ipod/.test(ua))
@@ -627,27 +659,32 @@ function downloadCanvas(canvas, fileName){
     hint.textContent = '長押しで「画像をダウンロード」や「共有」ができます';
   else
     hint.textContent = '右クリックで「名前を付けて保存」できます';
-
   bar.appendChild(hint);
 
   // 画像
   const img = document.createElement('img');
   img.src = dataUrl;
   Object.assign(img.style, {
-    maxWidth: '90vw', maxHeight: '80vh',
-    borderRadius: '12px', boxShadow: '0 0 24px rgba(0,0,0,0.6)',
+    maxWidth: 'min(95vw, 1350px)',
+    height: 'auto',
+    borderRadius: '12px',
+    boxShadow: '0 0 24px rgba(0,0,0,0.6)',
     objectFit: 'contain',
   });
 
-  // 背景クリックで閉じる
+  // 🔹 背景クリックで閉じる（×ボタンと同処理）
   modal.addEventListener('click', e => {
-    if (e.target === modal) modal.remove();
+    if (e.target === modal && e.clientY < window.innerHeight * 0.9) {
+      modal.remove();
+      document.body.style.overflow = '';
+    }
   });
 
   modal.appendChild(bar);
   modal.appendChild(img);
   document.body.appendChild(modal);
 }
+
 
 
 

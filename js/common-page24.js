@@ -594,13 +594,12 @@ function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}
   // ============ ユーティリティ ============
   function nextFrame(){ return new Promise(r=>requestAnimationFrame(()=>r())); }
 
-function downloadCanvas(canvas, fileName, preTab){
+function downloadCanvas(canvas, fileName){
   canvas.toBlob((blob)=>{
     if (!blob) return;
     const url = URL.createObjectURL(blob);
 
-    // 事前に開いたタブがあれば使う／無ければ（ブロック時）フォールバック
-    const newTab = preTab && !preTab.closed ? preTab : window.open('', '_blank');
+    const newTab = window.open('', '_blank');
     if (!newTab) {
       alert('画像を開けませんでした。ポップアップブロックを解除してください。');
       URL.revokeObjectURL(url);
@@ -710,6 +709,7 @@ function downloadCanvas(canvas, fileName, preTab){
     setTimeout(() => URL.revokeObjectURL(url), 15000);
   }, 'image/png', 1.0);
 }
+
 
 
   function getPreferredScale(){

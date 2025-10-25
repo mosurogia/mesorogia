@@ -162,7 +162,7 @@ select {
 /* ボタン群 */
 .filter-group {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     grid-auto-flow: dense;
     gap: 8px;
     align-items: stretch;
@@ -274,15 +274,19 @@ select {
         }
 }
 .filter-group[data-key="パック名"] .filter-btn {
+    display: block;
     white-space: normal;
-    /* 折返しOK */
     min-height: 42px;
     line-height: 1.25;
-    max-height: 2.6em;
-    /* 2行程度に抑える */
+    max-height: 4em;
     overflow: hidden;
 }
 
+/*パック名*/
+.filter-btn .pack-kana {
+    font-size: .8em;
+    opacity: .85;
+}
 
 /*コストパワー横並び*/
 .filter-range-wrapper {

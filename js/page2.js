@@ -4423,7 +4423,7 @@ function buildDeckPostPayload(){
   };
 }
 
-const GAS_POST_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyY1zOhKNBjWbn4MTK4KSU80Y4Arr1Q2Yup6iUMxH7BHaF_hn_yf-JDfLzduZm-dZpo/exec';
+const GAS_POST_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxVn9nAj5aDbejxBGKR33x-QdgzFMYWR-mJk-GmKSw3us4m1hKaR9o3k8fpPAmUIU_W/exec';
 
 // 認証操作もこのGASに対して mode パラメータで行うため、投稿と同じエンドポイントを使用する。
 const GAS_AUTH_ENDPOINT = GAS_POST_ENDPOINT;

@@ -83,6 +83,7 @@
                 <option value="power-asc">パワー昇順</option>
                 <option value="power-desc">パワー降順</option>
                 <option value="category-order">カテゴリ順</option>
+                <option value="rarity-order">レアリティ順</option>
             </select>
             <button onclick="openFilterModal()">📊 フィルター</button>
         </div>
@@ -180,6 +181,46 @@
             <!-- カード一覧（5列グリッド） -->
         </div>
 
+        <!-- ▼ カード操作モーダル -->
+        <div id="cardOpModal" class="modal">
+            <div class="modal-content cardop-modal" id="cardOpModalContent" role="dialog" aria-modal="true"
+                aria-labelledby="cardOpTitle">
+                <div class="cardop-header" id="cardOpHeader">
+                    <div class="cardop-topline">
+                        <span class="cardop-move-hint">
+                            ドラッグでミニウィンドウ移動可
+                        <br>
+                            ×で閉じる
+                        </span>
+                        <button type="button" class="cardop-close" id="cardOpCloseBtn" aria-label="閉じる">×</button>
+                    </div>
+                    <h3 id="cardOpTitle" class="cardop-title"></h3>
+                </div>
+
+                <div class="cardop-body">
+                    <!-- 上：カード画像（枚数バッジ付き） -->
+                    <div class="cardop-figure">
+                        <img id="cardOpImg" alt="">
+                        <div class="count-badge" id="cardOpCountBadge">x1</div>
+                    </div>
+
+                    <!-- 操作：1行目（- / +） -->
+                    <div class="cardop-row">
+                        <button type="button" class="cardop-btn grow" id="cardOpDec">－</button>
+                        <button type="button" class="cardop-btn grow" id="cardOpInc">＋</button>
+                    </div>
+
+                    <!-- 操作：2行目（代表カードにする） -->
+                    <div class="cardop-row">
+                        <button type="button" class="cardop-btn primary full" id="cardOpSetRep">このカードを代表カードにする</button>
+                    </div>
+
+                    <!-- 効果一覧 -->
+                    <div class="cardop-effects" id="cardOpEffects"></div>
+                </div>
+            </div>
+        </div>
+
         <!--デッキ情報ゾーン-->
         <div id="deck-info" class="deck-section">
             <!-- サブタブ -->
@@ -214,7 +255,7 @@
                     <div class="info-row">
                         <div class="info-label">メインカード</div>
                         <div class="info-value">
-                            <span id="deck-representative">未選択</span>(カード画像を選択)</div>
+                            <span id="deck-representative" class="tap-target" role="button" aria-label="代表カードを選択（タップで開く）"></span><br><span class="post-representative-hint">(カード名をタップして選択 保存デッキや投稿時の代表カード用)</span></div>
                     </div>
 
                     <!-- 旧神状況 -->
@@ -232,16 +273,16 @@
                     <!--レアリティ構成-->
                     <div class="info-row">
                         <div class="info-label">レアリティ構成</div>
-                        <div class="info-value" id="rarity-summary">🌈0枚/ 🟡0枚/ ⚪️0枚/ 🟤0枚</div>
+                        <div class="info-value" id="rarity-summary">🌈レジェンド0枚 🟡ゴールド0枚 ⚪️シルバー0枚 🟤ブロンズ0枚</div>
                     </div>
 
                     <!-- 使用タイプ内訳 -->
                     <div class="info-row">
                         <div class="info-label">タイプ構成</div>
                         <div class="info-value">
-                            🔵<span id="count-charger">0</span>枚/
-                            🟣<span id="count-attacker">0</span>枚/
-                            ⚪️<span id="count-blocker">0</span>枚
+                            <div id="type-summary" class="type-summary">
+                                <!-- JSでチップを自動挿入 -->
+                            </div>
                         </div>
                     </div>
 
@@ -253,12 +294,15 @@
 
                     <div class="info-row">
                         <div class="info-label">総パワー</div>
-                        <div class="info-value" id="total-power">🔵0 / 🟣0</div>
+                        <div class="info-value">
+                            <div id="power-summary" class="type-summary"></div>
+                            <span id="total-power" style="display:none;"></span>
+                        </div>
                     </div>
 
                     <!--マリガン練習 -->
                     <div class="mulligan-trainer" id="mulligan-trainer">
-                        <div class="info-label">マリガンシミュレーション</div>
+                        <div class="mull-remaining-title">マリガンシミュレーション</div>
 
                         <!-- デッキ不足メッセージ -->
                         <div class="mull-warning" id="mull-warning" hidden>
@@ -308,7 +352,7 @@
                     <div class="info-row" style="justify-content:flex-start;">
                         <div class="info-label">不足枚数</div>
                         <div class="button-info">
-                        <div id="shortage-summary-line">🌈0枚 / 🟡0枚 / ⚪️0枚 / 🟤0枚</div>
+                        <div id="shortage-summary-line">🌈レジェンド0枚 🟡ゴールド0枚 ⚪️シルバー0枚 🟤ブロンズ0枚</div>
                         <button id="shortage-toggle-btn" type="button">不足カードリスト</button>
                         </div>
 
@@ -319,11 +363,15 @@
                     <!-- 必要ポイント/ダイヤ/砂 -->
                     <div class="info-row" style="justify-content:flex-start;">
                         <div class="info-label">必要ポイント</div>
-                        <div class="button-info" >
+                        <div>
+                        <div class="owned-note">必要なポイント/ダイヤ/砂を確認できます<br>
+                        ボタンで変更可</div>
+                        <div class="button-info">
                             <button id="exchange-toggle-btn-compact" type="button">🟢 ポイント</button>
                             <div id="exchange-values-compact" class="exchange-values">
                                 <!-- ここに数値が入る（ポイント/ダイヤ/砂） -->
                             </div>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -337,7 +385,16 @@
                         <button id="exportPngBtn">画像生成</button>
                     </div>
                     <!-- 👆ここまで“元の #deck-info 中身” -->
-
+        <!-- ▼ 代表カード：選択モーダル -->
+        <div class="modal" id="repSelectModal" style="display:none;">
+            <div class="modal-content cardnote-modal">
+                <h3 class="filter-maintitle">代表カードを選択</h3>
+                <div id="repSelectGrid" class="cardnote-grid"><!-- JSで5列グリッド生成 --></div>
+                <div class="modal-footer" style="gap:.5rem;">
+                    <button type="button" id="repSelectClose" class="modal-buttun">閉じる</button>
+                </div>
+            </div>
+        </div>
                 </div>
                 </div>
 
@@ -365,7 +422,7 @@
                             <label class="info-label">メインカード</label>
                             <div class="info-value">
 
-                            <span id="post-representative">未選択</span>(カード画像を選択)</div>
+                            <span id="post-representative" class="tap-target" role="button" aria-label="代表カードを選択（タップで開く）"></span><br><span class="post-representative-hint">(カード名をタップして選択 保存デッキや投稿時の代表カード用)</span></div>
                         </div>
 
                         <div class="info-row">
@@ -377,7 +434,10 @@
 
                         <!-- ▼ カード解説（複数可） -->
                         <div class="info-row">
-                            <label class="info-label">カード解説</label>
+                            <label class="info-label any">
+                                <div>カード解説</div>
+                                <div class="any-text">(任意)</div>
+                            </label>
                             <div class="info-value" style="width:100%">
                                 <div id="post-card-notes">
                                     <!-- JSで行を生成 -->
@@ -390,15 +450,108 @@
                         </div>
 
                         <div class="info-row">
-                            <div class="info-label">タグ</div>
+                            <div class="info-label any">
+                                <div>タグ</div>
+                                <div class="any-text">(任意)</div>
+                            </div>
                             <div class="info-value" id="post-tags">
                                 <div id="auto-tags" class="tag-chips"></div>
                                 <div id="select-tags" class="tag-chips"></div>
                             </div>
                         </div>
 
+                        <!-- ユーザータグ -->
                         <div class="info-row">
-                            <label class="info-label">投稿同意</label>
+                            <div class="info-label any">
+                                <div>ユーザータグ</div>
+                                <div class="any-text">(任意)</div>
+                            </div>
+                            <div class="info-value">
+                                <div id="user-tags" class="tag-chips user-tags"></div>
+
+                                <div style="display:flex; gap:6px; margin-top:6px;">
+                                    <input id="user-tag-input" class="user-tag-input" type="text" placeholder="タグを入力してください"
+                                    maxlength="12" aria-label="ユーザータグ入力" />
+                                    <button id="user-tag-add" type="button" class="add-note-btn">＋追加</button>
+                                </div>
+
+                                <div class="tags-hint" style="margin-top:4px;">
+                                    オリジナルのタグを入力できます。最大3個まで。
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <!-- ▼ 共有コード（ユーザー貼り付け／解析しない） -->
+                        <div class="info-row">
+                        <label class="info-label any">
+                            <div>デッキコード</div>
+                            <div class="any-text">(任意)</div>
+                        </label>
+                        <div class="paste-code-block">
+                            <div class="paste-code-controls">
+                                <button id="btn-paste-code" type="button">📋 貼り付け</button>
+                                <button id="btn-clear-code" type="button" disabled>🗑 削除</button>
+                            </div>
+                            <div class="paste-code-preview">
+                                <span class="label">貼り付けコード</span>
+                                <span id="pasted-code-preview">（未設定）</span>
+                            </div>
+                        </div>
+                        </div>
+
+
+                        <!-- ▼ 投稿者情報（UIのみ） -->
+                        <div class="info-row">
+                            <div class="info-label any">
+                                <div>アカウント</div>
+                                <div class="any-text">(任意)</div>
+                            </div>
+
+                            <div class="info-value">
+                                <div class="poster-stack">
+                                    <!-- 1行目：ユーザー名（投稿者名） -->
+                                    <div class="poster-line">
+                                        <input id="poster-name" type="text" placeholder="デッキ投稿者名" autocomplete="nickname" />
+                                    </div>
+
+                                    <!-- 2行目：パスワード + 表示切替 -->
+                                    <div class="poster-line pass-line">
+                                        <input id="auth-pass" type="password" placeholder="パスワード" inputmode="verbatim" />
+                                        <button type="button" id="auth-pass-toggle" class="btn ghost">表示</button>
+                                    </div>
+
+                                    <!-- 3行目：登録 / ログイン（ログイン中はログアウトのみを表示） -->
+                                    <div class="poster-line auth-buttons">
+                                        <button type="button" id="btn-signup" class="btn primary">新規登録</button>
+                                        <button type="button" id="btn-login" class="btn primary">ログイン</button>
+                                        <button type="button" id="btn-logout" class="btn danger" hidden>ログアウト</button>
+                                    </div>
+                                    <!-- 4行目：Xアカウント（連携はしない／プロフィール開くだけ） -->
+                                    <div class="poster-line x-line">
+                                        <div class="X-info">
+                                            <input id="poster-x" type="text" placeholder="Xアカウント名（@なし可）" inputmode="verbatim" />
+                                            <button type="button" id="x-link-btn" class="x-link-btn" title="Xプロフィールを開く">X を確認</button>
+                                        </div>
+                                    </div>
+                                    <!-- 注意文（ログイン中のみ表示） -->
+                                    <div id="account-note" class="account-note" hidden>
+                                        現在 <span id="account-username"></span> としてログイン中です。この状態で投稿すると投稿者名に反映されます。
+                                    </div>
+                                    <!--説明文-->
+                                    <div class="account-hint">
+                                        <small>アカウント登録することで自分のデッキで並べたり別端末から編集が可能です</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                        <div class="info-row">
+                            <label class="info-label">
+                                投稿同意
+                            </label>
                             <div class="info-value">
                                 <label class="agree-label">
                                     <input type="checkbox" id="post-agree">
@@ -436,7 +589,10 @@
                         <input type="hidden" id="post-races-hidden" name="races">
                         <input type="hidden" id="post-rep-img" name="repImg">
                         <input type="hidden" id="post-card-notes-hidden" name="cardNotes">
-
+                        <input type="hidden" id="post-user-tags-hidden" name="userTags">
+                        <input type="hidden" id="post-poster-hidden" name="poster">
+                        <input type="hidden" id="post-share-code" name="shareCode">
+                                                                </div>
                     </div>
                 </form>
                 </div>
@@ -444,26 +600,23 @@
             </div>
         </div>
 
-    </div>
-
-
     <!-- 保存デッキ一覧表示用 -->
     <div id="saved-deck">
-            <h3 class="saved-deck-title">保存デッキ一覧</h3>
-            <div id="savedDeckCount"></div>
+        <h3 class="saved-deck-title">保存デッキ一覧</h3>
+        <div id="savedDeckCount"></div>
     </div>
     <div id="savedDeckList">
         <!--保存デッキリスト-->
     </div>
 
-        <p class="saved-deck-massage">
-            ⚠️ デッキはブラウザに保存されます。キャッシュを削除するとデータが消えるのでご注意ください。
-        </p>
-</div>
+    <p class="saved-deck-massage">
+        ⚠️ デッキはブラウザに保存されます。キャッシュを削除するとデータが消えるのでご注意ください。
+    </p>
+    </div>
 
+    </div>
 <!--上部に戻るボタン-->
 <button id="scrollTopFixed" onclick="scrollToTop()">▲</button>
-
 <footer>
     <div>
         <p>

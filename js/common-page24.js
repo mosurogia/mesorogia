@@ -1,71 +1,9 @@
-/* =============================
- * common-page24.js (rewrite)
- * デッキ投稿/共有向け「紹介画像」生成（3:4 縦 / 4:3 横）
- * - deckmaker.html に読み込む想定
- * - #exportPngBtn クリックで html2canvas によりPNG保存
- * - 生成中はオーバーレイで「画像生成中…」を表示
- * - コンソールAPI:
- *     DeckImg.getAspect(), DeckImg.setAspect('3:4'|'4:3')
- *     DeckImg.getCols(),   DeckImg.setCols(n)   // 横長時のみ有効
- *     DeckImg.getBg(),     DeckImg.setBg('dark'|'light'|'#f7f7fb'等)
- * ============================= */
+
 
 (function(){
   const IMG_DIR = 'img/';
   const FALLBACK_IMG = IMG_DIR + '00000.webp';
   const BRAND_URL = 'https://mosurogia.github.io/mesorogia-cards/deckmaker.html';
-
-  // ローカル保存キー
-  const LS_KEY_ASPECT = 'deckimg_aspect_v2'; // 1:1 廃止後のv2
-  const LS_KEY_COLS   = 'deckimg_cols_v1';   // 横長用の列数
-  const LS_KEY_BG     = 'deckimg_bg_v1';     // 背景テーマ
-
-  const VALID_ASPECTS = new Set(['3:4']);
-
-  // ================= 公開API =================
-  const DeckImg = {
-    // 比率
-    getAspect(){ return readAspect(); },
-    setAspect(aspect){
-      if (!VALID_ASPECTS.has(aspect)) { console.warn('Use "3:4" or "4:3".'); return; }
-      localStorage.setItem(LS_KEY_ASPECT, aspect);
-      console.log(`Aspect set to ${aspect}`);
-    },
-    // 横長の列数（縦長は常に5固定）
-    getCols(){ return readCols(); },
-    setCols(n){
-      const v = Math.max(3, Math.min(10, parseInt(n,10)||0));
-      localStorage.setItem(LS_KEY_COLS, String(v));
-      console.log(`Cols set to ${v} (effective on 4:3)`);
-    },
-    // 背景（'dark'|'light'|任意カラー）
-    getBg(){ return readBg(); },
-    setBg(v){
-      if (!v) return;
-      localStorage.setItem(LS_KEY_BG, String(v));
-      console.log(`Background set to ${v}`);
-    },
-    help(){
-      console.log([
-        'DeckImg.getAspect() / DeckImg.setAspect("3:4"|"4:3")',
-        'DeckImg.getCols()   / DeckImg.setCols(3..10)   // 4:3時のみ適用',
-        "DeckImg.getBg()     / DeckImg.setBg('dark'|'light'|'#f7f7fb'等)",
-        'exportDeckImage()   // 直接呼び出しも可'
-      ].join('\n'));
-    }
-  };
-  window.DeckImg = DeckImg;
-
-  function readAspect(){
-    const v = localStorage.getItem(LS_KEY_ASPECT) || '3:4';
-    return VALID_ASPECTS.has(v) ? v : '3:4';
-  }
-  function readCols(){
-    return Math.max(3, Math.min(10, parseInt(localStorage.getItem(LS_KEY_COLS) || '7', 10)));
-  }
-  function readBg(){
-    return localStorage.getItem(LS_KEY_BG) || 'dark';
-  }
 
   // ============ 初期化 ============
   window.addEventListener('DOMContentLoaded', () => {
@@ -73,13 +11,6 @@
     if (!btn) return;
     btn.addEventListener('click', () => exportDeckImage());
   });
-
-//画像アスペクト確認
-async function chooseAspectByPrompt() {
-  // スマホでも確実に動く原始的UI：OK=縦 / Cancel=横
-  const okIsPortrait = window.confirm('縦長（3:4）で出力しますか？\nOK：縦長（3:4） / キャンセル：横長（4:3）');
-  return okIsPortrait ? '3:4' : '4:3';
-}
 
 
   // ============ 画像生成メイン ============
@@ -89,23 +20,25 @@ async function chooseAspectByPrompt() {
   if (total === 0){ alert('デッキが空です。カードを追加してください。'); return; }
   if (total > 40){ alert('デッキ枚数が多すぎます（40枚以内にしてください）'); return; }
 
-  const aspect = '3:4';                        // 縦固定
-  window.DeckImg?.setAspect?.('3:4');
-  const data = buildDeckSummaryData();
+  const aspect = '3:4';
 
-  // ← ここがポイント：カード種類数から“ちょうど収まる高さ”を決める
+  const data  = buildDeckSummaryData();
   const kinds = data.uniqueList?.length || 0;
-  const spec  = getCanvasSpec(aspect, kinds);  // ★ 引数に kinds を渡す
+  const spec  = getCanvasSpec(aspect, kinds);
+  spec.cols = 5;// 5列固定
 
-  spec.cols = 5;                                // 5列固定
+  //先にローディングを出す
+  const loader = showLoadingOverlay('画像生成中…');
+  await nextFrame();  // 1フレーム分、描画を譲る
+  await nextFrame();  // 端末によっては2回あるとより安定
 
+  // 以降が重い：DOM構築＆画像ロード
   const node = await buildShareNode(data, spec);
   document.body.appendChild(node);
 
-  const loader = showLoadingOverlay('画像生成中…');
 
   try {
-    await nextFrame(); // 1回でOK
+    await nextFrame(); await nextFrame();
     const scale = getPreferredScale();
       const target = node;  // 生成ノードを直接キャプチャ
       const prevOverflow = target.style.overflow;
@@ -115,13 +48,13 @@ async function chooseAspectByPrompt() {
       target.scrollTop = 0;
 
       const canvas = await html2canvas(target, {
-        scale: getPreferredScale(),               // ← 端末に合わせたスケール
+        scale,
         useCORS: true,
         backgroundColor: '#fff',
         scrollX: 0,
         scrollY: 0,
-        width:  target.scrollWidth,               // ← 修正：modal → target
-        height: target.scrollHeight,              // ← 修正：modal → target
+        width:  target.scrollWidth,
+        height: target.scrollHeight,
         windowWidth:  document.documentElement.scrollWidth,
         windowHeight: document.documentElement.scrollHeight,
         x: 0,
@@ -166,11 +99,6 @@ async function chooseAspectByPrompt() {
 
     const mainRace = (typeof computeMainRace==='function' ? computeMainRace() : null) || '未選択';
 
-    let elderGodName = '未採用';
-    for (const [cd] of entries){
-      if (cardMap[cd]?.race === '旧神') { elderGodName = cardMap[cd].name || '旧神'; break; }
-    }
-
     const typeCounts = { 'チャージャー':0, 'アタッカー':0, 'ブロッカー':0 };
     let total = 0;
     entries.forEach(([cd, n])=>{
@@ -192,7 +120,7 @@ async function chooseAspectByPrompt() {
       : (entries[0]?.[0] || null);
 
     return {
-      deckName, total, mainRace, elderGodName,
+      deckName, total, mainRace,
       typeCounts, rarityMap,
       representativeCd: repCd,
       uniqueList, countMap,
@@ -210,7 +138,7 @@ async function chooseAspectByPrompt() {
     const CARD_AR      = 532/424;  // カード縦横比（縦/横）
 
     // ヘッダー/フッター（基準）
-    const HEADER_H_STD = 320;      // 標準ヘッダー高さ
+    const HEADER_H_STD = 330;      // 標準ヘッダー高さ
     const FOOTER_H     = 84;
 
     // 使える横幅
@@ -221,7 +149,7 @@ async function chooseAspectByPrompt() {
 
     // 行数
     const rows    = Math.max(1, Math.ceil((kinds||0) / COLS));
-    const rowsStd = 4;                       // ★標準：20種＝4行
+    const rowsStd = 4; // 標準：20種＝4行
 
     // グリッドの高さ（行数ぶんぴったり）
     const gridH   = rows * cardH + GAP * (rows - 1);
@@ -285,7 +213,8 @@ const RACE_BG = {
   'シェイド'   : 'rgba(200, 150, 255, 0.16)',
 };
 
-function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}){
+//タイプ枚数
+function coloredChip(text, {bg, border, color='#0f172a', fz=30, pad='10px 14px'}){
   const span = document.createElement('span');
   span.style.display = 'inline-flex';
   span.style.alignItems = 'center';
@@ -302,6 +231,34 @@ function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}
   return span.outerHTML;
 }
 
+// ① 数字だけを強調する小ユーティリティ
+function strongNum(n){
+  return `<span style="
+    font-size:1.2em;
+    font-weight:900;
+    line-height:1;
+    letter-spacing:.3px;
+  ">${n}</span>`;
+}
+
+// ② HTMLで内容を渡せる“リッチ版”チップ
+function chipRich(html, {bg, border, color='#0f172a', fz=30, pad='10px 14px'} = {}){
+  const span = document.createElement('span');
+  span.style.display = 'inline-flex';
+  span.style.alignItems = 'center';
+  span.style.gap = '8px';
+  span.style.background = bg || 'rgba(2,6,23,0.04)';
+  span.style.border = `1px solid ${border || 'rgba(2,6,23,0.10)'}`;
+  span.style.padding = pad;
+  span.style.marginRight = '10px';
+  span.style.borderRadius = '999px';
+  span.style.fontSize = `${fz}px`;
+  span.style.color = color;
+  span.style.fontWeight = '700';
+  span.style.fontVariantNumeric = 'tabular-nums'; // ← 等幅数字で読みやすく
+  span.innerHTML = html;
+  return span.outerHTML;
+}
 
   // ============ DOMビルド ============
   async function buildShareNode(data, spec){
@@ -329,7 +286,7 @@ function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}
     header.style.background = spec.theme.panelBg;
     header.style.border = `1px solid ${spec.theme.panelEdge}`;
     header.style.borderRadius = '16px';
-    header.style.padding = '16px';
+    header.style.padding = '10px';
     header.style.boxShadow = spec.theme.shadow;
 
     const rep = await buildRepThumb(data.representativeCd, spec);
@@ -338,7 +295,7 @@ function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}
 
     // 2列グリッド：左=タイプ/レア、右=枚数/種族
     headRight.style.display = 'grid';
-    headRight.style.gridTemplateColumns = '1fr 180px';
+    headRight.style.gridTemplateColumns = '1fr 220px';
     headRight.style.gridTemplateRows = 'min-content min-content min-content';
     headRight.style.columnGap = '18px';
     headRight.style.rowGap = '0';
@@ -365,30 +322,53 @@ function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}
     const leftRow1 = document.createElement('div');
     leftRow1.style.whiteSpace = 'nowrap';
     leftRow1.innerHTML =
-      coloredChip(`チャージャー ${data.typeCounts['チャージャー']||0}枚`, TYPE_BG['チャージャー']) +
-      coloredChip(`アタッカー ${data.typeCounts['アタッカー']||0}枚`, TYPE_BG['アタッカー']) +
-      coloredChip(`ブロッカー ${data.typeCounts['ブロッカー']||0}枚`, TYPE_BG['ブロッカー']);
+      chipRich(`チャージャー ${strongNum(data.typeCounts['チャージャー']||0)}枚`, TYPE_BG['チャージャー']) +
+      chipRich(`アタッカー ${strongNum(data.typeCounts['アタッカー']||0)}枚`,   TYPE_BG['アタッカー']) +
+      chipRich(`ブロッカー ${strongNum(data.typeCounts['ブロッカー']||0)}枚`,   TYPE_BG['ブロッカー']);
 
-    // 左列：レアリティ構成（従来チップのままでもOK）
+
+    // 左列：レアリティ構成（2行：上＝レジェンド/ゴールド、下＝シルバー/ブロンズ）
     const r = data.rarityMap;
-    const leftRow2 = document.createElement('div');
-    leftRow2.style.whiteSpace = 'nowrap';
-    leftRow2.innerHTML =
-      badge(spec, '🌈', `レジェンド ${r['レジェンド']||0}枚`) + ' ' +
-      badge(spec, '🟡', `ゴールド ${r['ゴールド']||0}枚`)   + ' '+
-      badge(spec, '⚪️', `シルバー ${r['シルバー']||0}枚`)  + ' ' +
-      badge(spec, '🟤', `ブロンズ ${r['ブロンズ']||0}枚`);
+
+    const rarityWrap = document.createElement('div');
+    rarityWrap.style.display = 'flex';
+    rarityWrap.style.flexDirection = 'column';
+    rarityWrap.style.gap = '4px'; // 行間少し
+
+    // 上段（レジェンド＋ゴールド）
+    const rowTop = document.createElement('div');
+    rowTop.style.whiteSpace = 'nowrap';
+    rowTop.innerHTML =
+      badge(spec, '🌈', `レジェンド ${strongNum(r['レジェンド']||0)}枚`) + ' ' +
+      badge(spec, '🟡', `ゴールド ${strongNum(r['ゴールド']||0)}枚`);
+
+    // 下段（シルバー＋ブロンズ）
+    const rowBottom = document.createElement('div');
+    rowBottom.style.whiteSpace = 'nowrap';
+    rowBottom.innerHTML =
+      badge(spec, '⚪️', `シルバー ${strongNum(r['シルバー']||0)}枚`) + ' ' +
+      badge(spec, '🟤', `ブロンズ ${strongNum(r['ブロンズ']||0)}枚`);
+
+    rarityWrap.appendChild(rowTop);
+    rarityWrap.appendChild(rowBottom);
+
+    // ← この rarityWrap をヘッダーの左下セルとして使用
+    rarityWrap.style.gridColumn = '1 / 2';
+
 
     // 右列：デッキ枚数（大きめチップ）
     const rightRow1 = document.createElement('div');
     rightRow1.style.display = 'flex';
     rightRow1.style.justifyContent = 'flex-end';
-    rightRow1.innerHTML = coloredChip(`📘${data.total} / 30`, {
-    bg:'rgba(2,6,23,0.04)',
-    border:'rgba(2,6,23,0.10)',
-    fz:24,
-    pad:'12px 16px'
-    });
+    rightRow1.innerHTML = chipRich(
+      `📘 ${strongNum(data.total)} <span style="opacity:.75">/ 30</span>`,
+      {
+        bg:'rgba(2,6,23,0.04)',
+        border:'rgba(2,6,23,0.10)',
+        fz:30,
+        pad:'12px 16px'
+      }
+    );
 
 
     // 右列：メイン種族（背景色で表現）
@@ -396,7 +376,7 @@ function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}
     rightRow2.style.display = 'flex';
     rightRow2.style.justifyContent = 'flex-end';
     const raceBg = RACE_BG[data.mainRace] || 'rgba(2,6,23,0.04)';
-    rightRow2.innerHTML = coloredChip(`${data.mainRace}`, { bg: raceBg, border:'rgba(2,6,23,0.10)', fz:24, pad:'12px 16px' });
+    rightRow2.innerHTML = coloredChip(`${data.mainRace}`, { bg: raceBg, border:'rgba(2,6,23,0.10)', fz:30, pad:'12px 16px' });
 
     // 配置
     // 1行目：タイトル（2列）
@@ -407,9 +387,8 @@ function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}
     headRight.appendChild(leftRow1);
     headRight.appendChild(rightRow1);
     // 3行目：左=レア、右=種族
-    leftRow2.style.gridColumn = '1 / 2';
     rightRow2.style.gridColumn = '2 / 3';
-    headRight.appendChild(leftRow2);
+    headRight.appendChild(rarityWrap);
     headRight.appendChild(rightRow2);
 
     // 既存の append
@@ -434,7 +413,7 @@ function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}
 
     // タイル生成
     const tiles = await buildCardTilesUnified(data.uniqueList, data.countMap, spec);
-    tiles.forEach(t => grid.appendChild(t));
+    grid.append(...tiles);
 
     // そのまま入れる（スケールやラップなし）
     gridPanel.appendChild(grid);
@@ -476,20 +455,24 @@ function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}
     span.style.padding = '8px 12px';
     span.style.marginRight = '8px';
     span.style.borderRadius = '999px';
-    span.style.fontSize = '24px';
+    span.style.fontSize = '30px';
     span.style.color = spec.theme.chipText;
     span.style.fontWeight = '700';
 
     const hasText = (text !== undefined);
     const e = document.createElement('span'); e.textContent = hasText ? (emoji || '') : '';
-    const t = document.createElement('span'); t.textContent = hasText ? text : (emoji || '');
-    span.appendChild(e); span.appendChild(t);
+    const t = document.createElement('span');
+    t.innerHTML = hasText ? text : (emoji || '');
+    t.style.fontVariantNumeric = 'tabular-nums';
+    span.appendChild(e);
+    span.appendChild(t);
     return span.outerHTML;
   }
 
   // 代表カードの角丸サムネ
   async function buildRepThumb(cd, spec){
-    const h = Math.min((spec.aspect==='3:4'? 280:220), Math.floor(spec.headerH * 0.9));
+    const h = Math.min(280, Math.floor(spec.headerH * 0.9));
+
     const wrap = document.createElement('div');
     wrap.style.height = h + 'px';
     wrap.style.aspectRatio = '424 / 532';
@@ -509,8 +492,10 @@ function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}
   // 各カード（角丸＋影＋重複バッジ）
   async function buildCardTilesUnified(uniqueList, countMap, spec){
     const out = [];
+    const imgs = await Promise.all(uniqueList.map(cd => loadCardImageSafe(cd)));
     for (let i=0; i<uniqueList.length; i++){
       const cd = String(uniqueList[i]);
+      const img = imgs[i];
       const wrap = document.createElement('div');
       wrap.style.position = 'relative';
       wrap.style.borderRadius = '12px';
@@ -519,7 +504,6 @@ function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}
       wrap.style.aspectRatio = '424 / 532';
       wrap.style.boxShadow = spec.theme.shadow;
 
-      const img = await loadCardImageSafe(cd);
       img.style.width = '100%';
       img.style.height = '100%';
       img.style.objectFit = 'cover';
@@ -530,7 +514,7 @@ function coloredChip(text, {bg, border, color='#0f172a', fz=22, pad='10px 14px'}
       Object.assign(badgeDiv.style, {
         position: 'absolute', right: '8px', top: '8px',
         background: spec.theme.badgeBg, color: '#fff', fontWeight: '900',
-        padding: '10px 14px', borderRadius: '999px', fontSize: '30px',
+        padding: '10px 14px', borderRadius: '999px', fontSize: '40px',
         lineHeight: '1',
       });
       wrap.appendChild(badgeDiv);

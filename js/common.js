@@ -19,7 +19,7 @@ window.cardMap = cardMap;
 const BASE_PATH = '';
 
 async function fetchLatestCards() {
-  const res = await fetch('public/cards_latest.json');
+  const res = await fetch('./public/cards_latest.json');
   if (!res.ok) {
     throw new Error(`HTTP error ${res.status} - ${res.statusText}`);
   }
@@ -28,8 +28,76 @@ async function fetchLatestCards() {
 }
 
 
+// パック一覧を読み出して共通利用（card_data.py が packs.json を出す想定）
+let __PackCatalog = null;
+/**
+ * 返り値:
+ * {
+ *   list: [{ key, en, jp, slug, labelTwoLine }, ...] // 表示順でソート済み
+ *   byEn:  Map(en -> item)
+ *   order: string[] // en の表示順
+ * }
+ */
+function splitPackName(name='') {
+  const s = String(name);
+  if (s.includes('「')) {
+    const i = s.indexOf('「');
+    return { en: s.slice(0, i).trim(), jp: s.slice(i).trim() };
+  }
+  if (s.includes('／')) {
+    const [en, jp=''] = s.split('／');
+    return { en: en.trim(), jp: jp.trim() ? `「${jp.trim()}」` : '' };
+  }
+  return { en: s.trim(), jp: '' };
+}
+function makePackSlug(en='') {
+  return en.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+}
+async function loadPackCatalog() {
+  if (window.__PackCatalog) return window.__PackCatalog;
+  try {
+    const res = await fetch('./public/packs.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const { packs=[] } = await res.json();
 
+  const list = packs.map(p => {
+    // packs.json が「Awaking The Oracle「神託者の覚醒」」のように混在する前提で正規化
+    const rawEn = String(p.en||'').trim();
+    const rawJp = String(p.jp||'').trim();
+    const sp = splitPackName(rawEn);           // ← 英名/仮名を安全に分離
+    const en = sp.en || rawEn;                  // 英名
+    const jp = rawJp || sp.jp;                  // jpが空ならsplit結果を採用（「…」付き）
+    const slug = makePackSlug(en);
+    return {
+      key: p.key || slug,
+      en, jp, slug,
+      labelTwoLine: `${en}${jp?`\n${jp}`:''}`
+    };
+  });
+    const byEn  = new Map(list.map(x => [x.en, x]));
+    const order = list.map(x => x.en);
+    window.__PackCatalog = { list, byEn, order };
+    return window.__PackCatalog;
+  } catch (e) {
+    console.warn('packs.json 読み込み失敗→cards_latest.jsonから検出にフォールバック', e);
+    const cards = await fetchLatestCards();
+    const byEn = new Map();
+    cards.forEach(c => {
+      const { en, jp } = splitPackName(c.pack_name || '');
+      if (en && !byEn.has(en)) byEn.set(en, { en, jp, slug: makePackSlug(en) });
+    });
+    const list = [...byEn.values()].sort((a,b)=>a.en.localeCompare(b.en,'ja'));
+    list.forEach(x => { x.key = x.slug; x.labelTwoLine = `${x.en}${x.jp?`\n${x.jp}`:''}`; });
+    const order = list.map(x => x.en);
+    window.__PackCatalog = { list, byEn: new Map(list.map(x=>[x.en,x])), order };
+    return window.__PackCatalog;
+  }
+}
 
+// ここで window に公開
+window.splitPackName   = splitPackName;
+window.makePackSlug    = makePackSlug;
+window.loadPackCatalog = loadPackCatalog;
 
 
 
@@ -77,40 +145,46 @@ function scrollToTop() {
 
 // 一覧のカードをソート
 function sortCards() {
-const sortValue = document.getElementById("sort-select").value;
-const grid = document.getElementById("grid");
-const cards = Array.from(grid.children).filter(card => card.classList.contains("card"));
+  const sortValue = document.getElementById("sort-select").value;
+  const grid = document.getElementById("grid");
+  const cards = Array.from(grid.children).filter(card => card.classList.contains("card"));
 
-cards.sort((a, b) => {
-const typeA = getTypeOrder(a.dataset.type);
-const typeB = getTypeOrder(b.dataset.type);
-const costA = parseInt(a.dataset.cost);
-const costB = parseInt(b.dataset.cost);
-const powerA = parseInt(a.dataset.power);
-const powerB = parseInt(b.dataset.power);
-const cdA = parseInt(a.dataset.cd);
-const cdB = parseInt(b.dataset.cd);
-const catA = getCategoryOrder(a.dataset.category);
-const catB = getCategoryOrder(b.dataset.category);
+  cards.sort((a, b) => {
+    const typeA = getTypeOrder(a.dataset.type);
+    const typeB = getTypeOrder(b.dataset.type);
+    const costA = parseInt(a.dataset.cost);
+    const costB = parseInt(b.dataset.cost);
+    const powerA = parseInt(a.dataset.power);
+    const powerB = parseInt(b.dataset.power);
+    const cdA = parseInt(a.dataset.cd);
+    const cdB = parseInt(b.dataset.cd);
+    const catA = getCategoryOrder(a.dataset.category);
+    const catB = getCategoryOrder(b.dataset.category);
 
-switch (sortValue) {
-    case "cost-asc":
-    return costA - costB || typeA - typeB || powerA - powerB || cdA - cdB;
-    case "cost-desc":
-    return costB - costA || typeA - typeB || powerA - powerB || cdA - cdB;
-    case "power-asc":
-    return powerA - powerB || typeA - typeB || costA - costB || cdA - cdB;
-    case "power-desc":
-    return powerB - powerA || typeA - typeB || costA - costB || cdA - cdB;
-    case "category-order":
-    return catA - catB || typeA - typeB || costA - costB || powerA - powerB || cdA - cdB;
-    default:
-    return typeA - typeB || costA - costB || powerA - powerB || cdA - cdB;
+    switch (sortValue) {
+      case "cost-asc":
+        return costA - costB || typeA - typeB || powerA - powerB || cdA - cdB;
+      case "cost-desc":
+        return costB - costA || typeA - typeB || powerA - powerB || cdA - cdB;
+      case "power-asc":
+        return powerA - powerB || typeA - typeB || costA - costB || cdA - cdB;
+      case "power-desc":
+        return powerB - powerA || typeA - typeB || costA - costB || cdA - cdB;
+      case "category-order":
+        return catA - catB || typeA - typeB || costA - costB || powerA - powerB || cdA - cdB;
+      case "rarity-order":
+        const rarityOrder = { "レジェンド": 0, "ゴールド": 1, "シルバー": 2, "ブロンズ": 3 };
+        const rA = rarityOrder[a.dataset.rarity] ?? 99;
+        const rB = rarityOrder[b.dataset.rarity] ?? 99;
+        return rA - rB || costA - costB || powerA - powerB || cdA - cdB;
+      default:
+        return typeA - typeB || costA - costB || powerA - powerB || cdA - cdB;
+    }
+  });
+
+  cards.forEach(card => grid.appendChild(card));
 }
-});
 
-cards.forEach(card => grid.appendChild(card));
-}
 
 
 /* === 所持データ共通ストア ===*/

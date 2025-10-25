@@ -268,61 +268,73 @@ async function generateFilterUI() {
   const types = ['チャージャー', 'アタッカー', 'ブロッカー'];
   const rarities = ['レジェンド', 'ゴールド', 'シルバー', 'ブロンズ'];
 
-//詳細フィルターデータ
-  const packs = getUniqueValues("pack_name");
-// ===== パック名の並び制御（英語→かな。その他特殊カードは最後） =====
-const splitPackLabel = (s) => {
-  const str = String(s || "");
-  const m = str.match(/^([^「]+)(?:「([^」]*)」)?/); // 例: Awaking...「神託者...」
-  return { en: (m?.[1] || "").trim(), kana: (m?.[2] || "").trim() };
-};
+  // ===== パック名（英名＋仮名の2行表示、英名でフィルター） =====
+  // 共通カタログが読めたらそれを優先。だめなら従来の packs からフォールバック。
+  let packCatalog = null;
+  try {
+    packCatalog = await window.loadPackCatalog(); // common.js のやつ
+  } catch {}
 
-// ユーザーが任意の順を指定したい場合は、ここに配列で定義（前の方が優先）
-// 例: window.packCustomOrder = ["Awaking The Oracle「神託者の覚醒」","Beyond the Sanctuary 「聖域の先へ」"];
-window.packCustomOrder = window.packCustomOrder || null;
+  // 英名→仮名の対応をグローバルに持っておく（チップ表示にも使う）
+  window.__PACK_EN_TO_JP = {};
 
-// 末尾に送りたいラベル（完全一致/部分一致の両方で拾う）
-const isSpecialOthers = (packName) => {
-  const { en, kana } = splitPackLabel(packName);
-  return en === "その他特殊カード" || kana === "その他特殊カード" || /その他特殊カード/.test(packName);
-};
+  const packWrapper = document.createElement('div');
+  packWrapper.className = 'filter-block';
 
-// 英語→かなの基本ソート
-const basicSort = (a, b) => {
-  const A = splitPackLabel(a), B = splitPackLabel(b);
-  const p = A.en.localeCompare(B.en, "en");
-  return p || A.kana.localeCompare(B.kana, "ja");
-};
+  const packTitle = document.createElement('strong');
+  packTitle.className = 'filter-title';
+  packTitle.textContent = 'パック名';
+  packWrapper.appendChild(packTitle);
 
-// カスタム順 → 基本ソート → 「その他特殊カード」を最後へ
-function sortPacksWithRules(list) {
-  const arr = [...list];
+  const packGroup = document.createElement('div');
+  packGroup.className = 'filter-group';
+  packGroup.dataset.key = 'パック名';
 
-  // 1) カスタム順があれば最優先
-  if (Array.isArray(window.packCustomOrder) && window.packCustomOrder.length) {
-    const indexOf = (name) => {
-      const i = window.packCustomOrder.indexOf(name);
-      return i < 0 ? Number.POSITIVE_INFINITY : i;
-    };
-    arr.sort((a, b) => {
-      const ia = indexOf(a), ib = indexOf(b);
-      if (ia !== ib) return ia - ib;
-      return basicSort(a, b);
+  // ① カタログがある場合：その順でボタン化
+  if (packCatalog && Array.isArray(packCatalog.list)) {
+    packCatalog.list.forEach(p => {
+      const en = p.en || '';
+      const jp = p.jp || '';
+      if (!en) return;
+
+      window.__PACK_EN_TO_JP[en] = jp;
+
+      const btn = document.createElement('button');
+      btn.className = 'filter-btn';
+      btn.type = 'button';
+      // ★ 英名で絞り込む
+      btn.dataset.pack = en;
+
+      // 2行ラベル
+      btn.innerHTML = `<span class="pack-en">${en}</span><br><small class="pack-kana">${jp}</small>`;
+      packGroup.appendChild(btn);
     });
   } else {
-    // 2) デフォルト：英語→かな
-    arr.sort(basicSort);
+    // ② フォールバック：JSON上の pack_name を英名/仮名に割ってアルファベット順
+    const packsRaw = getUniqueValues('pack_name');
+    const splitPackLabel = (s) => {
+      const m = String(s||'').match(/^([^「]+)(?:「([^」]*)」)?/);
+      return { en: (m?.[1]||'').trim(), jp: (m?.[2]||'').trim() };
+    };
+    const uniq = [...new Map(packsRaw.map(n => {
+      const sp = splitPackLabel(n);
+      return [sp.en, sp]; // 英名でユニーク化
+    })).values()].sort((a,b) => a.en.localeCompare(b.en,'en'));
+
+    uniq.forEach(sp => {
+      window.__PACK_EN_TO_JP[sp.en] = sp.jp;
+
+      const btn = document.createElement('button');
+      btn.className = 'filter-btn';
+      btn.type = 'button';
+      btn.dataset.pack = sp.en; // ★ 英名
+      btn.innerHTML = `<span class="pack-en">${sp.en}</span><br><small class="pack-kana">${sp.jp}</small>`;
+      packGroup.appendChild(btn);
+    });
   }
 
-  // 3) 最後送り（その他特殊カード）: 安定パーティション
-  const normal = [];
-  const specials = [];
-  for (const name of arr) (isSpecialOthers(name) ? specials : normal).push(name);
-  return [...normal, ...specials];
-}
+  packWrapper.appendChild(packGroup);
 
-// 既存の packs を並び替えてからボタン生成
-const sortedPacks = sortPacksWithRules(packs);
 
 
 
@@ -480,6 +492,9 @@ if (location.pathname.includes('deckmaker')) {
     groupDiv.appendChild(wave);
     groupDiv.appendChild(selectMax);
     wrapper.appendChild(groupDiv);
+    // 変更されたら即反映（デバウンス不要の即時）
+    selectMin.addEventListener('change', () => applyFilters());
+    selectMax.addEventListener('change', () => applyFilters());
     return wrapper;
   }
 
@@ -512,13 +527,14 @@ if (location.pathname.includes('deckmaker')) {
 
 
   // 📌 メインフィルター構築
-  mainFilters.appendChild(createButtonGroup('種族', races, 'race'));
-  mainFilters.appendChild(createButtonGroup('カテゴリ', categories, 'category'));
   mainFilters.appendChild(createRangeStyleWrapper('タイプ', types, 'type'));
   mainFilters.appendChild(createRangeStyleWrapper('レアリティ', rarities, 'rarity'));
+  mainFilters.appendChild(packWrapper);//パック
+  mainFilters.appendChild(createButtonGroup('種族', races, 'race'));
+  mainFilters.appendChild(createButtonGroup('カテゴリ', categories, 'category'));
   mainFilters.appendChild(createRangeSelector('コスト', 'cost', costs));
   mainFilters.appendChild(createRangeSelector('パワー', 'power', powers));
-  mainFilters.appendChild(createButtonGroup('パック名', sortedPacks, 'pack'));
+
 
   // 📌 詳細フィルター
 
@@ -636,17 +652,34 @@ function renderActiveFilterChips() {
     ['その他','destroy_opponent'], ['その他','destroy_self'],
     ['その他','heal'], ['その他','power_up'], ['その他','power_down'],
   ];
-  GROUPS.forEach(([title, key])=>{
-    document.querySelectorAll(`.filter-btn.selected[data-${key}]`).forEach(btn=>{
-      const val = btn.dataset[key];
-      const labelText = (DISPLAY_LABELS && DISPLAY_LABELS[val] != null)
-      ? DISPLAY_LABELS[val] : val;
+
+  //チップ見栄え
+    GROUPS.forEach(([title, key])=>{
+     document.querySelectorAll(`.filter-btn.selected[data-${key}]`).forEach(btn=>{
+    const val = btn.dataset[key];
+    let labelText;
+
+    // パック：英名＋仮名の短縮表示
+    if (key === 'pack') {
+      const jp = (window.__PACK_EN_TO_JP && window.__PACK_EN_TO_JP[val]) || '';
+      labelText = jp ? `${val} / ${jp}` : val;
+    }
+    // その他（boolean群）は val は常に 'true' なので key から表示名を引く
+    else if (['draw','cardsearch','graveyard_recovery','destroy_opponent','destroy_self','heal','power_up','power_down'].includes(key)) {
+      labelText = DISPLAY_LABELS[key] ?? key;
+    }
+    // それ以外は通常（valから表示名）
+    else {
+      labelText = (DISPLAY_LABELS && DISPLAY_LABELS[val] != null) ? DISPLAY_LABELS[val] : val;
+    }
+
       chips.push({
         label: `${title}:${labelText}`,
         onRemove: () => { btn.classList.remove('selected'); applyFilters(); }
       });
     });
   });
+
 
   // 生成（横スクロール1行）
   chips.forEach(({label,onRemove})=>{
@@ -769,6 +802,9 @@ function applyFilters() {
     graveyard_recovery: getBooleanFilter("graveyard_recovery"),
     destroy_opponent: getBooleanFilter("destroy_opponent"),
     destroy_self: getBooleanFilter("destroy_self"),
+    heal: getBooleanFilter("heal"),
+    power_up: getBooleanFilter("power_up"),
+    power_down: getBooleanFilter("power_down"),
   };
 
   const costMin = parseInt(document.getElementById("cost-min")?.value ?? 0);
@@ -818,6 +854,9 @@ function applyFilters() {
       graveyard_recovery: card.dataset.graveyard_recovery,
       destroy_opponent: card.dataset.destroy_opponent,
       destroy_self: card.dataset.destroy_self,
+      heal: card.dataset.heal,
+      power_up: card.dataset.power_up,
+      power_down: card.dataset.power_down,
       cost: parseInt(card.dataset.cost),
       power: parseInt(card.dataset.power),
     };
@@ -829,8 +868,21 @@ function applyFilters() {
 
     const matchesFilters = Object.entries(selectedFilters).every(([key, selectedValues]) => {
       if (!selectedValues || selectedValues.length === 0) return true;
-      return selectedValues.includes(cardData[key]);
+
+      // ★ パックだけは英名で一致判定（カード側は full の "EN「仮名」"）
+      if (key === 'pack') {
+        const cardEn = (cardData.pack || '').split('「')[0].trim(); // 先頭の英名
+        return selectedValues.includes(cardEn);
+      }
+
+    // 効果名だけは「含む」判定（例: '■召喚時■' を含んでいればOK）
+    if (key === 'effect') {
+      const eff = cardData.effect || '';
+      return selectedValues.some(v => eff.includes(v));
+    }
+    return selectedValues.includes(cardData[key]);
     });
+
 
     const matchesCost = cardData.cost >= costMin && cardData.cost <= costMax;
     const matchesPower = cardData.power >= powerMin && cardData.power <= powerMax;
@@ -877,12 +929,12 @@ function getBooleanFilter(key) {
 }
 
 //フィルターボタン、selectrd切り替え
-document.addEventListener("click", e => {
-  if (e.target.classList.contains("filter-btn")) {
-    e.target.classList.toggle("selected");
-    applyFilters();
-  }
-});
+  document.addEventListener("click", e => {
+  const btn = e.target.closest(".filter-btn");
+  if (!btn) return;
+  btn.classList.toggle("selected");
+  applyFilters();
+  });
 
 
 

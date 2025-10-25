@@ -131,29 +131,16 @@ if (window.OwnedStore?.setAutosave) {
 document.addEventListener('DOMContentLoaded', () => {
   updateSummary(); // 初回反映
 });
+
+
+// グローバル初期値（未定義エラー防止）
+window.PACK_ORDER = window.PACK_ORDER || [];
+window.packs      = window.packs || [];
+
 /*===================
     2.所持率コンプ率
 ====================*/
-const packs = [
-  { key:'awaking',
-    nameMain:'Awaking The Oracle',
-    nameSub:'「神託者の覚醒」',
-    selector:'#pack-awaking'
-  },
-    { key:'beyond',
-    nameMain:'Beyond the Sanctuary',
-    nameSub:'「聖域の先へ」',
-    selector:'#pack-beyond'
-  },
-    { key:'creeping',
-    nameMain:'Creeping Souls',
-    nameSub:'「忍び寄る魂達」',
-    selector:'#pack-creeping'
-  },
-];
 
-// ★ クリックハンドラで参照するため公開
-window.packs = packs;
 
 function calcSummary(nodeList){
   let owned = 0, ownedTypes = 0, total = 0, totalTypes = 0;
@@ -749,22 +736,6 @@ async function buildOwnedShareURL(){
 /*=======================
     2.所持率チェッカー変数
 ========================*/
-//スラッグ：プログラム用文字列
-
-// パック名表示順（未指定のものは末尾にアルファベット順で付く)
-const PACK_ORDER = [
-    'Awaking The Oracle',
-    'Beyond the Sanctuary',
-    'Creeping Souls',
-    // 新パックをここに追加（無くても自動検出されます）
-];
-
-// パック名→id（スラッグ）化
-const PACK_SLUG_ALIAS = {
-    'Awaking The Oracle': 'awaking',
-    'Beyond the Sanctuary': 'beyond',
-    'Creeping Souls': 'creeping'
-};
 
 // 種族表示順
 const RACE_ORDER = ['ドラゴン','アンドロイド','エレメンタル','ルミナス','シェイド','イノセント','旧神'];
@@ -808,16 +779,6 @@ const viewCategory = (s) => String(s ?? '').replace(/\s*[（(][^（）()]*[）)]
 /*============生成前準備===========*/
 //#regionready
 
-// パック名分裂（英名和名で分裂）
-function splitPackName(packName) {
-    const i = packName.indexOf('「');
-    if (i >= 0) return { en: packName.slice(0, i).trim(), jp: packName.slice(i).trim() };
-    return { en: packName.trim(), jp: '' };
-}
-//パック英名→スラッグ用id生成
-function makePackSlug(packEn) {
-    return PACK_SLUG_ALIAS[packEn] || packEn.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
-}
 
 //レアリティclassを作る
 function rarityClassOf(rarity) {
@@ -1549,24 +1510,50 @@ function attachPackControls(root){
   });
 }
 
-// ========== 全パックをまとめて描画 ==========
-renderAllPacks({
+// パックカタログ初期化してから描画
+async function initPacksThenRender() {
+  try {
+    const catalog = await window.loadPackCatalog();
+    window.PACK_ORDER = catalog.order; // 英名の表示順
+    window.packs = catalog.list.map(p => ({
+      key: p.key,
+      nameMain: p.en,
+      nameSub:  p.jp,
+      selector: `#pack-${p.slug}`
+    }));
+  } catch (e) {
+    console.warn('packカタログ初期化に失敗:', e);
+    window.PACK_ORDER = [];
+    window.packs = [];
+  }
+
+  // ここでパック順が確定した状態で描画
+  await renderAllPacks({
     jsonUrl: 'public/cards_latest.json',
     mountSelector: '#packs-root',
     isLatestOnly: true,
-    sortInRace: typeCostPowerCd,
-    }).then(() => {
-  // 所持表示の同期 → サマリー更新
+    sortInRace: typeCostPowerCd
+  });
+
   if (typeof window.applyGrayscaleFilter === 'function') window.applyGrayscaleFilter();
-  updateSummary();
-});
+  updateSummary && updateSummary();
+}
+
+// DOM 準備後に起動
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initPacksThenRender, { once:true });
+} else {
+  initPacksThenRender();
+}
 
 // パック抽出の共通ヘルパ（英名で前方一致＋範囲限定）
 function queryCardsByPack(pack) {
-  const key = (pack?.nameMain || '').trim();
-  if (!key) return document.querySelectorAll('#packs-root .card');
-  return document.querySelectorAll(`#packs-root .card[data-pack^="${CSS.escape(key)}"]`);
+  const en = (pack?.nameMain || '').trim(); // 既存互換
+  return en
+    ? document.querySelectorAll(`#packs-root .card[data-pack^="${CSS.escape(en)}"]`)
+    : document.querySelectorAll('#packs-root .card');
 }
+
 
 // チェッカー反映（保存 → 反映 → チェッカータブへ）
 // ※ 保存を拒否した場合は A に巻き戻してからタブ切替（クランプはしない）

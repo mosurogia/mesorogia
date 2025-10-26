@@ -3422,8 +3422,9 @@ function deleteDeckFromIndex(index) {
 
 /*選択タグ設定*/
 window.POST_TAG_CANDIDATES ??= [
-  "アグロ","ミッドレンジ","コントロール","コンボ","バーン","初心者向け","趣味構築","ネタ構築","ランク戦用","大会用","格安"
+  "初心者向け","趣味構築","ネタ構築","ランク戦用","大会用","格安"
 ];
+/*"アグロ","ミッドレンジ","コントロール","コンボ","バーン",*/
 
 // ===== ユーザータグ =====
 const USER_TAGS_KEY = 'dm_post_user_tags_v1';
@@ -3683,181 +3684,6 @@ document.addEventListener('DOMContentLoaded', () => {
   updateUI();
 })();
 
-
-// =====================
-// 投稿者UI（簡易ログインUIのみ）
-// =====================
-(function initPosterAuthUI(){
-  const $ = (s)=>document.querySelector(s);
-
-  const nameInput = $('#poster-name');
-  const passInput = $('#auth-pass');
-  const passToggle= $('#auth-pass-toggle');
-
-  const btnSignup = $('#btn-signup');
-  const btnLogin  = $('#btn-login');
-  const btnLogout = $('#btn-logout');
-
-  const noteWrap  = $('#account-note');
-  const noteName  = $('#account-username');
-
-  const xInput    = $('#poster-x');
-  const xBtn      = $('#x-link-btn');
-
-  const authRow   = document.querySelector('.auth-buttons');
-
-  // ローカルに保持する最小限の状態（UI用）
-  const LS_KEY = 'meso_deck_user';
-  function loadState(){
-    try { return JSON.parse(localStorage.getItem(LS_KEY)) || { loggedIn:false, username:'' }; }
-    catch(e){ return { loggedIn:false, username:'' }; }
-  }
-  function saveState(st){ localStorage.setItem(LS_KEY, JSON.stringify(st)); }
-
-  let state = loadState();
-
-  function applyState(){
-    const loggedIn = !!state.loggedIn && !!state.username;
-
-    if (state.username) nameInput.value = state.username;
-
-    nameInput.disabled = loggedIn;
-    passInput.disabled = loggedIn;
-    passToggle.disabled= loggedIn;
-
-    btnSignup.hidden = loggedIn;
-    btnLogin.hidden  = loggedIn;
-    btnLogout.hidden = !loggedIn;
-
-    if (authRow) authRow.classList.toggle('logged-in', loggedIn);
-
-    noteWrap.hidden = !loggedIn;
-    if (loggedIn) noteName.textContent = state.username || '';
-
-    const hiddenPoster = document.getElementById('post-poster-hidden');
-    if (hiddenPoster) hiddenPoster.value = loggedIn ? state.username : (nameInput.value || '');
-  }
-
-  // パスワード表示/非表示
-  passToggle?.addEventListener('click', ()=>{
-    if (!passInput) return;
-    const show = passInput.type === 'password';
-    passInput.type = show ? 'text' : 'password';
-    passToggle.textContent = show ? '非表示' : '表示';
-  });
-
-
-    // ★ フォーム送信の徹底抑止（親フォームを止める）
-  const parentForm = authRow?.closest('form');
-  parentForm?.addEventListener('submit', (e) => {
-    // 認証行からのsubmitはすべて無効化（デッキ投稿のsubmitは別ボタンで行う前提）
-    e.preventDefault();
-    e.stopPropagation();
-  });
-
-  // ★ Enterキーでの誤送信も抑止
-  [nameInput, passInput].forEach(el => {
-    el?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); }
-    });
-  });
-
-
-  // サインアップ（POSTに統一）
-  btnSignup?.addEventListener('click', async (ev) => {
-    ev.preventDefault(); ev.stopPropagation();               // ← 追加
-    const u = (nameInput.value||'').trim();
-    const p = (passInput.value||'').trim();
-    if (!u || !p) { alert('ユーザー名とパスワードを入力してください'); return; }
-
-    // 二重クリック防止
-    btnSignup.disabled = true;
-    try {
-      const url = `${GAS_AUTH_ENDPOINT}?mode=signup${IS_LOCAL ? '&dev=1' : ''}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-        body: new URLSearchParams({ username: u, password: p })
-      });
-      const text = await res.text();
-      let json = {}; try { json = JSON.parse(text); } catch(_){}
-      if (json && json.ok) {
-        state = { loggedIn: true, username: u };
-        saveState(state); applyState();
-        alert('登録が完了しました');
-      } else {
-        alert('登録に失敗しました: ' + (json?.error || '不明なエラー'));
-      }
-    } catch (err) {
-      console.error('signup failed', err);
-      alert('通信エラーが発生しました');
-    } finally {
-      btnSignup.disabled = false;
-    }
-  });
-
-  // ログイン（POST）
-  btnLogin?.addEventListener('click', async (ev)=>{
-    ev.preventDefault(); ev.stopPropagation();               // ← 追加
-    const u = (nameInput.value||'').trim();
-    const p = (passInput.value||'').trim();
-    if (!u || !p) { alert('ユーザー名とパスワードを入力してください'); return; }
-
-    btnLogin.disabled = true;
-    try {
-      const url = `${GAS_AUTH_ENDPOINT}?mode=login${IS_LOCAL ? '&dev=1' : ''}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-        body: new URLSearchParams({ username: u, password: p })
-      });
-      const text = await res.text();
-      let json = {}; try { json = JSON.parse(text); } catch(_){}
-      if (json && json.ok) {
-        state = { loggedIn:true, username:u };
-        saveState(state); applyState();
-        alert('ログインしました');
-      } else {
-        alert('ログインに失敗しました: ' + (json?.error || '不明なエラー'));
-      }
-    } catch(err) {
-      console.error('login failed', err);
-      alert('通信エラーが発生しました');
-    } finally {
-      btnLogin.disabled = false;
-    }
-  });
-
-
-  // ログアウト
-  btnLogout?.addEventListener('click', ()=>{
-    state = { loggedIn:false, username:'' };
-    saveState(state);
-    nameInput.value = '';
-    passInput.value = '';
-    passInput.type = 'password';
-    passToggle.textContent = '表示';
-    applyState();
-  });
-
-  // Xプロフィールを開く
-  xBtn?.addEventListener('click', ()=>{
-    const raw = (xInput.value||'').trim();
-    if (!raw) { alert('Xアカウント名を入力してください'); return; }
-    const handle = raw.replace(/^@/,'');
-    window.open(`https://x.com/${encodeURIComponent(handle)}`, '_blank', 'noopener');
-  });
-
-  // 起動時
-  applyState();
-
-  // 投稿直前に hidden 更新（保険）
-  const form = document.getElementById('deck-post-form');
-  form?.addEventListener('submit', ()=>{
-    const hiddenPoster = document.getElementById('post-poster-hidden');
-    if (hiddenPoster) hiddenPoster.value = state.loggedIn ? state.username : (nameInput.value || '');
-  });
-})();
 
 
 // ===== 投稿者情報 UI 初期化 =====
@@ -4149,47 +3975,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 /** 送信 */
-async function submitDeckPost(e) {
-  e.preventDefault();
-  refreshPostSummary();
-
-  // 簡易バリデーション
-  const errors = validateDeckBeforePost();
-  const status = document.getElementById('post-status');
-  if (errors.length) {
-    status.textContent = '⚠ ' + errors.join(' / ');
-    return;
-  }
-
-  const btn = document.getElementById('post-submit');
-  btn.disabled = true;
-  status.textContent = '送信中…';
-
+async function submitDeckPost(e){
+  e?.preventDefault?.();
   const payload = buildDeckPostPayload();
 
-  try {
-    // 送信（プリフライト回避版）
-    const res = await fetch(GAS_POST_ENDPOINT, {
-        method: 'POST',
-        body: new URLSearchParams({
-          payload: JSON.stringify(payload) // ← 文字列1個
-        })
-      });
-      const text = await res.text();
-      let json = {};
-      try { json = JSON.parse(text); } catch {}
-      if (json.ok) {
-        status.textContent = '✅ 投稿しました';
-      } else {
-        status.textContent = '❌ エラー：' + (json.error || '不明');
-      }
-  } catch (err) {
-    console.error('POST failed:', err);
-    status.textContent = '❌ 通信失敗：' + (err?.message || err);
-  } finally {
-    btn.disabled = false;
+  const res = await fetch(`${GAS_POST_ENDPOINT}?mode=post`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  const json = await res.json().catch(()=>({}));
+  if(json.ok){
+    // 返ってきた postId を控えると後で更新/削除が簡単
+    const pid = json.postId;
+    alert('投稿しました！' + (pid ? `\n投稿ID: ${pid}` : ''));
+    // クリアなど
+  }else{
+    alert('投稿に失敗しました: ' + (json.error || '不明なエラー'));
   }
 }
+
 
 // ================================
 // カード解説（複数行）管理：デッキ内カードのみ / 画像モーダル選択 / 5列 / 重複名OK / 既選択は無効化
@@ -4426,6 +4231,7 @@ function buildDeckPostPayload(){
   const count = typeof getDeckCount==='function' ? getDeckCount() : 0;
   const posterName = document.getElementById('poster-name')?.value.trim() || '';
   const posterX    = normalizeHandle(document.getElementById('poster-x')?.value || '');
+  const editPin    = (document.getElementById('post-pin')?.value || '').trim();
 
   // 必要に応じてカード配列・代表カードcdなども付与
   const cards = typeof getDeckAsArray==='function' ? getDeckAsArray() : []; // [{cd, count}, ...] を想定
@@ -4433,21 +4239,24 @@ function buildDeckPostPayload(){
   return {
     title,
     comment,
-    tags,
     code,
     count,
     races,
     repImg,
-    cards,
-    poster: { name: posterName, x: posterX },
-    includeImage: !!document.getElementById('post-include-image')?.checked,
     ua: navigator.userAgent,
-    ts: Date.now()
+    autoTags: autoTagList,        // 自動生成済みの配列
+    selectTags: selectedTagList,  // 選択チップの配列
+    userTags: userTagInput.split(/\s+/).filter(Boolean), // 自由入力欄など
+    poster: { name, x },
+    editPin,
   };
 }
 
-// 先頭の定数定義付近に追加（または既存を上書き）
-const GAS_AUTH_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxhfeSZlTYklLVzoNWhONFH4XbbKUlaJGwv8DgHBoqi0iuMJJGVTozVLMl982Uym-q8/exec';
-const GAS_POST_ENDPOINT = GAS_AUTH_ENDPOINT; // 投稿も同じWebAppを使うならこれで統一
+// 例（必ずあなたの最終URLに差し替え）
+const GAS_AUTH_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxrPzCs67W85UaFglKiOXD4e4SvibHBpzriMNzSJzpKz7KGr-t06JI_3x_f0vidWfso/exec';
+
+
+
+const GAS_POST_ENDPOINT = GAS_AUTH_ENDPOINT;
 const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
 

@@ -4447,7 +4447,7 @@ function buildDeckPostPayload(){
 }
 
 // 先頭の定数定義付近に追加（または既存を上書き）
-const GAS_AUTH_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyJquZJXpz-RhDy_a9Ikc6BIAevtic0hxM4KHMuOf4FUB0mwbbUKeHRSkZsQPF_CKxu/exec';
+const GAS_AUTH_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxhfeSZlTYklLVzoNWhONFH4XbbKUlaJGwv8DgHBoqi0iuMJJGVTozVLMl982Uym-q8/exec';
 const GAS_POST_ENDPOINT = GAS_AUTH_ENDPOINT; // 投稿も同じWebAppを使うならこれで統一
 const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
 

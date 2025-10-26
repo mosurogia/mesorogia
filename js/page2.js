@@ -4190,25 +4190,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 /** 送信 */
-async function submitDeckPost(e){
-  e?.preventDefault?.();
+async function submitDeckPost(payload) {
+  const url = `${GAS_POST_ENDPOINT}?mode=post`; // 例：…/exec?mode=post
 
-  const payload = buildDeckPostPayload();
-
-  // ❶ application/json ヘッダーを付けない（プリフライト回避）
-  // ❷ body は文字列(JSON)のまま
-  const res = await fetch(`${GAS_POST_ENDPOINT}?mode=post`, {
-    method: 'POST',
-    // mode や credentials は付けなくてOK（付けても良い）
-    body: JSON.stringify(payload)
+  // プリフライトを起こさない形
+  const body = new URLSearchParams({
+    payload: JSON.stringify(payload)
   });
 
-  const json = await res.json().catch(()=> ({}));
-  if (json.ok) {
-    alert('投稿しました: ' + (json.postId || ''));
-  } else {
-    alert('投稿に失敗: ' + (json.error || '不明なエラー'));
-  }
+  const res = await fetch(url, {
+    method: 'POST',
+    // ← ヘッダーは付けないか、付けても下の1行のみ
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  });
+
+  const json = await res.json(); // GAS側は JSON を返している
+  if (!json.ok) throw new Error(json.error || 'post failed');
+  return json;
 }
 
 

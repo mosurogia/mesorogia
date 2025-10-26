@@ -3719,26 +3719,21 @@ document.addEventListener('DOMContentLoaded', () => {
   function applyState(){
     const loggedIn = !!state.loggedIn && !!state.username;
 
-    // フィールド反映
     if (state.username) nameInput.value = state.username;
 
     nameInput.disabled = loggedIn;
     passInput.disabled = loggedIn;
     passToggle.disabled= loggedIn;
 
-    // ボタンの表示
     btnSignup.hidden = loggedIn;
     btnLogin.hidden  = loggedIn;
     btnLogout.hidden = !loggedIn;
 
-    // グリッド列数を切替（ログアウトだけの時は1列）
     if (authRow) authRow.classList.toggle('logged-in', loggedIn);
 
-    // 注意文
     noteWrap.hidden = !loggedIn;
     if (loggedIn) noteName.textContent = state.username || '';
 
-    // 投稿者名は hidden でも使うので、既存の hidden があれば更新
     const hiddenPoster = document.getElementById('post-poster-hidden');
     if (hiddenPoster) hiddenPoster.value = loggedIn ? state.username : (nameInput.value || '');
   }
@@ -3751,35 +3746,38 @@ document.addEventListener('DOMContentLoaded', () => {
     passToggle.textContent = show ? '非表示' : '表示';
   });
 
-
-// サインアップ
-btnSignup?.addEventListener('click', async () => {
-  const u = nameInput.value.trim();
-  const p = passInput.value.trim();
-  if (!u || !p) {
-    alert('ユーザー名とパスワードを入力してください');
-    return;
-  }
-  try {
-    const url = `${GAS_AUTH_ENDPOINT}?mode=signup&username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`;
-    const res = await fetch(url);
-    const json = await res.json();
-    if (json.ok) {
-      // 成功処理
-      state = { loggedIn: true, username: u };
-      saveState(state);
-      applyState();
-      alert('登録が完了しました');
-    } else {
-      alert('登録に失敗しました: ' + (json.error || '不明なエラー'));
+  // サインアップ（POSTに統一）
+  btnSignup?.addEventListener('click', async () => {
+    const u = (nameInput.value||'').trim();
+    const p = (passInput.value||'').trim();
+    if (!u || !p) {
+      alert('ユーザー名とパスワードを入力してください');
+      return;
     }
-  } catch (err) {
-    alert('通信エラーが発生しました');
-  }
-});
+    try {
+      const res = await fetch(`${GAS_AUTH_ENDPOINT}?mode=signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: new URLSearchParams({ username: u, password: p })
+      });
+      const text = await res.text();
+      let json = {};
+      try { json = JSON.parse(text); } catch(_) {}
+      if (json && json.ok) {
+        state = { loggedIn: true, username: u };
+        saveState(state);
+        applyState();
+        alert('登録が完了しました');
+      } else {
+        alert('登録に失敗しました: ' + (json?.error || '不明なエラー'));
+      }
+    } catch (err) {
+      console.error('signup failed', err);
+      alert('通信エラーが発生しました');
+    }
+  });
 
-
-  // ログイン。ユーザー名とパスワードをGASへ送信し、成功ならログイン状態にします。
+  // ログイン（POST）
   btnLogin?.addEventListener('click', async ()=>{
     const u = (nameInput.value||'').trim();
     const p = (passInput.value||'').trim();
@@ -3787,6 +3785,7 @@ btnSignup?.addEventListener('click', async () => {
     try {
       const res = await fetch(`${GAS_AUTH_ENDPOINT}?mode=login`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
         body: new URLSearchParams({ username: u, password: p })
       });
       const text = await res.text();
@@ -3810,7 +3809,6 @@ btnSignup?.addEventListener('click', async () => {
   btnLogout?.addEventListener('click', ()=>{
     state = { loggedIn:false, username:'' };
     saveState(state);
-    // 入力は残さない
     nameInput.value = '';
     passInput.value = '';
     passInput.type = 'password';
@@ -3818,7 +3816,7 @@ btnSignup?.addEventListener('click', async () => {
     applyState();
   });
 
-  // Xプロフィールを開く（@有無どちらでもOK）
+  // Xプロフィールを開く
   xBtn?.addEventListener('click', ()=>{
     const raw = (xInput.value||'').trim();
     if (!raw) { alert('Xアカウント名を入力してください'); return; }
@@ -3836,6 +3834,7 @@ btnSignup?.addEventListener('click', async () => {
     if (hiddenPoster) hiddenPoster.value = state.loggedIn ? state.username : (nameInput.value || '');
   });
 })();
+
 
 // ===== 投稿者情報 UI 初期化 =====
 
@@ -4423,7 +4422,7 @@ function buildDeckPostPayload(){
   };
 }
 
-const GAS_POST_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxVn9nAj5aDbejxBGKR33x-QdgzFMYWR-mJk-GmKSw3us4m1hKaR9o3k8fpPAmUIU_W/exec';
+const GAS_POST_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyJquZJXpz-RhDy_a9Ikc6BIAevtic0hxM4KHMuOf4FUB0mwbbUKeHRSkZsQPF_CKxu/exec';
 
 // 認証操作もこのGASに対して mode パラメータで行うため、投稿と同じエンドポイントを使用する。
 const GAS_AUTH_ENDPOINT = GAS_POST_ENDPOINT;

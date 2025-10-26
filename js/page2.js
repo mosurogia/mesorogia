@@ -4237,26 +4237,29 @@ function buildDeckPostPayload(){
   const cards = typeof getDeckAsArray==='function' ? getDeckAsArray() : []; // [{cd, count}, ...] を想定
 
   return {
-    title,
-    comment,
-    code,
-    count,
-    races,
-    repImg,
-    ua: navigator.userAgent,
-    autoTags: autoTagList,        // 自動生成済みの配列
-    selectTags: selectedTagList,  // 選択チップの配列
-    userTags: userTagInput.split(/\s+/).filter(Boolean), // 自由入力欄など
-    poster: { name, x },
-    editPin,
-  };
+  title,
+  comment,
+  code,
+  count,
+  races,
+  repImg,
+  ua: navigator.userAgent,
+  autoTags: Array.isArray(autoTagList) ? autoTagList : [],
+  selectTags: Array.isArray(selectedTagList) ? selectedTagList : [],
+  userTags: (userTagInput || '').split(/\s+/).filter(Boolean),
+  poster: { name: posterName, x: posterX },
+  editPin,
+};
+
 }
 
 // 例（必ずあなたの最終URLに差し替え）
-const GAS_AUTH_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxrPzCs67W85UaFglKiOXD4e4SvibHBpzriMNzSJzpKz7KGr-t06JI_3x_f0vidWfso/exec';
+const GAS_AUTH_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyuDs8eziypZ2Mi5qapLpoWI9LYZYFXo1-YeDpnpYrnYA8S4ai7ho0pTbaT_4hs9Gty/exec';
 
 
 
 const GAS_POST_ENDPOINT = GAS_AUTH_ENDPOINT;
 const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+
+
 

@@ -398,7 +398,7 @@
     gap: 0.2rem;
     flex-direction: row;
     height: 100%;
-    max-height: clamp(80vh, calc( 4 * (15vw + 4px) ), 120vh);
+    max-height: clamp(40vh, calc( 4 * (12vw + 4px) ), 120vh);
 }
 
 @media (max-width: 700px) {
@@ -837,7 +837,7 @@
 .info-section {
     display: flex;
     flex-direction: column;
-    gap: .6rem;
+    gap: 10px;
     padding: .3rem;
 }
 @media (max-width: 700px) {
@@ -878,7 +878,7 @@
 
 @media (max-width: 700px) {
     #deck-info .info-label {
-    font-size: clamp(11px, 3vw, 21px);
+    font-size: clamp(11px, 2.5vw, 17px);
     width: 24%;
     }
 }
@@ -890,6 +890,7 @@
 @media (max-width: 1024px) {
     .info-value {
         margin-top: .2rem;
+        font-size: .5rem;
     }
 }
 @media (max-width: 700px) {
@@ -907,10 +908,23 @@
         text-overflow: ellipsis;
         white-space: nowrap;
         gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
         }
 }
+@media (max-width: 700px) {
+    .any {
+            display: block;
+            gap: 5px;
+        }
+    }
 .any-text{
     font-size: 0.9em;
+}
+@media (max-width: 700px) {
+.any-text {
+    font-size: clamp(11px, 2vw, 14px);
+    }
 }
 /*デッキ名入力*/
 .info-value input[type="text"],
@@ -1554,6 +1568,11 @@
     line-height: 1.6;
     font-size: 0.6rem;
 }
+@media (max-width: 1024px) {
+    #post-note {
+        font-size: .5rem;
+    }
+}
 @media (max-width: 700px) {
     #post-note {
         min-height: 12rem;
@@ -1576,7 +1595,7 @@
     background: #fafafa;
     margin-bottom: .5rem;
 }
-@media (max-width: 700px) {
+@media (max-width: 1024px) {
     .post-card-note {
         grid-template-columns: 70px 1fr;
         gap: .25rem;

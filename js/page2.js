@@ -4192,23 +4192,25 @@ document.addEventListener('DOMContentLoaded', () => {
 /** 送信 */
 async function submitDeckPost(e){
   e?.preventDefault?.();
+
   const payload = buildDeckPostPayload();
 
+  // ❶ application/json ヘッダーを付けない（プリフライト回避）
+  // ❷ body は文字列(JSON)のまま
   const res = await fetch(`${GAS_POST_ENDPOINT}?mode=post`, {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
+    // mode や credentials は付けなくてOK（付けても良い）
     body: JSON.stringify(payload)
   });
-  const json = await res.json().catch(()=>({}));
-  if(json.ok){
-    // 返ってきた postId を控えると後で更新/削除が簡単
-    const pid = json.postId;
-    alert('投稿しました！' + (pid ? `\n投稿ID: ${pid}` : ''));
-    // クリアなど
-  }else{
-    alert('投稿に失敗しました: ' + (json.error || '不明なエラー'));
+
+  const json = await res.json().catch(()=> ({}));
+  if (json.ok) {
+    alert('投稿しました: ' + (json.postId || ''));
+  } else {
+    alert('投稿に失敗: ' + (json.error || '不明なエラー'));
   }
 }
+
 
 
 

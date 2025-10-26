@@ -504,7 +504,7 @@
                         <!-- ▼ 投稿者情報（UIのみ） -->
                         <div class="info-row">
                             <div class="info-label any">
-                                <div>アカウント</div>
+                                <div>投稿者名</div>
                                 <div class="any-text">(任意)</div>
                             </div>
 
@@ -515,40 +515,48 @@
                                         <input id="poster-name" type="text" placeholder="デッキ投稿者名" autocomplete="nickname" />
                                     </div>
 
-                                    <!-- 2行目：パスワード + 表示切替 -->
-                                    <div class="poster-line pass-line">
-                                        <input id="auth-pass" type="password" placeholder="パスワード" inputmode="verbatim" />
+                                    <!-- 2行目：編集用PIN -->
+                                    <div class="poster-pin">
+                                        <input id="post-pin" type="password" inputmode="numeric" placeholder="編集用PIN4〜6桁（任意）">
+                                        <small>※後で投稿の編集や削除をするための本人確認用。未設定でも投稿できます。</small>
+                                    </div>
+
+
+                                    <!-- 3行目：パスワード + 表示切替（隠す） -->
+                                    <div class="poster-line pass-line" style="display:none;">
+                                        <input id="auth-pass" type="password" placeholder="パスワード" />
                                         <button type="button" id="auth-pass-toggle" class="btn ghost">表示</button>
                                     </div>
 
-                                    <!-- 3行目：登録 / ログイン（ログイン中はログアウトのみを表示） -->
-                                    <div class="poster-line auth-buttons">
+                                    <!-- 4行目：登録 / ログイン / ログアウト（隠す） -->
+                                    <div class="poster-line auth-buttons" style="display:none;">
                                         <button type="button" id="btn-signup" class="btn primary">新規登録</button>
                                         <button type="button" id="btn-login" class="btn primary">ログイン</button>
                                         <button type="button" id="btn-logout" class="btn danger" hidden>ログアウト</button>
-                                    </div>
-                                    <!-- 4行目：Xアカウント（連携はしない／プロフィール開くだけ） -->
-                                    <div class="poster-line x-line">
-                                        <div class="X-info">
-                                            <input id="poster-x" type="text" placeholder="Xアカウント名（@なし可）" inputmode="verbatim" />
-                                            <button type="button" id="x-link-btn" class="x-link-btn" title="Xプロフィールを開く">X を確認</button>
-                                        </div>
-                                    </div>
-                                    <!-- 注意文（ログイン中のみ表示） -->
-                                    <div id="account-note" class="account-note" hidden>
-                                        現在 <span id="account-username"></span> としてログイン中です。この状態で投稿すると投稿者名に反映されます。
-                                    </div>
-                                    <!--説明文-->
-                                    <div class="account-hint">
-                                        <small>アカウント登録することで自分のデッキで並べたり別端末から編集が可能です</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-
-
                         <div class="info-row">
+                            <div class="info-label any">
+                                <div>Xアカウント</div>
+                                <div class="any-text">(任意)</div>
+                            </div>
+                            <div class="info-value">
+                                    <div class="poster-line x-line">
+                                        <div class="X-info">
+                                        <input id="poster-x" type="text" placeholder="Xアカウント名（@なし可）" inputmode="verbatim" />
+                                            <button type="button" id="x-link-btn" class="x-link-btn" title="Xプロフィールを開く">X を確認</button>
+                                        </div>
+                                    <small>
+                                    投稿内に自分のXアカウントを載せることができます。なりすましはやめてください。
+                                    </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="info-row">
                             <label class="info-label">
                                 投稿同意
                             </label>
@@ -561,10 +569,11 @@
                                     ※本サイトは非公式のファンサイトです。<br>
                                     他の利用者が気持ちよく閲覧できるようご協力をお願いします。
                                 </small>
-
-
                             </div>
                         </div>
+                        </div>
+
+
 
                         <div class="post-actions">
                             <div id="post-status" class="status-text"></div>

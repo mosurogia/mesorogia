@@ -4190,25 +4190,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 /** 送信 */
-async function submitDeckPost(payload) {
-  const url = `${GAS_POST_ENDPOINT}?mode=post`; // 例：…/exec?mode=post
+async function submitDeckPost(event){
+  // ← ページ遷移を止める
+  if (event) event.preventDefault();
 
-  // プリフライトを起こさない形
-  const body = new URLSearchParams({
-    payload: JSON.stringify(payload)
-  });
+  const payload = buildDeckPostPayload();
 
-  const res = await fetch(url, {
-    method: 'POST',
-    // ← ヘッダーは付けないか、付けても下の1行のみ
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body
-  });
-
-  const json = await res.json(); // GAS側は JSON を返している
-  if (!json.ok) throw new Error(json.error || 'post failed');
-  return json;
+  try {
+    const res = await fetch(`${GAS_POST_ENDPOINT}?mode=post`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ payload: JSON.stringify(payload) })
+    });
+    const json = await res.json();
+    if (json.ok) {
+      alert('投稿完了！ID: ' + (json.postId || ''));
+    } else {
+      alert('投稿に失敗しました: ' + (json.error || '不明なエラー'));
+    }
+  } catch (err) {
+    alert('通信エラー: ' + err);
+  }
+  // ← ここを追加（フォーム送信の完了を防ぐ）
+  return false;
 }
+
 
 
 

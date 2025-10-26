@@ -3746,27 +3746,44 @@ document.addEventListener('DOMContentLoaded', () => {
     passToggle.textContent = show ? '非表示' : '表示';
   });
 
+
+    // ★ フォーム送信の徹底抑止（親フォームを止める）
+  const parentForm = authRow?.closest('form');
+  parentForm?.addEventListener('submit', (e) => {
+    // 認証行からのsubmitはすべて無効化（デッキ投稿のsubmitは別ボタンで行う前提）
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  // ★ Enterキーでの誤送信も抑止
+  [nameInput, passInput].forEach(el => {
+    el?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); }
+    });
+  });
+
+
   // サインアップ（POSTに統一）
-  btnSignup?.addEventListener('click', async () => {
+  btnSignup?.addEventListener('click', async (ev) => {
+    ev.preventDefault(); ev.stopPropagation();               // ← 追加
     const u = (nameInput.value||'').trim();
     const p = (passInput.value||'').trim();
-    if (!u || !p) {
-      alert('ユーザー名とパスワードを入力してください');
-      return;
-    }
+    if (!u || !p) { alert('ユーザー名とパスワードを入力してください'); return; }
+
+    // 二重クリック防止
+    btnSignup.disabled = true;
     try {
-      const res = await fetch(`${GAS_AUTH_ENDPOINT}?mode=signup`, {
+      const url = `${GAS_AUTH_ENDPOINT}?mode=signup${IS_LOCAL ? '&dev=1' : ''}`;
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
         body: new URLSearchParams({ username: u, password: p })
       });
       const text = await res.text();
-      let json = {};
-      try { json = JSON.parse(text); } catch(_) {}
+      let json = {}; try { json = JSON.parse(text); } catch(_){}
       if (json && json.ok) {
         state = { loggedIn: true, username: u };
-        saveState(state);
-        applyState();
+        saveState(state); applyState();
         alert('登録が完了しました');
       } else {
         alert('登録に失敗しました: ' + (json?.error || '不明なエラー'));
@@ -3774,27 +3791,31 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error('signup failed', err);
       alert('通信エラーが発生しました');
+    } finally {
+      btnSignup.disabled = false;
     }
   });
 
   // ログイン（POST）
-  btnLogin?.addEventListener('click', async ()=>{
+  btnLogin?.addEventListener('click', async (ev)=>{
+    ev.preventDefault(); ev.stopPropagation();               // ← 追加
     const u = (nameInput.value||'').trim();
     const p = (passInput.value||'').trim();
     if (!u || !p) { alert('ユーザー名とパスワードを入力してください'); return; }
+
+    btnLogin.disabled = true;
     try {
-      const res = await fetch(`${GAS_AUTH_ENDPOINT}?mode=login`, {
+      const url = `${GAS_AUTH_ENDPOINT}?mode=login${IS_LOCAL ? '&dev=1' : ''}`;
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
         body: new URLSearchParams({ username: u, password: p })
       });
       const text = await res.text();
-      let json = {};
-      try { json = JSON.parse(text); } catch(e){}
+      let json = {}; try { json = JSON.parse(text); } catch(_){}
       if (json && json.ok) {
         state = { loggedIn:true, username:u };
-        saveState(state);
-        applyState();
+        saveState(state); applyState();
         alert('ログインしました');
       } else {
         alert('ログインに失敗しました: ' + (json?.error || '不明なエラー'));
@@ -3802,8 +3823,11 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(err) {
       console.error('login failed', err);
       alert('通信エラーが発生しました');
+    } finally {
+      btnLogin.disabled = false;
     }
   });
+
 
   // ログアウト
   btnLogout?.addEventListener('click', ()=>{
@@ -4422,8 +4446,8 @@ function buildDeckPostPayload(){
   };
 }
 
-const GAS_POST_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyJquZJXpz-RhDy_a9Ikc6BIAevtic0hxM4KHMuOf4FUB0mwbbUKeHRSkZsQPF_CKxu/exec';
-
-// 認証操作もこのGASに対して mode パラメータで行うため、投稿と同じエンドポイントを使用する。
-const GAS_AUTH_ENDPOINT = GAS_POST_ENDPOINT;
+// 先頭の定数定義付近に追加（または既存を上書き）
+const GAS_AUTH_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyJquZJXpz-RhDy_a9Ikc6BIAevtic0hxM4KHMuOf4FUB0mwbbUKeHRSkZsQPF_CKxu/exec';
+const GAS_POST_ENDPOINT = GAS_AUTH_ENDPOINT; // 投稿も同じWebAppを使うならこれで統一
+const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
 

@@ -4189,38 +4189,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-/** 送信 */
-async function submitDeckPost(event){
-  // ← ページ遷移を止める
-  if (event) event.preventDefault();
-
-  const payload = buildDeckPostPayload();
-
-  try {
-    const res = await fetch(`${GAS_POST_ENDPOINT}?mode=post`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ payload: JSON.stringify(payload) })
-    });
-    const json = await res.json();
-    if (json.ok) {
-      alert('投稿完了！ID: ' + (json.postId || ''));
-    } else {
-      alert('投稿に失敗しました: ' + (json.error || '不明なエラー'));
-    }
-  } catch (err) {
-    alert('通信エラー: ' + err);
-  }
-  // ← ここを追加（フォーム送信の完了を防ぐ）
-  return false;
-}
-
-
-
-
-
-
-
 
 //投稿チェック
 function validateDeckBeforePost(){
@@ -4248,7 +4216,7 @@ function validateDeckBeforePost(){
 }
 
 
-//送信
+//送信内容
 function buildDeckPostPayload(){
   const title = document.getElementById('post-deck-name')?.value.trim() || '';
   const comment = document.getElementById('post-note')?.value.trim() || '';
@@ -4281,13 +4249,34 @@ function buildDeckPostPayload(){
 
 }
 
-// 例（必ずあなたの最終URLに差し替え）
-const GAS_AUTH_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyuDs8eziypZ2Mi5qapLpoWI9LYZYFXo1-YeDpnpYrnYA8S4ai7ho0pTbaT_4hs9Gty/exec';
+const GAS_POST_ENDPOINT =
+  'https://script.google.com/macros/s/AKfycbxYm8_R8m8sEcob7lFOdGVnqWwciBnRZihq_mBj34rvk_R3k_ruuKOmtsUpzjGF2kO0/exec';
 
 
 
-const GAS_POST_ENDPOINT = GAS_AUTH_ENDPOINT;
 const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+
+
+// 送信
+async function submitDeckPost(e){
+  e?.preventDefault();
+
+  const payload = buildDeckPostPayload();
+
+  const res = await fetch(`${GAS_POST_ENDPOINT}?mode=post`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, // ← プリフライト回避
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json();
+  if (json.ok) {
+    alert(`投稿OK: ${json.postId || ''}`);
+  } else {
+    alert('投稿失敗: ' + (json.error || '不明なエラー'));
+  }
+  return false;
+}
+
 
 
 

@@ -1954,7 +1954,7 @@ font-size: .55rem;
 /* === 投稿者UI === */
 .poster-stack {
     display: grid;
-    gap: .4rem;
+    gap: 5px;
 }
 
 .poster-line {
@@ -2015,6 +2015,12 @@ font-size: .55rem;
     font-weight: 700;
 }
 
+.x-line {
+    display: block;
+    gap: 5px;
+    align-items: center;
+}
+
 /* X 行：既存の .X-info を横並び均等 */
 .X-info {
     display: flex;
@@ -2039,22 +2045,6 @@ font-size: .55rem;
     cursor: pointer;
 }
 
-/* ログイン注記 */
-.account-note {
-    margin-top: .2rem;
-    font-size: .55rem;
-    color: #444;
-    background: #f8fafc;
-    border: 1px solid #e5e7eb;
-    padding: .4rem .5rem;
-    border-radius: 8px;
-}
-
-/*使い方説明*/
-.account-hint{
-    font-size: .65rem;
-    color: #444;
-}
 /* 投稿者行（横並び→折返し対応） */
 .poster-row {
     display: flex;

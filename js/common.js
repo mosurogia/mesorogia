@@ -51,33 +51,45 @@ function splitPackName(name='') {
   return { en: s.trim(), jp: '' };
 }
 function makePackSlug(en='') {
-  return en.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+  const base = String(en || '').trim();
+  const ascii = base.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+  // 英字が1文字も無い（=日本語など）と空になるのでフォールバックで元文字列を返す
+  return ascii || base;
 }
 async function loadPackCatalog() {
   if (window.__PackCatalog) return window.__PackCatalog;
   try {
-    const res = await fetch('./public/packs.json', { cache: 'no-store' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const { packs=[] } = await res.json();
+    const res2 = await fetch('./public/packs.json', { cache: 'no-store' });
+if (!res2.ok) throw new Error(`HTTP ${res2.status}`);
 
-  const list = packs.map(p => {
-    // packs.json が「Awaking The Oracle「神託者の覚醒」」のように混在する前提で正規化
-    const rawEn = String(p.en||'').trim();
-    const rawJp = String(p.jp||'').trim();
-    const sp = splitPackName(rawEn);           // ← 英名/仮名を安全に分離
-    const en = sp.en || rawEn;                  // 英名
-    const jp = rawJp || sp.jp;                  // jpが空ならsplit結果を採用（「…」付き）
-    const slug = makePackSlug(en);
-    return {
-      key: p.key || slug,
-      en, jp, slug,
-      labelTwoLine: `${en}${jp?`\n${jp}`:''}`
-    };
-  });
+    const raw = await res2.json();
+    // どちらの形式でも受け付ける:
+    // A) { "packs": [ ... ], "order": [...] } ← 新しい生成スクリプト
+    // B) { "list":  [ ... ], "order": [...] } ← 以前の手作業ファイル
+    const arr   = Array.isArray(raw.packs) ? raw.packs : (Array.isArray(raw.list) ? raw.list : []);
+    const order = Array.isArray(raw.order) ? raw.order : null;
+
+    const list = arr.map(p => {
+      const enRaw = (p.en ?? '').trim();
+      const jpRaw = (p.jp ?? '').trim();
+      // en が未入力で jp 側だけある場合でも表示できるように補正
+      const en  = enRaw || (jpRaw ? jpRaw.replace(/[「」]/g,'') : '');
+      const jp  = jpRaw || '';
+      // slug/key は与えられていれば尊重。無ければ makePackSlug から作る
+      const slug = p.slug || makePackSlug(en);
+      const key  = p.key  || slug;
+      return {
+        key, en, jp, slug,
+        labelTwoLine: `${en}${jp ? `\n${jp}` : ''}`
+      };
+    });
+
     const byEn  = new Map(list.map(x => [x.en, x]));
-    const order = list.map(x => x.en);
-    window.__PackCatalog = { list, byEn, order };
+    const ord   = order && order.length ? order : list.map(x => x.en);
+
+    window.__PackCatalog = { list, byEn, order: ord };
     return window.__PackCatalog;
+
   } catch (e) {
     console.warn('packs.json 読み込み失敗→cards_latest.jsonから検出にフォールバック', e);
     const cards = await fetchLatestCards();
@@ -93,6 +105,7 @@ async function loadPackCatalog() {
     return window.__PackCatalog;
   }
 }
+
 
 // ここで window に公開
 window.splitPackName   = splitPackName;

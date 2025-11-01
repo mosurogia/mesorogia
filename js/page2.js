@@ -57,11 +57,13 @@ function writeDeckNameInput(name) {
 }
 
 
-function buildAutosavePayload() {
+function buildAutosavePayload(){
   return {
     cardCounts: { ...deck },
     m: representativeCd || null,
     name: readDeckNameInput(),
+    note: readPostNote(),
+    poster: document.getElementById('poster-name')?.value?.trim() || '',
     date: formatYmd()
   };
 }
@@ -102,7 +104,14 @@ function loadAutosave(data){
   representativeCd = (data.m && deck[data.m]) ? data.m : null;
   writeDeckNameInput(data.name || '');
 
-    // デッキ名（２つのタブ同期）
+  /*解説コメント*/
+  writePostNote(data.note || '');
+
+
+  /*タグ*/
+  if (Array.isArray(data.userTags)) writeUserTags(data.userTags);
+
+    // デッキ名（３つのタブ同期）
   if (typeof window.syncDeckNameFields === 'function') window.syncDeckNameFields();
 
   // UI更新（スクロール保持）
@@ -852,7 +861,7 @@ function updateDeck() {
     return el;
   })();
   info.innerHTML = `
-    デッキ枚数：${total} /30~40<br>
+    デッキ枚数：${total}/30~40<br>
     使用種族：${races.size > 0 ? Array.from(races).join("/") : "なし"}<br>
     旧神：${hasOldGod ? "採用中" : "未採用"}<br>
     🔵 ${typeCount["チャージャー"]} 🟣 ${typeCount["アタッカー"]} ⚪️ ${typeCount["ブロッカー"]}
@@ -1270,7 +1279,6 @@ function openCardOpModal(cd, anchorRect){
   box.style.top  = top  + 'px';
 }
 
-
 function closeCardOpModal(){
   const modal = document.getElementById('cardOpModal');
   if (!modal.classList.contains('show')) return true;
@@ -1305,6 +1313,7 @@ function closeCardOpModal(){
   _cardOpCurrentCd = null;
   return true;
 }
+
 
 
 function updateCardOpCountBadge(){
@@ -1873,21 +1882,46 @@ function updateDeckCardListBackground(){
   let io = null;
   function installObserver(){
     const { btn, pane } = ensureNodes();
-    const list = document.getElementById('deck-card-list');
-    if (!list) return;
+    const list  = document.getElementById('deck-card-list');
+    const modal = document.getElementById('noteFullModal');
+    if (!list || !modal) return;
 
-    if (io) io.disconnect();
-    io = new IntersectionObserver((entries)=>{
-      const entry = entries[0];
-      const visible = !!entry?.isIntersecting;
-      // 条件チェック
-      const show = isMobile() && isEditTabOpen() && !visible;
+    // ▼ 表示状態を一元的に更新する関数
+    const updateDeckpeekVisibility = (visibleEntry) => {
+      const visible = !!visibleEntry?.isIntersecting; // deck-card-list が画面内か
+      const modalOpen = getComputedStyle(modal).display === 'flex'; // ←ご指定の条件
+
+      // 通常条件（モバイル + 編集タブ + リストが画面外） or モーダル開
+      const show = (isMobile() && isEditTabOpen() && !visible) || modalOpen;
+
       btn.style.display = show ? 'inline-flex' : 'none';
-      if (!show) pane.style.display = 'none';
-    }, { root: null, threshold: 0.05 });
+      if (modalOpen) btn.classList.add('onModal'); else btn.classList.remove('onModal');
 
-    io.observe(list);
+      if (!show) pane.style.display = 'none';
+    };
+
+    // ▼ 既存の IntersectionObserver（リストの出入り監視）
+    if (window._deckpeekIO) window._deckpeekIO.disconnect();
+    window._deckpeekIO = new IntersectionObserver((entries)=>{
+      updateDeckpeekVisibility(entries[0]);
+    }, { root: null, threshold: 0.05 });
+    window._deckpeekIO.observe(list);
+
+    // ▼ 追加：モーダルの display/class 変化を監視（開閉に即応）
+    if (window._noteFullMO) window._noteFullMO.disconnect();
+    window._noteFullMO = new MutationObserver(()=>{
+      // エントリが無いとき用に visible=false 相当で評価
+      updateDeckpeekVisibility({ isIntersecting: false });
+    });
+    window._noteFullMO.observe(modal, { attributes: true, attributeFilter: ['style','class'] });
+
+    // 初期反映
+    // IntersectionObserver の初回発火を待たずに即評価
+    updateDeckpeekVisibility({ isIntersecting: false });
   }
+
+
+
 
     // ===== メイン種族カラー反映 =====
   function updateDeckPeekButtonColor() {
@@ -3026,31 +3060,82 @@ function fitCover(sw, sh, dw, dh){
 
 
 /*デッキ名同期
-*デッキ情報のデッキ名とデッキ投稿のデッキ名が同じになるようにする
+* デッキ情報のデッキ名とデッキ投稿のデッキ名が同じになるようにする
+* 未設定時は「デッキリスト」を既定表示
 */
 (function () {
   const $ = (id) => document.getElementById(id);
   const infoNameEl = $('info-deck-name');
   const postNameEl = $('post-deck-name');
+  const titleEl    = $('note-side-title');
 
+  // 双方向同期：info/post → 両方、タイトルは空なら空のまま（CSSで“デッキリスト”表示）
   function setBoth(val) {
-    if (infoNameEl && infoNameEl.value !== val) infoNameEl.value = val;
-    if (postNameEl && postNameEl.value !== val) postNameEl.value = val;
+    const v = val ?? '';
+    if (infoNameEl && infoNameEl.value !== v) infoNameEl.value = v;
+    if (postNameEl && postNameEl.value !== v) postNameEl.value = v;
+    if (titleEl) {
+      titleEl.textContent = v; // 空の時は空文字 → :empty::before で“デッキリスト”が出る
+    }
   }
 
-  // どちらかが入力されたら相互に反映
-  infoNameEl?.addEventListener('input', () => setBoth(infoNameEl.value));
-  postNameEl?.addEventListener('input', () => setBoth(postNameEl.value));
+  // 入力欄→相互反映
+  infoNameEl?.addEventListener('input', () => { setBoth(infoNameEl.value.trim()); scheduleAutosave?.(); });
+  postNameEl?.addEventListener('input', () => { setBoth(postNameEl.value.trim()); scheduleAutosave?.(); });
 
-  // タブ切替や外部からも呼べる同期関数を公開
+  // ===== タイトルをその場編集 =====
+  function selectAll(el){
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    const s = window.getSelection();
+    s.removeAllRanges();
+    s.addRange(r);
+  }
+  function beginEdit(){
+    if (!titleEl || titleEl.isContentEditable) return;
+    titleEl.dataset.prev = titleEl.textContent.trim();
+    titleEl.contentEditable = 'true';
+    titleEl.focus();
+    selectAll(titleEl);
+  }
+  function commitEdit(ok=true){
+    if (!titleEl || !titleEl.isContentEditable) return;
+    titleEl.contentEditable = 'false';
+    const next = ok ? titleEl.textContent.trim() : (titleEl.dataset.prev || '');
+    // commit: 両入力にも反映。空ならタイトルは空文字（見た目は“デッキリスト”）
+    setBoth(next);
+    scheduleAutosave?.();
+  }
+
+  // クリックで編集開始
+  titleEl?.addEventListener('click', (e) => {
+    // 既に編集中なら無視
+    if (titleEl.isContentEditable) return;
+    beginEdit();
+  });
+
+  // Enterで確定 / Escでキャンセル / フォーカス外れたら確定
+  titleEl?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commitEdit(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); commitEdit(false); }
+  });
+  titleEl?.addEventListener('blur', () => commitEdit(true));
+
+  // 外部からの同期（復元トーストの“復元する”押下時などで呼ぶ）
   window.syncDeckNameFields = function () {
-    const cur = (postNameEl?.value?.trim()) || (infoNameEl?.value?.trim()) || '';
-    setBoth(cur);
+    const name = (postNameEl?.value?.trim()) || (infoNameEl?.value?.trim()) || '';
+    setBoth(name);
   };
 
-  // 初期同期（片方が空で片方に値があるケースの吸収）
-  window.addEventListener('DOMContentLoaded', () => window.syncDeckNameFields?.());
+  // 初期同期：読み込み直後に一度（空ならタイトルは空＝“デッキリスト”表示）
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', () => window.syncDeckNameFields?.(), { once: true });
+  } else {
+    window.syncDeckNameFields?.();
+  }
 })();
+
+
 
 // ===== deck-code-controls が画面に見えていない時だけ、画面下に“浮遊バー”を出す（モバイル用） =====
 (function setupFloatingDeckControls(){
@@ -3443,21 +3528,42 @@ function exportDeckCode() {
   catch { return ''; }
 }
 
-// デッキ投稿タブが開かれたタイミングで一度だけ
-document.addEventListener('DOMContentLoaded', () => {
-  // post-tab が存在するページのみ
-  if (document.getElementById('post-tab')) {
-    ensurePostCommentSkeleton();
-  }
+// === 追加: 入力値の読み書きヘルパ ===
+function readPostNote(){ return document.getElementById('post-note')?.value || ''; }
+function writePostNote(v){ const el=document.getElementById('post-note'); if (el) el.value = v||''; }
+function readUserTags(){
+const wrap = document.getElementById('user-tags');
+if (!wrap) return [];
+return Array.from(wrap.querySelectorAll('.tag')).map(t=> t.textContent.trim()).filter(Boolean).slice(0,3);
+}
+
+// === 入力監視: 解説/ユーザータグでオートセーブを走らせる ===
+document.addEventListener('DOMContentLoaded', ()=>{
+const note = document.getElementById('post-note');
+if (note) note.addEventListener('input', scheduleAutosave);
+const userTagInput = document.getElementById('user-tag-input');
+const addBtn = document.getElementById('user-tag-add');
+if (userTagInput && addBtn){
+addBtn.addEventListener('click', ()=>{ setTimeout(scheduleAutosave, 0); });
+userTagInput.addEventListener('keydown', (e)=>{ if (e.key==='Enter') setTimeout(scheduleAutosave, 0); });
+}
 });
 
+function writeUserTags(list){
+const wrap = document.getElementById('user-tags');
+if (!wrap) return;
+wrap.innerHTML = '';
+(list||[]).forEach(txt=>{
+const chip = document.createElement('span'); chip.className='tag'; chip.textContent=txt; wrap.appendChild(chip);
+});
+}
 
 /* ✅ 保存キー（選択状態を保持） */
 const SELECT_TAGS_KEY = 'dm_post_select_tags_v1';
 
 /*選択タグ設定*/
 window.POST_TAG_CANDIDATES ??= [
-  "初心者向け","趣味構築","ランク戦用","大会入賞","格安"
+  "初心者向け","趣味構築","ランク戦用","大会入賞","格安デッキ"
 ];
 /*"アグロ","ミッドレンジ","コントロール","コンボ","バーン",*/
 
@@ -3524,7 +3630,7 @@ async function getAllCardsForTags() {
   for (const c of candidates) if (Array.isArray(c) && c.length) return c;
 
   // それでも無ければJSONから読む
-  const res = await fetch('public/cards_latest.json', { cache: 'no-store' });
+
   const data = await res.json();
   // is_latest がある前提なら最新のみ
   const latest = Array.isArray(data) ? data.filter(x => x?.is_latest !== false) : [];
@@ -3573,36 +3679,316 @@ function refreshPostSummary() {
   document.getElementById('post-rep-img')?.setAttribute('value', repImg);
 }
 
+// ---- デッキ解説：プリセットボタン → 文章挿入 ----
+function insertAtCursor(el, text) {
+  if (!el) return;
+  const start = el.selectionStart ?? el.value.length;
+  const end   = el.selectionEnd ?? el.value.length;
+  const before = el.value.slice(0, start);
+  const after  = el.value.slice(end);
+  el.value = before + text + after;
 
-// --- デッキ解説コメント（初回のみ自動挿入） ---
-function ensurePostCommentSkeleton() {
-  const ta = document.getElementById('post-note');
-  if (!ta) return;
-  const SKELETON =
-`【デッキ紹介】
-・
+  const pos = start + text.length;
+  try {
+    el.selectionStart = el.selectionEnd = pos;
+  } catch (e) {}
+  // 入力更新を他ロジックに通知
+  el.dispatchEvent(new Event('input'));
+}
+
+
+
+// === デッキ解説プリセット挿入 ===
+const NOTE_PRESETS = {
+  "deck-overview": `【デッキ概要】
+どんなコンセプトで作ったか、狙いの動きなど。
 
 【キーカード】
-・
+主軸となるカード・シナジー解説。
 
 【入れ替え候補】
-・
+なぜこの構成にしたのか、他構築との差別化など。
+`,
 
-【マリガン基準】
-・
+  "play-guide": `【マリガン基準】
+初手で意識するカード、キープ基準など。
 
-【立ち回りのコツ】
-・
+【試合の立ち回り】
+〈序盤〉
+〈中盤〉
+〈終盤〉
 
-【対面ごとの相性】
+【プレイのコツ】
+状況判断やよくあるミスなど。
+`,
+
+  "matchup": `【環境での立ち位置】
+どんな相手に強いか・苦手かなど。
+
+【相性一覧】
 〈有利対面〉
-・
-
 〈不利対面〉
-・
-`;
-  if (!ta.value.trim()) ta.value = SKELETON;
+
+【対策カード】
+環境・メタに合わせた調整案など。
+`,
+
+  "results": `【使用環境】
+使用期間・レート帯・環境など（例：シーズン〇〇／レート1600帯）
+
+【戦績】
+総試合数・勝敗（ざっくりでもOK）
+
+【課題・改善点】
+苦手な対面や構築上の弱点、今後調整したい点。
+
+【まとめ】
+使ってみた全体の印象、成果や気づきなど。
+`
+};
+
+// 共通の挿入関数
+function insertPresetTo(el, text){
+  if (!el) return;
+  const start = el.selectionStart ?? el.value.length;
+  const end   = el.selectionEnd   ?? el.value.length;
+  const v = el.value;
+  el.value = v.slice(0, start) + text + v.slice(end);
+  el.focus();
+  el.selectionStart = el.selectionEnd = start + text.length;
+  el.dispatchEvent(new Event('input', { bubbles: true }));
 }
+
+// ===== プリセットクリック処理 =====
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.note-preset-btn');
+  if (!btn) return;
+  const preset = btn.dataset.preset;
+  const text = NOTE_PRESETS[preset];
+  if (!text) return;
+  const isFullOpen = document.getElementById('noteFullModal')?.style.display !== 'none';
+  const target = isFullOpen ? document.getElementById('note-full-text')
+                            : document.getElementById('post-note');
+  insertPresetTo(target, text);
+});
+
+
+
+// ==== デッキ解説: 全画面モーダル ====
+(function(){
+function openNoteFull(){
+const modal = document.getElementById('noteFullModal');
+const src = document.getElementById('post-note');
+const dst = document.getElementById('note-full-text');
+if (!modal || !src || !dst) return;
+dst.value = src.value;
+// デッキ名（右側タイトル）を最新に同期
+if (window.syncDeckNameFields) window.syncDeckNameFields();
+
+// 右ペインに現在のデッキ一覧を軽量レンダリング
+const side = document.getElementById('note-side-list');
+if (side) {
+side.innerHTML = '';
+const entries = Object.entries(window.deck || {});
+const sorted = entries.sort(([a],[b])=> String(a).localeCompare(String(b)));
+sorted.forEach(([cd,n])=>{
+const row = document.createElement('div'); row.className='note-card-row';
+row.style.display='grid'; row.style.gridTemplateColumns='56px 1fr auto'; row.style.alignItems='center'; row.style.gap='8px'; row.style.margin='4px 0';
+const img = document.createElement('img'); img.alt=''; img.loading='lazy'; img.src = `img/${String(cd).slice(0,5)}.webp`; img.onerror=()=>{img.src='img/00000.webp'}; img.style.width='56px'; img.style.borderRadius='6px';
+const name = document.createElement('div'); name.textContent = (window.cardMap?.[cd]?.name)||cd; name.style.fontSize='.95rem';
+const qty = document.createElement('div'); qty.textContent = '×'+n; qty.style.opacity='.8';
+
+row.dataset.cardId = cd;
+row.addEventListener('click', () => {
+  if (typeof openCardOpModal === 'function') {
+    // 位置合わせ用に行の矩形を渡す
+    const rect = row.getBoundingClientRect();
+    openCardOpModal(cd, rect);
+  }
+});
+row.appendChild(img);
+row.appendChild(name);
+row.appendChild(qty);
+side.appendChild(row);
+});
+}
+modal.style.display='flex';
+document.body.style.overflow='hidden';
+}
+function closeNoteFull(){
+const modal = document.getElementById('noteFullModal');
+const src = document.getElementById('post-note');
+const dst = document.getElementById('note-full-text');
+if (!modal || !src || !dst) return;
+src.value = dst.value;
+src.dispatchEvent(new Event('input')); // オートセーブ連動
+modal.style.display='none';
+document.body.style.overflow='';
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+document.getElementById('note-fullscreen-btn')?.addEventListener('click', openNoteFull);
+document.getElementById('note-full-close')?.addEventListener('click', closeNoteFull);
+document.addEventListener('keydown', (e)=>{ if (e.key==='Escape' && document.getElementById('noteFullModal')?.style.display==='flex') closeNoteFull(); });
+});
+
+
+  document.addEventListener('click', (e)=>{
+    if(e.target.closest('.note-preset-btn')) onPresetClick(e);
+  });
+
+  // ============= ② モーダルのクローズ：× と外側タップ =============
+  const noteFullModal = document.getElementById('noteFullModal');
+  const noteFullClose = document.getElementById('note-full-close');
+  if(noteFullClose){
+    noteFullClose.addEventListener('click', ()=> closeNoteFull());
+  }
+  if(noteFullModal){
+    noteFullModal.addEventListener('click', (e)=>{
+      // 背景（.modal 直下）クリックで閉じる
+      if(e.target === noteFullModal) closeNoteFull();
+    });
+  }
+  function closeNoteFull(){
+    // 同期して閉じる＋スクロール復帰
+    const modalEl = document.getElementById('noteFullModal');
+    const src = document.getElementById('post-note');
+    const dst = document.getElementById('note-full-text');
+    if (modalEl) modalEl.style.display = 'none';
+    if (src && dst) {
+      src.value = dst.value;
+      src.dispatchEvent(new Event('input')); // オートセーブ連動
+    }
+    document.body.classList.remove('modal-open'); // 念のため
+    document.body.style.overflow = '';            // ← これが重要
+  }
+
+  // ============= ③ デッキ名と note-side-title の双方向同期 =============
+  const infoDeckName = document.getElementById('info-deck-name');
+  const postDeckName = document.getElementById('post-deck-name');
+  const noteSideTitle = document.getElementById('note-side-title');
+
+  function setAllDeckName(name){
+    if(infoDeckName && infoDeckName.value !== name) infoDeckName.value = name;
+    if(postDeckName && postDeckName.value !== name) postDeckName.value = name;
+    if(noteSideTitle && noteSideTitle.textContent !== name) noteSideTitle.textContent = name || 'デッキリスト';
+  }
+
+  // 入力から右側タイトルへ
+  infoDeckName?.addEventListener('input', ()=> setAllDeckName(infoDeckName.value));
+  postDeckName?.addEventListener('input', ()=> setAllDeckName(postDeckName.value));
+
+  // 右側タイトルタップで編集（contenteditable）
+  if(noteSideTitle){
+    noteSideTitle.addEventListener('click', ()=>{
+      // 編集開始
+      noteSideTitle.setAttribute('contenteditable', 'true');
+      const range = document.createRange();
+      range.selectNodeContents(noteSideTitle);
+      const sel = window.getSelection();
+      sel.removeAllRanges(); sel.addRange(range);
+      noteSideTitle.focus();
+    });
+    // Enter または blur で確定
+    noteSideTitle.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter'){
+        e.preventDefault(); noteSideTitle.blur();
+      }
+    });
+    noteSideTitle.addEventListener('blur', ()=>{
+      noteSideTitle.setAttribute('contenteditable', 'false');
+      setAllDeckName(noteSideTitle.textContent.trim());
+    });
+  }
+
+  // 初期同期（ページ読み込み時）
+  setAllDeckName(postDeckName?.value || infoDeckName?.value || '');
+
+})();
+
+// === cardOpModal open from note-side ===
+(function attachNoteSideOpenCardOp(){
+  const list = document.getElementById('note-side-list');
+  if (!list) return;
+  list.addEventListener('click', (e)=>{
+    const row = e.target.closest('.note-card-row');
+    if (!row) return;
+    const cardId = row.dataset.cardId || row.getAttribute('data-card-id');
+    if (!cardId) return;
+
+    // 既存の起動関数に合わせて順にトライ
+    if (typeof window.openCardOpModal === 'function') {
+      window.openCardOpModal(cardId);
+      return;
+    }
+    if (typeof window.showCardOpModal === 'function') {
+      window.showCardOpModal(cardId);
+      return;
+    }
+    if (typeof window.openCardOperationModal === 'function') {
+      window.openCardOperationModal(cardId);
+      return;
+    }
+    // 最終手段: カスタムイベント（受け側があれば拾える）
+    document.dispatchEvent(new CustomEvent('open-cardop', { detail: { cardId }}));
+  });
+})();
+
+// --- 全画面メモの同期ユーティリティ ---
+(function setupNoteSync(){
+  const src = document.getElementById('post-note');
+  const dst = document.getElementById('note-full-text');
+  const modal = document.getElementById('noteFullModal');
+  if (!src || !dst || !modal) return;
+
+  let syncing = false;
+  function sync(a, b){
+    if (syncing) return;
+    syncing = true;
+    b.value = a.value;
+    // カーソル位置もなるべく合わせる
+    try { b.selectionStart = b.selectionEnd = a.selectionEnd; } catch {}
+    b.dispatchEvent(new Event('input', { bubbles: true }));
+    syncing = false;
+  }
+
+  // 開く時にコピー（すでに実装があればそのままでOK）
+  function openNoteFull(){
+    sync(src, dst);
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  // 閉じる時に戻す
+  function closeNoteFull(){
+    sync(dst, src);
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  // リアルタイム双方向
+  src.addEventListener('input', () => { if (modal.style.display !== 'none') sync(src, dst); });
+  dst.addEventListener('input', () => { sync(dst, src); });
+
+  // 既存の開閉ボタンに結線（id は実装に合わせて）
+  document.getElementById('note-fullscreen-btn')?.addEventListener('click', openNoteFull);
+  document.getElementById('note-full-close')?.addEventListener('click', closeNoteFull);
+
+  // 外部から呼ばれる open/close 実装があるなら、上の関数呼び出しに合わせて置き換えてください
+})();
+
+
+
+// note-side の各行（.note-card-row）タップでカード操作モーダルを開く
+document.addEventListener('click', (e) => {
+  const row = e.target.closest('.note-card-row');
+  if (!row) return;
+  const cd = row.getAttribute('data-cd') || row.dataset.cd;
+  if (!cd) return;
+  // クリック位置近くに出す
+  const rect = row.getBoundingClientRect();
+  openCardOpModal(String(cd), rect);
+});
+
+
 
 
 // ================================
@@ -3904,7 +4290,7 @@ async function renderPostSelectTags() {
   // 画面再構築
   wrap.innerHTML = '';
   const hint = document.createElement('div');
-  hint.className = 'tags-hint';
+  hint.className = 'post-hint';
   hint.textContent = 'タップでさらにタグを追加';
   wrap.appendChild(hint);
   const frag = document.createDocumentFragment();
@@ -4096,18 +4482,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!xEl.value)    xEl.value    = savedX;
   } catch(_) {}
 
-  // 2) Xハンドルを正規化（@自動補完、URLが来たら@に直す）
-  function normalizeHandle(v){
-    const s = String(v||'').trim();
-    if (!s) return '';
-    if (/^https?:\/\//i.test(s)) {
-      // https://x.com/handle 形式 → handle へ
-      const m = s.match(/x\.com\/([^\/\?\#]+)/i) || s.match(/twitter\.com\/([^\/\?\#]+)/i);
-      const h = m ? m[1] : s;
-      return h ? '@' + h.replace(/^@+/, '') : '';
-    }
-    return s.startsWith('@') ? s : '@' + s.replace(/^@+/, '');
-  }
 
   // 3) Xボタンのリンク更新・活性制御
   function refreshXLink(){
@@ -4139,7 +4513,6 @@ document.addEventListener('DOMContentLoaded', () => {
   refreshXLink();
 
   // === 送信ペイロードへの同梱 ===
-  // 既存の buildDeckPostPayload を拡張（存在すれば差し替え、無ければ何もしない）
   if (typeof window.buildDeckPostPayload === 'function') {
     const prev = window.buildDeckPostPayload;
     window.buildDeckPostPayload = function(){
@@ -4151,6 +4524,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 })();
+
 
 
 
@@ -4168,8 +4542,7 @@ function normalizeHandle(v=''){
 function bindMinimalAgreeCheck() {
   const agree = document.getElementById('post-agree');
   const submit = document.getElementById('post-submit');
-  const preview = document.querySelector('#post-tab .post-actions button[type="button"]');
-  if (!agree || !submit) return;
+  const preview = document.getElementById('post-preview');
 
   const sync = () => {
     const ok = !!agree.checked;
@@ -4182,6 +4555,122 @@ function bindMinimalAgreeCheck() {
   agree.addEventListener('change', sync);
   sync();
 }
+
+// === 投稿タブ: 画像生成ボタン ===
+(function attachPostImageGenButton(){
+  const btn = document.getElementById('post-open-imagegen');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    // common-page24.js 側の exportDeckImage() を直接呼ぶ
+    if (typeof window.exportDeckImage === 'function') {
+      window.exportDeckImage();
+      return;
+    }
+    // fallback: デッキ情報タブ側のボタンがあればクリック
+    const proxy = document.getElementById('exportPngBtn');
+    if (proxy) {
+      proxy.click();
+      return;
+    }
+    alert('画像生成機能が見つかりませんでした（exportDeckImage / #exportPngBtn）');
+  });
+})();
+
+// === アカウントデータ保存：空入力ガード & 毎回パスワード確認 ===
+(function bindAccountSaveBehavior(){
+  const saveBtn   = document.getElementById('acct-save-btn');
+  if (!saveBtn) return;
+
+  // 既存のクリックを一旦解除（多重バインド防止・あれば）
+  saveBtn.replaceWith(saveBtn.cloneNode(true));
+  const btn = document.getElementById('acct-save-btn');
+
+  btn.addEventListener('click', async () => {
+    const $ = (sel)=>document.querySelector(sel);
+
+    const newLogin  = ($('#acct-login-name')?.value || '').trim();
+    const newPass   = ($('#acct-password')?.value   || '').trim();
+    const newPoster = ($('#acct-poster-name')?.value|| '').trim();
+    const newX      = ($('#acct-x')?.value          || '').trim();
+
+    // ① 何も入力がない → 中断
+    if (!newLogin && !newPass && !newPoster && !newX) {
+      alert('新しい変更データを入力してください');
+      return;
+    }
+
+    // ② 毎回、現在のパスワードを確認（キャンセル/空文字なら中断）
+    const confirmPassword = window.prompt('現在のパスワードを入力してください');
+    if (confirmPassword === null) return; // キャンセル
+    if (!String(confirmPassword).trim()) {
+      alert('パスワードが入力されていません');
+      return;
+    }
+
+    // 送信準備（GAS側の updateProfile_ 仕様に合わせる）
+    // loginName は「現在ログイン中のID」を使用（Auth から取得）
+    const loginName = (window.Auth && Auth.state && Auth.state.user && Auth.state.user.username)
+      ? String(Auth.state.user.username)
+      : '';
+
+    // 最低限のバリデーション（念のため）
+    if (!loginName) {
+      alert('ログイン情報が取得できません。いったんログインし直してください。');
+      return;
+    }
+
+    // 画面上のトーストやローディングがある場合はここで表示
+    if (window.setAuthLoading) setAuthLoading(true, '保存中…');
+
+    try {
+      const payload = {
+        mode: 'updateProfile',
+        loginName,
+        password: confirmPassword,      // ← 確認用“現在のパスワード”
+        // 以下は入力があったものだけ送る（空文字は送らない）
+        ...(newPoster ? { posterName: newPoster } : {}),
+        ...(newX      ? { xAccount:   newX      } : {}),
+        // いまは GAS 側で login/password の変更は未実装なので送らない
+        // （UIは残しつつ、後日 GAS 実装時に newLogin/newPass を使う）
+      };
+
+      const res = await fetch(window.API, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload),
+      }).then(r => r.json());
+
+      if (!res?.ok) {
+        // 代表的なエラー文言をユーザー向けに整形
+        const msg =
+          res?.error === 'password mismatch' ? 'パスワードが一致しません' :
+          res?.error === 'not found'         ? 'ユーザーが見つかりません' :
+          res?.error || '保存に失敗しました';
+        alert(msg);
+        return;
+      }
+
+      // 成功時のUI反映（任意）
+      alert('アカウントデータを保存しました');
+      // 反映が必要なら Auth の表示名/X を更新
+      if (window.Auth && Auth.state && Auth.state.user) {
+        if (newPoster) Auth.state.user.displayName = newPoster;
+        if (newX)      Auth.state.user.x = newX;
+      }
+      // 入力欄は必要に応じてクリア
+      // （新しいログイン名/パスワード欄は GAS 実装後に使用）
+      // $('#acct-password').value = '';
+
+    } catch (err) {
+      console.error(err);
+      alert('通信エラーが発生しました');
+    } finally {
+      if (window.setAuthLoading) setAuthLoading(false, '');
+    }
+  });
+})();
+
 
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('post-tab')) bindMinimalAgreeCheck();
@@ -4216,57 +4705,57 @@ function validateDeckBeforePost(){
 }
 
 
-//送信内容
-function buildDeckPostPayload(){
-  const title = document.getElementById('post-deck-name')?.value.trim() || '';
-  const comment = document.getElementById('post-note')?.value.trim() || '';
-  const tags = Array.from(document.querySelectorAll('#post-tags .chip.active')).map(b=>b.textContent);
-  const code = document.getElementById('post-deck-code')?.value || '';
-  const races = document.getElementById('post-races-hidden')?.value || '';
-  const repImg = document.getElementById('post-rep-img')?.value || '';
-  const count = typeof getDeckCount==='function' ? getDeckCount() : 0;
-  const posterName = document.getElementById('poster-name')?.value.trim() || '';
-  const posterX    = normalizeHandle(document.getElementById('poster-x')?.value || '');
-  const editPin    = (document.getElementById('post-pin')?.value || '').trim();
-
-  // 必要に応じてカード配列・代表カードcdなども付与
-  const cards = typeof getDeckAsArray==='function' ? getDeckAsArray() : []; // [{cd, count}, ...] を想定
-
+// ★ Auth から安全に値を取る小ヘルパ（共通JSで定義していない場合の保険）
+function getAuthSafe(){
+  const A = window.Auth || {};
   return {
-  title,
-  comment,
-  code,
-  count,
-  races,
-  repImg,
-  ua: navigator.userAgent,
-  autoTags: Array.isArray(autoTagList) ? autoTagList : [],
-  selectTags: Array.isArray(selectedTagList) ? selectedTagList : [],
-  userTags: (userTagInput || '').split(/\s+/).filter(Boolean),
-  poster: { name: posterName, x: posterX },
-  editPin,
-};
-
+    token: A.token || '',
+    user : (A.user || null)
+  };
 }
 
-const GAS_POST_ENDPOINT =
-  'https://script.google.com/macros/s/AKfycbxYm8_R8m8sEcob7lFOdGVnqWwciBnRZihq_mBj34rvk_R3k_ruuKOmtsUpzjGF2kO0/exec';
+// 送信内容
+function buildDeckPostPayload(){
+  const title     = document.getElementById('post-deck-name')?.value.trim() || '';
+  const comment   = document.getElementById('post-note')?.value.trim() || '';
+  const code      = document.getElementById('post-deck-code')?.value || '';
+  const races     = document.getElementById('post-races-hidden')?.value || '';
+  const repImg    = document.getElementById('post-rep-img')?.value || '';
+  const count     = (typeof getDeckCount==='function') ? getDeckCount() : 0;
+  const posterInp = document.getElementById('poster-name')?.value.trim() || '';
+  const posterXIn = normalizeHandle(document.getElementById('poster-x')?.value || '');
+  const cards     = (typeof getDeckAsArray==='function') ? getDeckAsArray() : [];
 
 
+  // ▼ ログイン情報から自動補完
+  const { token, user } = getAuthSafe();
+  const posterName = posterInp || user?.displayName || user?.username || '';
+  const posterX    = posterXIn || user?.x || '';
+  const username = (window.Auth?.user?.username) || '';
 
-const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
-
+  return {
+    title, comment, code, count, races, repImg, cards,
+    ua: navigator.userAgent,
+    autoTags  : Array.isArray(autoTagList)    ? autoTagList    : [],
+    selectTags: Array.isArray(selectedTagList)? selectedTagList: [],
+    userTags  : (userTagInput || '').split(/\s+/).filter(Boolean),
+    token,
+    poster: { name: posterName, x: posterX, username },
+  };
+}
 
 // 送信
 async function submitDeckPost(e){
   e?.preventDefault();
 
+  // ※ 以前の poster-display-name / post-poster-hidden は未定義で落ちやすいので削除
+
   const payload = buildDeckPostPayload();
 
   const res = await fetch(`${GAS_POST_ENDPOINT}?mode=post`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, // ← プリフライト回避
-    body: JSON.stringify(payload),
+    method : 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, // 既存運用のまま
+    body   : JSON.stringify(payload),
   });
   const json = await res.json();
   if (json.ok) {
@@ -4279,4 +4768,8 @@ async function submitDeckPost(e){
 
 
 
+const GAS_POST_ENDPOINT =
+  'https://script.google.com/macros/s/AKfycbyWhl-8JFvHdhtYZfpv59zd6a3aHhAjWcY-QLJD7dbPlRTYBiHNutGvMGNr2V7AfK_G/exec';
 
+
+const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';

@@ -51,6 +51,8 @@ window.afterTabSwitched = function afterTabSwitched(targetId) {
     if (typeof updateExchangeSummary === 'function') updateExchangeSummary();
     if (typeof autoscaleAllBadges === 'function')
       requestAnimationFrame(autoscaleAllBadges);
+  //上にスクロール
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   // 構築タブに戻った場合
@@ -81,8 +83,7 @@ window.afterTabSwitched = function afterTabSwitched(targetId) {
     // （任意）他箇所連動用のイベントも飛ばす
   document.dispatchEvent(new Event('deckTabSwitched'));
 
-  //上にスクロール
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+
 };
 
 

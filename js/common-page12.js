@@ -291,21 +291,20 @@ async function generateFilterUI() {
   packGroup.dataset.key = 'パック名';
 
   // ① カタログがある場合：その順でボタン化
-  if (packCatalog && Array.isArray(packCatalog.list)) {
+    if (packCatalog && Array.isArray(packCatalog.list)) {
+    // packs.json の順序でボタン生成
     packCatalog.list.forEach(p => {
       const en = p.en || '';
       const jp = p.jp || '';
       if (!en) return;
-
       window.__PACK_EN_TO_JP[en] = jp;
 
       const btn = document.createElement('button');
       btn.className = 'filter-btn';
       btn.type = 'button';
-      // ★ 英名で絞り込む
+      // ★ 絞り込みキーは英名（cards_latest.json の pack_name を split した en と一致）
       btn.dataset.pack = en;
-
-      // 2行ラベル
+      // 表示は 2 行
       btn.innerHTML = `<span class="pack-en">${en}</span><br><small class="pack-kana">${jp}</small>`;
       packGroup.appendChild(btn);
     });
@@ -396,18 +395,26 @@ if (location.pathname.includes('deckmaker')) {
     ownedBtn.dataset.mode = 'owned';
     ownedBtn.textContent = '所持カードのみ表示';
 
+    // ★ ② 未コンプカードのみ表示（通常0～1枚 / 旧神0枚）
+    const uncompBtn = document.createElement('button');
+    uncompBtn.className = 'filter-btn';
+    uncompBtn.type = 'button';
+    uncompBtn.dataset.mode = 'incomplete';
+    uncompBtn.textContent = '未コンプカードのみ表示';
 
-    // ② コンプカードのみ表示（通常3枚 / 旧神1枚）
+    // ③ コンプカードのみ表示（通常3枚 / 旧神1枚）
     const compBtn = document.createElement('button');
     compBtn.className = 'filter-btn';
     compBtn.type = 'button';
     compBtn.dataset.mode = 'complete';
     compBtn.textContent = 'コンプカードのみ表示';
 
-
+    // 並び順：所持 → 未コンプ → コンプ
     g.appendChild(ownedBtn);
+    g.appendChild(uncompBtn);
     g.appendChild(compBtn);
     ownWrap.appendChild(g);
+
 
     // 他のメインフィルターより上に置く
     const mainFilters = document.getElementById('main-filters');
@@ -815,12 +822,13 @@ function applyFilters() {
   const powerMaxVal = document.getElementById("power-max")?.value;
   const powerMax = powerMaxVal === "上限なし" ? Infinity : parseInt(powerMaxVal);
 
-    // --- 所持/コンプ フィルター ---
+  // --- 所持/コンプ フィルター ---
   const ownedFilterGroup = document.querySelector('.filter-group[data-key="所持フィルター"]');
-  let ownedBtnOn = false, compBtnOn = false;
+  let ownedBtnOn = false, compBtnOn = false, unCompBtnOn = false;
   if (ownedFilterGroup) {
-    ownedBtnOn = ownedFilterGroup.querySelector('[data-mode="owned"]')?.classList.contains('selected') || false;
-    compBtnOn  = ownedFilterGroup.querySelector('[data-mode="complete"]')?.classList.contains('selected') || false;
+    ownedBtnOn   = ownedFilterGroup.querySelector('[data-mode="owned"]')?.classList.contains('selected') || false;
+    unCompBtnOn  = ownedFilterGroup.querySelector('[data-mode="incomplete"]')?.classList.contains('selected') || false; // ★追加
+    compBtnOn    = ownedFilterGroup.querySelector('[data-mode="complete"]')?.classList.contains('selected') || false;
   }
 
   // 所持データ（都度読むが軽い）
@@ -889,7 +897,8 @@ function applyFilters() {
 
   let visible = matchesKeyword && matchesFilters && matchesCost && matchesPower;
 
-    if (ownedBtnOn || compBtnOn) {
+  // 各カードごとの可視判定の中（visible を決めているブロック）に以下ロジックを反映
+  if (ownedBtnOn || compBtnOn || unCompBtnOn) {
     const cd = String(card.dataset.cd || '');
     const entry = ownedDataMap[cd];
     let total = 0;
@@ -899,11 +908,22 @@ function applyFilters() {
       total = (entry.normal|0) + (entry.shine|0) + (entry.premium|0);
     }
 
+    // 所持のみ：1枚以上なければ非表示
     if (ownedBtnOn && total <= 0) visible = false;
+
+    // コンプのみ：通常3枚 / 旧神1枚に満たなければ非表示
     if (compBtnOn) {
       const isOldGod = (card.dataset.race === '旧神');
       const need = isOldGod ? 1 : 3;
       if (total < need) visible = false;
+    }
+    // ★ 未コンプのみ：
+    //   通常カード→ 所持合計が 0～1 枚 のみ表示（= 2枚以上は非表示）
+    //   旧神カード→ 所持合計 0 枚のみ表示（= 1枚以上は非表示）
+    if (unCompBtnOn) {
+      const isOldGod = (card.dataset.race === '旧神');
+      const ok = isOldGod ? (total === 0) : (total <= 1);
+      if (!ok) visible = false;
     }
   }
 

@@ -118,7 +118,7 @@
     width: 100%;
     background-color: #e0e0e0;
     color: #333;
-    font-size: 0.5rem;
+    font-size: 0.7rem;
     padding: 2px 0px;
     margin-top: 3px;
     border: 1px solid #aaa;
@@ -485,12 +485,12 @@
 #deckpeek-button {
     position: fixed;
     right: 8px;
-    top: 55px;
+    top: 60px;
     z-index: 3200;
     display: none;
     /* 可視/不可視はJSで切替 */
     padding: 6px 10px;
-    font-size:clamp(12px, 2.6vw, 20px);
+    font-size: 15px;
     border: 1px solid #ddd;
     border-radius: 999px;
     background: rgba(255, 255, 255, .9);
@@ -500,20 +500,20 @@
     -webkit-user-select: none;
     touch-action: none;
 }
-
-#deckpeek-button:active {
-    filter: brightness(.95);
-}
-
 /* モバイル以外で常に無効 */
 @media (min-width: 701px) {
     #deckpeek-button {
         display: none !important;
     }
+}
+#deckpeek-button:active {
+    filter: brightness(.95);
+}
 
-    #deckpeek-overlay {
-        display: none !important;
-    }
+#deckpeek-button.onModal{
+    right: 55px;
+    top: 55px;
+    font-size: 15px;
 }
 
 #deckpeek-overlay {
@@ -532,6 +532,11 @@
     border-radius: 12px;
     box-shadow: 0 10px 24px rgba(0, 0, 0, .16);
     padding: 6px;
+}
+@media (min-width: 701px) {
+    #deckpeek-overlay {
+        display: none !important;
+    }
 }
 
 /* 内部の簡易グリッド */
@@ -831,7 +836,15 @@
 
 .subtab-bar .tab.active {
     border-bottom: none;
-    background: #fff;
+}
+/*デッキ情報タブバー*/
+.subtab-bar .info-tab-bar {
+    background: linear-gradient(180deg, #f8fff8 0%, #ecffec 100%);
+}
+
+
+.subtab-bar .post-tab-bar{
+    background: linear-gradient(180deg, #f8fbff 0%, #eaf3ff 100%);
 }
 /*タブ全体レイアウト*/
 .info-section {
@@ -869,8 +882,8 @@
 
 
 .info-label {
-    font-size: 0.65rem;
-    width: 110px;
+    font-size: 1.1rem;
+    width: 130px;
     font-weight: 600;
     color: #333;
     flex-shrink: 0;
@@ -878,25 +891,24 @@
 
 @media (max-width: 700px) {
     #deck-info .info-label {
-    font-size: clamp(11px, 2.5vw, 17px);
-    width: 24%;
+    font-size: clamp(10px, 2.5vw, 20px);
+    width: 20%;
     }
 }
 
 .info-value {
     flex: 1;
-    font-size: 0.6rem;
+    font-size: 1.2rem;
 }
 @media (max-width: 1024px) {
     .info-value {
         margin-top: .2rem;
-        font-size: .5rem;
     }
 }
 @media (max-width: 700px) {
     .info-value {
         margin-top: 0;
-        font-size: clamp(11px, 2.8vw, 21px);
+        font-size: clamp(11px, 2.2vw, 16px);
     }
 }
 .any{
@@ -932,7 +944,7 @@
 .info-value textarea {
     width: 100%;
     padding: 0.3rem 0.5rem;
-    font-size: 0.65rem;
+    font-size: 1.2rem;
     box-sizing: border-box;
     border: 1px solid #ccc;
     border-radius: 6px;
@@ -1001,12 +1013,12 @@
 .type-summary {
     display: flex;
     flex-wrap: wrap;
-    gap: 3px;
+    gap: 10px;
 }
 
 /* チップ本体 */
 .type-chip {
-    font-size: .53rem;
+    font-size: 1.2rem;
     display: inline-flex;
     align-items: center;
     padding: 3px 4px;
@@ -1065,7 +1077,7 @@
     border-radius: 6px;
     border: none;
     color: #fff;
-    font-weight: 600;
+    font-weight: 500;
     font-size: 0.7rem;
     display: flex;
     justify-content: flex-end;
@@ -1098,15 +1110,23 @@
 
 
 /*========デッキ情報ゾーン-デッキ情報タブ-====*/
+/* デッキ情報タブ */
+#info-tab {
+    background: linear-gradient(180deg, #f8fff8 0%, #ecffec 100%);
+}
 
 /*デッキ情報タブのボタン（緑系）*/
 .deck-code-controls {
     position: sticky;
     bottom: 0;
-    background: #fff;
-    border-top: 1px solid #ddd;
-    padding: .2rem 0;
+    width: auto;
+    padding: .5rem 0;
     z-index: 1000;
+    background: linear-gradient(180deg, rgba(248, 255, 248, .88), rgba(236, 255, 236, .88));
+    /* ぼかしで“面”を作る */
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid rgba(107, 201, 107, .25);
 }
 @media (max-width: 700px) {
     /* 投稿/保存ボタンは縦積み・全幅にしてタップしやすく */
@@ -1122,11 +1142,12 @@
 .deck-code-controls button {
         background: linear-gradient(90deg, #6bc96b, #a0e4a0);
         box-shadow: 0 2px 6px rgba(107, 201, 107, 0.25);
+        font-size: 1.2rem;
 }
 @media (max-width: 1024px) {
 
     .deck-code-controls button {
-        font-size: 0.45rem;
+        font-size: 0.8rem;
         padding: .4rem .3rem;
     }
 }
@@ -1134,7 +1155,7 @@
 @media (max-width: 700px) {
     /* 投稿/保存ボタンは縦積み・全幅にしてタップしやすく */
     .deck-code-controls button {
-        font-size: 0.45rem;
+        font-size: 0.65rem;
         padding: .6rem .3rem;
     }
 }
@@ -1203,6 +1224,7 @@
     position: relative;
     height: 190px;
     margin-bottom: 20px;
+    background-color: #fff;
 }
 @media (max-width: 1024px) {
     .chart {
@@ -1245,7 +1267,7 @@
     color: #9a3412;
     border-radius: 8px;
     margin: 8px 0;
-    font-size: 0.7rem;
+    font-size: 1.2rem;
 }
 @media (max-width: 700px) {
     .mull-warning {
@@ -1320,7 +1342,7 @@
 
 .mull-actions .btn-mulligan {
     width: 100%;
-    font-size: .5rem;
+    font-size: .8rem;
     padding: 10px 12px;
     border-radius: 8px;
     border: 1px solid #c7d2e3;
@@ -1340,7 +1362,7 @@
 }
 
 #deck-info .mull-hint{
-    font-size: 10px;
+    font-size: .7rem;
     color: #6b7280;
 }
 
@@ -1350,7 +1372,7 @@
 }
 
 .mull-remaining-title{
-    font-size: 0.8rem;
+    font-size: 1.2rem;
 }
 @media (max-width: 700px) {
     .mull-remaining-title {
@@ -1419,7 +1441,6 @@
 .owned-info {
     border: 1px solid #eee;
     border-radius: 8px;
-    background: #fff;
     padding: .3rem .3rem;
 }
 
@@ -1561,21 +1582,177 @@
 
 /*========デッキ情報ゾーン-デッキ投稿タブ-====*/
 
+#post-tab {
+    background: linear-gradient(180deg, #f8fbff 0%, #eaf3ff 100%);
+}
+.post-hint {
+    font-size: .7rem;
+    color: #666;
+    margin-top: 4px;
+    line-height: 1.5;
+}
+
+/* ---- デッキ解説ツールバー---- */
+.note-toolbar {
+    display: grid;
+    grid-template-columns: 3fr 3fr auto;
+    /* 左:プリセット / 中:プリセット / 右:全表示 */
+    grid-template-rows: 26px 26px;
+    gap: 3px;
+    margin-bottom: 3px;
+    align-items: center;
+}
+@media (max-width: 700px) {
+    .note-toolbar {
+    grid-template-rows: 32px 32px;
+    gap: 6px;
+    }
+}
+/* 左2/3はプリセット 2×2 を敷き詰める */
+.note-presets-grid {
+    grid-column: 1 / span 2;
+    /* 左と中を占有 */
+    grid-row: 1 / span 2;
+    /* 2段ぶん占有 */
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 26px);
+    gap: 3px;
+    min-width: 0;
+
+}
+@media (max-width: 700px) {
+    .note-presets-grid {
+        grid-template-rows: 32px 32px;
+        gap: 6px;
+    }
+}
+/* 右1/3は“全表示”を縦2段分の高さで正方形気味に */
+.note-toolbar-right {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    /* 2段ぶんの高さ */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* プリセットは“存在感控えめ＆横長” */
+/* プリセットボタンの色ごとデザイン */
+.note-preset-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 0.35rem 0.5rem;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: transform 0.06s ease, box-shadow 0.2s ease;
+}
+@media (max-width: 700px) {
+    .note-preset-btn {
+        font-size: 11px;
+        padding: 0.3rem 0.45rem;
+    }
+}
+
+/* 個別カラー */
+.note-preset-btn[data-preset="deck-overview"] {
+    background: linear-gradient(90deg, #68a6ff, #a4d0ff);
+    box-shadow: 0 2px 6px rgba(104, 166, 255, 0.25);
+}
+
+.note-preset-btn[data-preset="play-guide"] {
+    background: linear-gradient(90deg, #fbbf24, #fde68a);
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.25);
+}
+
+.note-preset-btn[data-preset="matchup"] {
+    background: linear-gradient(90deg, #f87171, #fca5a5);
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25);
+}
+
+.note-preset-btn[data-preset="results"] {
+    background: linear-gradient(90deg, #34d399, #a7f3d0);
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+}
+
+/* ホバー・クリック時 */
+.note-preset-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+}
+
+.note-preset-btn:active {
+    transform: scale(0.98);
+}
+
+/* hover時に少し明るく */
+.note-preset-btn:hover {
+    filter: brightness(1.03);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 押した時に軽く沈む */
+.note-preset-btn:active {
+    transform: scale(0.97);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .1);
+}
+
+
+/* “全表示”は2段ぶんの高さで正方形に近づける */
+.note-showall-btn {
+    height: calc(26px * 2 + 8px);
+    aspect-ratio: 1 / 1;
+    /* ほぼ正方形 */
+    width: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.25);
+    color: #fff;
+    border: none;
+}
+@media (max-width: 700px) {
+    .note-showall-btn {
+    height: calc(32px * 2 + 6px);
+    font-size: 13px;
+    }
+}
+
+.note-showall-btn:hover {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+.note-showall-btn:active {
+    transform: scale(.985);
+}
+
+
+
 /* デッキ解説  */
 #post-note {
     min-height: 10rem;
     resize: vertical;
     line-height: 1.6;
-    font-size: 0.6rem;
+    font-size: 1rem;
 }
-@media (max-width: 1024px) {
-    #post-note {
-        font-size: .5rem;
-    }
-}
+
 @media (max-width: 700px) {
     #post-note {
         min-height: 12rem;
+        font-size: .8rem;
     }
 }
 
@@ -1601,6 +1778,157 @@
         gap: .25rem;
     }
 }
+
+/* 全画面エディタ */
+.note-fullscreen {
+    width: min(1200px, 96vw);
+    height: min(88vh, 920px);
+    max-height: 90%;
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    margin-top: 50px;
+}
+@media (max-width: 700px) {
+    .note-fullscreen {
+        gap: 0;
+    }
+}
+
+.note-full-head{
+    height: auto;
+}
+
+/* 右上 × */
+.note-full-close-x {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    font-size: 20px;
+    line-height: 1;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+}
+
+.note-full-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 36%);
+    gap: 12px;
+    min-height: 0;
+    margin-top: .7rem;
+}
+@media (max-width: 700px) {
+    .note-full-body {
+        grid-template-columns: 1fr;
+        margin-top: .4rem;
+    }
+}
+.note-full-body-title{
+    margin: 0;
+    font-size:20px;
+}
+.text-side {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+
+.text-side .note-presets-grid{
+    grid-template-rows: repeat(2, 30px);
+}
+#note-full-text {
+    width: 100%;
+    height: 100%;
+    resize: none;
+    font: inherit;
+    line-height: 1.6;
+    font-size: .8rem;
+}
+
+.note-side {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-left: 1px solid rgba(0, 0, 0, .08);
+    padding-left: 5px;
+}
+@media (max-width: 700px) {
+    .note-side {
+        display: none;
+    }
+}
+
+.note-side-title {
+    font-weight: 700;
+    margin: .2rem 0 .4rem;
+}
+
+/* 空の時にだけ “デッキリスト” を疑似表示（入力値は空のまま） */
+#note-side-title:empty::before {
+    content: 'デッキリスト';
+    color: #9aa3af;
+}
+
+/* 編集中の見た目（枠など） */
+#note-side-title[contenteditable="true"] {
+    outline: 2px solid #93c5fd;
+    border-radius: 6px;
+    padding: 2px 4px;
+    background: #fff;
+}
+
+.note-side-list {
+    overflow: auto;
+    contain: paint;
+    -ms-overflow-style: none;
+    /* IE/Edge */
+    scrollbar-width: none;
+    /* Firefox */
+    padding-right: 6px;
+    /* スクロールバー分の重なり回避 */
+}
+.note-side-list::-webkit-scrollbar {
+    /* Chrome/Safari */
+    width: 0;
+    height: 0;
+}
+/* 幅が狭いときは1カラムに */
+
+
+
+/* ====== ⑤ 見やすさ調整：カード名↑ / 枚数↓ ====== */
+.cardop-title {
+    font-size: .85rem;
+    /* ← 少し大きめ */
+}
+@media (max-width: 700px) {
+    .cardop-title {
+        font-size: .52rem;
+    }
+
+}
+
+.cardop-figure .count-badge {
+    min-width: 24px;
+    height: 24px;
+    line-height: 24px;
+    font-size: 12px;
+    /* ← やや控えめ */
+    padding: 0 6px;
+}
+
+
+/*==========カード解説========*/
+
 /* 左カラム全体 */
 .post-card-note .left {
     grid-area: left;
@@ -1693,7 +2021,7 @@
     background: #f3f4f6;
     border-radius: 8px;
     cursor: pointer;
-    font-size: .65rem;
+    font-size: 1.2rem;
     white-space: nowrap;
     /* ← 改行を禁止 */
     flex-shrink: 0;
@@ -1702,7 +2030,7 @@
     /* ← インラインブロックにしてテキスト中央 */
     align-items: center;
     justify-content: center;
-    max-height: 2rem;
+    max-height: 3rem;
     /* ← 高さを安定化 */
 }
 
@@ -1777,6 +2105,7 @@
 @media (max-width: 700px) {
 .tag-chips .chip {
         padding: 4px 7px;
+        font-size: .75rem;
     }
 }
 
@@ -1808,7 +2137,7 @@
     min-width: 125px;
 }
 
-/* ︙選択タグ（#select-tags）をグリッド化してサイズを揃える */
+/* 選択タグ */
 #select-tags {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -1820,6 +2149,7 @@
     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
 }
 }
+
 /* 自動タグと選択タグの見た目を横並びで揃えやすくする */
 #select-tags .chip,
 #auto-tags .chip {
@@ -1834,18 +2164,15 @@
 }
 
 /* ヒント行（1列にまたがる） */
-#select-tags .tags-hint {
+#select-tags .post-hint {
     grid-column: 1 / -1;
-    font-size: .7rem;
-    color: #666;
+    font-size: 1rem;
+    color: #000;
     margin: 0 0 2px 2px;
     user-select: none;
     pointer-events: none;
 }
-.tags-hint{
-    font-size: .45rem;
-    color: #666;
-}
+
 
 /*ユーザータグ欄*/
 #user-tags{
@@ -1899,7 +2226,7 @@
 /* ボタンを横並びにして均等に伸ばす */
 .paste-code-controls {
     display: flex;
-    gap: 0.6rem;
+    gap: 5px;
     width: 100%;
 }
 @media (max-width: 700px) {
@@ -1915,14 +2242,10 @@
     border: 1px solid #d1d5db;
     background: #fff;
     font-weight: 700;
-    font-size: 0.7rem;
+    font-size: .8rem;
     cursor: pointer;
 }
-@media (max-width: 700px) {
-    .paste-code-controls button {
-    font-size: 0.55rem;
-    }
-}
+
 .paste-code-controls button:active {
     transform: scale(0.985);
 }
@@ -1935,7 +2258,7 @@
 /* プレビューは横いっぱい使って折り返す */
 .paste-code-preview {
     margin-top: 5px;
-    font-size: 0.7rem;
+    font-size: 1.2rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -1945,7 +2268,7 @@
 @media (max-width: 700px) {
 .paste-code-preview {
 display: block;
-font-size: .55rem;
+font-size: .8rem;
 }
 }
 
@@ -1971,7 +2294,12 @@ font-size: .55rem;
 
 
 /* === 投稿者UI === */
-.poster-stack {
+.auth-stack {
+    display: grid;
+    gap: 5px;
+}
+
+.auth-login-form{
     display: grid;
     gap: 5px;
 }
@@ -1983,13 +2311,13 @@ font-size: .55rem;
 }
 
 /* パスワード行：入力＋トグル */
-.pass-line input {
+.poster-line input {
     flex: 1;
     height: 30px;
 }
 
 .btn.ghost {
-    font-size: .5rem;
+    font-size: .7rem;
     background: #f3f4f6;
     border: 1px solid #d1d5db;
     color: #333;
@@ -1997,16 +2325,18 @@ font-size: .55rem;
     padding: .35rem .6rem;
     font-weight: 600;
     cursor: pointer;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-/* 登録 / ログイン / ログアウト */
+/* 登録 / ログイン */
 .auth-buttons {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: .4rem;
+    gap: 5px;
 }
 
-.auth-buttons #btn-logout[hidden] {
+.auth-buttons #auth-logout-btn[hidden] {
     display: none !important;
 }
 
@@ -2016,7 +2346,7 @@ font-size: .55rem;
 }
 
 .btn.primary {
-    font-size: .65rem;
+    font-size: .8rem;
     background: linear-gradient(90deg, #6a5acd, #9aa0ff);
     color: #fff;
     border: none;
@@ -2025,13 +2355,111 @@ font-size: .55rem;
     font-weight: 700;
 }
 
+
+
+.auth-logged-in {
+    align-items: center;
+    gap: 8px;
+}
+
+.auth-logged-in small {
+    opacity: .75;
+}
+/* ===== Auth: logged-in row (UI only) ===== */
+.auth-logged-in-row {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr;
+    /* ID＋ボタン2つを等分 */
+    align-items: center;
+    gap: 3px;
+    width: 100%;
+}
+@media (max-width: 1024px) {
+    .auth-logged-in-row {
+        display: flex;
+        flex-wrap: wrap;
+}
+}
+/* 表示専用の登録IDバッジに見せる */
+.login-id-chip {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    /* 入力欄っぽさを消す：*/
+    width: auto;
+    /* ← ここが重要。幅100%をやめる */
+    padding: 6px 10px;
+    border: none;
+    /* 罫線を外す */
+    border-radius: 999px;
+    background: linear-gradient(180deg, #f6f9ff 0%, #eaf1ff 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 1px 3px rgba(0, 0, 0, .05);
+    font-size: .8rem;
+    color: #1f2937;
+    cursor: default;
+    /* ← クリック可能に見せない */
+    user-select: text;
+    /* ← 文字コピーはできる */
+}
+@media (max-width: 1024px) {
+    .login-id-chip {
+        width: 100%;
+    }
+}
+.login-id-chip .id-lock {
+    font-size: 1rem;
+    opacity: .8;
+}
+
+.login-id-chip .id-label {
+    font-weight: 700;
+    font-size: .8rem;
+    color: #3b82f6;
+    /* 表示専用ラベルの色 */
+    letter-spacing: .02em;
+}
+
+.login-id-chip .id-value {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-weight: 600;
+    background: rgba(59, 130, 246, .10);
+    /* 値の小チップで“表示っぽさ”を強調 */
+    padding: 2px 8px;
+    border-radius: 999px;
+    line-height: 1.2;
+    color: #111827;
+}
+
+
+
+.login-id-chip small {
+    letter-spacing: .02em;
+}
+
+.login-id-chip strong {
+    font-weight: 700;
+}
+
 .btn.danger {
     background: linear-gradient(90deg, #ef4444, #f97316);
     color: #fff;
     border: none;
     border-radius: 8px;
-    padding: .45rem .7rem;
+    padding: .45rem .5rem;
     font-weight: 700;
+    font-size: .7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+    justify-self: stretch;
+    text-align: center;
+}
+@media (max-width: 1024px) {
+    .auth-logged-in-row .btn.danger {
+        width: auto;
+        flex: 1;
+    }
 }
 
 .x-line {
@@ -2054,7 +2482,7 @@ font-size: .55rem;
 .x-link-btn {
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 0.4rem;
+    font-size: 0.7rem;
     padding: 8px 12px;
     border-radius: 8px;
     border: 1px solid #d1d5db;
@@ -2072,16 +2500,10 @@ font-size: .55rem;
     align-items: center;
 }
 
-
-
-
-
 .x-link-btn:disabled {
     opacity: .5;
     cursor: not-allowed;
 }
-
-
 
 /*投稿＆プレビューボタン欄*/
 .status-text {
@@ -2095,19 +2517,28 @@ font-size: .55rem;
     display: inline-flex;
     align-items: flex-start;
     gap: 6px;
-    font-size: 0.6rem;
+    font-size: 1rem;
     color: #333;
     line-height: 1.4;
 }
-
+@media (max-width: 700px) {
+    .agree-label {
+        font-size: .85rem;
+        gap: 3px;
+    }
+}
 .agree-note {
     display: block;
-    font-size: 0.5rem;
+    font-size: 0.7rem;
     color: #666;
     margin-top: 4px;
     line-height: 1.5;
 }
-
+@media (max-width: 700px) {
+    .agree-note {
+        font-size: 0.6rem;
+    }
+}
 
 #post-agree {
     transform: scale(1.1);

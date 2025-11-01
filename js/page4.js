@@ -114,7 +114,7 @@ function normalizePost(src){
     thumbnail_url: thumb,
     representative_cd: repCd ? Number(repCd) : null,
     auto_tags: autoTags,         // 例：メイン種族など
-    select_tags: selectTags,     // 例：「初心者向け」「格安」など
+    select_tags: selectTags,     // 例：「初心者向け」「格安デッキ」など
     hashtags,                    // #から始まる自由タグ
     comment: String(src.comment || ''),
     deck_code: String(src.code || ''),

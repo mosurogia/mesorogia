@@ -137,6 +137,22 @@ document.addEventListener('DOMContentLoaded', () => {
 window.PACK_ORDER = window.PACK_ORDER || [];
 window.packs      = window.packs || [];
 
+ // packs が未設定なら packs.json から埋める
+  (async ()=>{
+  if (Array.isArray(window.packs) && window.packs.length) return;
+  try{
+    const pc = await (window.loadPackCatalog ? window.loadPackCatalog() : null);
+    if (pc && Array.isArray(pc.list)) {
+      window.packs = pc.list.map(p => ({
+        key: p.slug,                        // = slug
+        nameMain: p.en,
+        nameSub: p.jp || '',
+        selector: `#pack-${p.slug}`
+      }));
+    }
+  }catch(e){ console.warn('packs fallback failed', e); }
+  })();
+
 /*===================
     2.所持率コンプ率
 ====================*/
@@ -161,10 +177,9 @@ function calcSummary(nodeList){
 // === 全体所持率（PCサイドバー & スマホ上部）を更新 ===
 function updateOverallSummary(){
   const allCards = document.querySelectorAll('#packs-root .card');
-
   const s = calcSummary(allCards);
 
-  // PCサイドバー #summary 内の .summary-rate を書き換え
+  // PCサイドバー
   const pcRate = document.querySelector('#summary .summary-rate');
   if (pcRate){
     pcRate.innerHTML =
@@ -172,18 +187,14 @@ function updateOverallSummary(){
       `コンプ率: ${s.owned}/${s.total} (${s.percent}%)`;
   }
 
-// 枚数＋%の所持率/コンプ率を含める
-const pcTweet = document.querySelector('#summary .summary-share a');
-if (pcTweet){
-  const txt = buildShareText({
-    header: '全カード',
-    sum: s, // updateOverallSummary内で求めた全体サマリー
-  });
-  pcTweet.href = `https://twitter.com/intent/tweet?text=${txt}`;
-}
+  // PC共有リンク
+  const pcTweet = document.querySelector('#summary .summary-share a');
+  if (pcTweet){
+    const txt = buildShareText({ header: '全カード', sum: s });
+    pcTweet.href = `https://twitter.com/intent/tweet?text=${txt}`;
+  }
 
-
-  // スマホ上部バー（所持率・コンプ率・全体）を同期
+  // モバイル上部の数値
   const moTypeCount   = document.getElementById('mobile-owned-type-count');
   const moTypeTotal   = document.getElementById('mobile-total-type-count');
   const moTypePercent = document.getElementById('mobile-owned-type-percent');
@@ -198,65 +209,49 @@ if (pcTweet){
   if (moTotal)       moTotal.textContent = s.total;
   if (moPercent)     moPercent.textContent = `${s.percent}%`;
 
+  // モバイル共有リンク（選択中パックを優先、なければ全体）
+  const mobileTweet = document.getElementById('mobile-tweet-link');
+  if (mobileTweet){
+    const selKey = (document.getElementById('pack-selector')||{}).value;
+    let mtxt;
 
-// 両方とも「枚数＋%」の所持率/コンプ率で出す
-const mobileTweet = document.getElementById('mobile-tweet-link');
-if (mobileTweet){
-  const selKey = (document.getElementById('pack-selector')||{}).value;
-
-  let packName = '';
-  let packSum = null;
-  if (selKey && selKey !== 'all') {
-    const selPack = Array.isArray(packs) ? packs.find(p=>p.key===selKey) : null;
-    if (selPack){
-      packName = selPack.nameMain;
-      const selCards = queryCardsByPack(selPack);
-      packSum = calcSummary(selCards);
+    if (selKey && selKey !== 'all') {
+      const selPack = Array.isArray(packs) ? packs.find(p=>p.key===selKey) : null;
+      if (selPack){
+        const selCards = queryCardsByPack(selPack);
+        const sum = calcSummary(selCards);
+        mtxt = buildShareText({ header: selPack.nameMain, sum });
+      }
     }
-  }
 
-// モバイル：パック選択時は「全カード」を出さず、そのパックのみをポスト
-  let mtxt;
-  if (selKey && selKey !== 'all' && packSum && packName) {
-    // パックが選ばれているとき → そのパックだけ
-    mtxt = buildShareText({
-      header: packName,
-      sum: packSum
-    });
-  } else {
-    // 「全カード」選択時 → 全体だけ
-    mtxt = buildShareText({
-      header: '全カード',
-      sum: s
-    });
+    if (!mtxt) mtxt = buildShareText({ header: '全カード', sum: s });
+    mobileTweet.href = `https://twitter.com/intent/tweet?text=${mtxt}`;
   }
-  mobileTweet.href = `https://twitter.com/intent/tweet?text=${mtxt}`;
 }
 
+// モバイル：進捗バー付きサマリーHTML
+function renderMobilePackSummaryHTML(s){
+  return `
+    <div class="pack-meters">
+      <div class="meter">
+        <div class="meter-label">所持率</div>
+        <div class="meter-track" role="progressbar"
+            aria-valuemin="0" aria-valuemax="100" aria-valuenow="${s.typePercent}">
+          <span class="meter-bar" style="width:${s.typePercent}%"></span>
+        </div>
+        <div class="meter-val">${s.ownedTypes}/${s.totalTypes} (${s.typePercent}%)</div>
+      </div>
+      <div class="meter">
+        <div class="meter-label">コンプ率</div>
+        <div class="meter-track" role="progressbar"
+            aria-valuemin="0" aria-valuemax="100" aria-valuenow="${s.percent}">
+          <span class="meter-bar -comp" style="width:${s.percent}%"></span>
+        </div>
+        <div class="meter-val">${s.owned}/${s.total} (${s.percent}%)</div>
+      </div>
+    </div>`;
 }
 
-  // モバイル：進捗バー付きサマリーHTMLを返す
-  function renderMobilePackSummaryHTML(s){
-    return `
-      <div class="pack-meters">
-        <div class="meter">
-          <div class="meter-label">所持率</div>
-          <div class="meter-track" role="progressbar"
-              aria-valuemin="0" aria-valuemax="100" aria-valuenow="${s.typePercent}">
-            <span class="meter-bar" style="width:${s.typePercent}%"></span>
-          </div>
-          <div class="meter-val">${s.ownedTypes}/${s.totalTypes} (${s.typePercent}%)</div>
-        </div>
-        <div class="meter">
-          <div class="meter-label">コンプ率</div>
-          <div class="meter-track" role="progressbar"
-              aria-valuemin="0" aria-valuemax="100" aria-valuenow="${s.percent}">
-            <span class="meter-bar -comp" style="width:${s.percent}%"></span>
-          </div>
-          <div class="meter-val">${s.owned}/${s.total} (${s.percent}%)</div>
-        </div>
-      </div>`;
-  }
 
 
 // === 各パック所持率（PCの #pack-summary-list は li を使わず、指定の div 構成で生成） ===
@@ -302,10 +297,13 @@ const packTxt = buildShareText({
 const share = document.createElement('div');
 share.className = 'summary-share';
 share.innerHTML = `
-  <a class="custom-tweet-button" href="https://twitter.com/intent/tweet?text=${packTxt}" target="_blank" rel="noopener">
+  <a class="custom-tweet-button" target="_blank" rel="noopener">
     <img class="tweet-icon" src="img/x-logo.svg" alt="Post"><span>ポスト</span>
   </a>
 `;
+const a = share.querySelector('a');
+a.href = `https://twitter.com/intent/tweet?text=${buildShareText({ header: pack.nameMain, sum: s })}`;
+wrap.appendChild(share);
 
     wrap.appendChild(share);
     pcList.appendChild(wrap);
@@ -313,7 +311,8 @@ share.innerHTML = `
     // スマホ: セレクト
     if (mobileSelect){
       const opt = document.createElement('option');
-      opt.value = pack.key;
+      // packs.json の key は slug にしてある
+      opt.value = pack.key; // = slug
       opt.textContent = pack.nameMain;
       mobileSelect.appendChild(opt);
     }
@@ -385,19 +384,23 @@ function selectMobilePack(packKey) {
 }
 
 //パックへジャンプ
-function jumpToSelectedPack(){
+function jumpToSelectedPack() {
   const sel = document.getElementById('pack-selector');
   const key = sel?.value;
-  if(!key || key === 'all') return;
+  if (!key || key === 'all') return;
 
-  // パックセクションに id="pack-〇〇" を振っている想定
   const target = document.querySelector(`#pack-${key}`);
-  if(target){
-    target.scrollIntoView({behavior:'smooth', block:'start'});
-  }
+  if (!target) return;
+
+  // ← ここを class で取得
+  const headerEl = document.querySelector('.top-summary');
+  const offset   = headerEl ? headerEl.getBoundingClientRect().height : 0;
+
+  const rect = target.getBoundingClientRect();
+  const y = window.scrollY + rect.top - offset - 10; // 少しだけ余白
+
+  window.scrollTo({ top: y, behavior: 'smooth' });
 }
-
-
 
 
 // グローバル公開（HTML の onchange="selectMobilePack(this.value)" から呼ぶため）

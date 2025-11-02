@@ -481,6 +481,195 @@
     box-shadow: 0 0 10px limegreen;
 }
 
+/* ==== カード操作モーダル ==== */
+.cardop-modal {
+    width: min(30vw, 250px);
+    max-height: 90vh;
+    overflow: auto;
+    border-radius: 12px;
+    padding: 4px;
+}
+
+@media (max-width: 700px) {
+    .cardop-modal {
+        width: min(30vw, 180px);
+        padding: 3px;
+    }
+}
+
+.cardop-header {
+    display: flex;
+    flex-direction: column;
+    cursor: move;
+    user-select: none;
+    margin-bottom: .25rem;
+}
+
+@media (max-width: 700px) {
+    .cardop-header {
+        gap: 2px;
+    }
+}
+
+.cardop-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.cardop-move-hint {
+    font-size: 10px;
+    color: #666;
+}
+
+@media (max-width: 700px) {
+    .cardop-move-hint {
+        font-size: 7px;
+    }
+}
+
+/* 右上の×を少し小ぶりに */
+.cardop-close {
+    background: #eee;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: .15rem .35rem;
+    cursor: pointer;
+    font-size: .75rem;
+    line-height: 1;
+}
+
+.cardop-title {
+    font-size: .85rem;
+    margin: 0;
+}
+@media (max-width: 700px) {
+    .cardop-title {
+        font-size: .6rem;
+    }
+}
+
+.cardop-body {
+    display: grid;
+    gap: 5px;
+}
+
+/* 画像＋バッジ */
+.cardop-figure {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 424 / 532;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f6f6f6;
+}
+
+.cardop-figure img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.cardop-figure .count-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    border-radius: 999px;
+    min-width: 24px;
+    height: 24px;
+    line-height: 24px;
+    font-size: 12px;
+    /* ← やや控えめ */
+    padding: 0 6px;
+}
+
+/* 操作行 */
+.cardop-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .5rem;
+}
+
+.cardop-row .full {
+    grid-column: 1 / -1;
+}
+
+.cardop-btn {
+    padding: .3rem .4rem;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: .65rem;
+    transition: filter .15s ease, transform .06s ease;
+}
+
+.cardop-btn:active {
+    transform: scale(0.985);
+}
+
+.cardop-btn.primary {
+    background: linear-gradient(90deg, #6a5acd, #9aa0ff);
+    color: #fff;
+    border: none;
+}
+
+
+/* 効果一覧 */
+.cardop-effects {
+    margin-top: .25rem;
+    display: grid;
+    gap: .35rem;
+}
+
+
+.cardop-effects .eff {
+    border: 1px dashed #e5e7eb;
+    border-radius: 10px;
+    background: #fafafa;
+    padding: 5px;
+}
+
+.cardop-effects .eff-name {
+    font-weight: 700;
+    margin-bottom: .2rem;
+    font-size: .65rem;
+}
+
+.cardop-effects .eff-text {
+    font-size: .7rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+@media (max-width: 700px) {
+    .cardop-effects .eff-text {
+        font-size: .55rem;
+    }
+}
+/* ドラッグ時の位置調整（親.modal を固定） */
+#cardOpModal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    pointer-events: none;
+    z-index: 4000;
+    background: transparent;
+}
+
+#cardOpModal.show {
+    display: block;
+}
+
+#cardOpModal .modal-content {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+}
+
 /* ===== Deck Peek（モバイル用：押してる間だけデッキリストを覗く） ===== */
 #deckpeek-button {
     position: fixed;
@@ -580,205 +769,6 @@
     border-radius: 999px;
     pointer-events: none;
 }
-
-/* ==== カード操作モーダル ==== */
-.cardop-modal {
-    width: min(20vw, 200px);
-    max-height: 90vh;
-    overflow: auto;
-    border-radius: 12px;
-    padding: 4px;
-}
-@media (max-width: 700px) {
-.cardop-modal {
-    width: min(30vw, 200px);
-    padding: 3px;
-}
-}
-.cardop-header {
-    display: flex;
-    flex-direction: column;
-    cursor: move;
-    user-select: none;
-    margin-bottom: .25rem;
-}
-@media (max-width: 700px) {
-    .cardop-header {
-        gap: 2px;
-    }
-}
-.cardop-topline {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.cardop-move-hint {
-    font-size: 10px;
-    color: #666;
-}
-@media (max-width: 700px) {
-.cardop-move-hint {
-        font-size: 7px;
-    }
-}
-/* 右上の×を少し小ぶりに */
-.cardop-close {
-    background: #eee;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: .15rem .35rem;
-    cursor: pointer;
-    font-size: .6rem;
-    line-height: 1;
-}
-/* 2行目：カード名 */
-.cardop-title {
-    margin: 0;
-    font-size: .7rem;
-    /* 既存より少しだけ大きめにして見出し感 */
-}
-@media (max-width: 700px) {
-    .cardop-title {
-        font-size: .4rem;
-    }
-}
-.cardop-body {
-    display: grid;
-    gap: 5px;
-}
-
-/* 画像＋バッジ */
-.cardop-figure {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 424 / 532;
-    border-radius: 10px;
-    overflow: hidden;
-    background: #f6f6f6;
-}
-
-.cardop-figure img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.cardop-figure .count-badge {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    min-width: 28px;
-    height: 28px;
-    line-height: 28px;
-    font-size: 14px;
-    border-radius: 999px;
-    padding: 0 8px;
-}
-
-/* 操作行 */
-.cardop-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: .5rem;
-}
-
-.cardop-row .full {
-    grid-column: 1 / -1;
-}
-
-.cardop-btn {
-    padding: .3rem .4rem;
-    border-radius: 10px;
-    border: 1px solid #d1d5db;
-    background: #fff;
-    cursor: pointer;
-    font-weight: 700;
-    font-size: .35rem;
-    transition: filter .15s ease, transform .06s ease;
-}
-@media (max-width: 700px) {
-.cardop-btn {
-        padding: .3rem .4rem;
-        font-size: .23rem;
-    }
-}
-.cardop-btn:active {
-    transform: scale(0.985);
-}
-
-.cardop-btn.primary {
-    background: linear-gradient(90deg, #6a5acd, #9aa0ff);
-    color: #fff;
-    border: none;
-}
-
-
-/* 効果一覧 */
-.cardop-effects {
-    margin-top: .25rem;
-    display: grid;
-    gap: .35rem;
-}
-
-
-.cardop-effects .eff {
-    border: 1px dashed #e5e7eb;
-    border-radius: 10px;
-    background: #fafafa;
-    padding: .5rem .6rem;
-}
-@media (max-width: 700px) {
-    .cardop-effects .eff {
-        padding: .2rem .3rem;
-    }
-}
-
-.cardop-effects .eff-name {
-    font-weight: 700;
-    margin-bottom: .2rem;
-    font-size: .6rem;
-}
-@media (max-width: 700px) {
-    .cardop-effects .eff-name {
-        font-size:.3rem ;
-    }
-}
-
-.cardop-effects .eff-text {
-    font-size: .45rem;
-    line-height: 1.5;
-    white-space: pre-wrap;
-}
-@media (max-width: 700px) {
-    .cardop-effects .eff-text {
-        font-size: .25rem;
-    }
-}
-/* ドラッグ時の位置調整（親.modal を固定） */
-#cardOpModal {
-    position: fixed;
-    inset: 0;
-    display: none;
-    pointer-events: none;
-    z-index: 4000;
-    background: transparent;
-}
-
-#cardOpModal.show {
-    display: block;
-}
-
-#cardOpModal .modal-content {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    pointer-events: auto;
-}
-
-
 
 /*========デッキ情報ゾーン-全体-====*/
 /*情報ゾーンレイアウト*/
@@ -1788,6 +1778,7 @@
     flex-direction: column;
     gap: .6rem;
     margin-top: 50px;
+    padding-bottom: 15px;
 }
 @media (max-width: 700px) {
     .note-fullscreen {
@@ -1902,29 +1893,6 @@
     height: 0;
 }
 /* 幅が狭いときは1カラムに */
-
-
-
-/* ====== ⑤ 見やすさ調整：カード名↑ / 枚数↓ ====== */
-.cardop-title {
-    font-size: .85rem;
-    /* ← 少し大きめ */
-}
-@media (max-width: 700px) {
-    .cardop-title {
-        font-size: .52rem;
-    }
-
-}
-
-.cardop-figure .count-badge {
-    min-width: 24px;
-    height: 24px;
-    line-height: 24px;
-    font-size: 12px;
-    /* ← やや控えめ */
-    padding: 0 6px;
-}
 
 
 /*==========カード解説========*/

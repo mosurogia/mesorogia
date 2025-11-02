@@ -1517,6 +1517,7 @@ function refreshCardOpControls(){
   // 枚数バッジとボタン活性を同期
   updateCardOpCountBadge();   // バッジ更新（内部で updateCardOpButtons() も呼ぶ）
   updateCardOpButtons();      // 念のため明示
+  refreshPostSummary();
 }
 
 cardOpIncBtn?.addEventListener('click', (e) => {
@@ -1531,6 +1532,7 @@ cardOpDecBtn?.addEventListener('click', (e) => {
   if (!_cardOpCurrentCd) return;
   removeCardSoft(_cardOpCurrentCd);
   refreshCardOpControls();
+
 });
 
 cardOpSetRepBtn?.addEventListener('click', (e) => {
@@ -4577,101 +4579,6 @@ function bindMinimalAgreeCheck() {
   });
 })();
 
-// === アカウントデータ保存：空入力ガード & 毎回パスワード確認 ===
-(function bindAccountSaveBehavior(){
-  const saveBtn   = document.getElementById('acct-save-btn');
-  if (!saveBtn) return;
-
-  // 既存のクリックを一旦解除（多重バインド防止・あれば）
-  saveBtn.replaceWith(saveBtn.cloneNode(true));
-  const btn = document.getElementById('acct-save-btn');
-
-  btn.addEventListener('click', async () => {
-    const $ = (sel)=>document.querySelector(sel);
-
-    const newLogin  = ($('#acct-login-name')?.value || '').trim();
-    const newPass   = ($('#acct-password')?.value   || '').trim();
-    const newPoster = ($('#acct-poster-name')?.value|| '').trim();
-    const newX      = ($('#acct-x')?.value          || '').trim();
-
-    // ① 何も入力がない → 中断
-    if (!newLogin && !newPass && !newPoster && !newX) {
-      alert('新しい変更データを入力してください');
-      return;
-    }
-
-    // ② 毎回、現在のパスワードを確認（キャンセル/空文字なら中断）
-    const confirmPassword = window.prompt('現在のパスワードを入力してください');
-    if (confirmPassword === null) return; // キャンセル
-    if (!String(confirmPassword).trim()) {
-      alert('パスワードが入力されていません');
-      return;
-    }
-
-    // 送信準備（GAS側の updateProfile_ 仕様に合わせる）
-    // loginName は「現在ログイン中のID」を使用（Auth から取得）
-    const loginName = (window.Auth && Auth.state && Auth.state.user && Auth.state.user.username)
-      ? String(Auth.state.user.username)
-      : '';
-
-    // 最低限のバリデーション（念のため）
-    if (!loginName) {
-      alert('ログイン情報が取得できません。いったんログインし直してください。');
-      return;
-    }
-
-    // 画面上のトーストやローディングがある場合はここで表示
-    if (window.setAuthLoading) setAuthLoading(true, '保存中…');
-
-    try {
-      const payload = {
-        mode: 'updateProfile',
-        loginName,
-        password: confirmPassword,      // ← 確認用“現在のパスワード”
-        // 以下は入力があったものだけ送る（空文字は送らない）
-        ...(newPoster ? { posterName: newPoster } : {}),
-        ...(newX      ? { xAccount:   newX      } : {}),
-        // いまは GAS 側で login/password の変更は未実装なので送らない
-        // （UIは残しつつ、後日 GAS 実装時に newLogin/newPass を使う）
-      };
-
-      const res = await fetch(window.API, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(payload),
-      }).then(r => r.json());
-
-      if (!res?.ok) {
-        // 代表的なエラー文言をユーザー向けに整形
-        const msg =
-          res?.error === 'password mismatch' ? 'パスワードが一致しません' :
-          res?.error === 'not found'         ? 'ユーザーが見つかりません' :
-          res?.error || '保存に失敗しました';
-        alert(msg);
-        return;
-      }
-
-      // 成功時のUI反映（任意）
-      alert('アカウントデータを保存しました');
-      // 反映が必要なら Auth の表示名/X を更新
-      if (window.Auth && Auth.state && Auth.state.user) {
-        if (newPoster) Auth.state.user.displayName = newPoster;
-        if (newX)      Auth.state.user.x = newX;
-      }
-      // 入力欄は必要に応じてクリア
-      // （新しいログイン名/パスワード欄は GAS 実装後に使用）
-      // $('#acct-password').value = '';
-
-    } catch (err) {
-      console.error(err);
-      alert('通信エラーが発生しました');
-    } finally {
-      if (window.setAuthLoading) setAuthLoading(false, '');
-    }
-  });
-})();
-
-
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('post-tab')) bindMinimalAgreeCheck();
 });
@@ -4769,7 +4676,7 @@ async function submitDeckPost(e){
 
 
 const GAS_POST_ENDPOINT =
-  'https://script.google.com/macros/s/AKfycbyWhl-8JFvHdhtYZfpv59zd6a3aHhAjWcY-QLJD7dbPlRTYBiHNutGvMGNr2V7AfK_G/exec';
+  'https://script.google.com/macros/s/AKfycbyoFYF12R929Mo1JgI23zWiBw0eVMoqATz-TWOHGhdxr4DVHGHhPrboxyxjuC57Mcig/exec';
 
 
 const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';

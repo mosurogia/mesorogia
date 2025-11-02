@@ -234,8 +234,8 @@ function coloredChip(text, {bg, border, color='#0f172a', fz=30, pad='10px 14px'}
 // ① 数字だけを強調する小ユーティリティ
 function strongNum(n){
   return `<span style="
-    font-size:1.2em;
-    font-weight:900;
+    font-size:1.08em;
+    font-weight:800;
     line-height:1;
     letter-spacing:.3px;
   ">${n}</span>`;
@@ -376,7 +376,13 @@ function chipRich(html, {bg, border, color='#0f172a', fz=30, pad='10px 14px'} = 
     rightRow2.style.display = 'flex';
     rightRow2.style.justifyContent = 'flex-end';
     const raceBg = RACE_BG[data.mainRace] || 'rgba(2,6,23,0.04)';
-    rightRow2.innerHTML = coloredChip(`${data.mainRace}`, { bg: raceBg, border:'rgba(2,6,23,0.10)', fz:30, pad:'12px 16px' });
+
+    rightRow2.innerHTML = coloredChip(`${data.mainRace}`, {
+      bg: raceBg,
+      border:'rgba(2,6,23,0.10)',
+      fz: 34,              // 30 → 34 に拡大
+      pad: '12px 18px'     // 少しだけ横に余裕
+    });
 
     // 配置
     // 1行目：タイトル（2列）
@@ -730,6 +736,7 @@ function downloadCanvas(canvas, fileName){
         objectFit: 'contain',
       });
 
+
       // 🔹 背景クリックで閉じる（×ボタンと同処理）
       modal.addEventListener('click', e => {
         if (e.target === modal && e.clientY < window.innerHeight * 0.9) {
@@ -739,6 +746,20 @@ function downloadCanvas(canvas, fileName){
       });
 
       modal.appendChild(img);
+
+    // 利用許諾メッセージ（画像の直後）
+    const note = document.createElement('div');
+    note.textContent = '※ここで生成した画像はXやDiscordなどに自由に投稿して構いません。';
+    Object.assign(note.style, {
+      width: 'min(80vw, 500px)',      // 画像・ボタンと同じ幅
+      maxWidth: 'min(80vw, 500px)',
+      fontSize: 'clamp(12px, 1.8vw, 14px)',
+      color: 'rgba(255,255,255,0.8)',
+      textAlign: 'center',
+      margin: '10px auto 16px',       // 中央寄せ
+    });
+    modal.appendChild(note);
+
   document.body.appendChild(modal);
 }
 
@@ -753,11 +774,7 @@ function downloadCanvas(canvas, fileName){
 })();
 
 
-
 //=======アカウント関連========
-
-// グローバルに公開
-window.refreshWhoAmI = () => Auth.whoami({ force:true });
 
 // --- authトースト/スピナーのフォールバック（未定義ページ用） ---
 if (typeof window.setAuthChecking !== 'function') {
@@ -766,13 +783,8 @@ if (typeof window.setAuthChecking !== 'function') {
 
 // ==== Auth 一本化（PIN撤去版・UI結線） ====
 (function(){
-  const API = 'https://script.google.com/macros/s/AKfycbyWhl-8JFvHdhtYZfpv59zd6a3aHhAjWcY-QLJD7dbPlRTYBiHNutGvMGNr2V7AfK_G/exec';
+  const API = 'https://script.google.com/macros/s/AKfycbyoFYF12R929Mo1JgI23zWiBw0eVMoqATz-TWOHGhdxr4DVHGHhPrboxyxjuC57Mcig/exec';
   window.API = API;
-  const LS_TOKEN = 'authToken';
-  const LS_USER  = 'authUser';
-  const LS_LASTCHECK = 'authLastCheckAt';   // whoami最終確認時間
-  const WHOAMI_COOLDOWN_MS = 6 * 60 * 60 * 1000;  // 6時間
-
 
   const Auth = {
     user: null,
@@ -782,27 +794,24 @@ if (typeof window.setAuthChecking !== 'function') {
     setDisplayName(name){
     if (!this.user) return;
     this.user.displayName = name || this.user.displayName;
-    localStorage.setItem(LS_USER, JSON.stringify(this.user));
     reflectLoginUI();
     },
 
-    async whoami({ force=false } = {}){
-      const last = Number(localStorage.getItem(LS_LASTCHECK) || 0);
-      const needCheck = this.token && (force || (Date.now() - last > WHOAMI_COOLDOWN_MS));
-      if (!needCheck){
-        return { ok: !!(this.user && this.token && this.verified), user: this.user };
-      }
+    async whoami(){
+        if (!this.token) {
+          this._clear();
+          reflectLoginUI();
+          return { ok:false };
+        }
 
       setAuthChecking?.(true);
       try{
         const res = await postJSON(`${API}?mode=whoami`, { token: this.token });
-        localStorage.setItem(LS_LASTCHECK, String(Date.now()));
         if (!res?.ok || !res.user){
           this._clear();
           reflectLoginUI();
           return { ok:false };
         }
-        // 検証成功
         this._save(res.user, this.token);
         this.verified = true;
         reflectLoginUI();
@@ -812,38 +821,19 @@ if (typeof window.setAuthChecking !== 'function') {
       }
     },
 
-
-
-    // === Auth.init 内の whoami 実行部分を「毎回確認」に変更 ===
+    // === Auth.init 内の whoami 実行をやめて、毎回「未ログイン表示」から始める ===
     async init(){
-      // 1) まずはLSから復元（体感早く）ただし verified は false に戻す
-      try {
-        this.token = localStorage.getItem(LS_TOKEN) || null;
-        const raw  = localStorage.getItem(LS_USER);
-        this.user  = raw ? JSON.parse(raw) : null;
-      } catch(_) { this.user = null; this.token = null; }
-      this.verified = false; // ★ 再読込直後は未検証
-
-      // 2) 先にUI反映（未検証のため未ログイン表示になる）
-      reflectLoginUI();
-
-      // 3) トークンがあれば毎回サーバ確認（強制 whoami）
-      if (this.token) {
-        await this.whoami({ force: true }); // 成功で verified=true、失敗で _clear 済み
-      }
-
-      // 4) 最終確定
+      // ローカル復元もしない（= 再読込時は必ず未ログイン）
+      this.user = null;
+      this.token = null;
+      this.verified = false;
       reflectLoginUI();
     },
-
-
-
 
     async signup(username, password, displayName='', x=''){
       const res = await postJSON(`${API}?mode=signup`, {username, password, displayName, x});
       if (!res.ok) throw new Error(res.error||'signup failed');
       this._save(res.user, res.token);
-      localStorage.setItem(LS_LASTCHECK, String(Date.now())); // 直後は確認不要に
       reflectLoginUI();
       return res.user;
     },
@@ -852,7 +842,6 @@ if (typeof window.setAuthChecking !== 'function') {
       const res = await postJSON(`${API}?mode=login`, {username, password});
       if (!res.ok) throw new Error(res.error||'login failed');
       this._save(res.user, res.token);
-      localStorage.setItem(LS_LASTCHECK, String(Date.now())); // 直後は確認不要に
       reflectLoginUI();
       return res.user;
     },
@@ -863,28 +852,18 @@ if (typeof window.setAuthChecking !== 'function') {
       reflectLoginUI();
     },
 
-    attachToken(body){ return Object.assign({}, body, { token:this.token||'' }); },
+    attachToken(body){return Object.assign({}, body, { token:this.token||'' }); },
 
     _save(user, token){
-      this.user = user;
-      this.token = token;
-      this.verified = true; // ★ 保存時点では有効
-      localStorage.setItem(LS_TOKEN, token || '');
-      localStorage.setItem(LS_USER,  JSON.stringify(user || null));
+      this.user = user || null;
+      this.token = token || null;
+      this.verified = !!(user && token);
     },
 
     _clear(){
       this.user = null;
       this.token = null;
       this.verified = false; // ★ 未検証へ戻す
-      localStorage.removeItem(LS_TOKEN);
-      localStorage.removeItem(LS_USER);
-    },
-
-    async logout(){
-      try { await postJSON(`${API}?mode=logout`, {token:this.token}); } catch(_){}
-      this._clear();
-      reflectLoginUI();
     },
   };
   window.Auth = Auth;
@@ -1129,113 +1108,172 @@ function startSlowTimer(ms = 5000) {
       btn.disabled = !any;
     });
 
-    // ===== 保存: updateProfile（イベント委任で確実に拾う） =====
-    document.addEventListener('click', async (ev)=>{
-      const btn = ev.target.closest('#acct-save-btn');
-      if (!btn) return;
+  });
+})();
 
-      // 現在のアカウント情報（placeholder に入れてある）
-      const curLoginRaw = (document.getElementById('acct-login-name')?.placeholder || '').trim();
-      // 「現在: 」という接頭辞を除去して素のログイン名を得る
-      const curLogin = curLoginRaw.replace(/^現在:\s*/,'').trim();
+// ===== アカウント保存（共通・一元化） =====
+(function setupAccountSaveOnce(){
+  if (window.__acctSaveBound) return;
+  window.__acctSaveBound = true;
 
-      const curName  = (document.getElementById('acct-poster-name')?.placeholder || '').trim();
-      const curX     = (document.getElementById('acct-x')?.placeholder || '').trim();
+  const API = window.API;                   // 既存の GAS エンドポイント
+  const postJSON = window.postJSON;         // 既存の postJSON
+  const Auth = window.Auth;                 // 既存の Auth（attachToken / _save / whoami / logout など）
 
-      // 入力（＝変更希望）
-      const newLogin = (document.getElementById('acct-login-name')?.value || '').trim();
-      const newPass  = (document.getElementById('acct-password')?.value || '').trim();
-      const newName  = (document.getElementById('acct-poster-name')?.value || '').trim();
-      const newX     = (document.getElementById('acct-x')?.value || '').trim().replace(/^@+/, '');
+  // 差分ペイロードを作る補助
+  function buildPayloadFromForm(){
+    // 現在値は placeholder に「現在: foo」と入っている前提
+    const curLoginRaw = (document.getElementById('acct-login-name')?.placeholder || '').trim();
+    const curLogin    = curLoginRaw.replace(/^現在:\s*/,'').trim();
 
-      // 送信ペイロードは「差分のみ」
-      // 既存アカウント識別用に loginName、変更があるものだけ付ける
-      const payload = { loginName: curLogin };
-      let needsReauth = false;
+    const curNameRaw  = (document.getElementById('acct-poster-name')?.placeholder || '').trim();
+    const curName     = curNameRaw.replace(/^現在:\s*/,'').trim();
 
-      if (newLogin && newLogin.toLowerCase() !== curLogin.toLowerCase()){
-        payload.newLoginName = newLogin.toLowerCase();
-        needsReauth = true;
-      }
-      if (newPass){
-        payload.newPassword = newPass;
-        needsReauth = true;
-      }
-      if (newName && newName !== curName){
-        payload.posterName = newName;
-      }
-      if (newX && newX !== curX){
-        payload.xAccount = newX;
-      }
+    const curXRaw     = (document.getElementById('acct-x')?.placeholder || '').trim();
+    const curX        = curXRaw.replace(/^現在:\s*/,'').trim();
 
-      // 何も変更がなければ何もしない
-      const keys = Object.keys(payload);
-      if (keys.length <= 1){ // loginName しか無い
-        alert('変更はありません');
-        return;
-      }
+    // 入力（変更希望）
+    const newLogin = (document.getElementById('acct-login-name')?.value || '').trim();
+    const newPass  = (document.getElementById('acct-password')?.value || '').trim();
+    const newName  = (document.getElementById('acct-poster-name')?.value || '').trim();
+    const newX     = (document.getElementById('acct-x')?.value || '').trim().replace(/^@+/, '');
 
-      // ログイン名/パス変更がある場合だけ、現在パスワードを要求
-      if (needsReauth){
-        const curPw = window.prompt('現在のパスワードを入力してください');
-        if (!curPw || !curPw.trim()){
-          alert('変更をキャンセルしました');
-          return;
-        }
-        // ★ GAS側が期待するキー名は "password" に揃える
-        payload.password = curPw.trim();
-      }
+    // 差分のみ送る（GAS側は loginName で現在ユーザを特定）
+    const payload = { loginName: curLogin };
 
-      // ★ トークンも添付（GAS側はトークン or loginName のどちらでも照合できるようにします）
-      const sendBody = (window.Auth && typeof Auth.attachToken === 'function')
-        ? Auth.attachToken(payload)
-        : payload;
+    if (newLogin && newLogin.toLowerCase() !== curLogin.toLowerCase()){
+      payload.newLoginName = newLogin.toLowerCase();
+    }
+    if (newPass){
+      payload.newPassword = newPass;
+    }
+    if (newName && newName !== curName){
+      payload.posterName = newName;
+    }
+    if (newX && newX !== curX){
+      payload.xAccount = newX;
+    }
+    return payload;
+  }
 
-      btn.disabled = true;
-      const keep = btn.textContent;
-      btn.textContent = '送信中...';
-      try{
-      // 送信 → 成功チェック
+  // 成功後に placeholder と入力欄を更新する
+  function applyResultToForm(resUser){
+    const $login = document.getElementById('acct-login-name');
+    const $name  = document.getElementById('acct-poster-name');
+    const $x     = document.getElementById('acct-x');
+    const $pw    = document.getElementById('acct-password');
+
+    if ($login){
+      const now = resUser?.username || ($login.placeholder || '').replace(/^現在:\s*/,'').trim();
+      $login.value = '';
+      $login.placeholder = `現在: ${now}`;
+    }
+    if ($name){
+      const now = resUser?.displayName ?? ($name.placeholder || '').replace(/^現在:\s*/,'').trim();
+      $name.value = '';
+      $name.placeholder = `現在: ${now || ''}`;
+    }
+    if ($x){
+      const now = resUser?.x ?? ($x.placeholder || '').replace(/^現在:\s*/,'').trim();
+      $x.value = '';
+      $x.placeholder = `現在: ${now || ''}`;
+    }
+    if ($pw){ $pw.value = ''; }
+  }
+
+  // UI 反映（ヘッダ等）
+  function reflectLoginUI(){
+    const loggedIn = !!(Auth?.user && Auth?.token && Auth?.verified);
+    const $form     = document.getElementById('auth-login-form');
+    const $logged   = document.getElementById('auth-logged-in');
+    const $disp     = document.getElementById('auth-display');
+    const $unameLbl = document.getElementById('auth-username-label');
+    const u = Auth?.user || {};
+
+    if ($form)   $form.style.display   = loggedIn ? 'none' : '';
+    if ($logged) $logged.style.display = loggedIn ? '' : 'none';
+    if (loggedIn){
+      if ($disp)     $disp.textContent     = u.displayName || u.username || '';
+      if ($unameLbl) $unameLbl.textContent = u.username || '';
+    } else {
+      if ($disp)     $disp.textContent     = '';
+      if ($unameLbl) $unameLbl.textContent = '';
+      const $pw = document.getElementById('auth-password');
+      if ($pw) $pw.value = '';
+    }
+  }
+
+  // ここで一元バインド（イベント委任）
+  document.addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('#acct-save-btn');
+    if (!btn) return;
+
+    // 1) 差分作成
+    const payload = buildPayloadFromForm();
+
+    // 2) 変更がない場合はブロック
+    const keys = Object.keys(payload);
+    if (keys.length <= 1){ // loginName しか入っていない
+      alert('新しい変更データを入力してください');
+      return;
+    }
+
+    // 3) 毎回パスワード確認（仕様：保存時は毎回確認する）
+    const curPw = window.prompt('現在のパスワードを入力してください');
+    if (!curPw || !curPw.trim()){
+      alert('保存をキャンセルしました');
+      return;
+    }
+    payload.password = curPw.trim();
+
+    // 4) トークン添付（どちらでも認証できるが、あれば付ける）
+    const sendBody = (Auth && typeof Auth.attachToken === 'function')
+      ? Auth.attachToken(payload)
+      : payload;
+
+    // 5) 送信
+    btn.disabled = true;
+    const keep = btn.textContent;
+    btn.textContent = '送信中...';
+
+    try{
       const res = await postJSON(`${API}?mode=updateProfile`, sendBody);
       if (!res?.ok) throw new Error(res?.error || 'update failed');
 
-      // 返ってきた最新ユーザーで Auth キャッシュを更新
-      if (res.user && window.Auth) {
-        Auth._save(res.user, Auth.token); // 返却でキャッシュを最新化（verified=true）
+      // 1) 返ってきた user があれば一旦キャッシュ更新（即座にUIに反映させたいとき用）
+      if (res.user && Auth) {
+        Auth._save(res.user, Auth.token);
       }
-      reflectLoginUI(); // ラベル(auth-username-label / auth-display)にも即時反映
 
-      // ラベルは「ログインID」表示用なので username を流す（表示名を出したいならここを res.user.displayName に）
-      if ($disp)  $disp.textContent  = res.user?.displayName || res.user?.username || '';
-      if ($label) $label.textContent = res.user?.displayName || res.user?.username || '';
-      if ($disp)  $disp.textContent  = res.user?.displayName || res.user?.username || '';
-      if ($label) $label.textContent = res.user?.username || '';
+      // 2) 必ず whoami でサーバ最新を再取得（username 変更なども確実に反映）
+      try {
+        if (typeof window.refreshWhoAmI === 'function') {
+          await window.refreshWhoAmI(); // Auth.whoami() が内部で UI も反映
+        } else if (Auth && typeof Auth.whoami === 'function') {
+          await Auth.whoami();
+        }
+      } catch(_) { /* noop */ }
 
-      // 表示名／X のローカル保存（既存仕様踏襲）
-      if (payload.posterName !== undefined) localStorage.setItem('posterName', payload.posterName || '');
-      if (payload.xAccount  !== undefined) localStorage.setItem('xAccount',  payload.xAccount  || '');
+      // 3) 最終ユーザーを取得してフォームの placeholder を更新
+      const newUser = (Auth && Auth.user) ? Auth.user : (res.user || null);
+      applyResultToForm(newUser);
 
-      // UI確定
+      // 4) 念のためもう一度 UI 反映（ヘッダーなど）
       reflectLoginUI();
-      alert('アカウント情報を更新しました');
 
-      // 必要なら whoami 強制再取得（不要ならこの2行は省略可）
-      if (typeof window.refreshWhoAmI === 'function'){
-        try{ await window.refreshWhoAmI(); }catch(_){}
-      }
-
-      // モーダルを閉じる
+      // 5) モーダルを閉じる（存在するページのみ）
       const m = document.getElementById('accountDataModal');
       if (m) m.style.display = 'none';
-    }catch(err){
-        console.error(err);
-        alert('保存に失敗しました：' + err.message);
-      }finally{
-        btn.disabled = false;
-        btn.textContent = keep;
-      }
-    });
 
+      alert('アカウント情報を更新しました');
+
+    }catch(err){
+      console.error(err);
+      alert('保存に失敗しました：' + err.message);
+    }finally{
+      btn.disabled = false;
+      btn.textContent = keep;
+    }
   });
 })();
 

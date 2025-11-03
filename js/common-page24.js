@@ -794,13 +794,13 @@ if (typeof window.setAuthChecking !== 'function') {
     setDisplayName(name){
     if (!this.user) return;
     this.user.displayName = name || this.user.displayName;
-    reflectLoginUI();
+    window.reflectLoginUI?.();
     },
 
     async whoami(){
         if (!this.token) {
           this._clear();
-          reflectLoginUI();
+          window.reflectLoginUI?.();
           return { ok:false };
         }
 
@@ -809,12 +809,12 @@ if (typeof window.setAuthChecking !== 'function') {
         const res = await postJSON(`${API}?mode=whoami`, { token: this.token });
         if (!res?.ok || !res.user){
           this._clear();
-          reflectLoginUI();
+          window.reflectLoginUI?.();
           return { ok:false };
         }
         this._save(res.user, this.token);
         this.verified = true;
-        reflectLoginUI();
+        window.reflectLoginUI?.();
         return { ok:true, user: res.user };
       } finally {
         setAuthChecking?.(false);
@@ -827,14 +827,14 @@ if (typeof window.setAuthChecking !== 'function') {
       this.user = null;
       this.token = null;
       this.verified = false;
-      reflectLoginUI();
+      window.reflectLoginUI?.();
     },
 
     async signup(username, password, displayName='', x=''){
       const res = await postJSON(`${API}?mode=signup`, {username, password, displayName, x});
       if (!res.ok) throw new Error(res.error||'signup failed');
       this._save(res.user, res.token);
-      reflectLoginUI();
+      window.reflectLoginUI?.();
       return res.user;
     },
 
@@ -842,14 +842,14 @@ if (typeof window.setAuthChecking !== 'function') {
       const res = await postJSON(`${API}?mode=login`, {username, password});
       if (!res.ok) throw new Error(res.error||'login failed');
       this._save(res.user, res.token);
-      reflectLoginUI();
+      window.reflectLoginUI?.();
       return res.user;
     },
 
     async logout(){
       try { await postJSON(`${API}?mode=logout`, {token:this.token}); } catch(_){}
       this._clear();
-      reflectLoginUI();
+      window.reflectLoginUI?.();
     },
 
     attachToken(body){return Object.assign({}, body, { token:this.token||'' }); },
@@ -878,9 +878,9 @@ if (typeof window.setAuthChecking !== 'function') {
   }
 window.postJSON = postJSON;
 
-  // ---- UI ----
-  function reflectLoginUI(){
-    const loggedIn = !!(Auth.user && Auth.token && Auth.verified);
+  // ---- UI（グローバル公開版）----
+  window.reflectLoginUI = function reflectLoginUI(){
+    const loggedIn = !!(Auth?.user && Auth?.token && Auth?.verified);
 
     const $form     = document.getElementById('auth-login-form');
     const $logged   = document.getElementById('auth-logged-in');
@@ -892,7 +892,7 @@ window.postJSON = postJSON;
     if ($logged) $logged.style.display = loggedIn ? '' : 'none';
 
     if (loggedIn){
-      const u = Auth.user || {};
+      const u = Auth?.user || {};
       if ($disp)     $disp.textContent     = u.displayName || u.username || '(no name)';
       if ($unameLbl) $unameLbl.textContent = u.username || '';
     } else {
@@ -900,7 +900,8 @@ window.postJSON = postJSON;
       if ($disp) $disp.textContent = '';
       if ($unameLbl) $unameLbl.textContent = '';
     }
-  }
+  };
+
 
   // ===== 認証UIフィードバック =====
 function setAuthLoading(on, msg){
@@ -955,7 +956,7 @@ function startSlowTimer(ms = 5000) {
       stopSlow(); setAuthLoading(false, '');
       showAuthOK('登録完了');
       // サインアップ成功＝ログイン状態になっている設計ならここで反映
-      reflectLoginUI();
+      window.reflectLoginUI?.();
     }catch(e){
       stopSlow(); setAuthLoading(false, '');
       showAuthError('登録失敗：' + (e?.message || 'unknown'));
@@ -975,7 +976,7 @@ function startSlowTimer(ms = 5000) {
       const res = await Auth.login(username, password); // 成功時: {ok:true, token...}
       stopSlow(); setAuthLoading(false, '');
       showAuthOK('ログイン完了');
-      reflectLoginUI();
+      window.reflectLoginUI?.();
     }catch(e){
       stopSlow(); setAuthLoading(false, '');
       showAuthError('ログイン失敗：' + (e?.message || 'unknown'));
@@ -1181,27 +1182,6 @@ function startSlowTimer(ms = 5000) {
     if ($pw){ $pw.value = ''; }
   }
 
-  // UI 反映（ヘッダ等）
-  function reflectLoginUI(){
-    const loggedIn = !!(Auth?.user && Auth?.token && Auth?.verified);
-    const $form     = document.getElementById('auth-login-form');
-    const $logged   = document.getElementById('auth-logged-in');
-    const $disp     = document.getElementById('auth-display');
-    const $unameLbl = document.getElementById('auth-username-label');
-    const u = Auth?.user || {};
-
-    if ($form)   $form.style.display   = loggedIn ? 'none' : '';
-    if ($logged) $logged.style.display = loggedIn ? '' : 'none';
-    if (loggedIn){
-      if ($disp)     $disp.textContent     = u.displayName || u.username || '';
-      if ($unameLbl) $unameLbl.textContent = u.username || '';
-    } else {
-      if ($disp)     $disp.textContent     = '';
-      if ($unameLbl) $unameLbl.textContent = '';
-      const $pw = document.getElementById('auth-password');
-      if ($pw) $pw.value = '';
-    }
-  }
 
   // ここで一元バインド（イベント委任）
   document.addEventListener('click', async (ev) => {
@@ -1259,7 +1239,7 @@ function startSlowTimer(ms = 5000) {
       applyResultToForm(newUser);
 
       // 4) 念のためもう一度 UI 反映（ヘッダーなど）
-      reflectLoginUI();
+      window.reflectLoginUI?.();
 
       // 5) モーダルを閉じる（存在するページのみ）
       const m = document.getElementById('accountDataModal');

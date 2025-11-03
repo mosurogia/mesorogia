@@ -4849,7 +4849,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (postBtn) {
     postBtn.disabled = true;
     postBtn.textContent = '投稿（ベータ中は無効）';
-    postBtn.style.fontSize = '.6rem';
+    postBtn.style.fontSize = '.5rem';
     postBtn.style.opacity = '0.6';
     postBtn.style.cursor = 'not-allowed';
   }
@@ -4864,7 +4864,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (previewBtn) {
     previewBtn.disabled = true;
     previewBtn.textContent = 'プレビュー（ベータ中は無効）';
-    previewBtn.style.fontSize = '.6rem';
+    previewBtn.style.fontSize = '.5rem';
     previewBtn.style.opacity = '0.6';
     previewBtn.style.cursor = 'not-allowed';
 

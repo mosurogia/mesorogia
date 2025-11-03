@@ -840,13 +840,13 @@
 .info-section {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: .25rem;
     padding: .3rem;
 }
 @media (max-width: 700px) {
 /* 全体の余白を少し詰める */
     .info-section {
-        gap: .5rem;
+        gap: .1rem;
     }
 }
 
@@ -872,34 +872,17 @@
 
 
 .info-label {
-    font-size: 1.1rem;
-    width: 130px;
+    font-size: clamp(.75rem, 2.4vw, 1.1rem);
+    width: clamp(5.5rem, 18vw, 8rem);;
     font-weight: 600;
     color: #333;
     flex-shrink: 0;
 }
 
-@media (max-width: 700px) {
-    #deck-info .info-label {
-    font-size: clamp(10px, 2.5vw, 20px);
-    width: 20%;
-    }
-}
 
 .info-value {
     flex: 1;
-    font-size: 1.2rem;
-}
-@media (max-width: 1024px) {
-    .info-value {
-        margin-top: .2rem;
-    }
-}
-@media (max-width: 700px) {
-    .info-value {
-        margin-top: 0;
-        font-size: clamp(11px, 2.2vw, 16px);
-    }
+    font-size: clamp(.7rem, 2.2vw, 1rem);
 }
 .any{
     display: block;
@@ -909,7 +892,7 @@
         display: flex;
         text-overflow: ellipsis;
         white-space: nowrap;
-        gap: 10px;
+        gap: .625rem;
         flex-wrap: wrap;
         align-items: center;
         }
@@ -934,7 +917,7 @@
 .info-value textarea {
     width: 100%;
     padding: 0.3rem 0.5rem;
-    font-size: 1.2rem;
+    font-size: clamp(.7rem, 2.2vw, 1rem);
     box-sizing: border-box;
     border: 1px solid #ccc;
     border-radius: 6px;
@@ -986,7 +969,7 @@
 
 /*代表カード説明*/
 .post-representative-hint{
-    font-size: .8em;
+    font-size: .65rem;
     color: #6b7280;
     user-select: none;
 }
@@ -1008,7 +991,7 @@
 
 /* チップ本体 */
 .type-chip {
-    font-size: 1.2rem;
+    font-size: clamp(.6rem, 1.8vw, .8rem);
     display: inline-flex;
     align-items: center;
     padding: 3px 4px;
@@ -1018,7 +1001,11 @@
     line-height: 1.2;
     white-space: nowrap;
 }
-
+@media (max-width: 1024px) {
+    .type-chip {
+    font-size: clamp(.7rem, 2vw, 1rem);
+    }
+}
 /* タイプ別の淡色背景（mrt-chip と同配色）*/
 .type-chip[data-type="チャージャー"] {
     background: rgba(119, 170, 212, .2);
@@ -1073,11 +1060,14 @@
     justify-content: flex-end;
     cursor: pointer;
     transition: all 0.2s ease;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 @media (max-width: 1024px) {
 .deck-code-controls button,
 .post-actions button{
         font-size: 0.5rem;
+        padding: .8rem .5rem;
 }
 }
 @media (max-width: 700px) {
@@ -1257,13 +1247,9 @@
     color: #9a3412;
     border-radius: 8px;
     margin: 8px 0;
-    font-size: 1.2rem;
+    font-size: clamp(.75rem, 2.5vw, 1rem);
 }
-@media (max-width: 700px) {
-    .mull-warning {
-    font-size: clamp(11px, 3vw, 21px);
-    }
-}
+
 
 .hand-area {
     display: grid;
@@ -1362,13 +1348,9 @@
 }
 
 .mull-remaining-title{
-    font-size: 1.2rem;
+        font-size:clamp(.75rem, 2.4vw, 1.1rem)
 }
-@media (max-width: 700px) {
-    .mull-remaining-title {
-        font-size: clamp(11px, 3vw, 21px);
-    }
-}
+
 
 
 /* タイプ別 残り枚数（可変省略対応） */
@@ -1458,7 +1440,7 @@
 /* 未所持サマリー：PC/タブレットは1行、スマホは2列 */
 #shortage-summary-line {
     flex: 1;
-    font-size: 1.2rem;
+    font-size: clamp(.7rem, 2.2vw, 1rem);
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: .2rem .6rem;
@@ -1575,6 +1557,7 @@
 /*パック別ポイント表示*/
 .by-pack-list-ul{
     margin: .5rem 0;
+    font-size: clamp(.7rem, 2.2vw, 1rem);
 }
 
 /*========デッキ情報ゾーン-デッキ投稿タブ-====*/
@@ -2485,7 +2468,7 @@ font-size: .8rem;
 .status-text {
     margin-top: 0.5rem;
     color: #444;
-    font-size: 0.9rem;
+    font-size: clamp(.5rem, 1vw, .9rem);
 }
 
 /* 投稿同意チェックの軽量デザイン */

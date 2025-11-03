@@ -54,7 +54,8 @@
         <a href="index.html">📖 一覧</a>
         <a class="active-page" href="deckmaker.html">🃏 デッキメーカー</a>
         <a href="cardcheker.html">📊 所持率チェッカー</a>
-        <a href="deck-post.html">📤 デッキ投稿</a>
+        <a href="#" style="text-decoration: line-through; pointer-events: none; color: #aaa;">📤 デッキ投稿</a>
+        <!--<a href="deck-post.html">📤 デッキ投稿</a>-->
     </nav>
 </header>
 
@@ -350,12 +351,12 @@
             <div class="owned-head">所持データ反映部分</div>
             <div class="owned-note">※所持率チェッカーでの所持データをもとに計算しています</div>
 
-            <!-- 不足カード -->
+            <!-- 未所持カード -->
             <div class="info-row" style="justify-content:flex-start;">
-                <div class="info-label">不足枚数</div>
+                <div class="info-label">未所持枚数</div>
                 <div class="button-info">
                 <div id="shortage-summary-line">🌈レジェンド0枚 🟡ゴールド0枚 ⚪️シルバー0枚 🟤ブロンズ0枚</div>
-                <button id="shortage-toggle-btn" type="button">不足カードリスト</button>
+                <button id="shortage-toggle-btn" type="button">未所持カードリスト</button>
                 </div>
 
             </div>
@@ -366,13 +367,18 @@
             <div class="info-row" style="justify-content:flex-start;">
                 <div class="info-label">必要ポイント</div>
                 <div>
-                <div class="owned-note">必要なポイント/ダイヤ/砂を確認できます<br>
-                ボタンで変更可</div>
                 <div class="button-info">
                     <button id="exchange-toggle-btn-compact" type="button">🟢 ポイント</button>
-                    <div id="exchange-values-compact" class="exchange-values">
-                        <!-- ここに数値が入る（ポイント/ダイヤ/砂） -->
-                    </div>
+
+                    <!-- 合計の表示だけを入れる領域（JSで毎回書き換える） -->
+                    <div id="exchange-values-compact" class="exchange-values"></div>
+                </div>
+                <!-- パック別ポイント内訳は合計とは別領域として維持 -->
+                <div id="point-by-pack" class="by-pack-list"></div>
+                <div class="owned-note">
+                    必要なポイント/ダイヤ/砂を確認できます<br>
+                    ボタンで変更可
+                </div>
                 </div>
                 </div>
             </div>
@@ -397,7 +403,6 @@
         </div>
     </div>
 </div>
-        </div>
         </div>
 
         <!-- デッキ投稿タブ -->
@@ -638,6 +643,19 @@
                     <button type="button" id="post-preview" onclick="previewDeckPost()">プレビュー</button>
                     <button id="post-submit" type="submit">投稿</button>
                 </div>
+                <!-- ▼ ベータ版注意メッセージ -->
+                <div class="beta-warning" style="
+                  background: #fff3cd;
+                  border: 1px solid #ffeeba;
+                  border-radius: 8px;
+                  padding: 10px;
+                  margin: 10px 0;
+                  color: #856404;
+                  font-weight: 600;
+                ">
+                    🧪 このデッキ投稿機能は <b>ベータ版</b> です。<br>
+                    現在はUIの先行公開のみで、投稿の送信はできません。
+                </div>
 
 
 <!-- デッキ解説: 全画面編集モーダル -->
@@ -758,8 +776,8 @@
         </div>
 
         </div>
-    </div>
 
+    </div>
     <!-- 保存デッキ一覧表示用 -->
     <div id="saved-deck">
         <h3 class="saved-deck-title">保存デッキ一覧</h3>

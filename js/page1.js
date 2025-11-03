@@ -50,6 +50,14 @@ function generateCardListElement(card) {
   cardDiv.setAttribute('data-heal', String(card.heal ?? "").toLowerCase());
   cardDiv.setAttribute('data-power_up', String(card.power_up ?? "").toLowerCase());
   cardDiv.setAttribute('data-power_down', String(card.power_down ?? "").toLowerCase());
+  
+// リンクカード情報（コラボカードかどうか）と性能元カードの cd を data 属性に含める
+  if (typeof card.link !== 'undefined') {
+    cardDiv.setAttribute('data-link', String(card.link).toLowerCase());
+  }
+  if (typeof card.link_cd !== 'undefined') {
+    cardDiv.setAttribute('data-linkcd', String(card.link_cd));
+  }
 
   // 🔎 検索用にまとめた文字列（小文字化）
   const keywords = [

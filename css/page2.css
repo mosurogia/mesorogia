@@ -272,7 +272,7 @@
 .analyze-button {
     background-color: #6a5acd;
     color: white;
-    font-size: 12px;
+    font-size: .75rem;
     padding: 6px 10px;
     border: none;
     border-radius: 18px;
@@ -284,12 +284,12 @@
 @media (max-width: 768px) {
     .analyze-button {
             margin-top: 0rem;
-            font-size: 8px;
+            font-size: .5rem;
         }
 }
 @media (max-width: 410px) {
     .analyze-button {
-        font-size: 6px;
+        font-size: .35rem;
     }
 }
 .analyze-button:hover {
@@ -1201,7 +1201,7 @@
 #exchange-toggle-btn {
     font-size: 0.65em;
 }
-/*不足カード*/
+/*未所持カード*/
 #shortage-block{
     display: none;
     margin-top: 0.4rem;
@@ -1433,31 +1433,32 @@
     border-radius: 8px;
     padding: .3rem .3rem;
 }
-
+@media (max-width: 700px) {
+    .owned-info {
+        padding: .5rem .6rem;
+    }
+}
 .owned-info .owned-head {
-    font-size: .65rem;
+    font-size: 1.1rem;
     font-weight: 700;
     margin-bottom: .25rem;
 
 }
 
 .owned-info .owned-note {
-    font-size: .5rem;
+    font-size: .75rem;
     color: #666;
     margin-bottom: 5px;
 }
 .button-info{
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.3rem;
     align-items: center;
     width: 100%;
 }
 
-/* 不足サマリー：PC/タブレットは1行、スマホは2列 */
+/* 未所持サマリー：PC/タブレットは1行、スマホは2列 */
 #shortage-summary-line {
     flex: 1;
-    font-size: .6rem;
+    font-size: 1.2rem;
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: .2rem .6rem;
@@ -1471,10 +1472,10 @@
 }
 
 
-/* 不足カード：開閉エリア */
+/* 未所持カード：開閉エリア */
 #shortage-toggle-btn {
     width: 100%;
-    font-size: .7rem;
+    font-size: 1rem;
     padding: .2rem .8rem;
     margin: .2rem 0;
     border: 1px solid #ddd;
@@ -1485,10 +1486,10 @@
 
 .shortage-collapsible {
     padding: .4rem 0 0 .25rem;
-    font-size: .65rem;
+    font-size: .8rem;
 }
 
-/* 不足カードリスト：先頭のヒント */
+/* 未所持カードリスト：先頭のヒント */
 .shortage-collapsible .shortage-hint {
     color: #666;
     margin: 0 0 .25rem .2rem;
@@ -1511,8 +1512,8 @@
     border-bottom: none;
 }
 
-/* 不足カード：タイトル部分だけクリック可能に見せる */
-/* 不足カード：タイトルはテキスト幅だけ（列いっぱいに伸びない） */
+/* 未所持カード：タイトル部分だけクリック可能に見せる */
+/* 未所持カード：タイトルはテキスト幅だけ（列いっぱいに伸びない） */
 .shortage-collapsible .shortage-item .title {
     justify-self: start;/* ← stretch を無効化して左寄せ */
     width: max-content;/* ← テキスト幅に合わせる（fallback下は inline-block でOK） */
@@ -1521,7 +1522,7 @@
     padding-inline: 2px;
 }
 
-/*不足カードプレビュー*/
+/*未所持カードプレビュー*/
 #card-preview-pop {
     animation: fadeIn 0.15s ease;
     z-index: 3000;
@@ -1541,7 +1542,8 @@
 
 /* 必要ポイント（表示切替ボタン） */
 #exchange-toggle-btn-compact {
-    font-size: .6rem;
+    width: 8rem;
+    font-size: 1.2rem;
     padding: .2rem .3rem;
     border: 1px solid #ddd;
     border-radius: 999px;
@@ -1549,26 +1551,31 @@
     cursor: pointer;
     margin-bottom: auto;
 }
+@media (max-width: 700px) {
+    #shortage-toggle-btn,
+    #exchange-toggle-btn-compact {
+        font-size: 1rem;
+    }
+}
 
 .exchange-values {
-    font-size: .6rem;
+    font-size: 1rem;
     line-height: 1.5;
 }
 .exchange-values ul{
     margin: .2rem 0 0 .3rem;
 }
 
-@media (max-width: 768px) {
-    .owned-info {
-        padding: .5rem .6rem;
-    }
-
-    #shortage-toggle-btn,
-    #exchange-toggle-btn-compact {
-        font-size: .5rem;
-    }
+.point-sand{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: .2rem .6rem;
 }
 
+/*パック別ポイント表示*/
+.by-pack-list-ul{
+    margin: .5rem 0;
+}
 
 /*========デッキ情報ゾーン-デッキ投稿タブ-====*/
 
@@ -2069,6 +2076,7 @@
     cursor: pointer;
     user-select: none;
     font-weight: 500;
+    font-size: 1rem;
 }
 @media (max-width: 700px) {
 .tag-chips .chip {

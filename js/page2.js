@@ -24,14 +24,6 @@ function formatYmd(d = new Date()) {
 // 代表カードのグローバル変数
 let representativeCd = null;
 
-// iOS判定（画像生成時使用）
-function isiOS() {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent);
-}
-function isIOSChrome() {
-  return isiOS() && /CriOS/.test(navigator.userAgent);
-}
-
 
 // === オートセーブ ===//
 const AUTOSAVE_KEY = 'deck_autosave_v1';
@@ -84,12 +76,6 @@ function scheduleAutosave() {
 
 function clearAutosave() {
   try { localStorage.removeItem(AUTOSAVE_KEY); } catch {}
-}
-
-function hasFreshParamOff() {
-  // ?fresh=1 なら復元スキップ（新規開始）
-  const sp = new URLSearchParams(location.search);
-  return sp.get('fresh') === '1';
 }
 
 /*デッキ復元確認トースト*/
@@ -206,6 +192,14 @@ function generateCardListElement(card) {
   cardDiv.setAttribute('data-power_up', String(card.power_up ?? "").toLowerCase());
   cardDiv.setAttribute('data-power_down', String(card.power_down ?? "").toLowerCase());
 
+// リンクカード情報（コラボカードかどうか）と性能元カードの cd を data 属性に含める
+  if (typeof card.link !== 'undefined') {
+    cardDiv.setAttribute('data-link', String(card.link).toLowerCase());
+  }
+  if (typeof card.link_cd !== 'undefined') {
+    cardDiv.setAttribute('data-linkcd', String(card.link_cd));
+  }
+
   // 🔎 検索用にまとめた文字列（小文字化）
   const keywords = [
   card.name, card.race, card.category, card.type,
@@ -307,6 +301,10 @@ function rebuildCardMap() {
     const en2 = cardEl.dataset.effect2 || "";
     const et2 = cardEl.dataset.effecttext2 || "";
 
+    //リンクカード
+    const linkFlag = cardEl.dataset.link;
+    const linkCdRaw = cardEl.dataset.linkcd;
+
     // モーダル用： {name,text} の配列も持たせておく
     const effects = [];
     if (en1 || et1) effects.push({ name: en1 || '効果', text: et1 || '' });
@@ -315,6 +313,7 @@ function rebuildCardMap() {
     cardMap[cd] = {
       name,
       race: cardEl.dataset.race || "",
+      packName: cardEl.dataset.pack || 'その他カード',
       category: cardEl.dataset.category || "",
       type: cardEl.dataset.type || "",
       cost: parseInt(cardEl.dataset.cost) || 0,
@@ -322,7 +321,9 @@ function rebuildCardMap() {
       rarity: cardEl.dataset.rarity || "",
       effectNames: [en1, en2].filter(Boolean),
       effectTexts: [et1, et2].filter(Boolean),
-      effects      // ← buildCardOpEffects が最優先で使う
+      effects,
+      link: linkFlag === 'true',
+      linkCd: linkCdRaw ? parseInt(linkCdRaw) : parseInt(cd)
     };
   });
 }
@@ -696,16 +697,6 @@ function bytesFromB64url(s){
   return out;
 }
 
-// v1用：フル2bit列を展開
-function unpack2bit(bytes, length){
-  const out = new Uint8Array(length);
-  for (let i=0;i<length;i++){
-    const q = i >> 2, r = i & 3;
-    out[i] = (bytes[q] >> (r*2)) & 3;
-  }
-  return out;
-}
-
 
 //#endregion
 
@@ -780,8 +771,19 @@ function addCard(cd) {
   const raceType = getRaceType(race);
   const isKyuushin = race === "旧神";
 
-  // 既に3枚入っていれば追加不可
-  if ((deck[cd] || 0) >= 3) return;
+
+  // リンクカード込みで既に3枚入っていれば追加不可
+  const groupKey = card.link ? String(card.linkCd) : String(cd);
+  let totalGroupCount = 0;
+  for (const [id, count] of Object.entries(deck)) {
+    const other = cardMap[id];
+    if (!other) continue;
+    const otherGroup = other.link ? String(other.linkCd) : String(id);
+    if (otherGroup === groupKey) {
+      totalGroupCount += count;
+    }
+  }
+  if (totalGroupCount >= 3) return;
 
   // 旧神は1枚まで、かつ他の旧神がいる場合は追加不可
   if (isKyuushin) {
@@ -1662,6 +1664,25 @@ function buildRepSelectGrid() {
   });
 }
 
+//代表カード初期化処理
+document.addEventListener('DOMContentLoaded', () => {
+  ['deck-representative', 'post-representative'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('tap-target');
+    el.style.cursor = 'pointer';
+    el.title = 'タップして代表カードを選択';
+    el.addEventListener('click', openRepSelectModal);
+  });
+
+  document.getElementById('repSelectClose')?.addEventListener('click', closeRepSelectModal);
+  document.getElementById('repSelectModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'repSelectModal') closeRepSelectModal();
+  });
+});
+
+
+/*旧式代表カード選択
 // 起動時に「カード名」をタップ可能にしておく
 document.addEventListener('DOMContentLoaded', () => {
   ['deck-representative', 'post-representative'].forEach(id => {
@@ -1688,6 +1709,8 @@ document.addEventListener('DOMContentLoaded', () => {
     el.title = 'タップして代表カードを選択';
   });
 });
+*/
+
 
 
 //枚数表示サイズ調整
@@ -1758,7 +1781,7 @@ function updateDeckSummaryDisplay() {
   if (postEl) postEl.textContent = name;
 }
 
-
+/*もう使ってないかも？
 //デッキリスト「デッキをここに表示」
   function updateDeckEmptyMessage() {
     const deck = document.getElementById("deck-card-list");
@@ -1772,6 +1795,7 @@ function updateDeckSummaryDisplay() {
       msg.style.display = "none";
     }
   }
+*/
 
 let lastMainRace = null;
   // #deck-card-list の背景をメイン種族色に
@@ -2179,36 +2203,6 @@ if (powerWrap) {
 }
 
 
-// 4) 初手事故率（マリガン対応）
-// 可とみなす条件：コスト4以下
-const earlyPlayable = deckCards.filter(c => (c.cost || 0) <= 4).length;
-
-// マリガン枚数の反映：value="0" のとき 4枚、以降 value の分だけ +1
-const mulliganEl = document.getElementById('mulligan-count');
-const mulliganVal = parseInt(mulliganEl?.value ?? '0', 10) || 0;
-const draws = 4 + mulliganVal;
-
-// 事故率（= 引いた全カードが「非プレイ可能」になる確率）
-const badRatePercent = calculateBadHandRate(deckCards.length, earlyPlayable, draws) * 100;
-
-// 表示
-const badRateEl = document.getElementById('bad-hand-rate');
-if (badRateEl) badRateEl.textContent = `${badRatePercent.toFixed(1)}%`;
-
-// 1%以下なら注記を表示、それ以外は非表示
-let freqEl = document.getElementById('bad-hand-frequency');
-// 必要なら自動生成（HTMLに既にあるならこの塊は実行されません）
-if (!freqEl && badRateEl) {
-  freqEl = document.createElement('span');
-  freqEl.id = 'bad-hand-frequency';
-  freqEl.textContent = '（ほぼ事故なし）';
-  badRateEl.insertAdjacentElement('afterend', freqEl);
-}
-if (freqEl) {
-  freqEl.style.display = (badRatePercent <= 1) ? '' : 'none';
-}
-
-
 // 5) データラベル（最初に一度だけでOK）
 try { Chart.register(window.ChartDataLabels); } catch (_) {}
 
@@ -2273,55 +2267,23 @@ if (powerCtx) {
   updateAutoTags();//自動タグ設定
 }
 
-// ===== 初手事故率計算用 =====
-function combination(n, k) {
-  if (k < 0 || k > n) return 0;
-  if (k === 0 || k === n) return 1;
-  let result = 1;
-  for (let i = 1; i <= k; i++) result = (result * (n - k + i)) / i;
-  return result;
-}
-function calculateBadHandRate(total, early, draws) {
-  const nonPlayable = total - early;
-  if (nonPlayable < draws) return 0;
-  const numer = combination(nonPlayable, draws);
-  const denom = combination(total, draws);
-  return denom === 0 ? 0 : numer / denom;
-}
 
-// ===== 分析表示切替 =====
-function toggleAnalysis() {
-  const section = document.getElementById("analysis-section");
-  const btn = document.getElementById("toggle-analysis-btn");
-  const isOpen = section.classList.toggle("open");
-  if (isOpen) {
-    updateDeckAnalysis(); // 開くときだけ分析を更新
-    updateExchangeSummary();// ポイント等のサマリーを更新
-    btn.textContent = "⬆ 分析を隠す";
-  } else {
-    btn.textContent = "🔍 分析を表示";
-  }
-}
-
-
-// マリガン枚数変更時に再計算
-document.getElementById('mulligan-count')?.addEventListener('change', () => updateDeckAnalysis());
 
 /* =========================
-   交換ポイント計算と表示
-   - 不足枚数 = デッキ要求 - 所持合計(normal+shine+premium)
+   交換ポイント計算と表示（パック別集計版）
+   - 未所持枚数 = デッキ要求 - 所持合計(normal+shine+premium)
    - 不足分のみをポイント/ダイヤ/砂に換算
-   - 砂はUIに合わせてレジェンド/ゴールドのみ表示
+   - ポイントは「パック別の内訳」を表示、ダイヤは合計のみ
 ========================= */
 
-// 1枚あたりの交換レート（前に入れていた export は不要です）
+// 交換レート（既存値）
 const EXCHANGE_RATE = {
-  point:   { LEGEND: 300, GOLD: 150, SILVER: 20,  BRONZE: 10 },
+  point:   { LEGEND: 300,  GOLD: 150,  SILVER: 20,  BRONZE: 10 },
   diamond: { LEGEND: 4000, GOLD: 1000, SILVER: 250, BRONZE: 150 },
-  sand:    { LEGEND: 300, GOLD: 150, SILVER: 20,  BRONZE: 10 },
+  sand:    { LEGEND: 300,  GOLD: 150,  SILVER: 20,  BRONZE: 10 },
 };
 
-/** レアリティ文字列 → キー/アイコン */
+// レアリティ → キー
 function rarityToKeyJP(r) {
   if (!r) return null;
   if (r.includes('レジェ'))  return 'LEGEND';
@@ -2330,60 +2292,242 @@ function rarityToKeyJP(r) {
   if (r.includes('ブロンズ')) return 'BRONZE';
   return null;
 }
-const RARITY_ICON = { LEGEND:'🌈', GOLD:'🟡', SILVER:'⚪️', BRONZE:'🟤' };
 
+/* ============= packs.json 読み込み（順序ラベル） ============= */
+// packs.json の順序・ラベルを共通関数から取得して使う版（common.js の loadPackCatalog を利用）
+let __PACK_ORDER = null;
+let __PACK_LABELS = {}; // en → 表示ラベル（基本は en のまま）
 
-function rarityIconJP(rarity) {
-  if (!rarity) return '';
-  if (rarity.includes('レジェ'))  return '🌈';
-  if (rarity.includes('ゴールド')) return '🟡';
-  if (rarity.includes('シルバー')) return '⚪️';
-  if (rarity.includes('ブロンズ')) return '🟤';
-  return '';
+async function ensurePacksLoaded(){
+  if (__PACK_ORDER) return;
+
+  // 1) まず同階層の packs.json を探す
+  const tryUrls = ['./public/packs.json'];
+  for (const url of tryUrls) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) continue;
+      const data = await res.json();
+
+      // order（表示順）と labels（表示名）を構築
+      __PACK_ORDER = Array.isArray(data.order) ? data.order.slice() : [];
+      __PACK_LABELS = {};
+      if (Array.isArray(data.packs)) {
+        data.packs.forEach(p => {
+          if (p?.en) __PACK_LABELS[p.en] = p.en; // 今は EN 表示で統一
+        });
+      }
+
+      return; // 成功
+    } catch(e) {
+      // 次の候補へ
+    }
+  }
+
+  // 2) どれも読めなかった場合のフォールバック（最小限）
+  console.warn('packs.json を読み込めませんでした。アルファベット順で表示します。');
+  __PACK_ORDER = [];     // ← 無順序（render 側で dict のキーを並べ替え）
+  __PACK_LABELS = {};
+
+  // 表示順の補完：orderが無い/不足なら末尾に足す
+  const mustHave = ['Awaking The Oracle', 'Beyond the Sanctuary', 'Creeping Souls', 'Drawn Sword', 'その他カード', 'コラボカード'];
+  __PACK_ORDER = Array.isArray(__PACK_ORDER) ? __PACK_ORDER : [];
+  for (const k of mustHave) if (!__PACK_ORDER.includes(k)) __PACK_ORDER.push(k);
 }
 
-/** 不足カード（配列）をレアリティ別に合計 {LEGEND:n,...} */
-function groupShortageByRarity(shortages){
-  const sum = { LEGEND:0, GOLD:0, SILVER:0, BRONZE:0 };
-  shortages.forEach(s=>{
-    const info = cardMap[s.cd] || {};
-    const key = rarityToKeyJP(info.rarity);
-    if (key) sum[key] += (s.shortage|0);
-  });
-  return sum;
+function getPackLabel(en){ return __PACK_LABELS[en] || en || 'その他カード'; }
+
+
+/* EN名をカードの pack_name / pack / pack_en から抽出
+   例: "Awaking The Oracle「神託者の覚醒」" → "Awaking The Oracle"
+   例: "Beyond the Sanctuary／聖域の先へ"   → "Beyond the Sanctuary"
+   ※ 無指定や不明な場合は 'その他カード' を返す（'Unknown'は使わない）
+*/
+function getPackEnName(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return 'その他カード';
+  const i = s.indexOf('「');                 // EN「JP」
+  if (i >= 0) return s.slice(0, i).trim() || 'その他カード';
+  const slash = s.indexOf('／');            // EN／JP
+  if (slash >= 0) return s.slice(0, slash).trim() || 'その他カード';
+  return s; // すでに EN 単体（例: "Drawn Sword" / "コラボカード" など）
 }
 
-// 所持＝OwnedStore優先（未初期化時は localStorage）
-// 既に page2.js にある readOwnedMapForDeckmaker() をそのまま使います
+/* ---------- 不足・通貨計算（完成版：この1つだけ残す） ---------- */
+function computeExchangeNeeds(){
+  const owned = readOwnedMapForDeckmaker?.() || {};
+  const sand  = { LEGEND:0, GOLD:0, SILVER:0, BRONZE:0 };
+  const packPoint = {};  // パック別のポイント（※コラボは内訳に含めない）
+  const shortages = [];  // 未所持カードリスト { cd, name, shortage }
+  let pointTotal = 0;
+  let diamondTotal = 0;
 
-function computeExchangeNeeds() {
-  const owned = readOwnedMapForDeckmaker();
-  let point = 0, diamond = 0;
-  const sand = { LEGEND: 0, GOLD: 0, SILVER: 0, BRONZE: 0 };
-  const shortages = [];
-
-  for (const [cd, need] of Object.entries(deck)) {
-    const info = cardMap[cd];
+  for (const [cd, needRaw] of Object.entries(window.deck || {})) {
+    // pack_name を確実に拾うため allCardsMap をフォールバックに使う
+    const info = (window.cardMap?.[cd]) || (window.allCardsMap?.[cd]);
     if (!info) continue;
+
     const key = rarityToKeyJP(info.rarity);
     if (!key) continue;
 
     const v = owned[cd] || { normal:0, shine:0, premium:0 };
     const have = (v.normal|0) + (v.shine|0) + (v.premium|0);
-    const shortage = Math.max(0, (need|0) - have);
+    const shortage = Math.max(0, (needRaw|0) - have);
     if (!shortage) continue;
 
-    point   += EXCHANGE_RATE.point[key]   * shortage;
-    diamond += EXCHANGE_RATE.diamond[key] * shortage;
-    sand[key] += EXCHANGE_RATE.sand[key]  * shortage;
+    // 未所持カード情報を記録
+    shortages.push({ cd, name: info.name || cd, shortage });
 
+    // 合計（ポイント・ダイヤ・砂）
+    const pt = (EXCHANGE_RATE.point[key]   || 0) * shortage;
+    const dm = (EXCHANGE_RATE.diamond[key] || 0) * shortage;
+    const sd = (EXCHANGE_RATE.sand[key]    || 0) * shortage;
 
-    shortages.push({ cd, name: info.name, shortage });
+    pointTotal   += pt;
+    diamondTotal += dm;
+    sand[key]    += sd;
+
+    // パック別（ポイントのみ集計）— コラボカードは除外
+    const packEn = getPackEnName(info.packName || info.pack_name || info.pack || '');
+    if (packEn !== 'コラボカード') {
+      packPoint[packEn] = (packPoint[packEn] || 0) + pt;
+    }
   }
-  return { point, diamond, sand, shortages };
+
+  // packPoints は packPoint のエイリアスとする。shortages も返す。
+  const packPoints = packPoint;
+  return { pointTotal, diamondTotal, sand, packPoint, packPoints, shortages };
 }
 
-function updateExchangeSummary() {
+
+/* ---------- パック別ポイントの描画（ポイントのみ） ---------- */
+function renderPointByPack(dict){
+  const box = document.getElementById('point-by-pack');
+  if (!box) return;
+
+  // dict が空 or すべて 0 なら非表示
+  const keys = Object.keys(dict || {}).filter(k => (dict[k] | 0) > 0);
+  if (!keys.length) {
+    box.innerHTML = '';
+    box.style.display = 'none';
+    return;
+  }
+
+  // 1) __PACK_ORDER に載っていて、かつ dict に実データがあるもの（順序は packs.json の order）
+  const orderedInDict = Array.isArray(__PACK_ORDER)
+    ? __PACK_ORDER.filter(en => (dict[en] | 0) > 0)
+    : [];
+
+  // 2) __PACK_ORDER に無いが dict に存在するもの（アルファベット順）
+  const extras = keys.filter(en => !orderedInDict.includes(en))
+                     .sort((a,b)=> a.localeCompare(b));
+
+  const finalOrder = [...orderedInDict, ...extras];
+
+  const html = [];
+  for (const en of finalOrder) {
+    const val = dict[en] | 0;
+    if (!val) continue;
+    html.push(`<li>${getPackLabel(en)}：<strong>${val}ポイント</strong></li>`);
+  }
+
+  box.innerHTML = `<ul class="by-pack-list-ul">${html.join('')}</ul>`;
+  box.style.display = ''; // 表示
+}
+// ▼ 追加（renderPointByPack の直後でOK）
+let __latestPackPoint = null;
+function tryRenderPointByPack(dict){
+  // dict が来たら更新、来なければ前回値で描画だけ試みる
+  if (dict) __latestPackPoint = dict;
+
+  const box = document.getElementById('point-by-pack');
+  if (!box || !__latestPackPoint) return;
+
+  // 既存の描画ロジックに委譲
+  renderPointByPack(__latestPackPoint);
+
+  // 現在モードがポイント以外なら非表示にして整合
+  if (__exchangeModeCompact !== 'point') {
+    box.style.display = 'none';
+  }
+}
+
+
+/*
+ * パック別ポイントの描画（新UI用）
+ *
+ * computeExchangeNeeds() から取得した packPoint を元にポイント一覧を描画します。
+ * 旧UIコードでは未定義の renderByPackList() を呼び出しており、
+ * その結果パックごとのポイントが正しく表示されない不具合がありました。
+ * 新UIでは本関数を経由して packPoint を取得し、既存の renderPointByPack() へ委譲します。
+ */
+function renderByPackList() {
+  // 最新の交換ポイント情報を取得
+  const { packPoint } = computeExchangeNeeds();
+  // packPoint を用いて描画
+  renderPointByPack(packPoint);
+}
+
+/* =========================
+   パック内訳の再計算をデッキ更新に追従させるフック
+   - 追加/削除/並び替え/復元など、代表的な関数の後に再計算を挿入
+   ========================= */
+(function wirePackPointAutoRecalc(){
+  function recalc(){ try{ updateExchangeSummary(); }catch(e){} }
+
+  function hook(name){
+    const fn = window[name];
+    if (typeof fn === 'function' && !fn.__packPointHooked){
+      const orig = fn;
+      window[name] = function(...args){
+        const r = orig.apply(this, args);
+        try{ recalc(); }catch(e){}
+        return r;
+      };
+      window[name].__packPointHooked = true;
+    }
+  }
+
+  // よく呼ばれる描画系・読込系の関数をカバー（存在すればフック）
+  [
+    'renderDeckList',
+    'updateDeckAnalysis',
+    'updateDeckSummaryDisplay',
+    'loadDeckFromStorage',
+    'loadDeckFromLocal',
+    'restoreDeckFromLocal',
+    'applyDeckCode',
+    'loadDeckByCode',
+  ].forEach(hook);
+
+  // カードロード完了 or 任意の復元イベントにも追従
+  window.onCardsLoaded = (function(prev){
+    return function(...args){
+      if (typeof prev === 'function') prev.apply(this, args);
+      recalc();
+    };
+  })(window.onCardsLoaded);
+
+  window.onDeckRestored = (function(prev){
+    return function(...args){
+      if (typeof prev === 'function') prev.apply(this, args);
+      recalc();
+    };
+  })(window.onDeckRestored);
+
+  // 最後に一度だけ実行
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', recalc, { once:true });
+  } else {
+    recalc();
+  }
+})();
+
+
+/* ---------- 合計表示＋パック別（ポイント）を反映 ---------- */
+async function updateExchangeSummary(){
+  await ensurePacksLoaded();
+
   const els = {
     point:    document.getElementById('point-cost'),
     diamond:  document.getElementById('diamond-cost'),
@@ -2394,58 +2538,105 @@ function updateExchangeSummary() {
   };
   if (!els.point) return;
 
-  const { point, diamond, sand, } = computeExchangeNeeds();
-  const fmt = (n) => String(n);
+  const { pointTotal, diamondTotal, sand, packPoint } = computeExchangeNeeds();
 
-  // 数値の更新
-  els.point.textContent   = String(point);
-  els.diamond.textContent = String(diamond);
-  els.sandLeg.textContent = String(sand.LEGEND);
-  els.sandGld.textContent = String(sand.GOLD);
-  els.sandSil.textContent = String(sand.SILVER);
-  els.sandBro.textContent = String(sand.BRONZE);
+  els.point.textContent   = String(pointTotal || 0);
+  els.diamond.textContent = String(diamondTotal || 0);
+  els.sandLeg.textContent = String(sand.LEGEND || 0);
+  els.sandGld.textContent = String(sand.GOLD   || 0);
+  els.sandSil.textContent = String(sand.SILVER || 0);
+  els.sandBro.textContent = String(sand.BRONZE || 0);
 
-}
+  // パック別（ポイントのみ）
+  tryRenderPointByPack(packPoint);
 
-
-
-// 表示切り替え（ボタンの onclick="toggleExchange()" から呼ばれる）
-let __exchangeMode = 'point'; // 'point' | 'diamond' | 'sand'
-
-function setExchangeVisible(mode) {
-  const elPoint = document.getElementById('exchange-point');
-  const elDia   = document.getElementById('exchange-diamond');
-  const elSand  = document.getElementById('exchange-sand');
-  if (elPoint) elPoint.style.display = (mode === 'point'   ? '' : 'none');
-  if (elDia)   elDia.style.display   = (mode === 'diamond' ? '' : 'none');
-  if (elSand)  elSand.style.display  = (mode === 'sand'    ? '' : 'none');
-
-  const btn = document.getElementById('exchange-toggle-btn');
-  if (btn) {
-    btn.textContent =
-      mode === 'point'   ? '🟢 ポイント' :
-      mode === 'diamond' ? '💎 ダイヤ' :
-                           '🪨 砂';
+  // ★ 追加：コンパクト行も“現在モードのまま”上書き同期しておく
+  if (document.getElementById('exchange-values-compact')) {
+    setExchangeCompact({
+      point: pointTotal,
+      diamond: diamondTotal,
+      sand,
+      packPoint
+    });
   }
 }
-function toggleExchange() {
-  __exchangeMode = (__exchangeMode === 'point')
-    ? 'diamond'
-    : (__exchangeMode === 'diamond' ? 'sand' : 'point');
-  setExchangeVisible(__exchangeMode);
+
+/* ---------- コンパクト行（トグルは合計のみ切替＋ポイント時は内訳） ---------- */
+let __exchangeModeCompact = 'point'; // 'point'|'diamond'|'sand'
+function setExchangeCompact(values){
+  const wrap = document.getElementById('exchange-values-compact');
+  const btn  = document.getElementById('exchange-toggle-btn-compact');
+  // ポイントの時だけパック内訳を出す、それ以外は消す
+  const packBox = document.getElementById('point-by-pack');
+  if (packBox) {
+    packBox.style.display = (__exchangeModeCompact === 'point') ? '' : 'none';
+  }
+  if (!wrap || !btn) return;
+
+  const { point, diamond, sand, packPoint } = values;
+
+  if (__exchangeModeCompact === 'point') {
+    // ポイントモード：合計は小さめ、内訳リストを別領域に描画
+    wrap.innerHTML = `🟢 必要ポイント：`;
+    tryRenderPointByPack(packPoint);
+    if (packBox) packBox.style.display = ''; // 見せる
+  } else if (__exchangeModeCompact === 'diamond') {
+    wrap.innerHTML = `💎 必要ダイヤ：<strong>${diamond|0}個</strong>`;
+    if (packBox) { packBox.innerHTML = ''; packBox.style.display = 'none'; }
+  } else { // sand
+    wrap.innerHTML =
+      `🪨 必要砂：
+      <div class="point-sand">
+        <span class="rar-item">🌈レジェンド${sand?.LEGEND|0}個</span>
+        <span class="rar-item">🟡ゴールド${sand?.GOLD|0}個</span>
+        <span class="rar-item">⚪️シルバー${sand?.SILVER|0}個</span>
+        <span class="rar-item">🟤ブロンズ${sand?.BRONZE|0}個</span>
+      </div>`;
+    if (packBox) { packBox.innerHTML = ''; packBox.style.display = 'none'; }
+  }
+
+  btn.textContent =
+    (__exchangeModeCompact === 'point')   ? '🟢 ポイント' :
+    (__exchangeModeCompact === 'diamond') ? '💎 ダイヤ'   : '🪨 砂';
 }
 
-// 初期表示はポイント
-document.addEventListener('DOMContentLoaded', () => {
-  setExchangeVisible('point');
+
+function toggleExchangeCompact(){
+  __exchangeModeCompact =
+    (__exchangeModeCompact === 'point')   ? 'diamond' :
+    (__exchangeModeCompact === 'diamond') ? 'sand'    : 'point';
+  const { pointTotal, diamondTotal, sand, packPoint } = computeExchangeNeeds();
+  setExchangeCompact({
+    point: pointTotal,
+    diamond: diamondTotal,
+    sand,
+    packPoint
+  });
+}
+window.toggleExchangeCompact = toggleExchangeCompact;
+
+/* ---------- 初期化（DOMContentLoaded） ---------- */
+document.addEventListener('DOMContentLoaded', ()=>{
   updateExchangeSummary();
+  const { pointTotal, diamondTotal, sand, packPoint } = computeExchangeNeeds();
+  setExchangeCompact({
+    point: pointTotal,
+    diamond: diamondTotal,
+    sand,
+    packPoint
+  });
+    // 要素の生成順に負けないよう、最後にもう一度だけ描画を試みる
+  tryRenderPointByPack();
+
 });
+
 
 
 /* =========================
    🆕 マリガン練習ロジック
    ========================= */
 
+   const RARITY_ICON = { LEGEND:'🌈', GOLD:'🟡', SILVER:'⚪️', BRONZE:'🟤' };
 (() => {
   const HAND_SIZE = 4;
 
@@ -2613,10 +2804,6 @@ window.addEventListener('resize', () => {
 });
 
 
-
-
-
-
   // UI活性とボタン文言切替（単一ボタン仕様）
   function refreshUI(){
     const deckSize = Object.values(getDeckObject()).reduce((a,b)=>a+(b|0),0);
@@ -2722,6 +2909,17 @@ if (window.OwnedStore?.onChange) {
   window.OwnedStore.onChange(() => updateExchangeSummary());
 }
 
+// ===== 不足カードをレアリティ別に集計 =====
+function groupShortageByRarity(shortages){
+  const sum = { LEGEND:0, GOLD:0, SILVER:0, BRONZE:0 };
+  if (!Array.isArray(shortages)) return sum;
+  shortages.forEach(s=>{
+    const info = cardMap[s.cd] || {};
+    const key = rarityToKeyJP(info.rarity);
+    if (key) sum[key] += (s.shortage|0);
+  });
+  return sum;
+}
 
 /** コンパクト不足UIの描画 */
 function renderShortageCompact(shortages){
@@ -2833,7 +3031,7 @@ function renderShortageCompact(shortages){
 }
 
 
-// ==== 不足カード画像プレビュー共通層 ====
+// ==== 未所持カード画像プレビュー共通層 ====
 function ensureCardPreviewLayer() {
   if (document.getElementById('card-preview-pop')) return;
   const el = document.createElement('div');
@@ -2880,56 +3078,27 @@ document.addEventListener('click', (e) => {
 });
 
 
-/*不足リスト閉じるorタブ切り替え時にプレビュー閉じる*/
+/*未所持リスト閉じるorタブ切り替え時にプレビュー閉じる*/
 document.getElementById('shortage-toggle-btn')?.addEventListener('click', ()=> hideCardPreview());
 document.addEventListener('deckTabSwitched', ()=> hideCardPreview()); // 既存フックが無ければ afterTabSwitched 内で直接呼んでもOK
 
 
 
-/** 必要ポイント（コンパクト）の描画 */
-let __exchangeModeCompact = 'point'; // 'point'|'diamond'|'sand'
-function setExchangeCompact(values){
-  const wrap = document.getElementById('exchange-values-compact');
-  const btn  = document.getElementById('exchange-toggle-btn-compact');
-  if (!wrap || !btn) return;
-
-  const { point, diamond, sand } = values;
-  const html =
-    (__exchangeModeCompact === 'point')
-      ? `🟢 必要ポイント：<strong>${point}</strong>`
-      : (__exchangeModeCompact === 'diamond')
-        ? `💎 必要ダイヤ：<strong>${diamond}</strong>`
-        : `🪨 必要砂：<ul>
-             <li>レジェンド：${sand.LEGEND}個</li>
-             <li>ゴールド：${sand.GOLD}個</li>
-             <li>シルバー：${sand.SILVER}個</li>
-             <li>ブロンズ：${sand.BRONZE}個</li>
-           </ul>`;
-
-  wrap.innerHTML = html;
-  btn.textContent =
-    (__exchangeModeCompact === 'point')   ? '🟢 ポイント' :
-    (__exchangeModeCompact === 'diamond') ? '💎 ダイヤ' : '🪨 砂';
-}
-function toggleExchangeCompact(){
-  __exchangeModeCompact =
-    (__exchangeModeCompact === 'point')   ? 'diamond' :
-    (__exchangeModeCompact === 'diamond') ? 'sand'    : 'point';
-  // 値は直近の計算結果から再描画
-  const { point, diamond, sand } = computeExchangeNeeds();
-  setExchangeCompact({ point, diamond, sand });
-}
-window.toggleExchangeCompact = toggleExchangeCompact;
 
 /** まとめ：計算→新UI描画 */
 function renderOwnedInfoCompact(){
   const ownedBox = document.getElementById('owned-info');
   if (!ownedBox) return;
 
-  const { point, diamond, sand, shortages } = computeExchangeNeeds();
+  const { pointTotal, diamondTotal, sand, shortages, packPoint } = computeExchangeNeeds();
+
+  // 未所持リスト（レアリティ枚数サマリ＋カード行）
   renderShortageCompact(shortages);
-  setExchangeCompact({ point, diamond, sand });
+  // 合計のコンパクト表示（ポイント/ダイヤ/砂）
+  // ★ ポイント時の内訳描画に必要な packPoint も渡す
+  setExchangeCompact({ point: pointTotal, diamond: diamondTotal, sand, packPoint });
 }
+
 
 // 所持データがあるか？（OwnedStore優先、なければ localStorage）
 function hasOwnedData() {
@@ -3014,7 +3183,7 @@ if (window.OwnedStore?.onChange) {
 
 
 // グローバル公開（HTMLの onclick から使う）
-window.toggleExchange = toggleExchange;
+
 window.updateExchangeSummary = updateExchangeSummary;
 
 window.updateDeckAnalysis = updateDeckAnalysis;
@@ -3039,26 +3208,6 @@ function getDeckCardsArray(){
   for (const [cd, count] of entries) for (let i=0;i<count;i++) out.push(cd);
   return out;
 }
-
-// 画像読み込み（フォールバックは 00000.webp）
-function loadCardImage(cd){
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => { img.onerror = null; img.src = 'img/00000.webp'; };
-    img.src = `img/${cd}.webp`;
-  });
-}
-
-// <img>を枠いっぱいに「cover」させるための計算
-function fitCover(sw, sh, dw, dh){
-  const sr = sw/sh, dr = dw/dh;
-  let w, h, dx, dy;
-  if (sr > dr){ h = dh; w = h*sr; dx = -(w-dw)/2; dy = 0; }
-  else       { w = dw; h = w/sr; dx = 0;         dy = -(h-dh)/2; }
-  return {w,h,dx,dy};
-}
-
 
 
 /*デッキ名同期
@@ -3450,6 +3599,16 @@ function loadDeckFromIndex(index) {
   updateDeckSummaryDisplay();//代表カードデッキ情報表示
   updateExchangeSummary();//交換ポイント数更新
   scheduleAutosave();  //オートセーブ
+  updateExchangeSummary(); // ★ 合計やパック別の再計算＆描画
+
+  // ★ さらに現在モードのままコンパクト行も上書き
+  const { pointTotal, diamondTotal, sand, packPoint } = computeExchangeNeeds();
+  setExchangeCompact({
+    point: pointTotal,
+    diamond: diamondTotal,
+    sand,
+    packPoint
+  });
 }
 
 // 🗑 インデックス指定で削除
@@ -4680,3 +4839,46 @@ const GAS_POST_ENDPOINT =
 
 
 const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+
+
+
+
+// ===== ベータ版制御 =====
+document.addEventListener('DOMContentLoaded', () => {
+  const postBtn = document.getElementById('post-submit');
+  if (postBtn) {
+    postBtn.disabled = true;
+    postBtn.textContent = '投稿（ベータ中は無効）';
+    postBtn.style.fontSize = '.6rem';
+    postBtn.style.opacity = '0.6';
+    postBtn.style.cursor = 'not-allowed';
+  }
+
+  const status = document.getElementById('post-status');
+  if (status) {
+    status.textContent = '※ ベータ版のため投稿送信はできません。';
+    status.style.color = '#b57b00';
+  }
+
+    const previewBtn = document.getElementById('post-preview');
+  if (previewBtn) {
+    previewBtn.disabled = true;
+    previewBtn.textContent = 'プレビュー（ベータ中は無効）';
+    previewBtn.style.fontSize = '.6rem';
+    previewBtn.style.opacity = '0.6';
+    previewBtn.style.cursor = 'not-allowed';
+
+    // 安全対策：クリックしても何もしない
+    previewBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      alert('現在ベータ版のためプレビューは利用できません。');
+    });
+  }
+});
+
+
+function submitDeckPost(event){
+  alert('現在ベータ版のため投稿は無効です。');
+  event.preventDefault();
+  return false;
+}

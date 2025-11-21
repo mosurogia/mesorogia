@@ -783,7 +783,7 @@ if (typeof window.setAuthChecking !== 'function') {
 
 // ==== Auth 一本化（PIN撤去版・UI結線） ====
 (function(){
-  const API = 'https://script.google.com/macros/s/AKfycbyoFYF12R929Mo1JgI23zWiBw0eVMoqATz-TWOHGhdxr4DVHGHhPrboxyxjuC57Mcig/exec';
+  const API = 'https://script.google.com/macros/s/AKfycbxFj5HABSLGJaghas5MR56k-pW1QIef2kw_Z_wXvcQ-Nzq0_VMkxAW76GwKuOojK50/exec';
   window.API = API;
 
   const Auth = {

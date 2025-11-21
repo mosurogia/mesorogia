@@ -1,5 +1,6 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
+
 
 <head>
     <meta charset="UTF-8">
@@ -14,7 +15,7 @@
 
 
     <!-- OGP基本 -->
-    <meta property="og:title" content="モスロギア | 神託のメソロギア デッキ投稿">
+    <meta property="og:title" content="モスロギア | 神託のメソロギア デッキメーカー">
     <meta property="og:description" content="このサイトはアプリ「神託のメソロギア」のカード検索・デッキ構築ができる非公式サイトです。">
     <meta property="og:image" content="https://mosurogia.github.io/mesorogia-cards/img/deckmakerogp.webp">
     <meta property="og:url" content="https://mosurogia.github.io/mesorogia-cards/">
@@ -22,118 +23,110 @@
 
     <!-- Twitterカード向け -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="モスロギア | 神託のメソロギア デッキ投稿">
+    <meta name="twitter:title" content="モスロギア | 神託のメソロギア デッキメーカー">
     <meta name="twitter:description" content="カード検索とデッキ構築で神託のメソロギアをもっと楽しもう！">
     <meta name="twitter:image" content="https://mosurogia.github.io/mesorogia-cards/img/deckmakerogp.webp">
 
 
     <!-- CSS -->
     <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/common-page24.css">
+    <link rel="stylesheet" href="css/common-page23.css">
     <link rel="stylesheet" href="css/page4.css">
 
-    <!--棒グラフ外部リソース-->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <!--画像生成-->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
-
-
 <body>
 
-<header class="main-header">
-    <div class="header-logo">
-        <img src="img/tatudosi.webp" alt="神託のメソロギア ロゴ" />
+    <header class="main-header">
+        <div class="header-logo">
+            <img src="img/tatudosi.webp" alt="神託のメソロギア ロゴ" />
+        </div>
+        <nav class="header-nav">
+            <a href="index.html">📖 一覧</a>
+            <a href="deckmaker.html">🃏 デッキメーカー</a>
+            <a href="cardcheker.html">📊 所持率チェッカー</a>
+            <a class="active-page" href="deck-post.html">📤 デッキ投稿</a>
+        </nav>
+    </header>
+
+<!-- タブバー -->
+<div class="tab-bar">
+    <div class="tab active" onclick="switchTab('tab-post-list', this)">
+        <span>📤 投稿一覧</span>
     </div>
-    <nav class="header-nav">
-        <a href="index.html">📖 一覧</a>
-        <a href="deckmaker.html">🃏 デッキメーカー</a>
-        <a href="cardcheker.html">📊 所持率チェッカー</a>
-        <a class="active-page" href="deck-post.html">📤 デッキ投稿</a>
-    </nav>
-</header>
-
-<main id="post-app">
-    <section class="post-header">
-        <div class="search-row">
-            <input id="keyword" type="search" inputmode="search" placeholder="デッキ名・作者・#ハッシュタグ・カード名で検索">
-            <button id="openFiltersBtn" aria-haspopup="dialog">絞り込み</button>
-        </div>
-
-        <div class="status-row">
-            <span id="resultCount">0件</span>
-            <label class="select-wrap">
-                並び:
-                <select id="sortSelect">
-                    <option value="new">新しい順</option>
-                    <option value="old">古い順</option>
-                    <option value="fav">お気に入り多い順</option>
-                </select>
-            </label>
-            <label class="select-wrap">
-                表示:
-                <select id="viewSelect">
-                    <option value="card">カード</option>
-                    <option value="list">リスト</option>
-                </select>
-            </label>
-        </div>
-
-        <div id="filterChips" class="chips scroll-x" aria-label="フィルタチップ">
-            <!-- 自動/選択タグ、ハッシュタグ、種族、タイプ などをJSで注入 -->
-        </div>
-    </section>
-
-    <section id="postList" class="post-list" aria-live="polite"></section>
-
-    <section class="load-more">
-        <button id="loadMoreBtn">もっと見る</button>
-    </section>
-</main>
-<!-- ▲▲ デッキ投稿：一覧UI本体 ▲▲ -->
-
-<!-- 類似・比較：下から出るシート -->
-<div id="compareSheet" class="sheet hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-label="類似・比較">
-    <div class="sheet-handle" draggable="false"></div>
-    <div class="sheet-body">
-        <div class="sheet-tabs" role="tablist">
-            <button data-tab="diff" class="active" role="tab" aria-selected="true">差分</button>
-            <button data-tab="deckA" role="tab" aria-selected="false">A</button>
-            <button data-tab="deckB" role="tab" aria-selected="false">B</button>
-        </div>
-        <div id="sheetContent" class="sheet-content"></div>
-        <div class="sheet-actions">
-            <button id="closeSheetBtn">閉じる</button>
-        </div>
+    <div class="tab" onclick="switchTab('tab-compare', this)">
+        <span>⚖️ デッキ比較</span>
     </div>
 </div>
 
 
-<footer>
-    <div>
-        <p>
-            <strong>モスロギア</strong> はアプリ『神託のメソロギア』の非公式ファンサイトです。<br>
-            カード一覧検索やデッキメーカー、デッキ分析などを通じて、プレイヤー向けに便利なデータベース機能を提供しています。
-        </p>
-    </div>
+<!--投稿一覧タブ -->
+<div class="tab-content active" id="tab-post-list">
+    <main id="post-app" class="page" aria-labelledby="title-list">
+        <h2 id="title-list" class="sr-only">デッキ一覧</h2>
 
-    <p>
-        🔗 公式サイトはこちら 👉
-        <a href="https://mythologiatheoracle.com/" target="_blank" rel="noopener noreferrer">
-            神託のメソロギア公式サイト
-        </a>
-    </p>
-
-    © 2025 Mesorogia Cards. All rights reserved.<br />
-    当サイトは「神託のメソロギア」の非公式ファンサイトです。画像・データ等の著作権は各権利者に帰属します。<br />
-    一部画像素材は「ジュエルセイバーFREE」<br />
-    （<a href="https://www.jewel-s.jp/" target="_blank" rel="noopener">https://www.jewel-s.jp/</a>）を使用しています。<br />
-    💬 ご要望・不具合報告 👉
-    <a href="https://x.com/192837465aruneo" target="_blank" rel="noopener noreferrer">
-        @192837465aruneo
-    </a>
-</footer>
+        <!-- ツールバー -->
+        <div class="toolbar" id="toolbar">
+            <div class="spacer"></div>
+            <button id="toMineBtn" class="btn-ghost" type="button" aria-controls="pageMine">マイ投稿</button>
+        </div>
 
 
-<!-- JS -->
-<script src="js/common.js"></script>
-<script src="js/page4.js"></script>
+        <!-- 一覧リスト（JSが流し込み） -->
+        <section id="postList" class="post-list" aria-live="polite"></section>
+
+        <!-- 件数表示 -->
+        <div id="resultCount" class="list-status"></div>
+
+        <!-- もっと見る（ページングがある場合に出す） -->
+        <section class="load-more" id="listLoadMore" hidden>
+            <button id="loadMoreBtn" type="button">もっと見る</button>
+        </section>
+    </main>
+
+    <!-- =========================
+    Page: マイ投稿 (#mine) ＝ 全画面感
+========================== -->
+    <main id="pageMine" class="page" hidden aria-labelledby="title-mine">
+        <div class="mine-header">
+            <button id="backToListBtn" class="back-btn" type="button">← 戻る</button>
+            <h2 id="title-mine" style="margin:0;">マイ投稿</h2>
+        </div>
+
+        <!-- 未ログインガード -->
+        <div id="mineGuard" class="info-banner" style="display:none;">
+            マイ投稿を表示・編集するにはログインしてください。
+        </div>
+
+        <!-- マイ投稿リスト -->
+        <section id="myPostList" class="post-list" aria-live="polite"></section>
+
+        <!-- 件数 -->
+        <div id="resultCountMine" class="list-status"></div>
+
+        <!-- もっと見る（マイ投稿側） -->
+        <section class="load-more" id="mineLoadMore" hidden>
+            <button id="loadMoreMineBtn" type="button">もっと見る</button>
+        </section>
+    </main>
+</div>
+
+
+<!--デッキ比較タブ -->
+<div class="tab-content" id="tab-compare">
+    <section class="info-banner">
+        🧪 準備中：ここに「デッキ比較」機能が入ります（まずは枠のみ）。
+    </section>
+</div>
+
+    <!-- スクリプト群 -->
+    <script src="js/common-page24.js"></script>
+    <script src="js/common-page23.js"></script>
+    <script src="js/page4.js"></script>
+    <script>
+    </script>
 </body>
+
+</html>

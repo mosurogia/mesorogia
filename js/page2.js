@@ -3947,34 +3947,100 @@ function exportDeckCode() {
 }
 
 // === 追加: 入力値の読み書きヘルパ ===
-function readPostNote(){ return document.getElementById('post-note')?.value || ''; }
-function writePostNote(v){ const el=document.getElementById('post-note'); if (el) el.value = v||''; }
+function readPostNote(){
+  return document.getElementById('post-note')?.value || '';
+}
+function writePostNote(v){
+  const el = document.getElementById('post-note');
+  if (el) el.value = v || '';
+}
+
+// === ユーザータグ 読み取り ===
 function readUserTags(){
-const wrap = document.getElementById('user-tags');
-if (!wrap) return [];
-return Array.from(wrap.querySelectorAll('.tag')).map(t=> t.textContent.trim()).filter(Boolean).slice(0,3);
+  // 内部状態があればそれを優先
+  if (Array.isArray(window.PostUserTags)) {
+    return window.PostUserTags
+      .map(t => String(t || '').trim())
+      .filter(Boolean)
+      .slice(0, 3);
+  }
+
+  const wrap = document.getElementById('user-tags');
+  if (!wrap) return [];
+
+  return Array.from(wrap.querySelectorAll('.chip'))
+    .map(ch => {
+      const raw = ch.textContent || '';
+      // chip の中身が「タグ名×」になっている場合、末尾の × を落とす
+      const s = raw.endsWith('×') ? raw.slice(0, -1) : raw;
+      return s.trim();
+    })
+    .filter(Boolean)
+    .slice(0, 3);
 }
 
 // === 入力監視: 解説/ユーザータグでオートセーブを走らせる ===
 document.addEventListener('DOMContentLoaded', ()=>{
-const note = document.getElementById('post-note');
-if (note) note.addEventListener('input', scheduleAutosave);
-const userTagInput = document.getElementById('user-tag-input');
-const addBtn = document.getElementById('user-tag-add');
-if (userTagInput && addBtn){
-addBtn.addEventListener('click', ()=>{ setTimeout(scheduleAutosave, 0); });
-userTagInput.addEventListener('keydown', (e)=>{ if (e.key==='Enter') setTimeout(scheduleAutosave, 0); });
-}
+  const note = document.getElementById('post-note');
+  if (note) note.addEventListener('input', scheduleAutosave);
+
+  const userTagInput = document.getElementById('user-tag-input');
+  const addBtn = document.getElementById('user-tag-add');
+  if (userTagInput && addBtn){
+    addBtn.addEventListener('click', ()=>{ setTimeout(scheduleAutosave, 0); });
+    userTagInput.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter') setTimeout(scheduleAutosave, 0);
+    });
+  }
 });
 
+// === ユーザータグ 書き込み ===
 function writeUserTags(list){
-const wrap = document.getElementById('user-tags');
-if (!wrap) return;
-wrap.innerHTML = '';
-(list||[]).forEach(txt=>{
-const chip = document.createElement('span'); chip.className='tag'; chip.textContent=txt; wrap.appendChild(chip);
-});
+  const wrap = document.getElementById('user-tags');
+  if (!wrap) return;
+
+  // 正規化（空文字除外・重複除外・3個まで）
+  const normalized = [];
+  const seen = new Set();
+  (Array.isArray(list) ? list : []).forEach(t => {
+    const s = String(t || '').trim();
+    if (!s || seen.has(s)) return;
+    seen.add(s);
+    if (normalized.length < 3) normalized.push(s);
+  });
+
+  // 内部状態も同期
+  window.PostUserTags = normalized;
+
+  // 描画
+  wrap.innerHTML = '';
+  window.PostUserTags.forEach((tag, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'chip active';
+
+    // ラベル部分
+    const label = document.createElement('span');
+    label.className = 'label';
+    label.textContent = tag;
+    chip.appendChild(label);
+
+    // 削除ボタン
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'rm';
+    rm.textContent = '×';
+    rm.addEventListener('click', () => {
+      window.PostUserTags.splice(i, 1);
+      writeUserTags(window.PostUserTags);
+      if (typeof scheduleAutosave === 'function') scheduleAutosave();
+    });
+
+    chip.appendChild(rm);
+    wrap.appendChild(chip);
+  });
 }
+
+
 
 /* ✅ 保存キー（選択状態を保持） */
 const SELECT_TAGS_KEY = 'dm_post_select_tags_v1';
@@ -5253,11 +5319,11 @@ function buildDeckPostPayload(){
   const repImg  = document.getElementById('post-rep-img')?.value || '';
   const count   = (typeof getDeckCount === 'function') ? getDeckCount() : 0;
 
-  // ← フォームの実IDに合わせる
+  // 投稿者名・X
   const posterInp = document.getElementById('auth-display-name')?.value.trim() || '';
   const posterXIn = normalizeHandle(document.getElementById('auth-x')?.value || '');
 
-  // deck を {cd: count} 形式へ（GASの buildDeckFeatures_ が解釈しやすい形）
+  // deck を {cd: count} 形式へ（GAS の buildDeckFeatures_ が解釈しやすい形）
   let cardsMap = {};
   try {
     if (typeof deck === 'object' && deck) {
@@ -5275,6 +5341,29 @@ function buildDeckPostPayload(){
     }
   } catch(_) {}
 
+  // --- カード解説を取り出す ---
+  let cardNotes = [];
+  try {
+    // CardNotes モジュールがあればそっち優先
+    if (window.CardNotes && typeof window.CardNotes.getList === 'function') {
+      cardNotes = window.CardNotes.getList();
+    } else {
+      // フォールバック：hidden の JSON を読む
+      const hidden = document.getElementById('post-card-notes-hidden');
+      if (hidden && hidden.value) {
+        const arr = JSON.parse(hidden.value);
+        if (Array.isArray(arr)) {
+          cardNotes = arr.map(r => ({
+            cd:   String(r.cd   || ''),
+            text: String(r.text || '')
+          }));
+        }
+      }
+    }
+  } catch(_) {
+    cardNotes = [];
+  }
+
   const { token, user } = getAuthSafe();
   const posterName = posterInp || user?.displayName || user?.username || '';
   const posterX    = posterXIn || user?.x || '';
@@ -5283,16 +5372,18 @@ function buildDeckPostPayload(){
   return {
     title, comment, code, count, races, repImg,
     cards: cardsMap,
+    cardNotes,                       // ★ここで同梱
     ua: navigator.userAgent,
     autoTags  : Array.from(document.querySelectorAll('#auto-tags .chip[data-auto="true"]'))
-                  .map(el => el.textContent.trim()).filter(Boolean),
+                   .map(el => el.textContent.trim()).filter(Boolean),
     selectTags: Array.from(document.querySelectorAll('#select-tags .chip.active'))
-                  .map(el => el.textContent.trim()).filter(Boolean),
+                   .map(el => el.textContent.trim()).filter(Boolean),
     userTags  : Array.isArray(window.PostUserTags) ? window.PostUserTags.slice(0, 3) : [],
     token,
     poster: { name: posterName, x: posterX, username },
   };
 }
+
 
 
 // 送信（デッキコードは任意：空なら検証スキップ）

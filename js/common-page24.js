@@ -663,9 +663,9 @@ function downloadCanvas(canvas, fileName){
   const hint = document.createElement('div');
   const ua = navigator.userAgent.toLowerCase();
   if (/iphone|ipad|ipod/.test(ua))
-    hint.textContent = '長押しで「写真に追加」や「共有」ができます';
+    hint.textContent = '長押しで「写真に追加」や「共有（画像保存）」ができます';
   else if (/android/.test(ua))
-    hint.textContent = '長押しで「画像をダウンロード」や「共有」ができます';
+    hint.textContent = '長押しで「画像をダウンロード」や「共有（画像保存）」ができます';
   else
     hint.textContent = '右クリックで「名前を付けて保存」できます';
   bar.appendChild(hint);
@@ -700,13 +700,13 @@ function downloadCanvas(canvas, fileName){
       return el;
     };
 
-    // 保存（どの端末でも確実に使える）
-    const saveBtn = mkBtn('保存');
+    // ダウンロード（どの端末でも確実に使える）
+    const saveBtn = mkBtn('ダウンロード');
     saveBtn.href = dataUrl;          // ★ toDataURL をそのまま
     saveBtn.download = fileName;     // PC なら即保存、モバイルは新規DL
 
     // 共有（対応端末のみ表示）
-    const shareBtn = mkBtn('共有');
+    const shareBtn = mkBtn('共有（画像保存）');
     if (navigator.share) {
       shareBtn.href = 'javascript:void(0)';
       shareBtn.onclick = async () => {
@@ -717,7 +717,7 @@ function downloadCanvas(canvas, fileName){
         } catch (_) { /* キャンセルは無視 */ }
       };
     } else {
-      shareBtn.style.display = 'none'; // 未対応環境では非表示（保存ボタンが全幅に）
+      shareBtn.style.display = 'none'; // 未対応環境では非表示（ダウンロードボタンが全幅に）
     }
 
         btnBar.appendChild(saveBtn);
@@ -783,7 +783,7 @@ if (typeof window.setAuthChecking !== 'function') {
 
 // ==== Auth 一本化（PIN撤去版・UI結線） ====
 (function(){
-  const API = 'https://script.google.com/macros/s/AKfycbxFj5HABSLGJaghas5MR56k-pW1QIef2kw_Z_wXvcQ-Nzq0_VMkxAW76GwKuOojK50/exec';
+  const API = 'https://script.google.com/macros/s/AKfycbxvrzefFMwi7H1EYiOLuhtakG64VCiKivIP4ZiRN0HWX3syVVmv01KWhgU6esq8SWGz/exec';
   window.API = API;
 
   const Auth = {

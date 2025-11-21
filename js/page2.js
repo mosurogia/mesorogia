@@ -6,7 +6,7 @@
 
 //GAS設定
 const GAS_POST_ENDPOINT =
-  'https://script.google.com/macros/s/AKfycbxFj5HABSLGJaghas5MR56k-pW1QIef2kw_Z_wXvcQ-Nzq0_VMkxAW76GwKuOojK50/exec';
+  'https://script.google.com/macros/s/AKfycbxvrzefFMwi7H1EYiOLuhtakG64VCiKivIP4ZiRN0HWX3syVVmv01KWhgU6esq8SWGz/exec';
 
 
 const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
@@ -1697,14 +1697,17 @@ function openCardOpModal(cd, anchorRect){
   box.style.top  = top  + 'px';
 }
 
-// ドラッグ移動（モーダルヘッダー掴み）
+// ドラッグ移動（トップライン）
 (function initCardOpDrag(){
   const box  = document.getElementById('cardOpModalContent');
-  const head = document.getElementById('cardOpHeader');
+  // ドラッグ開始要素を「cardOpHeader 内の .cardop-topline」に限定
+  const head = document.querySelector('#cardOpHeader .cardop-topline')
+            || document.getElementById('cardOpHeader');
   if (!box || !head) return;
 
   const onDown = (e)=>{
-    if (e.target.closest('#cardOpCloseBtn')) return; // ×でドラッグ開始しない
+    // ×ボタン上ではドラッグ開始しない
+    if (e.target.closest('#cardOpCloseBtn')) return;
     _cardOpDrag.active = true;
     const rect = box.getBoundingClientRect();
     const pt   = e.touches?.[0] || e;
@@ -1715,6 +1718,7 @@ function openCardOpModal(cd, anchorRect){
     box.style.transform = 'none';
     e.preventDefault();
   };
+
   const onMove = (e)=>{
     if (!_cardOpDrag.active) return;
     const pt = e.touches?.[0] || e;
@@ -1724,6 +1728,7 @@ function openCardOpModal(cd, anchorRect){
     box.style.left = Math.min(Math.max(left, 8 - w*0.9), vw - 8) + 'px';
     box.style.top  = Math.min(Math.max(top , 8 - h*0.9), vh - 8) + 'px';
   };
+
   const onUp = ()=>{ _cardOpDrag.active = false; };
 
   head.addEventListener('mousedown', onDown);
@@ -1733,6 +1738,7 @@ function openCardOpModal(cd, anchorRect){
   addEventListener('touchmove', onMove, {passive:false});
   addEventListener('touchend', onUp);
 })();
+
 
 // ×ボタン
 document.getElementById('cardOpCloseBtn')?.addEventListener('click', (e) => {
@@ -5286,23 +5292,6 @@ function buildDeckPostPayload(){
     token,
     poster: { name: posterName, x: posterX, username },
   };
-}
-
-// --- デッキコードの軽量バリデーション（暫定） ---
-function validateDeckCodeLight(code){
-  if (!code || typeof code !== 'string') return { ok:false, reason:'空です' };
-  const s = code.trim();
-
-  // ざっくりの文字種と長さ（16文字以上・URLセーフ/一般Base64記号を許容）
-  if (!/^[A-Za-z0-9_\-+=/]{16,}$/.test(s)) {
-    return { ok:false, reason:'文字種/長さが不正' };
-  }
-
-  // 仕様メモより：代表カードm と 種族g(1..5) が最低限入っているか
-  if (!/m/.test(s)) return { ok:false, reason:'代表カード(m)が見つかりません' };
-  if (!/g[1-5]/.test(s)) return { ok:false, reason:'使用種族(g1..g5)が見つかりません' };
-
-  return { ok:true };
 }
 
 

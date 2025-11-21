@@ -4,7 +4,7 @@
    - マイ投稿（全画面・ログイン必須）
 ========================= */
 const DeckPostApp = (() => {
-  const GAS_BASE = window.DECKPOST_API_BASE || 'https://script.google.com/macros/s/AKfycbxFj5HABSLGJaghas5MR56k-pW1QIef2kw_Z_wXvcQ-Nzq0_VMkxAW76GwKuOojK50/exec';
+  const GAS_BASE = window.DECKPOST_API_BASE || 'https://script.google.com/macros/s/AKfycbxvrzefFMwi7H1EYiOLuhtakG64VCiKivIP4ZiRN0HWX3syVVmv01KWhgU6esq8SWGz/exec';
 
   const state = {
     list: { items: [], nextOffset: 0, loading: false },
@@ -183,13 +183,53 @@ function buildDeckListHtml(item){
   return `<div class="post-decklist">${tiles}</div>`;
 }
 
+// ===== 詳細用：カード解説（cardNotes） =====
+function buildCardNotesHtml(item){
+  const srcList = Array.isArray(item.cardNotes) ? item.cardNotes : [];
+  const list = srcList
+    .map(r => ({ cd: String(r.cd || ''), text: String(r.text || '') }))
+    .filter(r => r.cd || r.text);  // どちらも空は除外
+
+  if (!list.length){
+    return `<div class="post-cardnotes-empty">投稿者によるカード解説はまだ登録されていません。</div>`;
+  }
+
+  const cardMap = window.cardMap || {};
+
+  const rows = list.map(r => {
+    const cd   = r.cd;
+    const card = cardMap[cd] || {};
+    const name = card.name || (cd ? `CD:${cd}` : 'カード');
+    const img  = `img/${String(cd).slice(0,5) || '00000'}.webp`;
+    const textHtml = escapeHtml(r.text || '').replace(/\n/g, '<br>');
+
+    return `
+      <div class="post-cardnote">
+        <div class="post-cardnote-thumb">
+          <img src="${img}"
+               alt="${escapeHtml(name)}"
+               loading="lazy"
+               onerror="this.onerror=null;this.src='img/00000.webp';">
+        </div>
+        <div class="post-cardnote-body">
+          <div class="post-cardnote-title">${escapeHtml(name)}</div>
+          <div class="post-cardnote-text">${textHtml}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `<div class="post-cardnotes">${rows}</div>`;
+}
+
+
 // ===== 1枚カードレンダリング（PC用） =====
 function buildCardPc(item){
   const time     = item.updatedAt || item.createdAt || '';
   const mainRace = getMainRace(item.races);
   const bg       = raceBg(item.races);
-  const code     = item.code || '';           // デッキコード
-  const oldGod   = item.oldGodName || '';     // 旧神カード名
+  const code     = item.code || '';
+  const oldGod   = item.oldGodName || '';
 
   const deckNote = item.deckNote || item.comment || '';
   const deckNoteHtml = escapeHtml(deckNote).replace(/\n/g, '<br>');
@@ -197,6 +237,12 @@ function buildCardPc(item){
   const tagsMain = tagChipsMain(item.tagsAuto, item.tagsPick);
   const tagsUser = tagChipsUser(item.tagsUser);
   const deckList = buildDeckListHtml(item);
+  const cardNotesHtml = buildCardNotesHtml(item);
+
+  const posterXRaw   = (item.posterX || '').trim();
+  const posterXLabel = posterXRaw;
+  const posterXUser  = posterXRaw.startsWith('@') ? posterXRaw.slice(1) : posterXRaw;
+
 
   return el(`
     <article class="post-card post-card--pc" data-postid="${item.postId}" style="${bg ? `--race-bg:${bg};` : ''}">
@@ -208,11 +254,18 @@ function buildCardPc(item){
               <div class="title">
                 ${escapeHtml(item.title || '(無題)')}
               </div>
-            <div class="sub">
-              ${escapeHtml(item.posterName || item.username || '')}
-              ${item.posterX ? '　/　@' + escapeHtml(item.posterX) : ''}
-              ${fmtDate(time) ? '　' + fmtDate(time) : ''}
-            </div>
+              <div class="sub">
+                ${escapeHtml(item.posterName || item.username || '')}
+                ${posterXUser ? `
+                  　/　<a class="meta-x"
+                          href="https://x.com/${encodeURIComponent(posterXUser)}"
+                          target="_blank"
+                          rel="noopener noreferrer">
+                        ${escapeHtml(posterXLabel)}
+                      </a>
+                ` : ''}
+                ${fmtDate(time) ? '　/　' + fmtDate(time) : ''}
+              </div>
           </div>
         </div>
         <button class="fav-btn" type="button" aria-label="お気に入り">☆</button>
@@ -261,8 +314,8 @@ function buildCardPc(item){
 
         <div class="post-detail-section">
           <div class="post-detail-heading">カード解説</div>
-          <div class="post-detail-body">
-            （カード解説は後で cardNotes などから差し込み）
+          <div class="post-detail-body post-detail-body--notes">
+            ${cardNotesHtml}
           </div>
         </div>
 
@@ -287,6 +340,11 @@ function buildCardSp(item){
   const tagsMain = tagChipsMain(item.tagsAuto, item.tagsPick);
   const tagsUser = tagChipsUser(item.tagsUser);
   const deckList = buildDeckListHtml(item);
+  const cardNotesHtml = buildCardNotesHtml(item);
+
+  const posterXRaw   = (item.posterX || '').trim();
+  const posterXLabel = posterXRaw;
+  const posterXUser  = posterXRaw.startsWith('@') ? posterXRaw.slice(1) : posterXRaw;
 
   return el(`
     <article class="post-card post-card--sp" data-postid="${item.postId}" style="${bg ? `--race-bg:${bg};` : ''}">
@@ -296,18 +354,34 @@ function buildCardSp(item){
         <div class="sp-head-left">
           ${cardThumb(item.repImg, item.title)}
         </div>
+
         <div class="sp-head-right">
-            <div class="sp-title">
-              ${escapeHtml(item.title || '(無題)')}
-            </div>
-          <div class="sp-meta">
-            ${escapeHtml(item.posterName || item.username || '')}
-            ${item.posterX ? ' / ' + escapeHtml(item.posterX) : ''}
-            ${fmtDate(time) ? ' / ' + fmtDate(time) : ''}
+          <div class="sp-title">
+            ${escapeHtml(item.title || '(無題)')}
           </div>
+
+          <div class="sp-meta">
+            <div class="sp-meta-name">
+              ${escapeHtml(item.posterName || item.username || '')}
+            </div>
+
+            ${posterXUser ? `
+              <a class="sp-meta-x"
+                href="https://x.com/${encodeURIComponent(posterXUser)}"
+                target="_blank"
+                rel="noopener noreferrer">
+                ${escapeHtml(posterXLabel)}
+              </a>
+            ` : ''}
+
+            <div class="sp-meta-date">
+              ${fmtDate(time)}
+            </div>
+          </div>
+
           <button class="fav-btn sp-fav" type="button" aria-label="お気に入り">☆</button>
         </div>
-      </div>
+      </div> <!-- ← ★ sp-head-right の閉じタグ、sp-head の閉じタグ -->
 
       <!-- タグ（ヘッダーの下にまとめて） -->
       <div class="post-tags-wrap">
@@ -338,7 +412,7 @@ function buildCardSp(item){
         </div>
 
         <div class="post-detail-row">
-          <span>  枚数：${item.count || 0}枚</span>
+          <span>枚数：${item.count || 0}枚</span>
         </div>
 
         <div class="post-detail-row">
@@ -352,8 +426,11 @@ function buildCardSp(item){
 
         <div class="post-detail-section">
           <div class="post-detail-heading">カード解説</div>
-          <div class="post-detail-body">（カード解説は後で追加）</div>
+          <div class="post-detail-body post-detail-body--notes">
+            ${cardNotesHtml}
+          </div>
         </div>
+
 
         <div class="post-detail-footer">
           <button type="button" class="btn-detail-close">閉じる</button>
@@ -363,7 +440,6 @@ function buildCardSp(item){
     </article>
   `);
 }
-
 
 
 // ===== 1枚カードレンダリング（PC/SP切り替え） =====
@@ -396,7 +472,6 @@ function oneCard(item){
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
 
-  // ===== イベント配線 =====
   // ===== イベント配線 =====
   function wireCardEvents(root){
     root.addEventListener('click', (e) => {
@@ -441,6 +516,145 @@ function oneCard(item){
     });
   }
 
+    // 指定 postId の投稿オブジェクトを state から探す
+  function findPostItemById(postId){
+    const id = String(postId);
+    const pick = (arr) => (arr || []).find(it => String(it.postId) === id);
+    return pick(state.list.items) || pick(state.mine.items) || null;
+  }
+
+  // スマホ版：代表カード長押しでデッキリスト簡易表示
+  // スマホ版：代表カード長押しでデッキリスト簡易表示
+  function setupDeckPeekOnSp(){
+    const isSp = () => window.matchMedia('(max-width: 768px)').matches;
+
+    function ensureOverlay(){
+      let pane = document.getElementById('post-deckpeek-overlay');
+      if (!pane){
+        pane = document.createElement('div');
+        pane.id = 'post-deckpeek-overlay';
+        pane.innerHTML = `
+          <div class="post-deckpeek-inner">
+            <div class="post-deckpeek-body"></div>
+          </div>
+        `;
+        document.body.appendChild(pane);
+      }
+      return pane;
+    }
+
+    function hideOverlay(){
+      const pane = document.getElementById('post-deckpeek-overlay');
+      if (pane){
+        pane.style.display = 'none';
+      }
+    }
+
+    // ★ 代表カードの「右横」に出すように座標計算
+    function showForArticle(art, thumbEl){
+      if (!isSp()) return;
+      if (!art) return;
+
+      const postId = art.dataset.postid;
+      if (!postId) return;
+
+      const item = findPostItemById(postId);
+      if (!item) return;
+
+      const html = buildDeckListHtml(item);
+
+      const pane  = ensureOverlay();
+      const body  = pane.querySelector('.post-deckpeek-body');
+      if (!body) return;
+
+      body.innerHTML = html;
+
+      // 一旦表示してサイズを取る
+      pane.style.display = 'block';
+      pane.style.width   = '';     // 一度リセット
+      pane.style.right   = 'auto';
+      pane.style.bottom  = 'auto';
+
+      // 幅は画面の 70% までにして、代表カード横に収まるように
+      const maxW = Math.min(window.innerWidth * 0.7, 460);
+      pane.style.width = maxW + 'px';
+
+      if (thumbEl){
+        const r = thumbEl.getBoundingClientRect();
+        const margin = 8;
+
+        const paneW = pane.offsetWidth;
+        const paneH = pane.offsetHeight;
+
+        // 基本位置：代表カードの右横
+        let left = r.right + margin;
+        let top  = r.top;
+
+        // 右にはみ出す場合は左にずらす
+        if (left + paneW > window.innerWidth - margin){
+          left = window.innerWidth - margin - paneW;
+          if (left < margin) left = margin;
+        }
+
+        // 下にはみ出す場合は上にずらす
+        if (top + paneH > window.innerHeight - margin){
+          top = window.innerHeight - margin - paneH;
+          if (top < margin) top = margin;
+        }
+
+        pane.style.left = left + 'px';
+        pane.style.top  = top  + 'px';
+      }
+    }
+
+    const root = document.getElementById('postList');
+    if (!root) return;
+
+    let pressing = false;
+
+    const startHandler = (e) => {
+      if (!isSp()) return;
+
+      // 代表カード部分（thumb-box）だけ反応させる
+      const thumb = e.target.closest('.thumb-box');
+      if (!thumb) return;
+
+      const art = thumb.closest('.post-card.post-card--sp');
+      if (!art) return;
+
+      pressing = true;
+      showForArticle(art, thumb);
+    };
+
+    const endHandler = () => {
+      if (!pressing) return;
+      pressing = false;
+      hideOverlay();
+    };
+
+    // PointerEvent 優先
+    if (window.PointerEvent){
+      root.addEventListener('pointerdown', startHandler);
+      window.addEventListener('pointerup', endHandler);
+      window.addEventListener('pointercancel', endHandler);
+    } else {
+      // 古い環境向けフォールバック
+      root.addEventListener('touchstart', startHandler, { passive: true });
+      window.addEventListener('touchend', endHandler);
+      window.addEventListener('touchcancel', endHandler);
+    }
+
+    // スクロールや画面タップでも閉じる
+    window.addEventListener('scroll', hideOverlay, { passive: true });
+    document.addEventListener('click', (e) => {
+      const pane = document.getElementById('post-deckpeek-overlay');
+      if (!pane || pane.style.display === 'none') return;
+      if (e.target.closest('#post-deckpeek-overlay')) return; // オーバーレイ内クリックは無視
+      hideOverlay();
+    });
+  }
+
+
 
   // ===== 初期化 =====
   async function init(){
@@ -467,6 +681,8 @@ function oneCard(item){
 
     // デリゲートイベント
     wireCardEvents(document);
+    // スマホ版：代表カード長押しでデッキリスト簡易表示
+    setupDeckPeekOnSp();
   }
 
   async function loadMoreList(){
@@ -533,7 +749,7 @@ function oneCard(item){
 
 
 // デッキ投稿 API のエンドポイント（GAS 側の Web アプリ URL）
-const GAS_POST_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxFj5HABSLGJaghas5MR56k-pW1QIef2kw_Z_wXvcQ-Nzq0_VMkxAW76GwKuOojK50/exec';
+const GAS_POST_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxvrzefFMwi7H1EYiOLuhtakG64VCiKivIP4ZiRN0HWX3syVVmv01KWhgU6esq8SWGz/exec';
 
 // ① 生 API のレスポンスを確認
 (async () => {

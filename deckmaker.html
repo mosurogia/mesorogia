@@ -392,7 +392,10 @@
                             <button id="note-fullscreen-btn" class="note-showall-btn" type="button">全表示</button>
                         </div>
                     </div>
-                        <textarea id="post-note" rows="3" placeholder="デッキの特徴・回し方・相性などを自由に。プリセットで雛形を挿入できます"></textarea>
+                    <div class="post-hint">
+                        ※上のプリセットボタンを押すとカーソル位置に定型文が挿入されます。
+                    </div>
+                    <textarea id="post-note" rows="3" placeholder="デッキの特徴・回し方・相性などを自由に。プリセットで雛形を挿入できます"></textarea>
                     </div>
                 </div>
 
@@ -499,15 +502,15 @@
                             <!-- 非ログイン時に表示 -->
                         <div id="auth-login-form" class="auth-login-form" style="display:none;">
                             <div class="poster-line" style="margin-top:6px;">
-                                <input
-                                id="auth-username" name="username"
+                            <input
+                                id="auth-username"
+                                name="username"
                                 type="text"
                                 placeholder="ログインID"
                                 autocomplete="username"
-                                autocapitalize="off"
+                                autocapitalize="none"
                                 autocorrect="off"
-                                spellcheck="false"
-                                inputmode="verbatim">
+                                spellcheck="false">
                             </div>
                             <div class="poster-line">
                                 <input
@@ -545,6 +548,7 @@
                                 <button class="btn danger" type="button" id="auth-logout-btn">ログアウト</button>
                             </div>
                         </div>
+
                             <div class="post-hint">
                                 ※ ユーザーIDは投稿者名とは別です。<br>
                                 ※ ログインすると投稿の管理や編集ができます。（ログインなしでも投稿自体はできます）
@@ -725,6 +729,13 @@
                 <input type="hidden" id="post-poster-hidden" name="poster">
                 <input type="hidden" id="post-share-code" name="shareCode">
         </form>
+        <!-- ▼ パスワード保存用の隠しログインフォーム -->
+        <form id="auth-login-save" method="post" action="deckmaker.html" target="auth-login-save-frame" autocomplete="on"
+            style="position:absolute; left:-9999px; top:-9999px; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none;">
+            <input type="text" name="username" autocomplete="username">
+            <input type="password" name="password" autocomplete="current-password">
+        </form>
+        <iframe name="auth-login-save-frame" style="display:none;"></iframe>
         </div>
 
         </div>

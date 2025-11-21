@@ -11,6 +11,7 @@ const deck = {};
 // カード情報　例: { "10001": { name: "...", race: "...", type: "...", cost: 3, power: 2, ... }, ... }
 const cardMap = {};
 
+// ここで window に公開
 window.deck = deck;
 window.cardMap = cardMap;
 
@@ -26,6 +27,80 @@ async function fetchLatestCards() {
   const allCards = await res.json();
   return allCards.filter(card => card.is_latest === true);
 }
+// 一度だけカードマスタを読み込んで cardMap を埋める
+async function ensureCardMapLoaded() {
+  try {
+    // すでに埋まっていれば何もしない
+    if (window.cardMap && Object.keys(window.cardMap).length > 0) {
+      return window.cardMap;
+    }
+
+    const cards = await fetchLatestCards(); // is_latest=true のみ
+
+    cards.forEach(card => {
+      const cdRaw = card.cd ?? '';
+      if (!cdRaw && cdRaw !== 0) return;
+      const cd5 = String(cdRaw).padStart(5, '0');
+      cardMap[cd5] = card;
+    });
+
+    // 念のため window 側も同期
+    window.cardMap = cardMap;
+    return window.cardMap;
+  } catch (e) {
+    console.error('カード情報の読み込みに失敗しました', e);
+    throw e;
+  }
+}
+
+// 他ページから呼べるように公開
+window.ensureCardMapLoaded = ensureCardMapLoaded;
+
+// =======================================
+// カードマスタ → cardMap 構築（共通）
+// =======================================
+function buildCardMapFromCards(cards){
+  if (!Array.isArray(cards)) return;
+
+  for (const card of cards){
+    const cdRaw = card.cd ?? card.id ?? '';
+    const cd5   = String(cdRaw || '').trim().padStart(5, '0');
+    if (!cd5) continue;
+
+    // 必要そうな情報だけ拾う。足りなければ適宜追加OK
+    window.cardMap[cd5] = {
+      cd     : cd5,
+      name   : card.name   || '',
+      race   : card.race   || '',
+      type   : card.type   || '',
+      cost   : Number(card.cost  ?? 0) || 0,
+      power  : Number(card.power ?? 0) || 0,
+      rarity : card.rarity || '',
+      packName : card.pack_name || '',
+      category : card.category  || '',
+      // 使いそうなフィールドはここに増やしていけばOK
+    };
+  }
+}
+
+// 一度だけカードマスタを読み込んで cardMap を埋める
+async function ensureCardMapLoaded(){
+  // すでに埋まっていれば何もしない
+  if (window.cardMap && Object.keys(window.cardMap).length > 0){
+    return window.cardMap;
+  }
+
+  try{
+    const cards = await fetchLatestCards(); // 既存の共通関数
+    buildCardMapFromCards(cards);
+  }catch(e){
+    console.error('ensureCardMapLoaded: カードマスタ読み込み失敗', e);
+  }
+  return window.cardMap;
+}
+
+// グローバル公開
+window.ensureCardMapLoaded = ensureCardMapLoaded;
 
 
 // パック一覧を読み出して共通利用（card_data.py が packs.json を出す想定）

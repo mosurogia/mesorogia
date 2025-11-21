@@ -188,7 +188,7 @@ function buildCardNotesHtml(item){
   const srcList = Array.isArray(item.cardNotes) ? item.cardNotes : [];
   const list = srcList
     .map(r => ({ cd: String(r.cd || ''), text: String(r.text || '') }))
-    .filter(r => r.cd || r.text);  // どちらも空は除外
+    .filter(r => r.cd || r.text);
 
   if (!list.length){
     return `<div class="post-cardnotes-empty">投稿者によるカード解説はまだ登録されていません。</div>`;
@@ -197,10 +197,12 @@ function buildCardNotesHtml(item){
   const cardMap = window.cardMap || {};
 
   const rows = list.map(r => {
-    const cd   = r.cd;
-    const card = cardMap[cd] || {};
-    const name = card.name || (cd ? `CD:${cd}` : 'カード');
-    const img  = `img/${String(cd).slice(0,5) || '00000'}.webp`;
+    const cdRaw = String(r.cd || '').trim();
+    const cd5   = cdRaw.padStart(5, '0');   // ★ 必須：5桁化
+    const card  = cardMap[cd5] || {};
+    const name  = card.name || 'カード名未登録';
+    const img   = `img/${cd5}.webp`;
+
     const textHtml = escapeHtml(r.text || '').replace(/\n/g, '<br>');
 
     return `
@@ -656,34 +658,44 @@ function oneCard(item){
 
 
 
-  // ===== 初期化 =====
-  async function init(){
-    // トークン
-    state.token = resolveToken();
-
-    // 一覧 初回
-    await loadMoreList();
-
-    // もっと見る
-    document.getElementById('btnLoadMore')?.addEventListener('click', loadMoreList);
-
-    // マイ投稿へ
-    document.getElementById('btnOpenMine')?.addEventListener('click', async () => {
-      showMine();
-      if (state.mine.items.length === 0){
-        await loadMoreMine(true);
-      }
-    });
-
-    // マイ投稿：戻る／さらに読む
-    document.getElementById('btnBackList')?.addEventListener('click', showList);
-    document.getElementById('btnMineMore')?.addEventListener('click', () => loadMoreMine(false));
-
-    // デリゲートイベント
-    wireCardEvents(document);
-    // スマホ版：代表カード長押しでデッキリスト簡易表示
-    setupDeckPeekOnSp();
+// ===== 初期化 =====
+async function init(){
+  // ① カードマスタ読み込み（デッキリスト・カード解説で使う）
+  try {
+    await ensureCardMapLoaded();
+    console.log('cardMap loaded, size =', Object.keys(window.cardMap || {}).length);
+  } catch (e) {
+    console.error('カードマスタ読み込みに失敗しました', e);
   }
+
+  // ② トークン
+  state.token = resolveToken();
+
+  // ③ 一覧 初回
+  await loadMoreList();
+
+  // ④ もっと見る
+  document.getElementById('btnLoadMore')?.addEventListener('click', loadMoreList);
+
+  // ⑤ マイ投稿へ
+  document.getElementById('btnOpenMine')?.addEventListener('click', async () => {
+    showMine();
+    if (state.mine.items.length === 0){
+      await loadMoreMine(true);
+    }
+  });
+
+  // ⑥ マイ投稿：戻る／さらに読む
+  document.getElementById('btnBackList')?.addEventListener('click', showList);
+  document.getElementById('btnMineMore')?.addEventListener('click', () => loadMoreMine(false));
+
+  // ⑦ デリゲートイベント
+  wireCardEvents(document);
+  // スマホ版：代表カード長押しでデッキリスト簡易表示
+  setupDeckPeekOnSp();
+}
+
+
 
   async function loadMoreList(){
     if (state.list.loading) return;

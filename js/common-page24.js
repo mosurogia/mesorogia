@@ -940,6 +940,28 @@ function startSlowTimer(ms = 5000) {
   return () => { fired = true; clearTimeout(id); };
 }
 
+  // パスワード保存トリガー
+  function triggerPasswordSave(username, password){
+    const form = document.getElementById('auth-login-save');
+    if (!form) return;
+
+    const u = form.querySelector('input[name="username"]');
+    const p = form.querySelector('input[name="password"]');
+    if (!u || !p) return;
+
+    u.value = username || '';
+    p.value = password || '';
+
+    try{
+      if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+      } else {
+        form.submit();
+      }
+    } catch(e){
+      // 失敗しても致命的ではないので無視
+    }
+  }
 
   // 事件: 新規登録
   async function doSignup(){
@@ -947,41 +969,58 @@ function startSlowTimer(ms = 5000) {
     const password    = (document.getElementById('auth-password')?.value || '');
     const displayName = '';
     const x           = '';
-    if (!username || !password){ alert('ユーザー名とパスワードを入力してください'); return; }
+    if (!username || !password){
+      alert('ユーザー名とパスワードを入力してください');
+      return;
+    }
 
     setAuthLoading(true, '登録中…');
     const stopSlow = startSlowTimer(5000);
     try{
-      const res = await Auth.signup(username, password, displayName, x); // 成功時: {ok:true, token...}
-      stopSlow(); setAuthLoading(false, '');
+      const res = await Auth.signup(username, password, displayName, x); // 成功時: user オブジェクト
+      stopSlow();
+      setAuthLoading(false, '');
       showAuthOK('登録完了');
-      // サインアップ成功＝ログイン状態になっている設計ならここで反映
       window.reflectLoginUI?.();
+
+      // ★ 新規登録成功時に、ログイン情報をブラウザに保存させる
+      triggerPasswordSave(username, password);
     }catch(e){
-      stopSlow(); setAuthLoading(false, '');
+      stopSlow();
+      setAuthLoading(false, '');
       showAuthError('登録失敗：' + (e?.message || 'unknown'));
     }
   }
+
 
 
   // 事件: ログイン
   async function doLogin(){
     const username = (document.getElementById('auth-username')?.value || '').trim().toLowerCase();
     const password = (document.getElementById('auth-password')?.value || '');
-    if (!username || !password){ alert('ユーザー名とパスワードを入力してください'); return; }
+    if (!username || !password){
+      alert('ユーザー名とパスワードを入力してください');
+      return;
+    }
 
     setAuthLoading(true, 'ログイン中…');
     const stopSlow = startSlowTimer(5000);
     try{
-      const res = await Auth.login(username, password); // 成功時: {ok:true, token...}
-      stopSlow(); setAuthLoading(false, '');
+      const res = await Auth.login(username, password); // 成功時: user オブジェクト
+      stopSlow();
+      setAuthLoading(false, '');
       showAuthOK('ログイン完了');
       window.reflectLoginUI?.();
+
+      // ★ ログイン成功時に、ブラウザへ「この組み合わせ」を保存させる
+      triggerPasswordSave(username, password);
     }catch(e){
-      stopSlow(); setAuthLoading(false, '');
+      stopSlow();
+      setAuthLoading(false, '');
       showAuthError('ログイン失敗：' + (e?.message || 'unknown'));
     }
   }
+
 
 
   // 事件: ログアウト

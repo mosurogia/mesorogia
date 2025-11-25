@@ -881,26 +881,53 @@ window.postJSON = postJSON;
   // ---- UI（グローバル公開版）----
   window.reflectLoginUI = function reflectLoginUI(){
     const loggedIn = !!(Auth?.user && Auth?.token && Auth?.verified);
+    const user = loggedIn ? (Auth.user || {}) : null;
 
+    // 既存のログインフォーム周り（大きい方）
     const $form     = document.getElementById('auth-login-form');
     const $logged   = document.getElementById('auth-logged-in');
     const $disp     = document.getElementById('auth-display');
     const $unameLbl = document.getElementById('auth-username-label');
     const $pw       = document.getElementById('auth-password');
 
+    // 投稿フォーム内のミニ表示
+    const $miniOut  = document.getElementById('auth-mini-loggedout');  // 「未ログイン＋ボタン」
+    const $miniIn   = document.getElementById('auth-mini-loggedin');   // ログイン中（auth-logged-in-row）
+
+    // ---- 既存エリア（大きいログイン枠）の表示/非表示 ----
     if ($form)   $form.style.display   = loggedIn ? 'none' : '';
     if ($logged) $logged.style.display = loggedIn ? '' : 'none';
 
     if (loggedIn){
-      const u = Auth?.user || {};
-      if ($disp)     $disp.textContent     = u.displayName || u.username || '(no name)';
-      if ($unameLbl) $unameLbl.textContent = u.username || '';
+      if ($disp)     $disp.textContent     = user.displayName || user.username || '(no name)';
     } else {
-      if ($pw) $pw.value = '';
-      if ($disp) $disp.textContent = '';
-      if ($unameLbl) $unameLbl.textContent = '';
+      if ($pw)       $pw.value = '';
+      if ($disp)     $disp.textContent = '';
+    }
+
+    // ミニ側チップの中の ID 表示（auth-username-label）もここで更新
+    if ($unameLbl){
+      $unameLbl.textContent = loggedIn
+        ? (user.username || user.displayName || '')
+        : '';
+    }
+
+    // ---- 投稿フォーム内ミニ表示の切り替え ----
+    if ($miniOut) $miniOut.style.display = loggedIn ? 'none' : '';
+    if ($miniIn)  $miniIn.style.display  = loggedIn ? '' : 'none';
+
+    // ---- デッキ投稿フォームの既定値（未入力時のみ自動入力） ----
+    const $dispInput = document.getElementById('auth-display-name');
+    if (loggedIn && $dispInput && !$dispInput.value){
+      $dispInput.value = user.displayName || user.username || '';
+    }
+
+    const $xInput = document.getElementById('auth-x');
+    if (loggedIn && $xInput && !$xInput.value){
+      $xInput.value = user.x || '';
     }
   };
+
 
 
   // ===== 認証UIフィードバック =====
@@ -942,26 +969,32 @@ function startSlowTimer(ms = 5000) {
 
   // パスワード保存トリガー
   function triggerPasswordSave(username, password){
-    const form = document.getElementById('auth-login-save');
-    if (!form) return;
+      const form = document.getElementById('auth-login-save');
+      if (!form) return;
 
-    const u = form.querySelector('input[name="username"]');
-    const p = form.querySelector('input[name="password"]');
-    if (!u || !p) return;
+      const u = form.querySelector('input[name="username"]');
+      const p = form.querySelector('input[name="password"]');
+      if (!u || !p) return;
 
-    u.value = username || '';
-    p.value = password || '';
+      u.value = username || '';
+      p.value = password || '';
 
-    try{
-      if (typeof form.requestSubmit === 'function') {
-        form.requestSubmit();
-      } else {
-        form.submit();
-      }
-    } catch(e){
-      // 失敗しても致命的ではないので無視
-    }
+      // Chrome が無視しないよう一瞬だけ表示
+      form.style.left = '0px';
+      form.style.top  = '0px';
+
+      try {
+          form.requestSubmit?.();
+          form.submit?.();
+      } catch(e){}
+
+      // すぐ隠す（UIに見えない）
+      setTimeout(() => {
+          form.style.left = '-9999px';
+          form.style.top  = '-9999px';
+      }, 50);
   }
+
 
   // 事件: 新規登録
   async function doSignup(){
@@ -977,20 +1010,31 @@ function startSlowTimer(ms = 5000) {
     setAuthLoading(true, '登録中…');
     const stopSlow = startSlowTimer(5000);
     try{
-      const res = await Auth.signup(username, password, displayName, x); // 成功時: user オブジェクト
+      const res = await Auth.signup(username, password, displayName, x);
       stopSlow();
       setAuthLoading(false, '');
       showAuthOK('登録完了');
       window.reflectLoginUI?.();
 
-      // ★ 新規登録成功時に、ログイン情報をブラウザに保存させる
+      // ★ モーダルを閉じる
+      const modal = document.getElementById('authLoginModal');
+      if (modal) modal.style.display = 'none';
+
+      // ★ 閉じた後に alert（少し間をあける）
+      setTimeout(() => {
+        alert('新規登録しました');
+      }, 100);
+
+      // ★ パスワード保存
       triggerPasswordSave(username, password);
+
     }catch(e){
       stopSlow();
       setAuthLoading(false, '');
       showAuthError('登録失敗：' + (e?.message || 'unknown'));
     }
   }
+
 
 
 
@@ -1006,22 +1050,30 @@ function startSlowTimer(ms = 5000) {
     setAuthLoading(true, 'ログイン中…');
     const stopSlow = startSlowTimer(5000);
     try{
-      const res = await Auth.login(username, password); // 成功時: user オブジェクト
+      const res = await Auth.login(username, password);
       stopSlow();
       setAuthLoading(false, '');
       showAuthOK('ログイン完了');
       window.reflectLoginUI?.();
 
-      // ★ ログイン成功時に、ブラウザへ「この組み合わせ」を保存させる
+      // ★ モーダルを閉じる
+      const modal = document.getElementById('authLoginModal');
+      if (modal) modal.style.display = 'none';
+
+      // ★ 閉じた後に alert（少し間をあける）
+      setTimeout(() => {
+        alert('ログインしました');
+      }, 100);
+
+      // ★ パスワード保存
       triggerPasswordSave(username, password);
+
     }catch(e){
       stopSlow();
       setAuthLoading(false, '');
       showAuthError('ログイン失敗：' + (e?.message || 'unknown'));
     }
   }
-
-
 
   // 事件: ログアウト
   async function doLogout(){
@@ -1042,14 +1094,25 @@ function startSlowTimer(ms = 5000) {
       });
     }
 
+    // 元の大きいログインフォーム
     document.getElementById('auth-signup-btn')?.addEventListener('click', doSignup);
     document.getElementById('auth-login-btn') ?.addEventListener('click', doLogin);
     document.getElementById('auth-logout-btn')?.addEventListener('click', doLogout);
 
+
+    // 認証状態の初期化（未ログイン表示からスタート）
     Auth.init();
 
-
+    // Enter キーでログイン
+    const loginForm = document.getElementById('auth-login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            doLogin();       // 既存のログイン関数を呼ぶ
+        });
+    }
   });
+
 })();
 
 

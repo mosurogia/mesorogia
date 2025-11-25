@@ -15,19 +15,6 @@ body {
     padding: 12px;
 }
 
-/* スクリーンリーダー用 */
-.sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-}
-
 /*=======================
   1.ヘッダー / ページ共通UI
 ========================*/
@@ -90,7 +77,7 @@ body {
 
 /* デッキ投稿 共通 */
 .page {
-    padding: 12px;
+    padding: 0 1rem 1rem;
 }
 
 /* 一覧の上に置く簡易バー（将来検索/並び替え追加予定） */
@@ -99,7 +86,7 @@ body {
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
-    margin: 10px 0 14px;
+    /*margin: 5px 0;*/
     padding: 8px 0;
 }
 
@@ -261,7 +248,7 @@ body {
 
 /* タグ全体のくくり */
 .post-tags-wrap {
-    padding: 3px 5px 0;
+    padding: 6px 5px;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -303,10 +290,18 @@ body {
 
 /*---------- 2-2.スマホレイアウト----------*/
 
-
+/* スマホ版カード全体 */
 .post-card--sp {
     display: block;
     padding: 8px 10px;
+}
+
+/* ホバー効果無効化（スマホ用） */
+@media (max-width: 768px) {
+    .post-card:hover {
+        box-shadow: none !important;
+        transform: none !important;
+    }
 }
 
 /* 上段：画像 + 情報 */
@@ -342,7 +337,38 @@ body {
 }
 
 .sp-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
     opacity: .7;
+    font-size: .82rem;
+}
+
+.sp-meta-x::before,
+.meta-x::before {
+    content: "𝕏⇒";
+    font-size: 0.78em;
+    margin-right: -5px;
+}
+
+.meta-x {
+    color: #1d9bf0;
+    text-decoration: none;
+}
+
+.meta-x:hover {
+    text-decoration: underline;
+}
+.meta-x,
+.meta-x:visited,
+.sp-meta-x,
+.sp-meta-x:visited {
+    color: #1d9bf0 !important;
+    font-weight: 500;
+}
+
+.sp-meta-date {
+    color: #666;
 }
 
 /* スマホ版：お気に入りボタンを右上固定 */
@@ -353,10 +379,6 @@ body {
 }
 
 /* ボタン行 */
-.sp-actions {
-    margin-top: 6px;
-}
-
 .sp-actions button {
     flex: 1 1 0;
 }
@@ -364,16 +386,63 @@ body {
 
 /*---------- 2-3.PCレイアウト----------*/
 
-
-
 /*=======================
-  3.タグ / バッジ類
+  X.スマホ用 デッキホバー表示
+========================*/
+@media (max-width: 768px) {
+
+    /* デッキ簡易プレビュー用オーバーレイ */
+    #post-deckpeek-overlay {
+        position: fixed;
+
+        /* ★ 右側に固定（中央寄せを全削除） */
+        right: 8px;
+        bottom: 20px;
+
+        /* ★ 中央配置用は削除（重要） */
+        /* left: 50%; */
+        /* top: 55%; */
+        /* transform: translate(-50%, -50%); */
+
+        max-width: min(90vw, 460px);
+        max-height: 70vh;
+        padding: 8px;
+        box-sizing: border-box;
+        background: rgba(255, 255, 255, .98);
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, .18);
+        z-index: 3400;
+        display: none;
+        /* JSで切り替え */
+    }
+
+    #post-deckpeek-overlay .post-deckpeek-inner {
+        max-height: 100%;
+        overflow: auto;
+    }
+
+    /* 詳細用と同じ .post-decklist をそのまま中で使う */
+    #post-deckpeek-overlay .post-decklist {
+        margin: 0;
+    }
+}
+
+/* PCでは念のため強制非表示 */
+@media (min-width: 769px) {
+    #post-deckpeek-overlay {
+        display: none !important;
+    }
+}
+/*=======================
+  3.タグ
 ========================*/
 
 /* タグ全体（flex＋gap） */
 .post-tags {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
     gap: 6px;
 }
 
@@ -489,6 +558,56 @@ body {
     padding: 6px 12px;
     cursor: pointer;
     font-size: .9rem;
+}
+
+/* 詳細内：カード解説 */
+.post-detail-body--notes {
+    white-space: normal;
+    /* 中のHTMLをそのままレイアウトしたいので解除 */
+}
+
+/* カード解説リスト全体 */
+.post-cardnotes {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 1件ぶんのカード解説 */
+.post-cardnote {
+    display: grid;
+    grid-template-columns: minmax(72px, 96px) minmax(0, 1fr);
+    gap: 4px 10px;
+    align-items: flex-start;
+}
+
+.post-cardnote-thumb img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.post-cardnote-body {
+    font-size: .88rem;
+    line-height: 1.5;
+}
+
+.post-cardnote-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.post-cardnote-text {
+    font-size: .88rem;
+    line-height: 1.6;
+}
+
+/* cardNotes が無いとき */
+.post-cardnotes-empty {
+    font-size: .85rem;
+    color: #777;
 }
 
 /*=======================

@@ -4730,7 +4730,7 @@ async function renderPostSelectTags() {
   wrap.innerHTML = '';
   const hint = document.createElement('div');
   hint.className = 'post-hint';
-  hint.textContent = 'タップでさらにタグを追加';
+  hint.textContent = '⇩タップでさらにタグを追加';
   wrap.appendChild(hint);
   const frag = document.createDocumentFragment();
 
@@ -5207,36 +5207,6 @@ function getAuthSafe(){
     user : (A.user || null)
   };
 }
-
-// ログイン状態をフォームに反映
-window.reflectLoginUI = function(){
-  const A = window.Auth || {};
-  const user = A.user || null;
-
-  const $loginForm = document.getElementById('auth-login-form');
-  const $logged    = document.getElementById('auth-logged-in');
-  const $label     = document.getElementById('auth-username-label');
-
-  // 表示/非表示の切り替え
-  const loggedIn = !!(A.token && user);
-  if ($loginForm) $loginForm.style.display = loggedIn ? 'none' : '';
-  if ($logged)    $logged.style.display    = loggedIn ? '' : 'none';
-
-  // ラベル更新
-  if ($label) $label.textContent = user?.username || '';
-
-  // 投稿フォームの既定値（未入力のときだけ上書き）
-  const $disp = document.getElementById('auth-display-name');
-  if ($disp && !$disp.value) $disp.value = user?.displayName || user?.username || '';
-
-  const $x = document.getElementById('auth-x');
-  if ($x && !$x.value) $x.value = user?.x || '';
-};
-
-// 起動時と whoami 後に実行
-document.addEventListener('DOMContentLoaded', ()=> {
-  try { window.reflectLoginUI(); } catch(_) {}
-});
 
 // --- デッキ特徴量（コスト/パワー/タイプ内訳）を計算して投稿用にまとめる ---
 function buildDeckFeaturesForPost() {

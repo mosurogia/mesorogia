@@ -933,7 +933,7 @@ window.postJSON = postJSON;
   // ===== 認証UIフィードバック =====
 function setAuthLoading(on, msg){
   // ボタン disable / 文言
-  const loginBtn  = document.getElementById('auth-login-btn');
+  const loginBtn  = document.getElementById('auth-login-btn-submit'); // ← 実際のログインボタン
   const signupBtn = document.getElementById('auth-signup-btn');
   if (loginBtn)  loginBtn.disabled  = !!on;
   if (signupBtn) signupBtn.disabled = !!on;
@@ -1062,7 +1062,7 @@ function startSlowTimer(ms = 5000) {
 
       // ★ 閉じた後に alert（少し間をあける）
       setTimeout(() => {
-        alert('ログインしました');
+        //alert('ログインしました');
       }, 100);
 
       // ★ パスワード保存
@@ -1096,7 +1096,6 @@ function startSlowTimer(ms = 5000) {
 
     // 元の大きいログインフォーム
     document.getElementById('auth-signup-btn')?.addEventListener('click', doSignup);
-    document.getElementById('auth-login-btn') ?.addEventListener('click', doLogin);
     document.getElementById('auth-logout-btn')?.addEventListener('click', doLogout);
 
 

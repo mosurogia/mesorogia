@@ -42,12 +42,22 @@ const DeckPostApp = (() => {
 
   // ===== 画面遷移（一覧↔マイ投稿） =====
   function showList(){
-    document.getElementById('pageList')?.removeAttribute('hidden');
-    document.getElementById('pageMine')?.setAttribute('hidden','');
+    const listPage = document.getElementById('post-app');  // 一覧側 main
+    const minePage = document.getElementById('pageMine');  // マイ投稿側 main
+    if (listPage) listPage.hidden = false;
+    if (minePage) minePage.hidden = true;
+
+    // 見た目も戻しておくと親切
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
   function showMine(){
-    document.getElementById('pageMine')?.removeAttribute('hidden');
-    document.getElementById('pageList')?.setAttribute('hidden','');
+    const listPage = document.getElementById('post-app');
+    const minePage = document.getElementById('pageMine');
+    if (minePage) minePage.hidden = false;
+    if (listPage) listPage.hidden = true;
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   // ===== レンダリング =====
@@ -464,10 +474,13 @@ function oneCard(item){
     if (!v) return '';
     try{
       const d = new Date(v);
-      const y = d.getFullYear(), m = (d.getMonth()+1).toString().padStart(2,'0'), da = d.getDate().toString().padStart(2,'0');
+      const y = d.getFullYear(),
+            m = (d.getMonth()+1).toString().padStart(2,'0'),
+            da = d.getDate().toString().padStart(2,'0');
       return `${y}/${m}/${da}`;
     }catch(_){ return ''; }
   }
+
   function escapeHtml(s){
     return String(s||'')
       .replace(/&/g,'&amp;').replace(/</g,'&lt;')
@@ -505,7 +518,7 @@ function oneCard(item){
       // 比較に追加（今はプレースホルダ）
       if (e.target.classList.contains('btn-add-compare')){
         // TODO: 比較タブとの連携を実装
-        alert('比較タブに追加する機能は準備中です。');
+        alert('比較タブに追加する機能は準備中です。（ハーフアニバーサリーβではプレースホルダ）');
       }
 
       // 旧仕様の ID コピー（ボタン自体は今は出していないが、互換として残す）
@@ -518,14 +531,13 @@ function oneCard(item){
     });
   }
 
-    // 指定 postId の投稿オブジェクトを state から探す
+  // 指定 postId の投稿オブジェクトを state から探す
   function findPostItemById(postId){
     const id = String(postId);
     const pick = (arr) => (arr || []).find(it => String(it.postId) === id);
     return pick(state.list.items) || pick(state.mine.items) || null;
   }
 
-  // スマホ版：代表カード長押しでデッキリスト簡易表示
   // スマホ版：代表カード長押しでデッキリスト簡易表示
   function setupDeckPeekOnSp(){
     const isSp = () => window.matchMedia('(max-width: 768px)').matches;
@@ -656,97 +668,137 @@ function oneCard(item){
     });
   }
 
-
-
-// ===== 初期化 =====
-async function init(){
-  // ① カードマスタ読み込み（デッキリスト・カード解説で使う）
-  try {
-    await ensureCardMapLoaded();
-    console.log('cardMap loaded, size =', Object.keys(window.cardMap || {}).length);
-  } catch (e) {
-    console.error('カードマスタ読み込みに失敗しました', e);
-  }
-
-  // ② トークン
-  state.token = resolveToken();
-
-  // ③ 一覧 初回
-  await loadMoreList();
-
-  // ④ もっと見る
-  document.getElementById('btnLoadMore')?.addEventListener('click', loadMoreList);
-
-  // ⑤ マイ投稿へ
-  document.getElementById('btnOpenMine')?.addEventListener('click', async () => {
-    showMine();
-    if (state.mine.items.length === 0){
-      await loadMoreMine(true);
-    }
-  });
-
-  // ⑥ マイ投稿：戻る／さらに読む
-  document.getElementById('btnBackList')?.addEventListener('click', showList);
-  document.getElementById('btnMineMore')?.addEventListener('click', () => loadMoreMine(false));
-
-  // ⑦ デリゲートイベント
-  wireCardEvents(document);
-  // スマホ版：代表カード長押しでデッキリスト簡易表示
-  setupDeckPeekOnSp();
-}
-
-
-
+  // ===== 一覧ロード =====
   async function loadMoreList(){
     if (state.list.loading) return;
     state.list.loading = true;
+
     try{
       const res = await apiList({ limit: 24, offset: state.list.nextOffset, mine: false });
+
       if (res?.ok){
         state.list.items.push(...res.items);
         state.list.nextOffset = (res.nextOffset ?? null);
+
+        // 一覧に追記
         renderList(res.items, 'postList');
-        // ボタン表示制御
-        const btn = document.getElementById('btnLoadMore');
-        if (btn) btn.disabled = (state.list.nextOffset === null);
+
+        // 件数表示
+        const info = document.getElementById('resultCount');
+        if (info){
+          if (typeof res.total === 'number'){
+            info.textContent = `投稿：${res.total}件`;
+          }else{
+            info.textContent = '';
+          }
+        }
+
+        // 「もっと見る」表示制御
+        const wrap = document.getElementById('listLoadMore');
+        const btn  = document.getElementById('loadMoreBtn');
+        const hasNext = (state.list.nextOffset !== null);
+
+        if (wrap) wrap.hidden = !hasNext;
+        if (btn)  btn.disabled = !hasNext;
       }
     }finally{
       state.list.loading = false;
     }
   }
 
+  // ===== マイ投稿ロード =====
   async function loadMoreMine(reset){
     if (state.mine.loading) return;
     state.mine.loading = true;
+
     try{
+      const guard    = document.getElementById('mineGuard');
+      const listEl   = document.getElementById('myPostList');
+      const countEl  = document.getElementById('resultCountMine');
+      const wrap     = document.getElementById('mineLoadMore');
+      const btn      = document.getElementById('loadMoreMineBtn');
+
       const offset = reset ? 0 : (state.mine.nextOffset || 0);
       const res = await apiList({ limit: 24, offset, mine: true });
-      const info = document.getElementById('mineInfo');
+
       if (res?.ok){
-        if (reset){
+        // ログインOKなのでガードを消す
+        if (guard) guard.style.display = 'none';
+
+        if (reset && listEl){
           state.mine.items = [];
           state.mine.nextOffset = 0;
-          document.getElementById('mineList')?.replaceChildren();
+          listEl.replaceChildren();
         }
+
         state.mine.items.push(...res.items);
         state.mine.nextOffset = (res.nextOffset ?? null);
-        renderList(res.items, 'mineList');
 
-        // 文言
-        if (info){
-          if (res.total === 0) info.textContent = 'まだ投稿はありません。デッキメーカーから投稿してみましょう。';
-          else info.textContent = `あなたの投稿：${res.total}件`;
+        renderList(res.items, 'myPostList');
+
+        // 件数文言
+        if (countEl){
+          if (typeof res.total === 'number'){
+            countEl.textContent = `あなたの投稿：${res.total}件`;
+          }else{
+            countEl.textContent = '';
+          }
         }
 
-        // ボタン制御
-        const btn = document.getElementById('btnMineMore');
-        if (btn) btn.disabled = (state.mine.nextOffset === null);
-      } else {
-        if (info) info.textContent = 'ログインが必要です。デッキメーカーのログイン欄からサインインしてください。';
+        const hasNext = (state.mine.nextOffset !== null);
+        if (wrap) wrap.hidden = !hasNext;
+        if (btn)  btn.disabled = !hasNext;
+
+      }else{
+        // ログインしていない or エラー
+        if (guard){
+          guard.style.display = '';
+          guard.textContent = 'マイ投稿を表示するにはログインが必要です。デッキメーカーのログイン欄からサインインしてください。';
+        }
+        if (countEl) countEl.textContent = '';
+        if (wrap) wrap.hidden = true;
       }
     }finally{
       state.mine.loading = false;
     }
+  }
+
+  // ===== 初期化 =====
+  async function init(){
+    // ① カードマスタ読み込み（デッキリスト・カード解説で使う）
+    try {
+      await ensureCardMapLoaded();
+      console.log('cardMap loaded, size =', Object.keys(window.cardMap || {}).length);
+    } catch (e) {
+      console.error('カードマスタ読み込みに失敗しました', e);
+    }
+
+    // ② トークン
+    state.token = resolveToken();
+
+    // ③ 一覧 初回
+    await loadMoreList();
+
+    // ④ 一覧側「もっと見る」
+    document.getElementById('loadMoreBtn')?.addEventListener('click', loadMoreList);
+
+    // ⑤ マイ投稿へ（ツールバーのボタン）
+    document.getElementById('toMineBtn')?.addEventListener('click', async () => {
+      showMine();
+      if (state.mine.items.length === 0){
+        await loadMoreMine(true);
+      }
+    });
+
+    // ⑥ マイ投稿：戻る／さらに読む
+    document.getElementById('backToListBtn')?.addEventListener('click', showList);
+    document.getElementById('loadMoreMineBtn')?.addEventListener('click', () => loadMoreMine(false));
+
+    // ⑦ デリゲートイベント
+    wireCardEvents(document);
+
+    // ⑧ スマホ版：代表カード長押しでデッキリスト簡易表示
+    setupDeckPeekOnSp();
   }
 
   // DOMReady
@@ -757,17 +809,4 @@ async function init(){
   }
 
   return { init };
-})();
-
-
-// デッキ投稿 API のエンドポイント（GAS 側の Web アプリ URL）
-const GAS_POST_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxvrzefFMwi7H1EYiOLuhtakG64VCiKivIP4ZiRN0HWX3syVVmv01KWhgU6esq8SWGz/exec';
-
-// ① 生 API のレスポンスを確認
-(async () => {
-  const url = GAS_POST_ENDPOINT + '?mode=list&limit=3';
-  const res = await fetch(url);
-  const json = await res.json();
-  console.log(json);                // 全体確認
-  console.log(json.items?.[0]);     // 1件目
 })();

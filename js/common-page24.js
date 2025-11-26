@@ -1062,7 +1062,8 @@ function startSlowTimer(ms = 5000) {
 
       // ★ 閉じた後に alert（少し間をあける）
       setTimeout(() => {
-        //alert('ログインしました');
+        alert('ログインしました');
+        location.hash = '#logged-in';
       }, 100);
 
       // ★ パスワード保存

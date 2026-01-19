@@ -15,9 +15,39 @@ const cardMap = {};
 window.deck = deck;
 window.cardMap = cardMap;
 
+// ========================
+// 共通：HTMLエスケープ
+// ========================
+window.escapeHtml_ = window.escapeHtml_ || function (s) {
+  return String(s ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+};
+
+// 旧互換（escapeHtml を使っている箇所があっても落ちない）
+window.escapeHtml = window.escapeHtml || window.escapeHtml_;
+
+
+
 // common.js などグローバルに置く
 // ローカル開発なら '', GitHub Pages なら '/mesorogia-cards/' などに調整
 const BASE_PATH = '';
+
+// =======================================
+// GAS API エンドポイント（共通定義）
+// =======================================
+// 今後 URL を変更したいときは、基本的にここの値だけ変えればOK。
+window.GAS_API_BASE =
+  window.GAS_API_BASE ||
+  'https://script.google.com/macros/s/AKfycbyOdtj9u9ZW1hXgQIXDPmXc_kOY5B9lcVHpSDAa4-4uonmR12DxVdQqtSI3R8t7quRK/exec';
+
+// 用途別のエイリアス（必要なら今後増やしてOK）
+window.DECKPOST_API_BASE = window.DECKPOST_API_BASE || window.GAS_API_BASE; // デッキ投稿・一覧など
+window.AUTH_API_BASE     = window.AUTH_API_BASE     || window.GAS_API_BASE; // 認証（ログイン/登録など）
+
 
 async function fetchLatestCards() {
   const res = await fetch('./public/cards_latest.json');
@@ -27,34 +57,6 @@ async function fetchLatestCards() {
   const allCards = await res.json();
   return allCards.filter(card => card.is_latest === true);
 }
-// 一度だけカードマスタを読み込んで cardMap を埋める
-async function ensureCardMapLoaded() {
-  try {
-    // すでに埋まっていれば何もしない
-    if (window.cardMap && Object.keys(window.cardMap).length > 0) {
-      return window.cardMap;
-    }
-
-    const cards = await fetchLatestCards(); // is_latest=true のみ
-
-    cards.forEach(card => {
-      const cdRaw = card.cd ?? '';
-      if (!cdRaw && cdRaw !== 0) return;
-      const cd5 = String(cdRaw).padStart(5, '0');
-      cardMap[cd5] = card;
-    });
-
-    // 念のため window 側も同期
-    window.cardMap = cardMap;
-    return window.cardMap;
-  } catch (e) {
-    console.error('カード情報の読み込みに失敗しました', e);
-    throw e;
-  }
-}
-
-// 他ページから呼べるように公開
-window.ensureCardMapLoaded = ensureCardMapLoaded;
 
 // =======================================
 // カードマスタ → cardMap 構築（共通）
@@ -78,7 +80,10 @@ function buildCardMapFromCards(cards){
       rarity : card.rarity || '',
       packName : card.pack_name || '',
       category : card.category  || '',
-      // 使いそうなフィールドはここに増やしていけばOK
+      effect_name1: card.effect_name1 || '',
+      effect_text1: card.effect_text1 || '',
+      effect_name2: card.effect_name2 || '',
+      effect_text2: card.effect_text2 || '',
     };
   }
 }
@@ -187,6 +192,28 @@ window.splitPackName   = splitPackName;
 window.makePackSlug    = makePackSlug;
 window.loadPackCatalog = loadPackCatalog;
 
+// ========================
+// 投稿・デッキ共通：タグ定義
+// ========================
+window.POST_TAG_CANDIDATES ??= [
+  "初心者向け",
+  "趣味構築",
+  "ランク戦用",
+  "大会入賞",
+  "格安デッキ",
+  "回廊用",
+  "10スタン",
+  "LOデッキ",
+  "アグロデッキ",
+];
+
+// ========================
+// 種族表示順（共通）
+//  - page2/page3 でも後で流用できるよう window に寄せておく
+// ========================
+window.RACE_ORDER_all ??= ['ドラゴン','アンドロイド','エレメンタル','ルミナス','シェイド','イノセント','旧神'];
+// deck-post（page4）では「イノセント」「旧神」は使わない前提
+window.RACE_ORDER ??= ['ドラゴン','アンドロイド','エレメンタル','ルミナス','シェイド'];
 
 
 
@@ -196,12 +223,14 @@ const order = {
 "聖焔龍（フォルティア）": 11,
 "ドラゴライダー": 12,
 "電竜": 13,
+"メロウディア": 14,
 "メイドロボ": 21,
 "アドミラルシップ": 22,
 "テックノイズ": 23,
 "ナチュリア": 31,
 "鬼刹（きせつ）": 32,
 "風花森（ふかしん）":33,
+"秘饗（バンケット）": 34,
 "ロスリス": 41,
 "白騎士": 42,
 "愚者愚者（クラウンクラウド）":43,
@@ -213,6 +242,32 @@ const order = {
 };
 return order[category] ?? 9999;
 };
+
+// 外から使えるように公開（page4 のカテゴリ折りたたみ等で利用）
+window.getCategoryOrder ??= getCategoryOrder;
+
+// 一覧（定義済みカテゴリだけ）
+window.CATEGORY_LIST ??= Object.keys({
+  "聖焔龍（フォルティア）": 11,
+  "ドラゴライダー": 12,
+  "電竜": 13,
+  "メロウディア": 14,
+  "メイドロボ": 21,
+  "アドミラルシップ": 22,
+  "テックノイズ": 23,
+  "ナチュリア": 31,
+  "鬼刹（きせつ）": 32,
+  "風花森（ふかしん）":33,
+  "秘饗（バンケット）": 34,
+  "ロスリス": 41,
+  "白騎士": 42,
+  "愚者愚者（クラウンクラウド）":43,
+  "蒼ノ刀": 44,
+  "昏き霊園（スレイヴヤード）": 51,
+  "マディスキア": 52,
+  "炎閻魔（えんえんま）": 53,
+  "ノーカテゴリ": 999
+}).sort((a,b)=>getCategoryOrder(a)-getCategoryOrder(b));
 
 // タイプ順を定義
 const getTypeOrder = (type) => {
@@ -387,3 +442,39 @@ function sortCards() {
 
   global.OwnedStore = OwnedStore;
 })(window);
+
+
+/*====================
+    キャンペーン（フロント共通）
+=====================*/
+
+// 開催中キャンペーンを取得（GAS: mode=campaignGetActive）
+// - deckmaker / deck-post どちらでも使うため common.js に置く
+// - 30秒キャッシュ
+(function(){
+  let _campCache = { t:0, v:null };
+
+  window.fetchActiveCampaign = async function fetchActiveCampaign(opts = {}){
+    const ttlMs = Number(opts.ttlMs || 30000);
+    const now = Date.now();
+    if (_campCache.v && (now - _campCache.t) < ttlMs) return _campCache.v;
+
+    const base = window.DECKPOST_API_BASE || window.GAS_API_BASE;
+    if (!base) return null;
+
+    try{
+      const res = await fetch(`${base}?mode=campaignGetActive`, {
+        method : 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body   : JSON.stringify({}), // bodyは空でOK（modeはクエリで渡す）
+      });
+      const json = await res.json();
+      const camp = (json && json.ok) ? (json.campaign || null) : null;
+      _campCache = { t: now, v: camp };
+      return camp;
+    }catch(_){
+      return null;
+    }
+  };
+})();
+

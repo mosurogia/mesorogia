@@ -351,12 +351,22 @@
     /* クリック透過（必要なら外してOK） */
 }
 
+/*=======================
+    スクショ機能（スマホのみ）
+    - ノブドラッグ式（最初の方式）
+========================*/
+.floating-shot-btn {
+    display: none;
+}
+
 @media (max-width: 768px) {
+
     .floating-shot-btn {
+        display: block;
         position: fixed;
         left: 10px;
         bottom: 20px;
-        z-index: 3200;
+        z-index: 2500;
         padding: 8px 12px;
         border-radius: 999px;
         background: rgba(255, 255, 255, .95);
@@ -364,33 +374,149 @@
         font-size: 13px;
     }
 
-    #screenshot-preview {
+    /* ✅ ここが安定のキモ：パネル高さを固定する（vh基準） */
+    #shot-panel.shot-panel {
         position: fixed;
-        right: 10px;
-        bottom: 120px;
-        width: 120px;
-        z-index: 3200;
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, .2);
+        left: 10px;
+        bottom: 60px;
+        z-index: 3400;
+        width: min(92vw, 520px);
+        height: min(70vh, 520px);
+        /* ←追加 */
+        border-radius: 12px;
+        overflow: hidden;
+        background: rgba(0, 0, 0, .88);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, .22);
+        border: 1px solid rgba(255, 255, 255, .12);
     }
 
-    #screenshot-preview img {
+    #shot-panel .shot-stage {
+        position: relative;
         width: 100%;
-        display: block;
-        border-radius: 8px;
+        height: 100%;
+        padding-left: 54px;
+        /* レールぶん右へ */
+        box-sizing: border-box;
     }
 
-    #screenshot-clear {
+    #shot-panel .shot-img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+        background: transparent;
+    }
+
+    #shot-panel .shot-pick {
+        white-space: nowrap;
         position: absolute;
-        top: -6px;
-        right: -6px;
-        background: #333;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, .35);
+        background: rgba(255, 255, 255, .95);
+        font-weight: 800;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    #shot-panel .shot-x {
+        position: absolute;
+        right: 8px;
+        top: 8px;
+        width: 28px;
+        height: 28px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, .25);
+        background: rgba(0, 0, 0, .45);
         color: #fff;
-        border-radius: 50%;
-        border: none;
-        width: 20px;
-        height: 20px;
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    #shot-panel .shot-del {
+        position: absolute;
+        right: 8px;
+        bottom: 8px;
+        width: 34px;
+        height: 30px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, .20);
+        background: rgba(0, 0, 0, .45);
+        color: #fff;
+        cursor: pointer;
+        font-size: 16px;
+    }
+/* =========================
+   スクショ：下部 横スライダー（2つを横並び）
+   ========================= */
+
+/* 下部UIが画像に被るので、少し余白 */
+#shot-panel .shot-stage {
+    padding-left: 0;
+    box-sizing: border-box;
+    padding-bottom: 74px;
+}
+
+/* 下部のスライダー枠 */
+#shot-panel .shot-vcrop {
+    position: absolute;
+    left: 8px;
+    right: 52px;
+    /* 右下🗑️の分 */
+    bottom: 8px;
+    z-index: 6;
+
+    padding: 10px 10px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, .14);
+    background: rgba(0, 0, 0, .35);
+    backdrop-filter: blur(6px);
+}
+
+/* ここがポイント：2本を “横に2列” で置く */
+#shot-panel .shot-hcrop {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+    align-items: end;
+}
+
+/* 各列の中は「ラベル→スライダー」で縦積み */
+#shot-panel .shot-hrow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+#shot-panel .shot-hlbl {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+    opacity: .92;
+    line-height: 1;
+}
+
+/* 横range（ズレにくく） */
+#shot-panel .shot-hrange {
+    width: 100%;
+    height: 18px;
+    margin: 0;
+    display: block;
+    background: transparent;
+    touch-action: pan-x;
+}
+}
+
+/* 画面が狭い端末は1列に戻す（はみ出し防止） */
+@media (max-width: 380px) {
+    #shot-panel .shot-hcrop {
+        grid-template-columns: 1fr;
     }
 }
 

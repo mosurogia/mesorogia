@@ -13,7 +13,7 @@
     <title>モスロギア 神託のメソロギア デッキメーカー</title>
 
     <!-- 検索キーワード -->
-    <meta name="keywords" content="神託のメソロギア,神託,メソロギア,モスロギア,カードゲーム,DCG,デッキ,構築,デッキメーカー,デッキ構築,デッキ作成,デッキ分析,構築支援">
+    <meta name="keywords" content="神託のメソロギア,神託,メソロギア,モスロギア,攻略,カードゲーム,DCG,デッキ,構築,デッキメーカー,デッキ構築,デッキ作成,デッキ分析,構築支援">
 
 
     <!-- ページの説明（検索結果の下に表示） -->
@@ -211,14 +211,48 @@
 
 <!-- スクショ保持ボタン -->
 <button id="screenshot-save-btn" class="floating-shot-btn">
-    📸 スクショ保持
+    📸 リスト画像
 </button>
 
-<!-- サムネ表示 -->
-<div id="screenshot-preview" hidden>
-    <img id="screenshot-img" />
-    <button id="screenshot-clear">×</button>
+<!-- スクショパネル（最小UI） -->
+<div id="shot-panel" class="shot-panel" hidden>
+    <div class="shot-stage">
+
+
+        <!-- 縦トリミングUI -->
+        <div id="shot-vcrop" class="shot-vcrop" hidden>
+            <div class="shot-hcrop">
+                <!-- 上を削る -->
+                <div class="shot-hrow">
+                    <span class="shot-hlbl" id="shot-vtop-v">上 12%</span>
+                    <input id="shot-vtop" class="shot-hrange" type="range" min="0" max="40" step="1" value="12" />
+                </div>
+
+                <!-- 下を削る -->
+                <div class="shot-hrow">
+                    <span class="shot-hlbl" id="shot-vbottom-v">下 12%</span>
+                    <input id="shot-vbottom" class="shot-hrange" type="range" min="0" max="40" step="1" value="12" />
+                </div>
+            </div>
+        </div>
+
+        <!-- 画像 -->
+        <img id="shot-img" class="shot-img" alt="リスト画像" hidden />
+
+        <!-- 未選択時の選択ボタン（画像が無いときだけ表示） -->
+        <button type="button" id="shot-pick" class="shot-pick" hidden>
+            画像を選択
+        </button>
+
+        <!-- 閉じる（右上に重ねる） -->
+        <button type="button" id="shot-close" class="shot-x" aria-label="閉じる">×</button>
+
+        <!-- 削除（右下に重ねる） -->
+        <button type="button" id="shot-remove" class="shot-del" aria-label="保存を削除">🗑️</button>
+    </div>
 </div>
+
+
 
 </div>
 

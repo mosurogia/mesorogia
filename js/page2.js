@@ -338,57 +338,234 @@ function buildCardOpEffects(info) {
     wrap.appendChild(d);
   }
 }
+
+
 /*======================================================
-  スクリーンショット画像保存・復元（安全版）
+  スクショ画像：最小パネル + 上下トリミング（横2本レンジ・安定版）
 ======================================================*/
 document.addEventListener('DOMContentLoaded', () => {
-  const LS_KEY = 'deckmaker_screenshot';
+  // ===== storage keys =====
+  const LS_RAW  = 'deckmaker_screenshot_raw';   // 元画像(dataURL)
+  const LS_CROP = 'deckmaker_screenshot_crop';  // {"top":12,"bottom":12} ※percent
+  const LS_OUT  = 'deckmaker_screenshot';       // 切り抜き後(dataURL)
 
-  const btn      = document.getElementById('screenshot-save-btn');
-  const preview  = document.getElementById('screenshot-preview');
-  const imgEl    = document.getElementById('screenshot-img');
-  const clearBtn = document.getElementById('screenshot-clear');
+  // ===== DOM =====
+  const openBtn  = document.getElementById('screenshot-save-btn');
+  const panel    = document.getElementById('shot-panel');
+  const imgEl    = document.getElementById('shot-img');
+  const pickBtn  = document.getElementById('shot-pick');
+  const closeBtn = document.getElementById('shot-close');
+  const delBtn   = document.getElementById('shot-remove');
 
-  if (!btn || !preview || !imgEl || !clearBtn) return;
+  // 横スライダー2本
+  const vWrap      = document.getElementById('shot-vcrop');
+  const vTop       = document.getElementById('shot-vtop');
+  const vBottom    = document.getElementById('shot-vbottom');
+  const vTopLbl    = document.getElementById('shot-vtop-v');
+  const vBottomLbl = document.getElementById('shot-vbottom-v');
 
-  function showPreview(src){
-    imgEl.src = src;
-    preview.hidden = false;
+  if (!openBtn || !panel || !imgEl || !pickBtn || !closeBtn || !delBtn) return;
+  if (!vTop || !vBottom || !vTopLbl || !vBottomLbl || !vWrap) return;
+
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+
+  const isOpen = () => !panel.hidden;
+  const openPanel  = () => { panel.hidden = false; };
+  const closePanel = () => { panel.hidden = true; };
+
+  function getCrop(){
+    try{
+      const o = JSON.parse(localStorage.getItem(LS_CROP) || '{}');
+      const top    = clamp(parseInt(o.top ?? 12, 10) || 0, 0, 40);
+      const bottom = clamp(parseInt(o.bottom ?? 12, 10) || 0, 0, 40);
+      return { top, bottom };
+    }catch(_){
+      return { top: 12, bottom: 12 };
+    }
   }
 
-  function handleFile(file){
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      localStorage.setItem(LS_KEY, reader.result);
-      showPreview(reader.result);
-      showRestoreToast?.('スクショを保存しました（右下に表示）');
-    };
-    reader.readAsDataURL(file);
+  function setCrop(top, bottom){
+    top = clamp(parseInt(top, 10) || 0, 0, 40);
+    bottom = clamp(parseInt(bottom, 10) || 0, 0, 40);
+    localStorage.setItem(LS_CROP, JSON.stringify({ top, bottom }));
   }
 
-  // ファイル選択（iOS/Android対応）
-  btn.addEventListener('click', () => {
+  function syncCropUI(){
+    const { top, bottom } = getCrop();
+    vTop.value = String(top);
+    vBottom.value = String(bottom);
+    vTopLbl.textContent = `上 ${top}%`;
+    vBottomLbl.textContent = `下 ${bottom}%`;
+  }
+
+  function render(){
+    const saved = localStorage.getItem(LS_OUT);
+    if (saved) {
+      imgEl.src = saved;
+      imgEl.hidden = false;
+      pickBtn.hidden = true;
+      delBtn.hidden = false;
+      vWrap.hidden = false;
+    } else {
+      imgEl.src = '';
+      imgEl.hidden = true;
+      pickBtn.hidden = false;
+      delBtn.hidden = true;
+      vWrap.hidden = true;
+    }
+  }
+
+  // ---- crop保存を連打しない（軽いデバウンス） ----
+  let __cropTimer = null;
+  function scheduleCropSave(){
+    clearTimeout(__cropTimer);
+    __cropTimer = setTimeout(() => {
+      cropAndSave().catch(()=>{});
+    }, 120);
+  }
+
+  async function cropAndSave(){
+    const raw = localStorage.getItem(LS_RAW);
+    if (!raw) return;
+
+    const { top, bottom } = getCrop();
+
+    const img = new Image();
+    img.src = raw;
+
+    await new Promise((res, rej) => {
+      img.onload = () => res();
+      img.onerror = () => rej(new Error('image load failed'));
+    });
+
+    const sw = img.naturalWidth || img.width;
+    const sh = img.naturalHeight || img.height;
+
+    const topPx    = Math.floor(sh * (top / 100));
+    const bottomPx = Math.floor(sh * (bottom / 100));
+
+    let sy = topPx;
+    let ch = sh - topPx - bottomPx;
+    if (ch < 10) { sy = 0; ch = sh; } // 切りすぎ保険
+
+    // localStorage上限対策：横1080まで縮小
+    const maxW  = 1080;
+    const scale = (sw > maxW) ? (maxW / sw) : 1;
+
+    const cw  = Math.round(sw * scale);
+    const ch2 = Math.round(ch * scale);
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = cw;
+    canvas.height = ch2;
+
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.drawImage(img, 0, sy, sw, ch, 0, 0, cw, ch2);
+
+    const out = canvas.toDataURL('image/jpeg', 0.9);
+    localStorage.setItem(LS_OUT, out);
+
+    render();
+  }
+
+  function pickImage(){
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = () => handleFile(input.files?.[0]);
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        localStorage.setItem(LS_RAW, reader.result);
+
+        if (!localStorage.getItem(LS_CROP)) setCrop(12, 12);
+        syncCropUI();
+
+        await cropAndSave();
+        openPanel();
+        showRestoreToast?.('リスト画像を保存しました');
+      };
+      reader.readAsDataURL(file);
+    };
     input.click();
-  });
-
-  // 削除
-  clearBtn.addEventListener('click', () => {
-    localStorage.removeItem(LS_KEY);
-    preview.hidden = true;
-    showRestoreToast?.('スクショを削除しました');
-  });
-
-  // 復元
-  const saved = localStorage.getItem(LS_KEY);
-  if (saved) {
-    showPreview(saved);
-    showRestoreToast?.('スクショを復元しました（右下）');
   }
+
+  // ===== 横2本レンジの反映 =====
+  function applyFromRanges(changed){
+    let top    = clamp(parseInt(vTop.value, 10) || 0, 0, 40);
+    let bottom = clamp(parseInt(vBottom.value, 10) || 0, 0, 40);
+
+    // 交差防止：top+bottom<=40
+    if (top + bottom > 40){
+      if (changed === 'top'){
+        top = 40 - bottom;
+        vTop.value = String(top);
+      } else {
+        bottom = 40 - top;
+        vBottom.value = String(bottom);
+      }
+    }
+
+    setCrop(top, bottom);
+    syncCropUI();
+    scheduleCropSave();
+  }
+
+  vTop.addEventListener('input',    () => applyFromRanges('top'));
+  vBottom.addEventListener('input', () => applyFromRanges('bottom'));
+
+  // ===== buttons =====
+  openBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    render();
+    syncCropUI();
+
+    if (isOpen()) closePanel();
+    else openPanel();
+  });
+
+  closeBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    closePanel();
+  });
+
+  // パネル外タップで閉じる
+  document.addEventListener('pointerdown', (e) => {
+    if (panel.hidden) return;
+    if (panel.contains(e.target)) return;
+    if (openBtn.contains(e.target)) return;
+    closePanel();
+  }, { capture: true });
+
+  pickBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    pickImage();
+  });
+
+  delBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    localStorage.removeItem(LS_RAW);
+    localStorage.removeItem(LS_OUT);
+    localStorage.removeItem(LS_CROP);
+    render();
+    syncCropUI();
+    showRestoreToast?.('リスト画像を削除しました');
+  });
+
+  // ===== init =====
+  if (localStorage.getItem(LS_RAW) && !localStorage.getItem(LS_OUT)) {
+    cropAndSave().catch(()=>{});
+  }
+  render();
+  syncCropUI();
+  closePanel();
 });
 
 //#endregion

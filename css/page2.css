@@ -357,7 +357,6 @@
   - トリミング：別モーダル（ドラッグバー）
 ========================*/
 .floating-shot-btn,
-.shot-crop-modal,
 .shot-panel-backdrop {
     display: none;
 }
@@ -500,9 +499,15 @@
         position: fixed;
         inset: 0;
         height: 100dvh;
+        max-height: 100dvh;
         z-index: 4000;
         background: rgba(0, 0, 0, .88);
         flex-direction: column;
+        overflow: hidden;
+        /* まず外側で切る */
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        box-sizing: border-box;
     }
 
     .shot-crop-head {
@@ -536,6 +541,8 @@
         display: flex;
         flex-direction: column;
         gap: 10px;
+        min-height: 0;
+        overflow: hidden;
     }
 
     .shot-crop-guide {
@@ -556,6 +563,7 @@
         overflow: hidden;
         background: rgba(0, 0, 0, .35);
         border: 1px solid rgba(255, 255, 255, .12);
+        min-height: 0;
     }
 
     .shot-crop-stage img {
@@ -641,6 +649,7 @@
         padding: 10px 12px calc(14px + env(safe-area-inset-bottom));
         /* ↑ 下の安全領域ぶん足す */
         z-index: 2;
+        flex: 0 0 auto;
     }
 
     .shot-crop-btn {

@@ -371,7 +371,6 @@ function buildCardOpEffects(info) {
 document.addEventListener('DOMContentLoaded', () => {
   const LS_CROP = 'deckmaker_screenshot_crop'; // {"top":12,"bottom":12}
   const LS_OUT  = 'deckmaker_screenshot';
-  const LS_HINT = 'deckmaker_screenshot_hint_v1';
   const LS_CROP_HINT = 'deckmaker_screenshot_crop_hint_v1';
 
   // ---- panel ----
@@ -578,12 +577,10 @@ document.addEventListener('DOMContentLoaded', () => {
     __bottom = saved.bottom;
     __previewOut = null;
 
-    cropImg.src = rawDataUrl; // ✅ 常に元画像のまま（ズレ原因を潰す）
-    cropImg.onload = () => updateOverlay();
-    openCrop();
-    // 画像ロード後に overlay を確定
-    requestAnimationFrame(()=> updateOverlay());
-    schedulePreview();
+  cropImg.src = rawDataUrl;
+  openCrop();
+  requestAnimationFrame(updateOverlay);
+  schedulePreview();
   }
 
   function setFromPointer(e){
@@ -664,19 +661,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!__previewOut) __previewOut = await buildPreviewLow_(__editingRaw, __top, __bottom).catch(()=>null);
 
+  localStorage.removeItem(LS_OUT);
 
-    // 先に古いのを消して容量を空ける
-    try { localStorage.removeItem(LS_OUT); } catch(_){}
-
+    // 保存（成功→閉じ方指南、失敗→エラーだけ）
     try {
       if (__previewOut) localStorage.setItem(LS_OUT, __previewOut);
     } catch (e) {
-      // まだキツい場合：もっと軽く作り直す（保険）
-      toast('画像が大きすぎたので軽量化します…');
-
+      // 失敗したら軽量版を黙って試す（ここではトースト出さない）
       try {
-        __previewOut = await buildPreviewLow_(__editingRaw, __top, __bottom); // 下で定義
-        localStorage.removeItem(LS_OUT);
+        __previewOut = await buildPreviewLow_(__editingRaw, __top, __bottom);
         localStorage.setItem(LS_OUT, __previewOut);
       } catch (_) {
         toast('保存できませんでした（容量オーバー）。別の小さめ画像で試してください');
@@ -684,12 +677,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-  toast('✂️ リスト画像を更新しました');
-
     __editingRaw = null;
     closeCrop();
     renderPanel();
     openPanel();
+    toast('📸ボタンやリスト外タップで閉じられます');//最後に出す
   });
 
   // ===== panel buttons =====

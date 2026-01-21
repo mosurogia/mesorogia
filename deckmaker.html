@@ -210,31 +210,49 @@
 </div>
 
 <!-- スクショ保持ボタン -->
-<button id="screenshot-save-btn" class="floating-shot-btn">
-    📸 リスト画像
+<button id="screenshot-save-btn" class="floating-shot-btn" aria-label="リスト画像を表示">
+    <span class="shot-btn-ico" aria-hidden="true">📸</span>
+    <span class="shot-btn-txt">リスト画像</span>
 </button>
+
+<!-- ✅ パネル外タップ受け（表示中のみ） -->
+<div id="shot-panel-backdrop" class="shot-panel-backdrop" hidden></div>
+
+<!-- ✅ トリミング確認モーダル（パネルとは別） -->
+<div id="shot-crop-modal" class="shot-crop-modal" hidden>
+    <div class="shot-crop-head">
+        <div class="shot-crop-title">トリミング調整</div>
+        <button type="button" id="shot-crop-close" class="shot-crop-x" aria-label="閉じる">×</button>
+    </div>
+
+    <div class="shot-crop-body">
+        <div class="shot-crop-guide">デッキリスト部分をトリミング</div>
+        <div id="shot-crop-stage" class="shot-crop-stage" aria-label="トリミングプレビュー">
+            <!-- 元画像（表示用） -->
+            <img id="shot-crop-img" alt="" />
+
+            <!-- 上下マスク（可視化） -->
+            <div id="shot-crop-mask-top" class="shot-crop-mask top"></div>
+            <div id="shot-crop-mask-bot" class="shot-crop-mask bot"></div>
+
+            <!-- ドラッグできる境界バー -->
+            <div id="shot-crop-bar-top" class="shot-crop-bar top" role="slider" aria-label="上側のカット位置"></div>
+            <div id="shot-crop-bar-bot" class="shot-crop-bar bot" role="slider" aria-label="下側のカット位置"></div>
+
+            <!-- 数値表示（任意・小さく） -->
+            <div id="shot-crop-readout" class="shot-crop-readout">上 12% / 下 12%</div>
+        </div>
+    </div>
+
+    <div class="shot-crop-actions">
+        <button type="button" id="shot-crop-cancel" class="shot-crop-btn ghost">キャンセル</button>
+        <button type="button" id="shot-crop-apply" class="shot-crop-btn primary">決定</button>
+    </div>
+</div>
 
 <!-- スクショパネル（最小UI） -->
 <div id="shot-panel" class="shot-panel" hidden>
     <div class="shot-stage">
-
-
-        <!-- 縦トリミングUI -->
-        <div id="shot-vcrop" class="shot-vcrop" hidden>
-            <div class="shot-hcrop">
-                <!-- 上を削る -->
-                <div class="shot-hrow">
-                    <span class="shot-hlbl" id="shot-vtop-v">上 12%</span>
-                    <input id="shot-vtop" class="shot-hrange" type="range" min="0" max="40" step="1" value="12" />
-                </div>
-
-                <!-- 下を削る -->
-                <div class="shot-hrow">
-                    <span class="shot-hlbl" id="shot-vbottom-v">下 12%</span>
-                    <input id="shot-vbottom" class="shot-hrange" type="range" min="0" max="40" step="1" value="12" />
-                </div>
-            </div>
-        </div>
 
         <!-- 画像 -->
         <img id="shot-img" class="shot-img" alt="リスト画像" hidden />
@@ -244,6 +262,11 @@
             画像を選択
         </button>
 
+        <!-- 未選択時の案内文 -->
+        <div id="shot-hint" class="shot-hint" hidden>
+            ここにスクショしたデッキ画像を置いておけます
+        </div>
+
         <!-- 閉じる（右上に重ねる） -->
         <button type="button" id="shot-close" class="shot-x" aria-label="閉じる">×</button>
 
@@ -251,7 +274,6 @@
         <button type="button" id="shot-remove" class="shot-del" aria-label="保存を削除">🗑️</button>
     </div>
 </div>
-
 
 
 </div>

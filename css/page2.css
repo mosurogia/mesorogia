@@ -352,37 +352,66 @@
 }
 
 /*=======================
-    スクショ機能（スマホのみ）
-    - ノブドラッグ式（最初の方式）
+  スクショ機能（スマホのみ）
+  - パネル：最小UI
+  - トリミング：別モーダル（ドラッグバー）
 ========================*/
-.floating-shot-btn {
+.floating-shot-btn,
+.shot-crop-modal,
+.shot-panel-backdrop {
     display: none;
 }
 
-@media (max-width: 768px) {
+.shot-crop-modal[hidden],
+.shot-panel-backdrop[hidden] {
+    display: none !important;
+}
 
+@media (max-width: 768px) {
+    /* ===== 📸ボタン（小さめ＆分かりやすく） ===== */
     .floating-shot-btn {
-        display: block;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         position: fixed;
         left: 10px;
         bottom: 20px;
         z-index: 2500;
-        padding: 8px 12px;
+        padding: 7px 10px;
         border-radius: 999px;
         background: rgba(255, 255, 255, .95);
         border: 1px solid #ddd;
-        font-size: 13px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
     }
 
-    /* ✅ ここが安定のキモ：パネル高さを固定する（vh基準） */
+    .floating-shot-btn .shot-btn-ico {
+        font-size: 14px;
+        line-height: 1;
+    }
+
+    .floating-shot-btn .shot-btn-txt {
+        font-size: 12px;
+        font-weight: 900;
+        line-height: 1;
+    }
+
+    /* ===== パネル外タップ受け ===== */
+    .shot-panel-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 3390;/* panel(3400)の下 */
+        background: transparent;
+    }
+
+    /* ===== スクショパネル ===== */
     #shot-panel.shot-panel {
         position: fixed;
         left: 10px;
         bottom: 60px;
         z-index: 3400;
         width: min(92vw, 520px);
-        height: min(70vh, 520px);
-        /* ←追加 */
+        height: min(20vh, 220px);
         border-radius: 12px;
         overflow: hidden;
         background: rgba(0, 0, 0, .88);
@@ -394,9 +423,6 @@
         position: relative;
         width: 100%;
         height: 100%;
-        padding-left: 54px;
-        /* レールぶん右へ */
-        box-sizing: border-box;
     }
 
     #shot-panel .shot-img {
@@ -411,15 +437,32 @@
         white-space: nowrap;
         position: absolute;
         left: 50%;
-        top: 50%;
+        top: 48%;
         transform: translate(-50%, -50%);
-        padding: 10px 14px;
+        padding: 9px 12px;
         border-radius: 999px;
         border: 1px solid rgba(255, 255, 255, .35);
         background: rgba(255, 255, 255, .95);
-        font-weight: 800;
+        font-weight: 900;
         font-size: 13px;
         cursor: pointer;
+    }
+
+    #shot-panel .shot-hint {
+        position: absolute;
+        left: 50%;
+        top: calc(48% + 30px);
+        transform: translateX(-50%);
+        color: rgba(255, 255, 255, .86);
+        font-size: 12px;
+        font-weight: 800;
+        text-align: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, .12);
+        background: rgba(0, 0, 0, .28);
+        backdrop-filter: blur(4px);
+        max-width: calc(100% - 80px);
     }
 
     #shot-panel .shot-x {
@@ -450,74 +493,258 @@
         cursor: pointer;
         font-size: 16px;
     }
-/* =========================
-   スクショ：下部 横スライダー（2つを横並び）
-   ========================= */
 
-/* 下部UIが画像に被るので、少し余白 */
-#shot-panel .shot-stage {
-    padding-left: 0;
-    box-sizing: border-box;
-    padding-bottom: 74px;
-}
-
-/* 下部のスライダー枠 */
-#shot-panel .shot-vcrop {
-    position: absolute;
-    left: 8px;
-    right: 52px;
-    /* 右下🗑️の分 */
-    bottom: 8px;
-    z-index: 6;
-
-    padding: 10px 10px 12px;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, .14);
-    background: rgba(0, 0, 0, .35);
-    backdrop-filter: blur(6px);
-}
-
-/* ここがポイント：2本を “横に2列” で置く */
-#shot-panel .shot-hcrop {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px 12px;
-    align-items: end;
-}
-
-/* 各列の中は「ラベル→スライダー」で縦積み */
-#shot-panel .shot-hrow {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 0;
-}
-
-#shot-panel .shot-hlbl {
-    color: #fff;
-    font-size: 12px;
-    font-weight: 900;
-    white-space: nowrap;
-    opacity: .92;
-    line-height: 1;
-}
-
-/* 横range（ズレにくく） */
-#shot-panel .shot-hrange {
-    width: 100%;
-    height: 18px;
-    margin: 0;
-    display: block;
-    background: transparent;
-    touch-action: pan-x;
-}
-}
-
-/* 画面が狭い端末は1列に戻す（はみ出し防止） */
-@media (max-width: 380px) {
-    #shot-panel .shot-hcrop {
-        grid-template-columns: 1fr;
+    /* ===== トリミング確認モーダル ===== */
+    .shot-crop-modal {
+        display: flex;
+        position: fixed;
+        inset: 0;
+        height: 100dvh;
+        z-index: 4000;
+        background: rgba(0, 0, 0, .88);
+        flex-direction: column;
     }
+
+    .shot-crop-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        color: #fff;
+    }
+
+    .shot-crop-title {
+        font-weight: 900;
+        font-size: 14px;
+        opacity: .95;
+    }
+
+    .shot-crop-x {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, .25);
+        background: rgba(0, 0, 0, .35);
+        color: #fff;
+        font-size: 20px;
+        line-height: 1;
+    }
+
+    .shot-crop-body {
+        flex: 1;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .shot-crop-guide {
+        color: rgba(255, 255, 255, .90);
+        font-size: 12px;
+        font-weight: 800;
+        padding: 6px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, .12);
+        background: rgba(0, 0, 0, .28);
+    }
+
+    .shot-crop-stage {
+        position: relative;
+        width: 100%;
+        flex: 1;
+        border-radius: 14px;
+        overflow: hidden;
+        background: rgba(0, 0, 0, .35);
+        border: 1px solid rgba(255, 255, 255, .12);
+    }
+
+    .shot-crop-stage img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+    }
+
+    /* マスク（上/下） */
+    .shot-crop-mask {
+        position: absolute;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, .55);
+        pointer-events: none;
+    }
+
+    .shot-crop-mask.top {
+        top: 0;
+    }
+
+    .shot-crop-mask.bot {
+        bottom: 0;
+    }
+
+    /* ドラッグバー（上/下） */
+    .shot-crop-bar {
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        height: 44px;/* ←太めで掴みやすく */
+        transform: translateY(-50%);
+        touch-action: none;
+    }
+
+    .shot-crop-bar::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        height: 4px;/* ←バー太く */
+        background: rgba(255, 255, 255, .92);
+        transform: translateY(-50%);
+        border-radius: 999px;
+    }
+
+    .shot-crop-bar::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 48px;
+        height: 10px;/* ←つまみ太く */
+        background: rgba(255, 255, 255, .92);
+        border-radius: 999px;
+        transform: translate(-50%, -50%);
+        opacity: .9;
+    }
+
+    .shot-crop-readout {
+        position: absolute;
+        left: 10px;
+        top: 10px;
+        padding: 6px 8px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, .45);
+        border: 1px solid rgba(255, 255, 255, .16);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 900;
+    }
+
+    .shot-crop-actions {
+        padding: 10px 12px 14px;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        position: sticky;
+        bottom: 0;
+        background: rgba(0, 0, 0, .88);
+        padding: 10px 12px calc(14px + env(safe-area-inset-bottom));
+        /* ↑ 下の安全領域ぶん足す */
+        z-index: 2;
+    }
+
+    .shot-crop-btn {
+        border-radius: 999px;
+        padding: 10px 14px;
+        font-weight: 900;
+        font-size: 13px;
+        border: 1px solid rgba(255, 255, 255, .22);
+        background: rgba(0, 0, 0, .25);
+        color: #fff;
+    }
+
+    .shot-crop-btn.primary {
+        background: rgba(255, 255, 255, .92);
+        color: #111;
+        border-color: rgba(255, 255, 255, .35);
+    }
+
+    .shot-crop-btn:active {
+        transform: scale(.98);
+    }
+
+/* 投稿トースト（#post-toast / .post-toast） */
+#post-toast.post-toast{
+  position: fixed;
+  left: 50%;
+  top: 14px;
+  transform: translateX(-50%);
+  z-index: 99999;
+
+  display: none; /* JSがblockにする */
+  max-width: min(92vw, 520px);
+  padding: 10px 12px;
+  border-radius: 12px;
+
+  background: rgba(17, 24, 39, 0.92);
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+
+/* type別（showPostToast(message, type) の type） */
+#post-toast.post-toast.success{ background: rgba(16, 185, 129, 0.92); }
+#post-toast.post-toast.error{   background: rgba(239, 68, 68, 0.92); }
+/* 投稿トースト（#post-toast / .post-toast） */
+#post-toast.post-toast {
+    position: fixed;
+    left: 50%;
+    top: 14px;
+    transform: translateX(-50%);
+    z-index: 99999;
+
+    display: none;
+    /* JSがblockにする */
+    max-width: min(92vw, 520px);
+    padding: 10px 12px;
+    border-radius: 12px;
+
+    background: rgba(17, 24, 39, 0.92);
+    color: #fff;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+}
+
+/* type別（showPostToast(message, type) の type） */
+#post-toast.post-toast.success {
+    background: rgba(16, 185, 129, 0.92);
+}
+
+#post-toast.post-toast.error {
+    background: rgba(239, 68, 68, 0.92);
+}
+
+.dm-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%) translateY(10px);
+    background: rgba(0, 0, 0, .85);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 999999;/* 何より上 */
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    /* 折り返し禁止 */
+    max-width: calc(100vw - 24px);
+    /* 画面幅に収める */
+}
+
+.dm-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
 }
 
 

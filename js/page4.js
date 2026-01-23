@@ -1497,6 +1497,7 @@ function getOldGodNameFromItem(item){
 // paneId -> { cost: Chart, power: Chart }
 window.__postDistCharts ??= {};
 
+
 function renderPostDistCharts_(item, paneId){
   // Chart.js が無いなら何もしない
   if (!window.Chart) return;
@@ -1690,8 +1691,11 @@ if (manaEffEl) {
 
   // 既存インスタンス破棄（paneごと）
   const prev = window.__postDistCharts[paneId];
-  if (prev?.cost)  try{ prev.cost.destroy(); } catch(_){}
-  if (prev?.power) try{ prev.power.destroy(); } catch(_){}
+  if (prev) {
+    try { prev.cost?.destroy();  } catch(_) {}
+    try { prev.power?.destroy(); } catch(_) {}
+    delete window.__postDistCharts[paneId]; // 参照を完全に消す
+  }
 
   const costCanvas  = document.getElementById(`costChart-${paneId}`);
   // ✅ 注記（66ロスリスアタッカー除外）
@@ -2562,7 +2566,7 @@ function readCardNotesFromEditor_(root){
 }
 
 function syncCardNotesHidden_(root){
-  const hidden = root.querySelector('#post-card-notes-hidden');
+  const hidden = root.querySelector('.post-card-notes-hidden');
   if (!hidden) return;
   hidden.value = JSON.stringify(readCardNotesFromEditor_(root));
 }
@@ -2606,8 +2610,8 @@ function renumberCardNoteRows_(root){
   });
 }
 
-function renderCardNotesRows_(root, list){
-  const box = root.querySelector('#post-card-notes');
+function renderCardNotesRows_(root, list) {
+  const box = root.querySelector('.post-card-notes');
   if (!box) return;
   box.replaceChildren();
   (list || []).forEach(r=> box.appendChild(makeCardNoteRow_(r)));
@@ -2676,7 +2680,7 @@ const uniq = Array.from(new Set(
 }
 
 function validateCardNotes_(root){
-  const validator = root.querySelector('#post-cardnote-validator');
+  const validator = root.querySelector('.post-cardnote-validator');
   if (!validator) return true;
   validator.setCustomValidity('');
 
@@ -2705,12 +2709,12 @@ function initCardNotesEditor_(editorRoot, item){
 
   renderCardNotesRows_(editorRoot, initial);
 
-  editorRoot.addEventListener('click', (e)=>{
+  editorRoot.addEventListener('click', (e) => {
+
     const t = e.target;
 
-    // 追加
-    if (t && t.id === 'add-card-note'){
-      const box = editorRoot.querySelector('#post-card-notes');
+    if (t && t.classList.contains('add-note-btn')) {
+      const box = editorRoot.querySelector('.post-card-notes');
       if (!box) return;
       const row = makeCardNoteRow_({ cd:'', text:'' });
       box.appendChild(row);
@@ -2941,6 +2945,12 @@ function buildCardSp(item, opts = {}){
   const favSymbol = liked ? '★' : '☆';
   const favText   = `${favSymbol}${likeCount}`;
 
+
+  const notesRootId   = `post-card-notes-${spPaneId}`;
+  const notesHiddenId = `post-card-notes-hidden-${spPaneId}`;
+  const notesValidId  = `post-cardnote-validator-${spPaneId}`;
+  const addNoteBtnId  = `add-card-note-${spPaneId}`;
+
   const headRightBtnHtml = isMine
     ? `<button class="delete-btn" type="button" data-postid="${escapeHtml(item.postId || '')}" aria-label="投稿を削除">🗑</button>`
     : `<button class="fav-btn ${favClass}" type="button" aria-label="お気に入り">${favText}</button>`;
@@ -2994,14 +3004,14 @@ const codeBtnHtml = `${codeManageHtml}${codeCopyBtnHtml}`;
             <div class="cardnotes-editor" hidden
                  data-original='${escapeHtml(JSON.stringify(item.cardNotes || []))}'>
               <div class="info-value" style="width:100%">
-                <div id="post-card-notes"></div>
-                <input type="hidden" id="post-card-notes-hidden" value="${escapeHtml(JSON.stringify(item.cardNotes || []))}">
+                <div class="post-card-notes"></div>
+                <input type="hidden" id="${notesHiddenId}" class="post-card-notes-hidden" value="${escapeHtml(JSON.stringify(item.cardNotes || []))}">
 
-                <input type="text" id="post-cardnote-validator" aria-hidden="true" tabindex="-1"
+                <input type="text" id="${notesValidId}" class="post-cardnote-validator" aria-hidden="true" tabindex="-1"
                   style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;border:none;padding:0;margin:0;">
 
                 <div class="add-note-box">
-                  <button type="button" id="add-card-note" class="add-note-btn">カード解説を追加</button>
+                  <button type="button" id="${addNoteBtnId}" class="add-note-btn">カード解説を追加</button>
                   <div class="post-hint" style="opacity:.8">※カードを選んで簡単な解説や採用理由を書けます</div>
                 </div>
 
@@ -3278,7 +3288,9 @@ function oneCard(item, opts = {}){
   }
 
   // ===== 右ペイン：詳細パネル描画（タブ構造＋右側に常時デッキリスト） =====
-  function renderDetailPaneForItem(item, paneId){
+  function renderDetailPaneForItem(item, basePaneId) {
+    // 固定 paneId に postId を付加してユニーク化
+    const paneId = `${basePaneId}-${item.postId}`;
     const pane = document.getElementById(paneId || 'postDetailPane');
     if (!pane || !item) return;
 
@@ -3295,6 +3307,12 @@ function oneCard(item, opts = {}){
     // タグ
     const tagsMain = tagChipsMain(item.tagsAuto, item.tagsPick);
     const tagsUser = tagChipsUser(item.tagsUser);
+
+    const notesRootId   = `post-card-notes-${paneId}`;
+    const notesHiddenId = `post-card-notes-hidden-${paneId}`;
+    const notesValidId  = `post-cardnote-validator-${paneId}`;
+    const addNoteBtnId  = `add-card-note-${paneId}`;
+
 
     // 投稿者Xリンク生成
     const posterXRaw  = (item.posterX || '').trim();
@@ -3451,7 +3469,7 @@ function oneCard(item, opts = {}){
                 <button type="button" class="subtab-help-button" aria-label="マナ効率の説明を確認">？</button>
               </dt>
               <dd class="mana-eff-row">
-                <span id="mana-efficiency-${escapeHtml(paneId)}" class="mana-eff">-</span>
+                <span id="mana-efficiency-${paneId}" class="mana-eff">-</span>
                 <span class="avg-charge-inline">
                   （平均チャージ量：<span id="avg-charge-${escapeHtml(paneId)}">-</span>）
                 </span>
@@ -3466,7 +3484,7 @@ function oneCard(item, opts = {}){
                   <div class="post-detail-chartchips" id="cost-summary-${escapeHtml(paneId)}"></div>
                 </div>
                 <div class="post-detail-chartcanvas">
-                  <canvas id="costChart-${escapeHtml(paneId)}"></canvas>
+                  <span id="mana-efficiency-${paneId}" class="mana-eff">-</span>
                 </div>
               </div>
 
@@ -3573,13 +3591,13 @@ function oneCard(item, opts = {}){
               <div class="cardnotes-editor" hidden
                    data-original='${escapeHtml(JSON.stringify(item.cardNotes || []))}'>
                 <div class="info-value" style="width:100%">
-                  <div id="post-card-notes"></div>
+                  <div class="post-card-notes"></div>
 
                   <!-- ▼ 復元データミラー用（JSON文字列） -->
-                  <input type="hidden" id="post-card-notes-hidden" value="${escapeHtml(JSON.stringify(item.cardNotes || []))}">
+                  <input type="hidden" class="post-card-notes-hidden" value="${escapeHtml(JSON.stringify(item.cardNotes || []))}">
 
                   <!-- カード解説バリデーション用 -->
-                  <input type="text" id="post-cardnote-validator" aria-hidden="true" tabindex="-1"
+                  <input type="text" class="post-cardnote-validator" aria-hidden="true" tabindex="-1"
                     style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;border:none;padding:0;margin:0;">
 
                   <div class="add-note-box">

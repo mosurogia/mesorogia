@@ -409,7 +409,6 @@
         bottom: 60px;
         z-index: 3400;
         width: min(92vw, 520px);
-        height: min(20vh, 220px);
         border-radius: 12px;
         overflow: hidden;
         background: rgba(0, 0, 0, .88);

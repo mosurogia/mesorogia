@@ -370,8 +370,7 @@ function buildCardOpEffects(info) {
 ======================================================*/
 document.addEventListener('DOMContentLoaded', () => {
   const LS_CROP = 'deckmaker_screenshot_crop'; // {"top":12,"bottom":12}
-  const LS_OUT  = 'deckmaker_screenshot';
-  const LS_CROP_HINT = 'deckmaker_screenshot_crop_hint_v1';
+  const LS_OUT  = 'deckmaker_screenshot';      // dataURL
 
   // ---- panel ----
   const openBtn  = document.getElementById('screenshot-save-btn');
@@ -417,9 +416,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const openCrop = ()=>{
     cropModal.hidden = false;
     cropModal.style.display = 'flex';
-    if (!localStorage.getItem(LS_CROP_HINT)){
-      localStorage.setItem(LS_CROP_HINT, '1');
-    }
   };
   const closeCrop = ()=>{
     cropModal.hidden = true;

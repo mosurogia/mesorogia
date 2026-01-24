@@ -375,7 +375,7 @@
         left: 10px;
         bottom: 20px;
         z-index: 2500;
-        padding: 7px 10px;
+        padding: 15px 20px;
         border-radius: 999px;
         background: rgba(255, 255, 255, .95);
         border: 1px solid #ddd;
@@ -388,7 +388,7 @@
     }
 
     .floating-shot-btn .shot-btn-txt {
-        font-size: 12px;
+        font-size: 18px;
         font-weight: 900;
         line-height: 1;
     }
@@ -406,9 +406,21 @@
     #shot-panel.shot-panel {
         position: fixed;
         left: 10px;
-        bottom: 60px;
+        /* ✅ iOSの下側UI/安全領域ぶん持ち上げる */
+        bottom: calc(75px + env(safe-area-inset-bottom));
         z-index: 3400;
-        width: min(92vw, 520px);
+
+        width: clamp(200px, 60vw, 500px);
+
+        /* ★高さ固定をやめて、比率で決める */
+        height: auto;
+        aspect-ratio: var(--shot-ar, 16 / 9);
+        /* 画像が無い時の仮比率 */
+
+        /* ただし小さすぎ・大きすぎは防ぐ */
+        min-height: 160px;
+        max-height: calc(100dvh - (60px + env(safe-area-inset-bottom)) - 20px);
+
         border-radius: 12px;
         overflow: hidden;
         background: rgba(0, 0, 0, .88);
@@ -420,12 +432,15 @@
         position: relative;
         width: 100%;
         height: 100%;
+        background: rgba(0, 0, 0, .88);
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     #shot-panel .shot-img {
         width: 100%;
         height: 100%;
-        object-fit: contain;
+        object-fit: unset;
         display: block;
         background: transparent;
     }

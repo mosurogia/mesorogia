@@ -1580,6 +1580,34 @@ body {
     text-shadow: 0 0 2px rgba(0, 0, 0, 0.25);
 }
 
+/* タグチップ：ラベル＋🔎を横並びに */
+.post-tags .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 🔎ボタン（チップの色を継承） */
+.post-tags .chip-search-btn {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    padding: 0 0 0 2px;
+    line-height: 1;
+    font-size: 0.95em;
+    opacity: .9;
+}
+
+.post-tags .chip-search-btn:hover {
+    opacity: 1;
+    transform: translateY(-0.5px);
+}
+
+.post-tags .chip-label {
+    white-space: nowrap;
+}
 /*=======================
   4.詳細ブロック / デッキリスト
 ========================*/
@@ -2656,7 +2684,7 @@ body {
 /* =========================
    マイ投稿：デッキコード管理（PC右ペイン）
 ========================= */
-.deckcode-box {
+.post-manage-box {
     margin-top: 10px;
     padding: 10px 12px;
     border: 1px solid #e5e7eb;

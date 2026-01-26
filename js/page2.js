@@ -2975,7 +2975,7 @@ function isCostFreeBySpecialSummon(c){
 
 // 3) 総コスト/パワー表示（※先に計算→後で描画）
 
-// 総コスト
+// 総コスト（表示用：全部含める）
 const sumCost = deckCards.reduce((sum, c) => {
   if (isCostFreeBySpecialSummon(c)) return sum;
   return sum + (Number(c.cost) || 0);
@@ -3032,15 +3032,28 @@ if (avgChargeEl) {
   avgChargeEl.textContent = avg !== null ? avg.toFixed(2) : '-';
 }
 
+// ✅ マナ効率計算用：30109 を除外した総コスト
+const EXCLUDE_MANA_COST_CDS = new Set(['30109']);
 
-// ✅ マナ効率（供給率） = (総チャージャー量 + 初期マナ4) / 総コスト
+const sumCostForMana = deckCards.reduce((sum, c) => {
+  if (isCostFreeBySpecialSummon(c)) return sum;
+
+  const cd = String(c.cd ?? c.code ?? c.cardId ?? '').padStart(5, '0');
+  if (EXCLUDE_MANA_COST_CDS.has(cd)) return sum; // ← ここだけ除外
+
+  return sum + (Number(c.cost) || 0);
+}, 0);
+
+//  マナ効率（供給率） = (総チャージャー量 + 初期マナ4) / 総コスト
 const manaEffEl = document.getElementById('mana-efficiency');
 if (manaEffEl) {
   const BASE_MANA = 4;
   const totalMana = chargerPower + BASE_MANA;
 
-  // 供給率（逆数）
-  const manaEff = (sumCost > 0) ? (totalMana / sumCost) : null;
+  // マナ効率（供給率） = (総チャージャー量 + 初期マナ4) / 総コスト（専用）
+  const manaEff = (sumCostForMana > 0)
+    ? (totalMana / sumCostForMana)
+    : null;
 
   // 表示ラベル（高いほど良い）
   let label = '';
@@ -3540,6 +3553,13 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const HAND_SIZE = 4;
   const OUTCOME_LIMIT = 5;
 
+  // 例①〜例⑳（それ以上は例21みたいに数字で）
+  function formatExampleLabel_(n){
+    const circled = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩',
+                    '⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳'];
+    return '例' + (circled[n-1] || String(n));
+  }
+
   // 手札タイプスロットの初期値取得（現在の手札並びをテンプレにする）
   function getInitialHandTypeSlots(){
   const map = window.cardMap || window.allCardsMap || {};
@@ -3871,8 +3891,8 @@ function renderInitialHandOutcomeProbs(){
 
   grid.innerHTML = shown.map((r, idx) => `
     <div class="mull-outcome-row2">
-      <div style="display:flex; align-items:center; gap:6px;">
-        <span class="mull-outcome-rank">#${idx+1}</span>
+      <div style="display:flex; align-items:center;">
+        <span class="mull-outcome-rank">${formatExampleLabel_(idx+1)}</span>
         <div class="mull-outcome-hand">
           ${(r.typeArr||[]).map(t => `
             <div class="mull-outcome-card" data-type="${t}"></div>
@@ -3975,8 +3995,8 @@ function renderMulliganOutcomeProbs(){
     <div class="mull-outcome-grid">
       ${shown.map((r, idx) => `
         <div class="mull-outcome-row2">
-          <div style="display:flex; align-items:center; gap:6px;">
-            <span class="mull-outcome-rank">#${idx+1}</span>
+          <div style="display:flex; align-items:center;">
+            <span class="mull-outcome-rank">${formatExampleLabel_(idx+1)}</span>
               <div class="mull-outcome-hand">
                 ${(r.typeArr || []).map((t, i) => {
                   const h = state.hand[i];
@@ -4083,8 +4103,7 @@ window.addEventListener('resize', () => {
     if (selN === 0) {
       if (els.outcomeBox) {
         els.outcomeBox.innerHTML = `
-          <div class="mull-remaining-title">初期手札の手札構成確率</div>
-          <div class="mull-outcome-note"></div>
+          <div class="mull-remaining-title">初期手札パターンの目安</div>
           <div class="mull-outcome-grid"></div>
         `;
       }

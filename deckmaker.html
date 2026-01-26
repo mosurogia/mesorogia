@@ -126,6 +126,7 @@
                 <div class="modal-footer">
                     <button class="modal-buttun" id="applyFilterBtn">この条件で絞り込む</button>
                     <button class="modal-buttun" onclick="resetFilters()">リセット</button>
+                    <button class="modal-buttun" onclick="closeFilterModal()" type="button">閉じる</button>
                 </div>
             </div>
         </div>
@@ -447,8 +448,13 @@
 
                             <!-- ✅ リセットボタン直下：マリガン後手札構成（常時表示） -->
                             <div id="mull-outcome-probs" class="mull-outcome">
-                                <div class="mull-remaining-title">マリガン後の手札</div>
-                                <div class="mull-outcome-note">ここにマリガン後の手札構成予測が表示されます</div>
+                                <div class="mull-remaining-title">初期手札パターンの目安</div>
+                                <div class="mull-outcome-note">ここに初期手札パターンの目安が表示されます</div>
+                            </div>
+                            <div class="mull-hint">
+                                ※デッキの傾向を把握するための参考表示です。<br>
+                                ※マリガンの正解・推奨を示すものではありません。<br>
+                                ※計算はこの端末内で完結します。（サーバ送信なし）
                             </div>
                         </div>
                     </div>

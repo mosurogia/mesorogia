@@ -1,5 +1,24 @@
 
 :root {
+    /* =========================
+           タイプカラー（mrt-chip / マリガン結果と共通）
+           ========================= */
+
+        /* チャージャー（ブルー） */
+        --type-charger-rgb: 119, 170, 212;
+        --type-charger-bg: rgba(119, 170, 212, .2);
+        --type-charger-border: rgba(119, 170, 212, .4);
+
+        /* アタッカー（パープル） */
+        --type-attacker-rgb: 125, 91, 155;
+        --type-attacker-bg: rgba(125, 91, 155, .2);
+        --type-attacker-border: rgba(125, 91, 155, .4);
+
+        /* ブロッカー（グレー） */
+        --type-blocker-rgb: 214, 212, 204;
+        --type-blocker-bg: rgba(214, 212, 204, .5);
+        --type-blocker-border: rgba(214, 212, 204, .8);
+
     /* ===== 種族カラー（所持率チェッカー由来） ===== */
     --race-dragon: #e24545;
     --race-android: #2dbec0;

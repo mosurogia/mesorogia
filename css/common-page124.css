@@ -419,7 +419,7 @@
     --ring-accent: rgb(var(--pack-d-accent-rgb));
 }
 
-.filter-group[data-key="パック名"] .filter-btn[data-pack="Ensemble of Silence"] {
+.filter-group[data-key="パック名"] .filter-btn[data-pack="Ensemble of Slience"] {
     --ring: rgb(var(--pack-e-rgb));
     --ring-accent: rgb(var(--pack-e-accent-rgb));
 }
@@ -701,6 +701,11 @@
 }
 
 
+
+
+
+
+
 /*=====カード一覧======*/
 .grid {
     display: flex;
@@ -770,6 +775,85 @@
     font-weight: bold;
     font-size: 1.2rem;
     margin-bottom: 0.3em;
+}
+
+/* =====================================================
+   Owned Editor（詳細内の所持編集UI）
+   - card-name の右に並び、狭いと下に落ちる（SP対応）
+===================================================== */
+.card-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    /* ここが重要：SPで被らず下に落ちる */
+}
+
+.owned-editor {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, .55);
+    border: 1px solid rgba(0, 0, 0, .12);
+}
+
+.owned-editor-label {
+    font-size: .85em;
+    opacity: .85;
+    margin-right: 2px;
+}
+
+.owned-editor-num {
+    min-width: 2.2em;
+    text-align: center;
+    font-weight: 700;
+}
+
+.owned-editor-btn {
+    width: 30px;
+    height: 26px;
+    line-height: 1;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, .18);
+    background: #fff;
+    cursor: pointer;
+}
+
+.owned-editor-toggle {
+    margin-left: 4px;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, .18);
+    background: linear-gradient(180deg, #e9f5fb 0%, #d4ecfa 100%);
+    color: #1f3f5f;
+    cursor: pointer;
+}
+
+/* ロック中は +/- を押せない見た目に */
+.owned-editor.is-locked .owned-editor-btn {
+    opacity: .35;
+    cursor: not-allowed;
+}
+/* 編集中でも上限に達したボタンは押せない見た目に */
+.owned-editor-btn.is-disabled {
+    opacity: .35;
+    cursor: not-allowed;
+}
+
+/* SP：ボタンが小さすぎないように */
+@media (max-width: 768px) {
+    .owned-editor-btn {
+        width: 34px;
+        height: 30px;
+    }
+
+    .owned-editor-toggle {
+        height: 30px;
+    }
 }
 
 /*パック名、種族、カテゴリ*/

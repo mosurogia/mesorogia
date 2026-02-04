@@ -334,7 +334,11 @@
 /*メニュ＋カード一覧*/
 .card-content {
     flex: 1;
-    padding: 0 0.4rem;
+
+}
+/*カード一覧全体の左右余白*/
+#packs-root {
+        padding: 0 0.4rem;
 }
 
 /*メニュー全体*/
@@ -585,7 +589,7 @@ section h4 {
 .card-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 9px;
+    gap: 5px;
 }
 
 
@@ -634,12 +638,13 @@ section h4 {
 }
 
 /*カード*/
-.card {
-    width: calc(100% / 8 - 8px);
+.card-list .card{
+    width: calc(100% / 8 - 5px);
     box-sizing: border-box;
     position: relative;
     overflow: hidden;
     transition: box-shadow .15s ease, transform .05s ease;
+    border: 4px solid transparent;
 }
 .card:focus-visible {
     outline: none;
@@ -657,39 +662,27 @@ section h4 {
     }
 }
 /*カード画像（このページでは丸みをなくす）*/
-.card img{
+.card-list .cardimg{
     border-radius: 0px;
 }
 /*スマホ用*/
 @media (max-width: 1024px) {
-    .card {
-        width: calc(100% / 6 - 8px);
-    }
-
-    .owned-mark {
-        min-width: 15px;
-        width: 23%;
-        font-size: 0.6em;
+    .card-list .card{
+        width: calc(100% / 6 - 5px);
     }
 }
 @media (max-width: 560px) {
-
-    .card {
-        width: calc(100% / 5 - 8px);
+    .card-list .card{
+        width: calc(100% / 5 - 4px);
     }
 }
 
 
 /* ======== レアリティ枠線 ======== */
 
-
-    /* カード全体に枠線を付与（グラデ対応） */
-    .card {
-        border: 4px solid transparent;
-    }
 /* モバイル（～700px）では枠線を2pxに */
 @media (max-width: 700px) {
-    .card {
+    .card-list .card {
         border-width: 2px;
     }
     .owned-card-grid .card {
@@ -698,19 +691,19 @@ section h4 {
     }
 }
     /* レアリティ別グラデ枠線 */
-.card.rarity-legend {
+.card-list .card.rarity-legend {
     border-image: var(--rarity-border-legend) 1;
 }
 
-.card.rarity-gold {
+.card-list .card.rarity-gold {
     border-image: var(--rarity-border-gold) 1;
 }
 
-.card.rarity-silver {
+.card-list .card.rarity-silver {
     border-image: var(--rarity-border-silver) 1;
 }
 
-.card.rarity-bronze {
+.card-list .card.rarity-bronze {
     border-image: var(--rarity-border-bronze) 1;
 }
 
@@ -722,19 +715,19 @@ section h4 {
         border-image-slice: 1;
     }
 
-.card.rarity-legend::before {
+.card-list .card.rarity-legend::before {
     background: linear-gradient(90deg, #91e4fb 0%, #ffffff 70%, #91e4fb 100%);
 }
 
-.card.rarity-gold::before {
+.card-list .card.rarity-gold::before {
     background: linear-gradient(90deg, gold 0%, #fff5cc 70%, gold 100%);
 }
 
-.card.rarity-silver::before {
+.card-list .card.rarity-silver::before {
     background: linear-gradient(90deg, silver 0%, #f0f0f0 70%, silver 100%);
 }
 
-.card.rarity-bronze::before {
+.card-list .card.rarity-bronze::before {
     background: linear-gradient(90deg, peru 0%, #ffd9b3 70%, peru 100%);
 }
 
@@ -1146,7 +1139,7 @@ section h4 {
 }
 
 /*カード名*/
-.card-name {
+/*.card-name {
     display: block;
     font-size: clamp(0.3rem, 1vw, 1rem);
     font-weight: bold;
@@ -1163,7 +1156,8 @@ section h4 {
     font-size: clamp(5.5px, 1.4vw, 1rem);
     height: 4.2vw;
 }
-}
+}*/
+
 /*±ボタンレイアウト*/
 .owned-card-controls {
     display: flex;
@@ -1326,7 +1320,7 @@ font-size: clamp(5px, 1.3vw, 14px);
     font-size: clamp(15px, 4vw, 25px);
     padding: 0.6vw 6px;
 }
-
+/*
 #filter-modal .filter-group .filter-btn {
     font-size: clamp(11px, 3vw, 20px);
 }
@@ -1336,7 +1330,7 @@ font-size: clamp(5px, 1.3vw, 14px);
     gap: 0.3rem;
     margin-bottom: 0.2rem;
 }
-
+*/
 #filter-modal button.selected {
     background-color: #333;
     color: white;

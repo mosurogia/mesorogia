@@ -1,0 +1,123 @@
+/* ===== 表示切替トグル ===== */
+.view-toggle {
+    display: flex;
+    gap: 6px;
+    padding: 6px 4px;
+    background: #fff;
+    border-bottom: 1px solid #e7e7e7;
+    position: sticky;
+    top: 40px;
+    /* search-bar が sticky なので下に 붙ける。必要なら調整 */
+    z-index: 1900;
+}
+
+.view-btn {
+    flex: 1 1 auto;
+    border: 1px solid rgba(0, 0, 0, .15);
+    border-radius: 999px;
+    padding: 6px 10px;
+    background: #f7f7f9;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.view-btn.is-active {
+    background: #2b90ff;
+    border-color: #2b90ff;
+    color: #fff;
+}
+
+/* ===== リスト表示レイアウト ===== */
+.grid.is-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+
+/* 1カード分の行 */
+.list-row {
+    display: flex;
+    gap: 10px;
+    padding: 8px;
+    border: 1px solid rgba(0, 0, 0, .12);
+    border-radius: 10px;
+    background: #fff;
+}
+
+/* ✅ 横長PCは2列リストにして余白を有効活用 */
+@media (min-width: 1100px) {
+    .grid.is-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 5px;
+    }
+}
+
+/* 左：画像（既存.cardを中で使う想定） */
+.list-row .card {
+    width: 92px;
+    flex: 0 0 92px;
+}
+
+/* 右：詳細（既存 .card-detail を常時表示に） */
+.list-row .card-detail {
+    display: block;
+    margin: 0;
+    padding: 5px 10px;
+    flex: 1 1 auto;
+}
+
+/* SPは画像少し小さく */
+@media (max-width: 768px) {
+    .list-row .card {
+        width: 78px;
+        flex-basis: 78px;
+    }
+
+    .list-row .card-detail {
+        padding: 8px;
+    }
+}
+/* ===============================
+   リスト表示時：詳細の文字サイズ調整
+   =============================== */
+.grid.is-list .card-detail {
+    font-size: 0.85rem;
+    /* 全体を一段落とす */
+    line-height: 1.4;
+}
+
+.grid.is-list .card-detail .card-name {
+    font-size: 1rem;
+    /* 名前だけ少し大きめ */
+}
+
+.grid.is-list .card-detail .card-meta {
+    font-size: 0.75rem;
+}
+
+.grid.is-list .card-detail .card-meta.card-pack {
+    font-size: 0.7rem;
+    opacity: 0.85;
+}
+
+.grid.is-list .card-detail .effect-name {
+    font-size: 0.85em;
+}
+
+.grid.is-list .card-detail .card-effect {
+    font-size: 0.8rem;
+    line-height: 1.45;
+}
+
+/* SPはさらに少し詰める */
+@media (max-width: 768px) {
+    .grid.is-list .card-detail {
+        font-size: 0.8rem;
+    }
+
+    .grid.is-list .card-detail .card-name {
+        font-size: 0.95rem;
+    }
+}

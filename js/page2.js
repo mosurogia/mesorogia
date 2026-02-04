@@ -135,104 +135,6 @@ window.dmToast ??= (() => {
 //#region 2. カードデータ生成・一覧表示
 
 /**
- * 単一カードのカード要素（.card）を生成して返す
- * - データ属性は検索・フィルタ・詳細表示のために付与
- * - 画像は lazyload + フォールバック
- * - クリックでデッキに追加、右クリック/ダブルクリックは抑止
- */
-function generateCardListElement(card) {
-  const cardDiv = document.createElement('div');
-  cardDiv.classList.add('card');
-
-  // ---------- data-* 付与（検索・フィルタ・詳細用） ----------
-  // 文字列はそのまま、数値は文字列化、真偽は小文字文字列化
-  const setData = (key, val) => {
-    if (val === undefined || val === null) return;
-    cardDiv.setAttribute(key, String(val));
-  };
-
-  setData('data-cd', card.cd);
-  setData('data-name', card.name);
-  setData('data-effect1', card.effect_name1 ?? '');
-  setData('data-effect2', card.effect_name2 ?? '');
-  setData('data-effecttext1', card.effect_text1 ?? '');
-  setData('data-effecttext2', card.effect_text2 ?? '');
-  setData('data-race', card.race ?? '');
-  setData('data-category', card.category ?? '');
-  setData('data-rarity', card.rarity ?? '');
-  setData('data-type', card.type ?? '');
-  setData('data-cost', card.cost ?? '');
-  setData('data-power', card.power ?? '');
-  setData('data-pack', card.pack_name ?? '');
-
-  // まとめ検索用（効果名/テキストも含めて連結）
-  const _effectJoined = [card.effect_name1, card.effect_text1, card.effect_name2, card.effect_text2]
-    .filter(Boolean).join(' ');
-  setData('data-effect', _effectJoined);
-  setData('data-field', card.field ?? '');
-  setData('data-ability', card.special_ability ?? '');
-
-  // フラグ系は true/false を小文字化して格納
-  const flagToStr = (v) => String(v ?? '').toLowerCase();
-  setData('data-bp', flagToStr(card.BP_flag));
-  setData('data-draw', flagToStr(card.draw));
-  setData('data-graveyard_recovery', flagToStr(card.graveyard_recovery));
-  setData('data-cardsearch', flagToStr(card.cardsearch));
-  setData('data-destroy_opponent', flagToStr(card.destroy_opponent));
-  setData('data-destroy_self', flagToStr(card.destroy_self));
-  setData('data-heal', flagToStr(card.heal));
-  setData('data-power_up', flagToStr(card.power_up));
-  setData('data-power_down', flagToStr(card.power_down));
-
-  // リンクカード（性能リンク/コラボ対応）
-  if (typeof card.link !== 'undefined') setData('data-link', flagToStr(card.link));
-  if (typeof card.link_cd !== 'undefined') setData('data-linkcd', card.link_cd);
-
-  // キーワード（簡易全文検索用）
-  const keywords = [
-    card.name, card.race, card.category, card.type,
-    card.field, card.special_ability,
-    card.effect_name1, card.effect_text1,
-    card.effect_name2, card.effect_text2
-  ].filter(Boolean).join(' ').toLowerCase();
-  setData('data-keywords', keywords);
-
-  // ---------- UIパーツ ----------
-  // 拡大ボタン（インラインonclickは使用せず、addEventListenerに統一）
-  const zoomBtn = document.createElement('div');
-  zoomBtn.classList.add('zoom-btn');
-  zoomBtn.innerText = '🔎';
-  zoomBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (typeof handleZoomClick === 'function') handleZoomClick(e, zoomBtn);
-  });
-  cardDiv.appendChild(zoomBtn);
-
-  // 所持マーク（所持率連携の余地があるため残置）
-  const ownedMark = document.createElement('div');
-  ownedMark.classList.add('owned-mark');
-  cardDiv.appendChild(ownedMark);
-
-  // 画像
-  const img = document.createElement('img');
-  img.alt = card.name || '';
-  img.loading = 'lazy';
-  img.src = `img/${card.cd}.webp`;
-  img.addEventListener('error', () => {
-    if (img.dataset.fallbackApplied) return;
-    img.dataset.fallbackApplied = '1';
-    img.src = 'img/00000.webp';
-  });
-  // 左クリックでデッキに追加（ダブル/右クリック抑止）
-  img.addEventListener('click', (e) => { e.stopPropagation(); addCard(card.cd); });
-  img.addEventListener('contextmenu', (e) => e.preventDefault());
-  img.addEventListener('dblclick', (e) => e.preventDefault());
-  cardDiv.appendChild(img);
-
-  return cardDiv;
-}
-
-/**
  * 詳細領域のHTMLを生成（カード効果を見やすく段組）
  */
 function generateDetailHtml(card) {
@@ -836,8 +738,9 @@ function applyGrayscaleFilter() {
    所持カードオーバーレイ表示（シンプル版）
    ========================= */
 //#region owned-overlay
-// ON/OFF 状態（初期OFF：ボタン初期表示と合わせる）
-let ownedOverlayOn = false;
+
+// ✅ 常時ON（トグル廃止）
+let ownedOverlayOn = true;
 
 // 所持データ取得
 // OwnedStore（あれば最優先）→ localStorage の順で読むだけに簡素化
@@ -863,31 +766,20 @@ function paintOwnedMarkDeckmaker(cardEl, total) {
   const count = Math.max(0, Math.min(3, total | 0));
   const mark = cardEl.querySelector('.owned-mark');
 
-  // 既存の段階クラスをすべて一度剥がす
   cardEl.classList.remove('owned-0', 'owned-1', 'owned-2', 'owned-3');
 
-  if (ownedOverlayOn) {
-    cardEl.classList.add('owned');
-    // 段階クラスを付与（CSSで濃淡・表示方法を切れ味良く制御可能）
-    cardEl.classList.add(`owned-${count}`);
+  // ✅ 常時表示
+  cardEl.classList.add('owned');
+  cardEl.classList.add(`owned-${count}`);
 
-    if (mark) {
-      mark.textContent = String(count);
-      mark.style.display = 'flex';
-      // アクセシビリティ補助（任意）
-      mark.setAttribute('aria-label', `所持 ${count} 枚`);
-    }
-  } else {
-    cardEl.classList.remove('owned');
-    if (mark) {
-      mark.textContent = '';
-      mark.style.display = 'none';
-      mark.removeAttribute('aria-label');
-    }
+  if (mark) {
+    mark.textContent = String(count);
+    mark.style.display = 'flex';
+    mark.setAttribute('aria-label', `所持 ${count} 枚`);
   }
+
   cardEl.dataset.count = String(count);
 }
-
 
 // 画面の全カードへ反映
 function refreshOwnedOverlay() {
@@ -900,39 +792,31 @@ function refreshOwnedOverlay() {
   });
 }
 
-// トグル（HTMLのonclickからも呼べるようにグローバル公開）
+// （互換用に残す：呼ばれても常時ONなので「再描画」だけする）
 function toggleOwned() {
-  ownedOverlayOn = !ownedOverlayOn;
-
-  // 反映前にボタン文言を即時更新
-  const btn = document.getElementById('toggleOwnedBtn');
-  if (btn) {
-    btn.textContent = `所持カード${ownedOverlayOn ? '反映' : '未反映'}`;
-    btn.title = ownedOverlayOn ? '所持オーバーレイ表示中' : '所持オーバーレイOFF';
-  }
-
-  // 画面反映
+  ownedOverlayOn = true;
   refreshOwnedOverlay();
-
-  // 交換サマリーなどの派生UI更新（存在する場合のみ）
   if (typeof updateExchangeSummary === 'function') updateExchangeSummary();
 }
 
-
-//所持カード初期化
+// 所持カード初期化
 document.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('toggleOwnedBtn');
-  if (btn) btn.textContent = '所持カード未反映';
+  if (btn) {
+    // ✅ トグル文言は使わず「表示中」固定（見せ方はCSSで調整）
+    btn.textContent = '所持表示中';
+    btn.title = '所持オーバーレイ表示中';
+  }
 
-  // 初期正規化
+  // 初期反映
   refreshOwnedOverlay();
 
-  // #grid 再描画に追従（ONのときのみ）
+  // #grid 再描画に追従（常時ON）
   const root = document.getElementById('grid');
   if (root) {
     let busy = false;
     new MutationObserver(muts => {
-      if (busy || !ownedOverlayOn) return;
+      if (busy) return;
       if (!muts.some(m => m.addedNodes?.length || m.removedNodes?.length)) return;
       busy = true;
       requestAnimationFrame(() => { refreshOwnedOverlay(); busy = false; });
@@ -940,9 +824,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// HTML側から呼べるように公開
+// HTML側から呼べるように公開（互換）
 window.toggleOwned = toggleOwned;
 window.refreshOwnedOverlay = refreshOwnedOverlay;
+
+//#endregion owned-overlay
+
 
 
 /*----------------------------------------------

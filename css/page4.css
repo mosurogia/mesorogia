@@ -136,8 +136,7 @@ body {
 }
 
 /* ユーザータグ検索入力 */
-#userTagQuery,
-#userTagEditQuery {
+.ctrl-input {
     width: 100%;
     box-sizing: border-box;
     font-size: 15px;
@@ -543,6 +542,7 @@ body {
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 2px;
+    padding-right: 96px;/* 共有+いいね(または削除)分の逃げ */
 }
 
 .btn-filter-poster {
@@ -562,6 +562,24 @@ body {
     display: none;
 }
 
+/* 右上：共有/いいね/削除 の並び */
+.post-head-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: inline-flex;
+    gap: 3px;
+    align-items: center;
+}
+
+.btn-post-share {
+    appearance: none;
+    border: 1px solid rgba(0, 0, 0, .15);
+    background: #fff;
+    border-radius: 999px;
+    padding: 4px 8px;
+    cursor: pointer;
+}
 
 /* お気に入りボタン */
 .fav-btn {
@@ -578,14 +596,6 @@ body {
     border-color: #e6c76a;
 }
 
-/*お気に入りボタンを右上固定 */
-.sp-head-right .fav-btn,
-.pc-head-right .fav-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
-}
-
 /* 削除ボタン（見た目は後で調整OK） */
 .delete-btn {
     appearance: none;
@@ -594,14 +604,6 @@ body {
     border-radius: 999px;
     padding: 4px 10px;
     cursor: pointer;
-}
-
-/* 右上固定（fav-btn と同じ） */
-.sp-head-right .delete-btn,
-.pc-head-right .delete-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
 }
 
 /* タグ全体のくくり */

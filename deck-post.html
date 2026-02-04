@@ -51,18 +51,18 @@
     <!-- ===== ページ差分head ここまで ===== -->
 </head>
 <body>
-
-    <header class="main-header">
-        <div class="header-logo">
-            <img src="img/tatudosi.webp" alt="神託のメソロギア ロゴ" />
-        </div>
-        <nav class="header-nav">
-            <a href="index.html">📖 一覧</a>
-            <a href="deckmaker.html">🃏 デッキメーカー</a>
-            <a href="cardcheker.html">📊 所持率チェッカー</a>
-            <a class="active-page" href="deck-post.html">📤 デッキ投稿</a>
-        </nav>
-    </header>
+<!-- ヘッダー -->
+<header class="main-header">
+    <div class="header-logo">
+        <img src="img/tatudosi.webp" alt="神託のメソロギア ロゴ" />
+    </div>
+    <nav class="header-nav">
+        <a href="index.html">📖 一覧</a>
+        <a href="deckmaker.html">🃏 デッキメーカー</a>
+        <a href="cardcheker.html">📊 所持率チェッカー</a>
+        <a class="active-page" href="deck-post.html">📤 デッキ投稿</a>
+    </nav>
+</header>
 
 <!-- タブバー -->
 <div class="tab-bar" style="display: none;">
@@ -729,38 +729,68 @@
 </div>
 
 <!--フッター-->
-<footer>
-    <div>
-        <p>
-            <strong>モスロギア</strong> はアプリ『神託のメソロギア』の非公式ファンサイトです。<br>
-            カード一覧検索やデッキメーカー、デッキ分析などを通じて、プレイヤー向けに便利なデータベース機能を提供しています。
-        </p>
+<footer class="site-footer" role="contentinfo">
+    <div class="footer-mini">
+        <div class="footer-mini-left">
+            <span class="footer-brand">モスロギア</span>
+            <span class="footer-sep">・</span>
+            <a class="footer-link" href="https://mythologiatheoracle.com/" target="_blank" rel="noopener noreferrer">
+                公式サイト
+            </a>
+            <span class="footer-sep">・</span>
+
+            <!-- ✅ ここがフィードバック導線（Googleフォーム） -->
+            <a class="footer-link footer-feedback"
+                href="https://docs.google.com/forms/d/e/【フォームID】/viewform?usp=pp_url&entry.123456789=【ページ名】"
+                target="_blank" rel="noopener noreferrer">
+                💬 フィードバック
+            </a>
+        </div>
+
+        <details class="footer-details">
+            <summary class="footer-more">このサイトについて</summary>
+            <div class="footer-detail-body">
+                <p>
+                    <strong>モスロギア</strong> はアプリ『神託のメソロギア』の非公式ファンサイトです。<br>
+                    画像・データ等の著作権は各権利者に帰属します。
+                </p>
+                <p>
+                    一部画像素材は「ジュエルセイバーFREE」
+                    （<a href="https://www.jewel-s.jp/" target="_blank" rel="noopener">https://www.jewel-s.jp/</a>）
+                    を使用しています。
+                </p>
+                <p class="footer-contact">
+                    連絡先：<a href="https://x.com/192837465aruneo" target="_blank"
+                        rel="noopener noreferrer">@192837465aruneo</a>
+                </p>
+                <div class="footer-copy">© 2025 Mesorogia Cards</div>
+            </div>
+        </details>
     </div>
-
-    <p>
-        🔗 公式サイトはこちら 👉
-        <a href="https://mythologiatheoracle.com/" target="_blank" rel="noopener noreferrer">
-            神託のメソロギア公式サイト
-        </a>
-    </p>
-
-    © 2025 Mesorogia Cards. All rights reserved.<br />
-    当サイトは「神託のメソロギア」の非公式ファンサイトです。画像・データ等の著作権は各権利者に帰属します。<br />
-    一部画像素材は「ジュエルセイバーFREE」<br />
-    （<a href="https://www.jewel-s.jp/" target="_blank" rel="noopener">https://www.jewel-s.jp/</a>）を使用しています。<br />
-    💬 ご要望・不具合報告 👉
-    <a href="https://x.com/192837465aruneo" target="_blank" rel="noopener noreferrer">
-        @192837465aruneo
-    </a>
 </footer>
 
 <!--上部に戻るボタン-->
 <button id="scrollTopFixed" onclick="scrollToTop()">▲</button>
 
-    <!-- スクリプト群 -->
-    <script src="js/common.js"></script>
-    <script src="js/common-page124.js"></script>
-    <script src="js/common-page24.js"></script>
+<!-- スクリプト群 -->
+<!-- 共通処理 -->
+<script src="js/common/defs.js"></script>
+<script src="js/common/card-core.js"></script>
+<script src="js/common/app-common.js"></script>
+<script src="js/common/owned.js"></script>
+<!-- アカウント関係 -->
+<script src="js/auth/auth-core.js"></script>
+<script src="js/auth/auth-ui.js"></script>
+<script src="js/auth/account.js"></script>
+<!-- 画像生成（feature） -->
+<script src="js/features/image-export.js"></script>
+<!--フィルター-->
+<script src="js/features/postFilter.js"></script>
+
+
+
+    <!-- 共通ヘルパー -->
+
     <script src="js/common-page234.js"></script>
     <script src="js/page4.js"></script>
 

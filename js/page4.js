@@ -65,6 +65,66 @@ const postState = {
   }
 };
 
+// ===== マイ投稿 先読みキャッシュ =====
+let __minePrefetchPromise = null;
+let __mineFetchedAt = 0;
+const MINE_TTL_MS = 60 * 1000; // 1分以内は「新しい」とみなす（好みで調整）
+
+function hasValidMineCache_(){
+  return Array.isArray(state?.mine?.items)
+    && (__mineFetchedAt > 0)
+    && (Date.now() - __mineFetchedAt < MINE_TTL_MS);
+}
+
+// DOMを触らずに、マイ投稿データだけ取って state に入れる
+async function prefetchMineItems_({ force = false } = {}){
+  const tk = (window.Auth && window.Auth.token) || state.token || resolveToken();
+  if (!tk) return null;
+
+  if (!force && hasValidMineCache_()) return state.mine.items;
+  if (__minePrefetchPromise) return __minePrefetchPromise;
+
+  __minePrefetchPromise = (async () => {
+    const limit = PAGE_LIMIT;
+    let offset = 0;
+    let allItems = [];
+    let total = 0;
+
+    while (true){
+      const res = await apiList({ limit, offset, mine: true });
+
+      // ✅ auth required：キャッシュを「無効化」して終了（再帰しない）
+      if (res && res.error === 'auth required'){
+        state.mine.items = [];
+        state.mine.total = 0;
+        __mineFetchedAt = 0;   // ←ここ重要（Date.now()にしない）
+        return state.mine.items;
+      }
+
+      if (!res || !res.ok) throw new Error((res && res.error) || 'prefetch mine failed');
+
+      const items = res.items || [];
+      if (!total) total = Number(res.total || 0);
+
+      allItems.push(...items);
+      offset += items.length;
+
+      if (items.length < limit) break;
+      if (total && allItems.length >= total) break;
+    }
+
+    state.mine.items = allItems;
+    state.mine.total = total || allItems.length;
+    __mineFetchedAt = Date.now();
+    return allItems;
+  })().finally(() => {
+    __minePrefetchPromise = null;
+  });
+
+  return __minePrefetchPromise;
+}
+
+
 // 共通：カードリスト描画（postList と同じ oneCard を流用）
 function renderPostListInto(targetId, items, opts = {}){
   const box = document.getElementById(targetId);
@@ -93,6 +153,12 @@ function showListStatusMessage(type, text){
   listEl.innerHTML = `<div class="${baseClass}${errorClass}">${escapeHtml(text)}</div>`;
 }
 
+function buildPostShareUrl_(postId){
+  const base = location.origin + location.pathname; // deck-post.html
+  return `${base}?pid=${encodeURIComponent(String(postId || ''))}`;
+}
+
+
 // ===== マイ投稿読み込み（全件表示版）=====
 async function loadMinePage(_page = 1) {
   const listEl    = document.getElementById('myPostList');
@@ -100,6 +166,28 @@ async function loadMinePage(_page = 1) {
   const errorEl   = document.getElementById('mine-error');
   const loadingEl = document.getElementById('mine-loading');
   if (!listEl) return;
+
+  // ✅ 先読み済み（TTL内）なら、通信せず即描画
+  if (hasValidMineCache_() && !state.mine.loading) {
+    const allItems = state.mine.items || [];
+    postState.mine.items = allItems;
+    postState.mine.totalCount = Number(state.mine.total || allItems.length);
+    postState.mine.loading = false;
+
+    renderPostListInto('myPostList', allItems, { mode: 'mine' });
+    updateMineCountUI_();
+    if (emptyEl) emptyEl.style.display = allItems.length ? 'none' : '';
+    if (errorEl) errorEl.style.display = 'none';
+    if (loadingEl) loadingEl.style.display = 'none';
+
+    // PCなら先頭を開く（元の挙動）
+    const paneMine = document.getElementById('postDetailPaneMine');
+    if (paneMine && allItems.length && window.matchMedia('(min-width: 1024px)').matches) {
+      const firstCard = document.querySelector('#myPostList .post-card');
+      if (firstCard) showDetailPaneForArticle(firstCard);
+    }
+    return;
+  }
 
   const limit = PAGE_LIMIT; // そのまま使ってOK（ループで全件取る）
   let offset = 0;
@@ -666,12 +754,14 @@ window.posterKeyFromItem_ ??= function posterKeyFromItem_(item){
   const tags   = Array.from(st.selectedTags || []);
   const user   = Array.from(st.selectedUserTags || []);
   const posterLabel = String(st.selectedPosterLabel || '').trim();
+  const postLabel = String(st.selectedPostLabel || '').trim();
+  const postId    = String(st.selectedPostId || '').trim();
 
 
   sc.replaceChildren();
 
   const cards = Array.from(st.selectedCardCds || []);
-  const total = tags.length + user.length + (posterLabel ? 1 : 0) + cards.length;
+  const total = tags.length + user.length + (posterLabel ? 1 : 0) + cards.length + (postId ? 1 : 0);
   if (!total){
     bar.style.display = 'none';
     return;
@@ -764,6 +854,19 @@ window.posterKeyFromItem_ ??= function posterKeyFromItem_(item){
           window.DeckPostApp?.applySortAndRerenderList?.(true);
         }, 'chip-card');
       });
+    }
+
+    // ④ 投稿（共有リンク）
+    if (postId) {
+      addChip(`🔗投稿:${postLabel || postId}`, () => {
+        window.PostFilterState.selectedPostId = '';
+        window.PostFilterState.selectedPostLabel = '';
+        window.PostFilterDraft.selectedPostId = '';
+        window.PostFilterDraft.selectedPostLabel = '';
+
+        window.updateActiveChipsBar_?.();
+        window.DeckPostApp?.applySortAndRerenderList?.(true);
+      }, 'is-post');
     }
 
     // すべて解除（適用済みをクリア）
@@ -1199,36 +1302,47 @@ window.posterKeyFromItem_ ??= function posterKeyFromItem_(item){
 
   // ===== ログイン状態が変わったときに呼ばれるフック（Auth側から呼ぶ） =====
   function handleAuthChangedForDeckPost(){
-    // まずログインID表示だけ更新
     updateMineLoginStatus();
 
-    // ★ トークンを取り直す（Auth.token が変わっている可能性がある）
+    // ★ トークンを取り直す
     state.token = resolveToken();
 
-    // ★ init 完了後なら：
-    //    一覧タブ(postList)も「自分のいいね」情報付きで取り直す
+    // ✅ 追加：トークンが変わったらマイ投稿キャッシュを無効化
+    __mineFetchedAt = 0;
+    __minePrefetchPromise = null; // 念のため（なくても動くけど安全）
+
+    // init完了後なら一覧を取り直す（既存のまま）
     if (initialized) {
       (async () => {
         try {
-          await fetchAllList();       // token 付きでもう一度全件取得
-          rebuildFilteredItems();     // 並び替えなど再計算
+          await fetchAllList();
+          rebuildFilteredItems();
           const cur = state.list.currentPage || 1;
-          loadListPage(cur);          // 現在ページを維持したまま再描画
+          loadListPage(cur);
         } catch (e) {
           console.error('handleAuthChangedForDeckPost: reload list failed', e);
         }
       })();
     }
 
-    // 「マイ投稿」ページが表示中なら 1ページ目を読み直す（既存処理）
     const minePage    = document.getElementById('pageMine');
     const mineVisible = minePage && !minePage.hidden;
 
+    // ✅ 変更：ログイン状態が変わったら force で先読み（DOMは触らない）
+    if (state.token && !state.mine.loading) {
+      prefetchMineItems_({ force: true })
+        .catch(e => console.warn('prefetchMineItems_ failed:', e));
+    }
+
+    // ✅ 変更：マイ投稿が表示中なら「先読み→描画」にする（体感が良い）
     if (mineVisible && !state.mine.loading){
-      // ★ 未ログインなら auth required → 「ログインが必要です」表示になる
-      loadMinePage(1);
+      (async () => {
+        try { await prefetchMineItems_(); } catch {}
+        loadMinePage(1);
+      })();
     }
   }
+
 
   // グローバルに公開（common-page24.js から呼ぶ）
   window.onDeckPostAuthChanged = handleAuthChangedForDeckPost;
@@ -1399,6 +1513,37 @@ async function apiCampaignTags(){
     // すでに全件取得した場合はページキャッシュをクリアして再構築対象にする
     state.list.pageCache = {};
   }
+
+  //投稿リンク
+  function applySharedPostFromUrl_(){
+  const pid = new URLSearchParams(location.search).get('pid');
+  if (!pid) return;
+
+  // 共有リンクは「その投稿だけ見せたい」ので他の条件をクリア（安全）
+  window.PostFilterState ??= {};
+  window.PostFilterDraft ??= {};
+
+  window.PostFilterState.selectedTags?.clear?.();
+  window.PostFilterState.selectedUserTags?.clear?.();
+  window.PostFilterState.selectedCardCds?.clear?.();
+  window.PostFilterState.selectedPosterKey = '';
+  window.PostFilterState.selectedPosterLabel = '';
+
+  // postIdセット
+  window.PostFilterState.selectedPostId = String(pid);
+
+  // 表示用ラベル（デッキ名があれば使う）
+  const hit = (state.list.allItems || []).find(it => String(it.postId || '') === String(pid));
+  const label =
+    String(hit?.deckName || hit?.title || hit?.name || '').trim(); // ← あなたのデータ実体に合わせてどれか当たる
+  window.PostFilterState.selectedPostLabel = label || '共有リンク';
+
+  // draft 側も同期（×解除などの整合用）
+  window.PostFilterDraft.selectedPostId = window.PostFilterState.selectedPostId;
+  window.PostFilterDraft.selectedPostLabel = window.PostFilterState.selectedPostLabel;
+
+  window.updateActiveChipsBar_?.();
+}
 
 
   // ===== 投稿デッキメモ更新API =====
@@ -3238,9 +3383,30 @@ function buildCardPc(item, opts = {}){
   const favSymbol = liked ? '★' : '☆';
   const favText   = `${favSymbol}${likeCount}`;
 
+  // 例：共有URL生成（必要なら tab/フィルタも後で拡張）
+  function buildPostShareUrl_(postId){
+    const url = new URL(location.href);
+    url.searchParams.set('post', String(postId || '').trim()); // 既存実装の applySharedPostFromUrl_ が post= を見る想定
+    return url.toString();
+  }
+
+  // ===== 右上アクション（いいね/削除 + 共有）=====
+  const shareBtnHtml =
+    `<button type="button" class="btn-post-share" data-postid="${escapeHtml(item.postId || '')}" aria-label="共有リンクをコピー">🔗</button>`;
+
   const headRightBtnHtml = isMine
-    ? `<button class="delete-btn" type="button" data-postid="${escapeHtml(item.postId || '')}" aria-label="投稿を削除">🗑</button>`
-    : `<button class="fav-btn ${favClass}" type="button" aria-label="お気に入り">${favText}</button>`;
+    ? `
+      <div class="post-head-actions">
+        ${shareBtnHtml}
+        <button class="delete-btn" type="button" data-postid="${escapeHtml(item.postId || '')}" aria-label="投稿を削除">🗑</button>
+      </div>
+    `
+    : `
+      <div class="post-head-actions">
+        ${shareBtnHtml}
+        <button class="fav-btn ${favClass}" type="button" aria-label="お気に入り">${favText}</button>
+      </div>
+    `;
 
   return el(`
     <article class="post-card post-card--pc" data-postid="${escapeHtml(item.postId || '')}" style="${bg ? `--race-bg:${bg};` : ''}">
@@ -3346,9 +3512,30 @@ function buildCardSp(item, opts = {}){
   const notesValidId  = `post-cardnote-validator-${spPaneId}`;
   const addNoteBtnId  = `add-card-note-${spPaneId}`;
 
+  // 例：共有URL生成（必要なら tab/フィルタも後で拡張）
+  function buildPostShareUrl_(postId){
+    const url = new URL(location.href);
+    url.searchParams.set('post', String(postId || '').trim()); // 既存実装の applySharedPostFromUrl_ が post= を見る想定
+    return url.toString();
+  }
+
+  // ===== 右上アクション（いいね/削除 + 共有）=====
+  const shareBtnHtml =
+    `<button type="button" class="btn-post-share" data-postid="${escapeHtml(item.postId || '')}" aria-label="共有リンクをコピー">🔗</button>`;
+
   const headRightBtnHtml = isMine
-    ? `<button class="delete-btn" type="button" data-postid="${escapeHtml(item.postId || '')}" aria-label="投稿を削除">🗑</button>`
-    : `<button class="fav-btn ${favClass}" type="button" aria-label="お気に入り">${favText}</button>`;
+    ? `
+      <div class="post-head-actions">
+        ${shareBtnHtml}
+        <button class="delete-btn" type="button" data-postid="${escapeHtml(item.postId || '')}" aria-label="投稿を削除">🗑</button>
+      </div>
+    `
+    : `
+      <div class="post-head-actions">
+        ${shareBtnHtml}
+        <button class="fav-btn ${favClass}" type="button" aria-label="お気に入り">${favText}</button>
+      </div>
+    `;
 
     // デッキコード（スマホ）
     const postId  = String(item?.postId || '').trim();
@@ -4255,7 +4442,39 @@ document.addEventListener('click', async (e) => {
 
   }
 
+  // ===== 投稿：共有リンク =====
+  const shareBtn = e.target.closest?.('.btn-post-share');
+  if (shareBtn){
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
 
+    const postId = String(shareBtn.dataset.postid || '').trim();
+    if (!postId) return;
+
+    const url = buildPostShareUrl_(postId);
+
+    try{
+      await navigator.clipboard.writeText(url);
+      showActionToast?.('共有リンクをコピーしました');
+    }catch(_){
+      // フォールバック（古いブラウザ対策）
+      try{
+        const ta = document.createElement('textarea');
+        ta.value = url;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+        showActionToast?.('共有リンクをコピーしました');
+      }catch(__){
+        alert('コピーに失敗しました：\n' + url);
+      }
+    }
+    return;
+  }
 
 
   // 編集開始
@@ -5813,6 +6032,12 @@ function rebuildFilteredItems(){
   // ★ 投稿フィルター（タグ） — window.PostFilterState を見る
   const fs = window.PostFilterState;
 
+  // ★ 投稿1件だけ表示（共有リンク用）
+  const selPid = String(fs?.selectedPostId || '').trim();
+  if (selPid) {
+    filtered = filtered.filter(item => String(item.postId || '').trim() === selPid);
+  }
+
   // ① 投稿タグ（自動＋選択タグ）：AND（全部含む）
   if (fs?.selectedTags?.size) {
     const selected = Array.from(fs.selectedTags)
@@ -6095,6 +6320,8 @@ async function renderCampaignBanner(){
       // ★ 改善版：一度のリクエストで全件取得してフィルタ・ソートを行う
       // これにより投稿一覧を2回呼び出す必要がなくなり、最新投稿表示までの時間が短縮される
       await fetchAllList();         // state.list.allItems に全件を入れる（FETCH_LIMIT=100）
+      prefetchMineItems_().catch(()=>{});
+      applySharedPostFromUrl_();
       rebuildFilteredItems();       // フィルタ適用＆並び替え
       state.list.currentPage = 1;   // 初期ページを 1 に設定
       loadListPage(1);              // 最初のページを描画
@@ -6106,33 +6333,38 @@ async function renderCampaignBanner(){
     }
 
 
-// ⑤ 一覧側：ページャボタン
-// 上側：ページャボタン
-document.getElementById('pagePrevTop')?.addEventListener('click', () => {
-  const page = state.list.currentPage || 1;
-  if (page > 1) loadListPage(page - 1);
-});
-document.getElementById('pageNextTop')?.addEventListener('click', () => {
-  const page  = state.list.currentPage || 1;
-  const total = state.list.totalPages  || 1;
-  if (page < total) loadListPage(page + 1);
-});
-// 下側：ページャボタン
-document.getElementById('pagePrev')?.addEventListener('click', () => {
-  const page = state.list.currentPage || 1;
-  if (page > 1) loadListPage(page - 1);
-});
-document.getElementById('pageNext')?.addEventListener('click', () => {
-  const page  = state.list.currentPage || 1;
-  const total = state.list.totalPages  || 1;
-  if (page < total) loadListPage(page + 1);
-});
+    // ⑤ 一覧側：ページャボタン
+
+    // 上側：ページャボタン
+    document.getElementById('pagePrevTop')?.addEventListener('click', () => {
+      const page = state.list.currentPage || 1;
+      if (page > 1) loadListPage(page - 1);
+    });
+    document.getElementById('pageNextTop')?.addEventListener('click', () => {
+      const page  = state.list.currentPage || 1;
+      const total = state.list.totalPages  || 1;
+      if (page < total) loadListPage(page + 1);
+    });
+    // 下側：ページャボタン
+    document.getElementById('pagePrev')?.addEventListener('click', () => {
+      const page = state.list.currentPage || 1;
+      if (page > 1) loadListPage(page - 1);
+    });
+    document.getElementById('pageNext')?.addEventListener('click', () => {
+      const page  = state.list.currentPage || 1;
+      const total = state.list.totalPages  || 1;
+      if (page < total) loadListPage(page + 1);
+    });
 
     // ⑤ マイ投稿へ（ツールバーのボタン）
     document.getElementById('toMineBtn')?.addEventListener('click', async () => {
+      updateMineLoginStatus(); // 先にID表示だけ更新
+
+      // ✅ 可能なら先読みを待ってから表示（瞬間表示になる）
+      try { await prefetchMineItems_(); } catch {}
+
       showMine();
-      updateMineLoginStatus();     // ログインID表示更新
-      await loadMinePage(1);       // 1ページ目を取得
+      await loadMinePage(1); // cache があれば通信せず即描画になる
     });
 
     // ⑥ マイ投稿：戻る

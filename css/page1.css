@@ -39,7 +39,7 @@
 .list-row {
     display: flex;
     gap: 8px;
-    padding: 8px;
+    padding-left: 2px;
     border: 1px solid rgba(0, 0, 0, .12);
     border-radius: 10px;
     background: #fff;
@@ -70,13 +70,20 @@
 
 /* SPは画像少し小さく */
 @media (max-width: 768px) {
+    .grid.is-list {
+        gap: 3px;
+    }
+    .list-row{
+        gap: 3px;
+    }
+
     .list-row .card {
-        width: 78px;
-        flex-basis: 78px;
+        width: 87px;
+        flex-basis: 87px;
     }
 
     .list-row .card-detail {
-        padding: 8px 2px 8px 4px;
+        padding: 6px 2px 6px 4px;
     }
 }
 /* ===============================

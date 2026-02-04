@@ -895,7 +895,7 @@
 .card-detail {
     display: none;
     width: 100%;
-    padding: 1rem;
+    padding: 4px 4px 4px 6px;
     border-radius: 6px;
     margin: 0.5rem 0;
     box-sizing: border-box;
@@ -904,90 +904,159 @@
 .card-name {
     font-weight: bold;
     font-size: 1.2rem;
-    margin-bottom: 0.3em;
 }
 
 /* =====================================================
    Owned Editor（詳細内の所持編集UI）
-   - card-name の右に並び、狭いと下に落ちる（SP対応）
+   - 右上に“浮かせる” → カード名の高さを増やさない
+   - 2段（上：所持枚数＋編集 / 下：－ 0 ＋）
 ===================================================== */
+
 .card-title-row {
+    position: relative;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 3px;
     flex-wrap: wrap;
-    /* ここが重要：SPで被らず下に落ちる */
+
+    /* ✅ 右上に被らないよう、右側を予約（必要なら数値微調整OK） */
+    padding-right: var(--owned-editor-w, 132px);
 }
 
+/* ✅ 2段レイアウト：grid-template-areas の列数を揃えるのが重要 */
 .owned-editor {
-    display: inline-flex;
+    position: absolute;
+    top: 0;
+    right: 5px;
+    z-index: 2;
+
+    display: inline-grid;
+    grid-template-areas:
+        "label label toggle"
+        "minus num   plus";
+    grid-template-columns: 30px 28px 30px;
+    grid-template-rows: auto auto;
+    justify-content: center;
+
+    /* ここで“中の間”を詰める */
+    column-gap: 8px;
+    row-gap: 4px;
     align-items: center;
-    gap: 3px;
-    padding: 2px 5px;
-    border-radius: 6px;
+
+    /* 余白を少し詰めて、左に寄って見えるのを軽減 */
+    padding: 4px 4px 4px 6px;
+    border-radius: 8px;
     background: rgba(255, 255, 255, .55);
     border: 1px solid rgba(0, 0, 0, .12);
+    white-space: nowrap;
 }
 
+/* 上段 */
 .owned-editor-label {
+    grid-area: label;
+    justify-self: start;
     font-size: .85em;
     opacity: .85;
-}
-
-.owned-editor-num {
-    min-width: 1.5em;
-    text-align: center;
-    font-weight: 700;
-}
-
-.owned-editor-btn {
-    width: 30px;
-    height: 26px;
-    line-height: 1;
-    border-radius: 4px;
-    border: 1px solid rgba(0, 0, 0, .18);
-    background: #fff;
-    cursor: pointer;
+    padding-left: 2px;
+    /* 視覚的に左端ピタを避ける */
 }
 
 .owned-editor-toggle {
+    grid-area: toggle;
+    justify-self: end;
+
     height: 26px;
     padding: 0 8px;
-    border-radius: 6px;
+    border-radius: 8px;
     border: 1px solid rgba(0, 0, 0, .18);
     background: linear-gradient(180deg, #e9f5fb 0%, #d4ecfa 100%);
     color: #1f3f5f;
     cursor: pointer;
 }
 
-/* ロック中は +/- を押せない見た目に */
-.owned-editor.is-locked .owned-editor-btn {
-    opacity: .35;
-    cursor: not-allowed;
+/* 下段 */
+.owned-editor-btn {
+    width: 30px;
+    /* ←広く感じるなら 28px でもOK */
+    height: 26px;
+    line-height: 1;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, .18);
+    background: #fff;
+    cursor: pointer;
 }
-/* 編集中でも上限に達したボタンは押せない見た目に */
+
+.owned-editor-minus {
+    grid-area: minus;
+    justify-self: end;
+}
+
+.owned-editor-num {
+    grid-area: num;
+    justify-self: center;
+    min-width: 28px;
+    text-align: center;
+    font-weight: 800;
+}
+
+.owned-editor-plus {
+    grid-area: plus;
+    justify-self: start;
+}
+
+/* ロック中 / 上限下限の無効見た目 */
+.owned-editor.is-locked .owned-editor-btn,
 .owned-editor-btn.is-disabled {
     opacity: .35;
     cursor: not-allowed;
 }
 
-/* SP：ボタンが小さすぎないように */
-@media (max-width: 768px) {
+/* =====================================================
+   Owned Editor：小さいスマホは横1列に戻す
+===================================================== */
+@media (max-width: 480px) {
+    .card-title-row {
+        padding-right: 0;
+        /* 右上予約を解除 */
+    }
+
+    .owned-editor {
+        background: rgba(255, 255, 255, .7);
+        backdrop-filter: blur(1px);
+        position: static;
+        /* absolute解除 */
+        display: inline-flex;
+        /* ← 横1列に戻す */
+        align-items: center;
+        gap: 4px;
+
+        justify-content:flex-start;
+
+        padding: 3px 6px;
+
+    }
+
+    /* サイズを一段詰める */
     .owned-editor-btn {
-        width: 27px;
-        height: 25px;
+        width: 26px;
+        height: 24px;
+    }
+
+    .owned-editor-num {
+        min-width: 1.4em;
+        font-size: .95em;
     }
 
     .owned-editor-toggle {
-        height: 25px;
+        height: 24px;
+        padding: 0 6px;
     }
 }
 
 /*パック名、種族、カテゴリ*/
 .card-meta {
     color: #333;
-    margin-bottom: 0.5em;
 }
 /*パック名*/
 .card-meta.card-pack {

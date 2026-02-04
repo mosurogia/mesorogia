@@ -90,7 +90,7 @@ const deckMap = {};
     const VIEW_KEY = 'cards_view_mode'; // localStorage key
 
     /*------------------------------
-      4.0 detailテンプレ退避場所（グリッド復帰時に戻す）
+        4.0 detailテンプレ退避場所（グリッド復帰時に戻す）
     ------------------------------*/
     function getDetailBank_(){
     let bank = document.getElementById('detail-bank');
@@ -105,7 +105,7 @@ const deckMap = {};
 
 
     /*------------------------------
-      4.1 トグルUI
+        4.1 トグルUI
     ------------------------------*/
     function setActiveBtn_(mode) {
         const root = document.getElementById('viewToggle');
@@ -117,7 +117,7 @@ const deckMap = {};
     }
 
     /*------------------------------
-      4.2 リスト行を構築
+        4.2 リスト行を構築
     ------------------------------*/
     function buildListRows_() {
     const grid = document.getElementById('grid');
@@ -304,65 +304,65 @@ const deckMap = {};
 //#region 5. カード読み込み＆表示
 
 async function loadCards() {
-  const cards = await fetchLatestCards();
+    const cards = await fetchLatestCards();
 
-  const grid = document.getElementById('grid');
-  if (!grid) return;
+    const grid = document.getElementById('grid');
+    if (!grid) return;
 
-  // ✅ 既存DOMクリア
-  grid.innerHTML = '';
+    // ✅ 既存DOMクリア
+    grid.innerHTML = '';
 
-  // ✅ detailは grid に積まず bank に退避（初期表示を軽くする）
-  const bank = getOrCreateDetailBank_();
+    // ✅ detailは grid に積まず bank に退避（初期表示を軽くする）
+    const bank = getOrCreateDetailBank_();
 
-  // bank もいったんクリア（必要なら）
-  bank.innerHTML = '';
+    // bank もいったんクリア（必要なら）
+    bank.innerHTML = '';
 
-  const fragCards = document.createDocumentFragment();
-  const fragDetails = document.createDocumentFragment();
+    const fragCards = document.createDocumentFragment();
+    const fragDetails = document.createDocumentFragment();
 
-  for (const card of cards) {
-    // 一覧用カード生成（画像がここ）
-    const cardElement = generateCardListElement(card);
-    fragCards.appendChild(cardElement);
+    for (const card of cards) {
+        // 一覧用カード生成（画像がここ）
+        const cardElement = generateCardListElement(card);
+        fragCards.appendChild(cardElement);
 
-    // detail は bank へ（グリッドに入れない）
-    const html = generateDetailHtml(card);
-    const tmp = document.createElement('div');
-    tmp.innerHTML = html.trim();
-    const detailEl = tmp.firstElementChild;
-    if (detailEl) {
-      // テンプレとして隠す
-      detailEl.style.display = 'none';
-      fragDetails.appendChild(detailEl);
+        // detail は bank へ（グリッドに入れない）
+        const html = generateDetailHtml(card);
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html.trim();
+        const detailEl = tmp.firstElementChild;
+        if (detailEl) {
+        // テンプレとして隠す
+        detailEl.style.display = 'none';
+        fragDetails.appendChild(detailEl);
+        }
+
+        // map登録
+        allCardsMap[card.cd] = card;
     }
 
-    // map登録
-    allCardsMap[card.cd] = card;
-  }
+    grid.appendChild(fragCards);
+    bank.appendChild(fragDetails);
 
-  grid.appendChild(fragCards);
-  bank.appendChild(fragDetails);
-
-  // 並び替え/再構築は “描画後” に回す（体感改善）
-  requestAnimationFrame(() => {
-    try { sortCards(); } catch {}
-    try { window.rebuildCardMap?.(); } catch {}
-    try { window.onCardsLoaded?.(); } catch {}
-    // 所持オーバーレイ等があるならここで
-    try { window.OwnedUI?.bind?.("#grid"); } catch {}
-  });
+    // 並び替え/再構築は “描画後” に回す（体感改善）
+    requestAnimationFrame(() => {
+        try { sortCards(); } catch {}
+        try { window.rebuildCardMap?.(); } catch {}
+        try { window.onCardsLoaded?.(); } catch {}
+        // 所持オーバーレイ等があるならここで
+        try { window.OwnedUI?.bind?.("#grid"); } catch {}
+    });
 }
 
 function getOrCreateDetailBank_(){
-  let bank = document.getElementById('detail-bank');
-  if (!bank){
-    bank = document.createElement('div');
-    bank.id = 'detail-bank';
-    bank.style.display = 'none';
-    document.body.appendChild(bank);
-  }
-  return bank;
+    let bank = document.getElementById('detail-bank');
+    if (!bank){
+        bank = document.createElement('div');
+        bank.id = 'detail-bank';
+        bank.style.display = 'none';
+        document.body.appendChild(bank);
+    }
+    return bank;
 }
 
 //#endregion

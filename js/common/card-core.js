@@ -187,62 +187,81 @@ window.loadPackCatalog = window.loadPackCatalog || loadPackCatalog;
   //#endregion
 
 // =========================
-// cards.html 用：ソート（グローバル公開）
+// カードソート機能（grid/list 両対応）
 // =========================
 (function(){
     if (window.sortCards) return;
 
     function getTypeOrder_(type) {
         if (type === "チャージャー") return 0;
-        if (type === "アタッカー") return 1;
-        if (type === "ブロッカー") return 2;
+        if (type === "アタッカー")   return 1;
+        if (type === "ブロッカー")   return 2;
         return 3;
     }
 
+    function getSortValue_(){
+        const sortEl = document.getElementById("sort-select");
+        return sortEl?.value || "default";
+    }
+
+    function getKeyFromCardEl_(cardEl){
+        const type  = getTypeOrder_(cardEl.dataset.type);
+        const cost  = parseInt(cardEl.dataset.cost, 10)  || 0;
+        const power = parseInt(cardEl.dataset.power, 10) || 0;
+        const cd    = String(cardEl.dataset.cd || '').padStart(5,'0');
+
+        const cat = (window.getCategoryOrder ? window.getCategoryOrder(cardEl.dataset.category) : 9999);
+
+        const rarityOrder = { "レジェンド": 0, "ゴールド": 1, "シルバー": 2, "ブロンズ": 3 };
+        const rarity = rarityOrder[cardEl.dataset.rarity] ?? 99;
+
+        return { type, cost, power, cd, cat, rarity };
+    }
+
     window.sortCards = function sortCards() {
-    const grid = document.getElementById("grid");
-    if (!grid) return;
+        const grid = document.getElementById("grid");
+        if (!grid) return;
 
-    const sortEl = document.getElementById("sort-select");
-    const sortValue = sortEl?.value || "default"; // ✅ sort-select 無くても動く
+        const sortValue = getSortValue_();
 
-    const cards = Array.from(grid.children).filter(el => el.classList.contains("card"));
+        // ✅ list表示かどうか判定（#grid 直下が .list-row になる）
+        const isList = grid.classList.contains('is-list') || !!grid.querySelector(':scope > .list-row');
 
-    cards.sort((a, b) => {
-        const typeA = getTypeOrder_(a.dataset.type);
-        const typeB = getTypeOrder_(b.dataset.type);
-        const costA = parseInt(a.dataset.cost, 10) || 0;
-        const costB = parseInt(b.dataset.cost, 10) || 0;
-        const powerA = parseInt(a.dataset.power, 10) || 0;
-        const powerB = parseInt(b.dataset.power, 10) || 0;
-        const cdA = String(a.dataset.cd || '').padStart(5,'0');
-        const cdB = String(b.dataset.cd || '').padStart(5,'0');
+        // ✅ 並び替え対象：grid= .card / list= .list-row
+        const items = isList
+        ? Array.from(grid.querySelectorAll(':scope > .list-row'))
+        : Array.from(grid.querySelectorAll(':scope > .card'));
 
-        const catA = (window.getCategoryOrder ? window.getCategoryOrder(a.dataset.category) : 9999);
-        const catB = (window.getCategoryOrder ? window.getCategoryOrder(b.dataset.category) : 9999);
+        if (!items.length) return;
+
+        items.sort((A, B) => {
+        const aCard = isList ? A.querySelector('.card') : A;
+        const bCard = isList ? B.querySelector('.card') : B;
+        if (!aCard || !bCard) return 0;
+
+        const a = getKeyFromCardEl_(aCard);
+        const b = getKeyFromCardEl_(bCard);
 
         switch (sortValue) {
-        case "cost-asc":
-            return costA - costB || typeA - typeB || powerA - powerB || cdA.localeCompare(cdB);
-        case "cost-desc":
-            return costB - costA || typeA - typeB || powerA - powerB || cdA.localeCompare(cdB);
-        case "power-asc":
-            return powerA - powerB || typeA - typeB || costA - costB || cdA.localeCompare(cdB);
-        case "power-desc":
-            return powerB - powerA || typeA - typeB || costA - costB || cdA.localeCompare(cdB);
-        case "category-order":
-            return catA - catB || typeA - typeB || costA - costB || powerA - powerB || cdA.localeCompare(cdB);
-        case "rarity-order": {
-            const rarityOrder = { "レジェンド": 0, "ゴールド": 1, "シルバー": 2, "ブロンズ": 3 };
-            const rA = rarityOrder[a.dataset.rarity] ?? 99;
-            const rB = rarityOrder[b.dataset.rarity] ?? 99;
-            return rA - rB || costA - costB || powerA - powerB || cdA.localeCompare(cdB);
+            case "cost-asc":
+            return a.cost - b.cost || a.type - b.type || a.power - b.power || a.cd.localeCompare(b.cd);
+            case "cost-desc":
+            return b.cost - a.cost || a.type - b.type || a.power - b.power || a.cd.localeCompare(b.cd);
+            case "power-asc":
+            return a.power - b.power || a.type - b.type || a.cost - b.cost || a.cd.localeCompare(b.cd);
+            case "power-desc":
+            return b.power - a.power || a.type - b.type || a.cost - b.cost || a.cd.localeCompare(b.cd);
+            case "category-order":
+            return a.cat - b.cat || a.type - b.type || a.cost - b.cost || a.power - b.power || a.cd.localeCompare(b.cd);
+            case "rarity-order":
+            return a.rarity - b.rarity || a.cost - b.cost || a.power - b.power || a.cd.localeCompare(b.cd);
+            default:
+            return a.type - b.type || a.cost - b.cost || a.power - b.power || a.cd.localeCompare(b.cd);
         }
-        default:
-            return typeA - typeB || costA - costB || powerA - powerB || cdA.localeCompare(cdB);
-        }
-    });
+        });
 
-    cards.forEach(el => grid.appendChild(el));
+        // ✅ DOM反映：並び替え対象をそのまま append
+        for (const el of items) grid.appendChild(el);
     };
 })();
+

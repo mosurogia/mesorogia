@@ -391,6 +391,7 @@
         document.documentElement.style.setProperty('--chips-offset', `${sum}px`);
     }
 
+    // アクティブチップ表示
     function renderActiveFilterChips() {
         const grid = document.getElementById('grid');
         if (!grid) return;
@@ -443,7 +444,8 @@
 
         // ボタン系
         const GROUPS = [
-        ['種族', 'race'], ['カテゴリ', 'category'], ['タイプ', 'type'],
+        ['種族', 'race'], ['カテゴリ', 'category'],
+        // ✅ ['タイプ', 'type'] は削除（チップバーに出さない）
         ['レア', 'rarity'], ['パック', 'pack'],
         ['効果名', 'effect'], ['フィールド', 'field'],
         ['BP', 'bp'], ['特効', 'ability'],
@@ -534,6 +536,7 @@
         .map(btn => btn.dataset[key]);
     }
 
+    // Booleanフィルター取得
     function getBooleanFilter(key) {
         const btn = document.querySelector(`.filter-group [data-${key}].selected`);
         return btn ? ['true'] : [];
@@ -744,6 +747,72 @@
         }
 
         applyFilters();
+        setQuickTypeUI_('all');
+    }
+
+    // ==============================
+    // タイプ即時ボタン：状態同期ヘルパ
+    // ==============================
+    function normalizeQuickType_(t) {
+        t = String(t ?? '').trim();
+        return (t === 'all') ? '' : t;
+    }
+
+    function setQuickTypeUI_(mode, activeType) {
+        // mode: 'all' | 'single' | 'multi'
+        const wrap = document.querySelector('.type-quick-filter');
+        const btns = Array.from(document.querySelectorAll('.type-icon-btn'));
+        if (!btns.length) return;
+
+        const allBtn =
+            document.querySelector('.type-icon-btn[data-type=""]') ||
+            document.querySelector('.type-icon-btn[data-type="all"]') ||
+            btns[0];
+
+        // 初期化
+        btns.forEach(b => b.classList.remove('is-active'));
+        if (wrap) wrap.classList.remove('is-multi');
+
+        if (mode === 'multi') {
+            if (wrap) wrap.classList.add('is-multi');
+
+            // ✅ モーダル側で選ばれている type をすべてアクティブ表示
+            const selectedTypes = Array.from(
+                document.querySelectorAll('.filter-btn.selected[data-type]')
+            ).map(b => normalizeQuickType_(b.dataset.type));
+
+            btns.forEach(b => {
+                const t = normalizeQuickType_(b.dataset.type);
+                if (selectedTypes.includes(t)) {
+                    b.classList.add('is-active');
+                }
+            });
+            return;
+        }
+
+        if (mode === 'single') {
+            const t = normalizeQuickType_(activeType);
+            const hit = btns.find(b => normalizeQuickType_(b.dataset.type) === t);
+            (hit || allBtn)?.classList.add('is-active');
+            return;
+        }
+
+        // mode === 'all'
+        allBtn?.classList.add('is-active');
+    }
+
+    function syncQuickTypeFromModal_() {
+        const selected = Array.from(document.querySelectorAll('.filter-btn.selected[data-type]'))
+            .map(b => String(b.dataset.type || '').trim())
+            .filter(Boolean);
+
+        if (selected.length === 0) {
+            setQuickTypeUI_('all');
+        } else if (selected.length === 1) {
+            setQuickTypeUI_('single', selected[0]);
+        } else {
+            setQuickTypeUI_('multi');
+        }
     }
 
     // ==============================
@@ -758,10 +827,52 @@
 
         if (!hasCardFilterUI) return;
 
-        // モーダル外クリック/ESC
+        // フィルターボタン（selected切替）＋タイプ即時フィルター
         document.addEventListener('click', (e) => {
-        const modal = document.getElementById('filterModal');
-        if (modal && e.target === modal) closeFilterModal();
+
+        // ==============================
+        // タイプ即時フィルター（search-bar）
+        //  - 押したら「1種類に上書き」
+        //  - チップバーにタイプは出さない
+        // ==============================
+        const typeBtn = e.target.closest('.type-icon-btn');
+            if (typeBtn) {
+            const type = normalizeQuickType_(typeBtn.dataset.type || '');
+
+            // ✅ モーダル側 type を全解除→単一選択に上書き
+            document.querySelectorAll('.filter-group[data-key="タイプ"] .filter-btn[data-type]')
+                .forEach(fb => fb.classList.remove('selected'));
+
+            if (type) {
+                const target = document.querySelector(`.filter-group[data-key="タイプ"] .filter-btn[data-type="${CSS.escape(type)}"]`);
+                if (target) target.classList.add('selected');
+                setQuickTypeUI_('single', type);
+            } else {
+                setQuickTypeUI_('all');
+            }
+
+            applyFilters();
+            return; // ← 下の filter-btn 処理へ落とさない
+        }
+
+        // ==============================
+        // 既存：filter-btn
+        // ==============================
+        const btn = e.target.closest('.filter-btn');
+        if (!btn) return;
+
+        // 投稿フィルター用タグボタンは別処理
+        if (btn.classList.contains('post-filter-tag-btn')) return;
+
+        btn.classList.toggle('selected');
+
+        const group = btn.closest('.filter-group');
+        if (group && group.dataset.key === 'タイプ') {
+            // ✅ タイプ複数選択 → タイプボタンを「複数選択中」表示に
+            syncQuickTypeFromModal_();
+        }
+
+        applyFilters();
         });
         document.addEventListener('keydown', (e) => {
         const modal = document.getElementById('filterModal');
@@ -782,25 +893,6 @@
         document.getElementById('applyFilterBtn')?.addEventListener('click', () => {
         applyFilters();
         closeFilterModal();
-        });
-
-        // フィルターボタン（selected切替）
-        document.addEventListener('click', (e) => {
-        const btn = e.target.closest('.filter-btn');
-        if (!btn) return;
-
-        // 投稿フィルター用タグボタンは別処理
-        if (btn.classList.contains('post-filter-tag-btn')) return;
-
-        // 所持フィルターはサイクル
-        const group = btn.closest('.filter-group');
-        if (group && group.dataset.key === '所持フィルター') {
-            cycleOwnedFilter(btn);
-            return;
-        }
-
-        btn.classList.toggle('selected');
-        applyFilters();
         });
     }
 

@@ -92,11 +92,25 @@
 <div class="tab-content active" id="build">
 
     <!--メニューバー＆デッキバー上部固定用-->
-    <div class="fixed-top-bar">
+    <div class="top-bar">
         <!--メニューバー-->
         <div class="search-bar">
             <input id="keyword" oninput="applyFilters()" placeholder="カード検索" type="text">
-            <button id="toggleOwnedBtn" onclick="toggleOwned()">所持カード未反映</button>
+                <!-- タイプ即時フィルター -->
+                <div class="type-quick-filter">
+                    <button type="button" class="type-icon-btn is-active" data-type="">
+                        <img src="img/type-all.webp" alt="All">
+                    </button>
+                    <button type="button" class="type-icon-btn" data-type="チャージャー">
+                        <img src="img/type-charger.webp" alt="Charger">
+                    </button>
+                    <button type="button" class="type-icon-btn" data-type="アタッカー">
+                        <img src="img/type-attacker.webp" alt="Attacker">
+                    </button>
+                    <button type="button" class="type-icon-btn" data-type="ブロッカー">
+                        <img src="img/type-blocker.webp" alt="Blocker">
+                    </button>
+                </div>
             <select id="sort-select" onchange="sortCards()">
                 <option value="default">通常順</option>
                 <option value="cost-asc">コスト昇順</option>

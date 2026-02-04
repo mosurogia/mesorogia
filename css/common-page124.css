@@ -3,6 +3,15 @@
    0) SEARCH BAR（カード一覧上部）
    - sticky / 高さ揃え / ボタン共通
 ===================================================== */
+
+.top-bar {
+    position: sticky;
+    top: 0px;
+    background: #fff;
+    z-index: 2000;
+    border-bottom: 1px solid #ccc;
+}
+
 .search-bar {
     position: sticky;
     top: 0;
@@ -16,9 +25,18 @@
 
 @media (max-width: 768px) {
     .search-bar {
-        gap: 3px;
-        align-items: center;
-    }
+            display: grid !important;
+            grid-template-columns: 1fr auto;
+            grid-template-areas:
+                "kw owned"
+                "sort filter";
+            gap: 3px;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0;
+            flex-wrap: wrap;
+        }
 }
 
 /* 入力 */
@@ -44,7 +62,119 @@
     font-size: .8rem;
 }
 
+/* =========================
+   タイプ即時フィルター
+========================= */
+.type-quick-filter {
+    order: 2;
+    display: flex;
+    gap: 4px;
+    margin: 0px 2px;
+}
 
+.type-icon-btn {
+    width: 36px;
+    height: 36px;
+    padding: 3px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, .15);
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .08s ease, box-shadow .15s ease, opacity .15s ease;
+}
+
+.type-icon-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform: scale(1.25);
+}
+
+.type-icon-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
+}
+
+.type-icon-btn.is-active {
+    box-shadow:
+        0 0 0 2px rgba(0, 0, 0, .15),
+        inset 0 0 0 2px rgba(255, 255, 255, .6);
+    opacity: 1;
+}
+
+.type-icon-btn:not(.is-active) {
+    opacity: .55;
+}
+
+/* ==============================
+   タイプ即時フィルター：共通（枠＝グラデ）
+============================== */
+.type-quick-filter .type-icon-btn {
+    /* 枠線の色（各data-typeで上書き） */
+    --_filter-border: linear-gradient(90deg, rgba(0, 0, 0, .22), rgba(0, 0, 0, .22));
+
+    /* 背景（白 or タイプ色にしたいので変数化） */
+    --_filter-fill: #fff;
+
+    border: 2px solid transparent;
+    background:
+        linear-gradient(var(--_filter-fill), var(--_filter-fill)) padding-box,
+        var(--_filter-border) border-box;
+}
+
+/* ==============================
+   タイプ即時フィルター：枠色
+============================== */
+
+/* All（無指定） */
+.type-quick-filter .type-icon-btn[data-type=""] {
+    --_filter-border: linear-gradient(90deg,
+            rgba(180, 180, 180, .5),
+            rgba(180, 180, 180, .5));
+}
+
+/* チャージャー */
+.type-quick-filter .type-icon-btn[data-type="チャージャー"] {
+    --_filter-border: linear-gradient(90deg,
+            rgba(var(--type-charger-rgb), .75),
+            rgba(var(--type-charger-rgb), .75));
+}
+
+/* アタッカー */
+.type-quick-filter .type-icon-btn[data-type="アタッカー"] {
+    --_filter-border: linear-gradient(90deg,
+            rgba(var(--type-attacker-rgb), .75),
+            rgba(var(--type-attacker-rgb), .75));
+}
+
+/* ブロッカー */
+.type-quick-filter .type-icon-btn[data-type="ブロッカー"] {
+    --_filter-border: linear-gradient(90deg,
+            rgba(var(--type-blocker-rgb), .9),
+            rgba(var(--type-blocker-rgb), .9));
+}
+/* ==============================
+   タイプ即時フィルター：背景色（選択中のみ）
+============================== */
+
+.type-quick-filter .type-icon-btn.is-active[data-type=""] {
+    --_filter-fill: #e0e0e0;
+}
+
+.type-quick-filter .type-icon-btn.is-active[data-type="チャージャー"] {
+    --_filter-fill: var(--type-charger-bg);
+}
+
+.type-quick-filter .type-icon-btn.is-active[data-type="アタッカー"] {
+    --_filter-fill: var(--type-attacker-bg);
+}
+
+.type-quick-filter .type-icon-btn.is-active[data-type="ブロッカー"] {
+    --_filter-fill: var(--type-blocker-bg);
+}
 
 #sort-select {
     order: 3;
@@ -785,7 +915,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 3px;
     flex-wrap: wrap;
     /* ここが重要：SPで被らず下に落ちる */
 }
@@ -793,8 +923,8 @@
 .owned-editor {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 2px 6px;
+    gap: 3px;
+    padding: 2px 5px;
     border-radius: 6px;
     background: rgba(255, 255, 255, .55);
     border: 1px solid rgba(0, 0, 0, .12);
@@ -803,11 +933,10 @@
 .owned-editor-label {
     font-size: .85em;
     opacity: .85;
-    margin-right: 2px;
 }
 
 .owned-editor-num {
-    min-width: 2.2em;
+    min-width: 1.5em;
     text-align: center;
     font-weight: 700;
 }
@@ -823,9 +952,8 @@
 }
 
 .owned-editor-toggle {
-    margin-left: 4px;
     height: 26px;
-    padding: 0 10px;
+    padding: 0 8px;
     border-radius: 6px;
     border: 1px solid rgba(0, 0, 0, .18);
     background: linear-gradient(180deg, #e9f5fb 0%, #d4ecfa 100%);
@@ -847,12 +975,12 @@
 /* SP：ボタンが小さすぎないように */
 @media (max-width: 768px) {
     .owned-editor-btn {
-        width: 34px;
-        height: 30px;
+        width: 27px;
+        height: 25px;
     }
 
     .owned-editor-toggle {
-        height: 30px;
+        height: 25px;
     }
 }
 

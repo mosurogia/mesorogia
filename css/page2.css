@@ -44,19 +44,6 @@
 
 /*スマホ版*/
 @media (max-width: 768px) {
-    .search-bar {
-        display: grid !important;
-        grid-template-columns: 2fr 1fr;
-        grid-template-areas:
-            "kw owned"
-            "sort filter";
-        gap: 3px;
-        align-items: center;
-        width: 100%;
-        box-sizing: border-box;
-        padding: 0;
-        flex-wrap: wrap;
-    }
 
     .search-bar input {
         flex: 2;
@@ -91,13 +78,6 @@
 /*=========================
         3.メニューバー
 ==========================*/
-.fixed-top-bar {
-    position: sticky;
-    top: 0px;
-    background: #fff;
-    z-index: 2000;
-    border-bottom: 1px solid #ccc;
-}
 
 /*使用不可種族非表示ボタン*/
 .deck-filter-bar {

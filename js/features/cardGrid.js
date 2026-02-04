@@ -126,20 +126,28 @@
             ownedMark.style.display = 'none'; // common/owned.js が制御
             cardDiv.appendChild(ownedMark);
         }
-
+        
         // 画像
         const img = document.createElement('img');
         img.alt = card.name || '';
 
-        // ✅ ここから追加/強化
-        img.loading = (mode === 'deck') ? 'eager' : 'lazy'; // デッキメーカーは操作性優先で eager（好みで lazy でもOK）
+        // ✅ 追加/強化（イベントより前、srcより前に入れる）
+        img.loading = (mode === 'deck') ? 'eager' : 'lazy';
         img.decoding = 'async';
 
-        // ✅ レイアウト確定を早くしてガタつきを減らす（比率はカード画像に合わせて）
-        img.width = 240;   // ここは「CSSでの表示サイズ」ではなく“比率固定用”なので適当な基準値でOK
-        img.height = 336;  // 240x336（約 5:7）にしておくと安定する
-        // ✅ ここまで追加/強化
+        // ✅ レイアウト確定を早くしてガタつきを減らす
+        img.width = 240;
+        img.height = 336;
 
+        // ✅ 体感改善（対応ブラウザのみ）
+        try {
+        img.fetchPriority = (mode === 'deck') ? 'high' : 'low';
+        } catch {}
+
+        // （任意）キャッシュ条件のブレを減らす
+        img.referrerPolicy = 'no-referrer-when-downgrade';
+
+        // ✅ src は最後に
         img.src = `img/${card.cd}.webp`;
 
         img.addEventListener('error', () => {
@@ -152,28 +160,29 @@
         // - deck: 左クリックで addCard、右クリックで removeCard
         // - list/checker: 画像クリックは何もしない（必要なら opts.onImageClick）
         if (mode === 'deck'){
-            // 左クリック（追加）
-            img.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (typeof opts.onImageClick === 'function') return opts.onImageClick(card, e);
-                if (typeof window.addCard === 'function') window.addCard(card.cd);
-            });
+        // 左クリック（追加）
+        img.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (typeof opts.onImageClick === 'function') return opts.onImageClick(card, e);
+            if (typeof window.addCard === 'function') window.addCard(card.cd);
+        });
 
-            // 右クリック（削除）
-            img.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (typeof opts.onImageRightClick === 'function') return opts.onImageRightClick(card, e);
-                if (typeof window.removeCard === 'function') window.removeCard(card.cd);
-            });
+        // 右クリック（削除）
+        img.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof opts.onImageRightClick === 'function') return opts.onImageRightClick(card, e);
+            if (typeof window.removeCard === 'function') window.removeCard(card.cd);
+        });
 
-            img.addEventListener('dblclick', (e) => e.preventDefault());
+        img.addEventListener('dblclick', (e) => e.preventDefault());
 
         } else if (typeof opts.onImageClick === 'function'){
-            img.addEventListener('click', (e) => { e.stopPropagation(); opts.onImageClick(card, e); });
+        img.addEventListener('click', (e) => { e.stopPropagation(); opts.onImageClick(card, e); });
         }
 
         cardDiv.appendChild(img);
+
 
         // カード全体クリック（必要なら外から注入）
         if (typeof opts.onCardClick === 'function'){

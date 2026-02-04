@@ -109,24 +109,45 @@
     <!-- ===== メイン（既存のカード一覧UIをここに丸ごと入れる）===== -->
     <div class="card-content">
         <!-- ====== カード一覧部分 ====== -->
-        <!--メニューバー-->
-        <div class="search-bar">
-            <input id="keyword" oninput="applyFilters()" placeholder="カード検索（カード名・カード効果等）" type="text">
-            <select id="sort-select" onchange="sortCards()">
-                <option value="default">通常順</option>
-                <option value="cost-asc">コスト昇順</option>
-                <option value="cost-desc">コスト降順</option>
-                <option value="power-asc">パワー昇順</option>
-                <option value="power-desc">パワー降順</option>
-                <option value="category-order">カテゴリ順</option>
-                <option value="rarity-order">レアリティ順</option>
-            </select>
-            <button onclick="openFilterModal()">📊 フィルター</button>
-        </div>
-        <!-- 表示切替-->
-        <div class="view-toggle" id="viewToggle">
-            <button type="button" class="view-btn is-active" data-view="grid">グリッド</button>
-            <button type="button" class="view-btn" data-view="list">リスト</button>
+        <!--バートップ-->
+        <div class="top-bar">
+            <!--メニューバー-->
+            <div class="search-bar">
+                <input id="keyword" oninput="applyFilters()" placeholder="カード検索（カード名・カード効果等）" type="text">
+
+                <!-- タイプ即時フィルター -->
+                <div class="type-quick-filter">
+                    <button type="button" class="type-icon-btn is-active" data-type="">
+                        <img src="img/type-all.webp" alt="All">
+                    </button>
+                    <button type="button" class="type-icon-btn" data-type="チャージャー">
+                        <img src="img/type-charger.webp" alt="Charger">
+                    </button>
+                    <button type="button" class="type-icon-btn" data-type="アタッカー">
+                        <img src="img/type-attacker.webp" alt="Attacker">
+                    </button>
+                    <button type="button" class="type-icon-btn" data-type="ブロッカー">
+                        <img src="img/type-blocker.webp" alt="Blocker">
+                    </button>
+                </div>
+
+                <select id="sort-select" onchange="sortCards()">
+                    <option value="default">通常順</option>
+                    <option value="cost-asc">コスト昇順</option>
+                    <option value="cost-desc">コスト降順</option>
+                    <option value="power-asc">パワー昇順</option>
+                    <option value="power-desc">パワー降順</option>
+                    <option value="category-order">カテゴリ順</option>
+                    <option value="rarity-order">レアリティ順</option>
+                </select>
+
+                <button onclick="openFilterModal()">📊 フィルター</button>
+            </div>
+            <!-- 表示切替-->
+            <div class="view-toggle" id="viewToggle">
+                <button type="button" class="view-btn is-active" data-view="grid">グリッド</button>
+                <button type="button" class="view-btn" data-view="list">リスト</button>
+            </div>
         </div>
 
 

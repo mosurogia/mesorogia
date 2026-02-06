@@ -7,54 +7,45 @@
 (function(){
     'use strict';
 
-    // ✅ card.js を読んでないページ（デッキメーカー）でも詳細を生成できるフォールバック
-    function buildDetailElementFallback_(cd, cardEl){
-        // 1) cardMap（card-core）優先
-        const m = window.cardMap?.[String(cd).padStart(5,'0')];
+    // ✅ card-list.js を読んでないページ（デッキメーカー）でも詳細を生成できるフォールバック
+    function buildDetailElementFallback_(cd, cardEl) {
+    const cd5 = String(cd).padStart(5, '0');
 
-        // 2) 取れなければ DOM dataset から復元
-        const d = cardEl?.dataset || {};
+    // 1) cardMap（card-core）優先
+    const m = window.cardMap?.[cd5];
 
-        const name = (m?.name ?? d.name ?? '');
-        const type = (m?.type ?? d.type ?? '');
-        const race = (m?.race ?? d.race ?? '');
-        const category = (m?.category ?? d.category ?? '');
-        const packName = (m?.packName ?? d.pack ?? '');
+    // 2) 取れなければ DOM dataset から復元
+    const d = cardEl?.dataset || {};
 
-        const en1 = (m?.effect_name1 ?? d.effect1 ?? '');
-        const et1 = (m?.effect_text1 ?? d.effecttext1 ?? '');
-        const en2 = (m?.effect_name2 ?? d.effect2 ?? '');
-        const et2 = (m?.effect_text2 ?? d.effecttext2 ?? '');
+    // テンプレに渡す “共通card形” を作る（最低限）
+    const card = {
+        cd: cd5,
+        name: (m?.name ?? d.name ?? ''),
+        type: (m?.type ?? d.type ?? ''),
+        race: (m?.race ?? d.race ?? ''),
+        category: (m?.category ?? d.category ?? ''),
+        packName: (m?.packName ?? d.pack ?? ''),
+        pack_name: (m?.pack_name ?? d.pack ?? ''), // 念のため
+        effect_name1: (m?.effect_name1 ?? d.effect1 ?? ''),
+        effect_text1: (m?.effect_text1 ?? d.effecttext1 ?? ''),
+        effect_name2: (m?.effect_name2 ?? d.effect2 ?? ''),
+        effect_text2: (m?.effect_text2 ?? d.effecttext2 ?? ''),
+    };
 
-        const effectParts = [];
-        if (en1) effectParts.push(`<div><strong class="effect-name">${en1}</strong></div>`);
-        if (et1) effectParts.push(`<div>${et1}</div>`);
-        if (en2) effectParts.push(`<div><strong class="effect-name">${en2}</strong></div>`);
-        if (et2) effectParts.push(`<div>${et2}</div>`);
-        const effectHtml = effectParts.join('\n') || `<div>（効果情報なし）</div>`;
+    // ✅ テンプレがあればそれを使って Element 化（DOM構造を統一）
+    const html = window.CardDetailTemplate?.generate
+        ? window.CardDetailTemplate.generate(card)
+        : (window.generateDetailHtml ? window.generateDetailHtml(card) : '');
 
-        const typeClass = type ? `type-${type}` : '';
-        const raceClass = race ? `race-${race}` : '';
+    const wrap = document.createElement('div');
+    wrap.innerHTML = html.trim();
 
-        const el = document.createElement('div');
-        el.className = `card-detail ${typeClass} ${raceClass}`.trim();
-        el.id = `detail-${String(cd).padStart(5,'0')}`;
-        el.setAttribute('data-cd', String(cd).padStart(5,'0'));
-        el.setAttribute('data-name', name);
-
-        el.innerHTML = `
-            <div class="card-name">${name}</div>
-            <div class="card-meta card-pack">${packName || ''}</div>
-            <div class="card-meta">
-            <span class="card-race">${race || ''}</span> /
-            <span class="card-category">${category || ''}</span>
-            </div>
-            <div class="card-effect">${effectHtml}</div>
-        `.trim();
-
-        return el;
+    const el = wrap.firstElementChild || document.createElement('div');
+    // 念のため id / data-cd を保証
+    el.id = el.id || `detail-${cd5}`;
+    el.setAttribute('data-cd', el.getAttribute('data-cd') || cd5);
+    return el;
     }
-
 
     // 既存HTMLの detail-xxxx を行間に挿入する
     function expandCard(clickedCard){
@@ -77,7 +68,7 @@
 
     let detail = document.getElementById('detail-' + cd);
 
-    // ✅ card.js を読んでないページ（デッキメーカー）でも動くようにフォールバック生成
+    // ✅ card-list.js を読んでないページ（デッキメーカー）でも動くようにフォールバック生成
     if (!detail) {
     detail = buildDetailElementFallback_(cd, clickedCard);
     }
@@ -236,17 +227,19 @@
 
         // ロック切り替え
         const setLocked = (locked) => {
-            wrap.classList.toggle('is-locked', locked);
-            btnMinus.disabled = locked;
-            btnPlus.disabled  = locked;
-            btnToggle.setAttribute('aria-pressed', locked ? 'false' : 'true');
-            btnToggle.textContent = locked ? '編集' : '編集中';
+        wrap.classList.toggle('is-locked', locked);
+        btnMinus.disabled = locked;
+        btnPlus.disabled  = locked;
+        btnToggle.setAttribute('aria-pressed', locked ? 'false' : 'true');
+        btnToggle.textContent = locked ? '編集' : '編集中';
+        if (!locked) updateBtnState(); // ✅ 解除時に上限/下限を反映
         };
 
         btnToggle.addEventListener('click', (e)=>{
-            e.preventDefault();
-            e.stopPropagation();
-            setLocked(!btnMinus.disabled ? true : false);
+        e.preventDefault();
+        e.stopPropagation();
+        // ✅ class を正として反転
+        setLocked(!wrap.classList.contains('is-locked'));
         });
 
         // +/- 操作（ロック中は disabled で押せない）

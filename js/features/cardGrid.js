@@ -62,7 +62,7 @@
         setData_(cardDiv, 'data-type', card.type ?? '');
         setData_(cardDiv, 'data-cost', card.cost ?? '');
         setData_(cardDiv, 'data-power', card.power ?? '');
-        setData_(cardDiv, 'data-pack', card.pack_name ?? '');
+        setData_(cardDiv, 'data-pack', (card.packName ?? card.pack_name ?? ''));
 
         // 効果まとめ（検索用）
         const effectJoined = [card.effect_name1, card.effect_text1, card.effect_name2, card.effect_text2]
@@ -126,7 +126,7 @@
             ownedMark.style.display = 'none'; // common/owned.js が制御
             cardDiv.appendChild(ownedMark);
         }
-        
+
         // 画像
         const img = document.createElement('img');
         img.alt = card.name || '';

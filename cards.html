@@ -113,7 +113,7 @@
         <div class="top-bar">
             <!--メニューバー-->
             <div class="search-bar">
-                <input id="keyword" oninput="applyFilters()" placeholder="カード検索（カード名・カード効果等）" type="text">
+                <input id="keyword" oninput="applyFilters()" placeholder="キーワード検索" type="text">
 
                 <!-- タイプ即時フィルター -->
                 <div class="type-quick-filter">
@@ -145,8 +145,8 @@
             </div>
             <!-- 表示切替-->
             <div class="view-toggle" id="viewToggle">
-                <button type="button" class="view-btn is-active" data-view="grid">グリッド</button>
-                <button type="button" class="view-btn" data-view="list">リスト</button>
+                <button type="button" class="view-btn is-active" data-view="grid">カード表示</button>
+                <button type="button" class="view-btn" data-view="list">一覧表示</button>
             </div>
         </div>
 
@@ -210,7 +210,6 @@
 
         <div class="menu-mobile">
             <button id="save-btn-mobile" onclick="saveOwnership()">💾 保存</button>
-            <button class="js-share-owned">📋 リスト共有</button>
             <button id="show-missing-all-mobile">🧩 不足カード</button>
         </div>
     </div>
@@ -221,7 +220,6 @@
             <!-- 所持データ操作ボタンエリア -->
             <div class="menu">
                 <button id="save-btn" onclick="saveOwnership()">💾 保存</button>
-                <button class="js-share-owned">📋 リスト共有</button>
                 <button id="show-missing-all">🧩 不足カード</button>
             </div>
             <!-- 全カード所持率 -->
@@ -332,17 +330,22 @@
 <script src="js/common/owned.js"></script>
 <!--カード生成-->
 <script src="js/features/cardGrid.js"></script>
+<script src="js/ui/card-detail-template.js"></script>
 <script src="js/ui/card-detail.js"></script>
+
 
 <!--フィルター-->
 <script src="js/features/cardFilter.js"></script>
 
 <!--図鑑ページ専用-->
-<script src="js/pages/card.js"></script>
+<script src="js/pages/card/card-page-loader.js"></script>
+
+<!--サマリー共通処理-->
+<script src="js/common/summary.js"></script>
+
+
 
 <!--変更予定js-->
-<!-- 所持率チェッカー用ロジック -->
-<script src="js/page3.js"></script>
 <!-- 共通ヘルパー -->
 <script src="js/common-page234.js"></script>
 

@@ -697,11 +697,20 @@
         }
 
         // リスト表示は行(.list-row)を消す
-        const isList = gridRoot.classList.contains('is-list');
+        const isList = !!gridRoot.classList?.contains?.('is-list');
+
         if (isList) {
+            // ✅ グリッド時に付いた display:none が残る事故を防ぐ
+            // （リストでは row で制御するので card は必ず表示状態に戻す）
+            card.style.display = '';
+
             const row = card.closest('.list-row');
-            if (row) row.style.display = visible ? '' : 'none';
-            // card自体は触らない（rowで制御）
+            if (row) {
+                row.style.display = visible ? '' : 'none';
+            } else {
+                // 万一 list-row が無いカードは保険で card 側を制御
+                card.style.display = visible ? '' : 'none';
+            }
         } else {
             card.style.display = visible ? '' : 'none';
         }
@@ -709,6 +718,8 @@
 
         try { window.applyGrayscaleFilter?.(); } catch {}
         renderActiveFilterChips();
+        // ✅ リスト表示の row 表示を最終確定（cardsViewMode 側の同期関数があれば呼ぶ）
+        try { window.syncListRowVisibility_?.(); } catch {}
     }
 
     // ==============================

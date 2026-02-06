@@ -336,7 +336,7 @@ function sortCards() {
     const norm = (e)=> ({ normal: clampInt(e?.normal), shine: clampInt(e?.shine), premium: clampInt(e?.premium) });
 
   let cache;
-  let autosave = true;   // 既定は従来通り「自動保存ON」。page3.jsでfalseに切り替える
+  let autosave = true;   // 既定は従来通り「自動保存ON」。card-checker.jsでfalseに切り替える
   let dirty = false;     // 未保存フラグ
 
   function persist() {

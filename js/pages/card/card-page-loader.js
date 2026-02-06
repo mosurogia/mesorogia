@@ -1,8 +1,15 @@
 /**
  * js/pages/card/card-page-loader.js
- * - cardページで使う js/pages/card 配下のスクリプトを順番に読み込むローダー
- * - HTML にはこの1本だけ置けばOK
+ * - cardページ専用ローダー：js/pages/card 配下を「依存順」で順番読み込み
+ * - HTML は「共通（common/ui/features）」＋「このローダー1本」だけ置けばOK
+ *
+ * 読み込み順ルール:
+ * 1) 一覧（card-list）→ 2) 表示切替（view mode）
+ * 3) checker（owned ops → page wiring → render）
+ * 4) 保存フロー（owned-save-flow）
+ * 読み込み完了後に window イベント 'card-page:ready' を dispatch する
  */
+
 (function () {
   'use strict';
 
@@ -19,7 +26,10 @@
   ];
 
   function loadSequential(i) {
-    if (i >= FILES.length) return;
+        if (i >= FILES.length) {
+        fireReady_();
+            return;
+        }
     const s = document.createElement('script');
     s.src = BASE + FILES[i];
     s.async = false;
@@ -30,3 +40,14 @@
 
   loadSequential(0);
 })();
+
+function fireReady_(){
+  // DOMがまだなら待つ
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fireReady_, { once: true });
+    return;
+  }
+  // ✅ “後から読み込まれたJS”でも拾える合図
+  window.dispatchEvent(new Event('card-page:ready'));
+}
+

@@ -179,13 +179,21 @@ function restoreGrid_() {
   }
 
 // 初期表示設定
-window.addEventListener('DOMContentLoaded', () => {
+function initCardsViewMode_() {
   bindViewToggle_();
 
   // ✅ 常にgridを初期値にする（再読込でカード表示固定）
   try { localStorage.setItem(VIEW_KEY, 'grid'); } catch {}
   setActiveBtn_('grid');
-});
+
+  // ✅ カード生成後に前回モードを反映したいなら（任意）
+  // window.applyCardsViewMode();
+}
+
+// loader経由でも確実に動くように両対応
+window.addEventListener('DOMContentLoaded', initCardsViewMode_);
+window.addEventListener('card-page:ready', initCardsViewMode_);
+
 
   // ✅ 外から「カード生成後」に呼べる
   window.applyCardsViewMode = function (mode) {

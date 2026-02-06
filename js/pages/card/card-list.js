@@ -17,15 +17,22 @@
 ==================================================*/
 //#region 1. 初期設定
 
-window.addEventListener('DOMContentLoaded', () => {
-  loadCards();
+function initCardListPage_(){
+  try { loadCards(); } catch (e) { console.warn('[card-list] loadCards failed', e); }
 
   // owned-mark sync (card list)
-  window.OwnedUI?.bind?.("#grid");
+  try { window.OwnedUI?.bind?.("#grid"); } catch (e) { console.warn('[card-list] OwnedUI.bind(#grid) failed', e); }
 
   // 長押し（画像ズーム）
-  setTimeout(() => window.__bindLongPressForCards?.('list'), 0);
-});
+  setTimeout(() => {
+    try { window.__bindLongPressForCards?.('list'); } catch {}
+  }, 0);
+}
+
+// loader経由でも確実に動くように両対応
+window.addEventListener('DOMContentLoaded', initCardListPage_);
+window.addEventListener('card-page:ready', initCardListPage_);
+
 
 //#endregion
 

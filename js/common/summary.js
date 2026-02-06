@@ -135,17 +135,13 @@ function updatePackSummary(){
   const pcList = document.getElementById('pack-summary-list');
   const mobileSelect = document.getElementById('pack-selector');
   const mobileSummary = document.getElementById('mobile-pack-summary');
-
   if (!pcList) return;
 
-  // ✅ packs の形を吸収して「旧互換の配列」に正規化
   function getPackArray_(){
     const p = window.packs;
 
-    // 1) 旧形式（配列）: [{key,nameMain,nameSub,selector}, ...]
     if (Array.isArray(p)) return p;
 
-    // 2) card-core の loadPackCatalog() 形式: { list:[{en,jp,slug,key}], order:[...] }
     if (p && Array.isArray(p.list)) {
       return p.list.map(x => ({
         key: x.key || x.slug || x.en,
@@ -155,7 +151,6 @@ function updatePackSummary(){
       }));
     }
 
-    // 3) packs.json 生: { packs:[{en,jp,slug,key,selector}], order:[...] }
     if (p && Array.isArray(p.packs)) {
       return p.packs.map(x => ({
         key: x.key || x.slug || x.en,
@@ -168,7 +163,7 @@ function updatePackSummary(){
     return [];
   }
 
-  // ✅ queryCardsByPack が無ければ fallback を用意（card-checker.js 削除後も落ちない）
+  // queryCardsByPack が無ければ fallback
   if (typeof window.queryCardsByPack !== 'function') {
     window.queryCardsByPack = function (pack) {
       const en = (pack?.nameMain || '').trim();
@@ -180,19 +175,21 @@ function updatePackSummary(){
 
   const packArr = getPackArray_();
 
-  // --- UI初期化 ---
+  // UI初期化
   pcList.innerHTML = '';
+
+  let prev = '';
   if (mobileSelect) {
-    const prev = mobileSelect.value;
+    prev = mobileSelect.value || '';
     mobileSelect.innerHTML = '';
+
     const optAll = document.createElement('option');
     optAll.value = 'all';
     optAll.textContent = '全カード';
     mobileSelect.appendChild(optAll);
-    if (prev) mobileSelect.value = prev;
   }
 
-  // --- PCのパック一覧 ---
+  // PCパック一覧
   packArr.forEach(pack => {
     const cards = window.queryCardsByPack(pack);
     const s = calcSummary(cards);
@@ -209,6 +206,7 @@ function updatePackSummary(){
       </a>
     `;
 
+    // ポスト（これは残す）
     const share = document.createElement('div');
     share.className = 'summary-share';
     share.innerHTML = `
@@ -216,12 +214,13 @@ function updatePackSummary(){
         <img class="tweet-icon" src="img/x-logo.svg" alt="Post"><span>ポスト</span>
       </a>
     `;
-    const a = share.querySelector('a');
-    a.href = `https://twitter.com/intent/tweet?text=${buildShareText({ header: pack.nameMain, sum: s })}`;
-    wrap.appendChild(share);
+    share.querySelector('a').href =
+      `https://twitter.com/intent/tweet?text=${buildShareText({ header: pack.nameMain, sum: s })}`;
 
+    wrap.appendChild(share);
     pcList.appendChild(wrap);
 
+    // mobile select
     if (mobileSelect){
       const opt = document.createElement('option');
       opt.value = pack.key;
@@ -230,7 +229,13 @@ function updatePackSummary(){
     }
   });
 
-  // --- モバイル上部のパックサマリー ---
+  // mobile: 選択値を復元（なければ all）
+  if (mobileSelect) {
+    if (prev && [...mobileSelect.options].some(o => o.value === prev)) mobileSelect.value = prev;
+    else mobileSelect.value = 'all';
+  }
+
+  // mobile: 現在選択中パックの概要
   if (mobileSelect && mobileSummary) {
     const key = mobileSelect.value || 'all';
     let s;
@@ -250,6 +255,8 @@ function updatePackSummary(){
     if (jumpBtn) jumpBtn.style.display = (key==='all' ? 'none' : 'inline-block');
   }
 }
+
+
 
   // 全体と各パックサマリーをまとめて更新
     function updateSummary(){
@@ -273,4 +280,6 @@ function updatePackSummary(){
         };
     }
 })();
+
+
 

@@ -1,44 +1,89 @@
 /**
  * js/pages/card/card-checker-page.js
- * - card-checker（所持率チェッカー）ページ固有の初期化/配線
- * - 共有リンク系（X intent等）はここでは持たない（削除方針）
+ * - 所持率チェッカー（カードページ統合）の「ページ配線」
+ * - HTMLの onclick から呼ばれる関数を window に公開
+ *
+ * このファイルの役割:
+ * - 保存ボタン（saveOwnership）
+ * - モバイルpackセレクト→ジャンプ（selectMobilePack / jumpToSelectedPack）
+ * - packs が未初期化のときのフォールバック読み込み（public/packs.json）
+ *
+ * 方針:
+ * - デッキメーカー共有用のカスタムリンク生成は持たない（削除済み/今後も追加しない）
  */
 (function () {
   'use strict';
 
-  document.addEventListener('DOMContentLoaded', () => {
-    // ✅ summary.js 側に寄せた場合でも落ちない
+  // =====================================================
+  // 1) 初期化（summaryの更新だけ軽く）
+  // =====================================================
+
+  function initCheckerPage_(){
     if (typeof window.updateSummary === 'function') window.updateSummary();
     else if (window.Summary?.updateSummary) window.Summary.updateSummary();
-  });
+  }
+  window.addEventListener('DOMContentLoaded', initCheckerPage_);
+  window.addEventListener('card-page:ready', initCheckerPage_);
 
-  // グローバル初期値（未定義エラー防止）
+  // =====================================================
+  // 2) packs のフォールバック読み込み（未設定なら public/packs.json）
+  // =====================================================
+
   window.PACK_ORDER = window.PACK_ORDER || [];
   window.packs      = window.packs || [];
 
-  // packs が未設定なら packs.json から埋める
+  function normalizePacks_(raw){
+    // 旧: 配列
+    if (Array.isArray(raw)) return raw;
+
+    // {list:[...]} 形式
+    if (raw && Array.isArray(raw.list)) {
+      return raw.list.map(x => ({
+        key: x.key || x.slug || x.en,
+        nameMain: x.en || x.nameMain || '',
+        nameSub:  x.jp || x.nameSub || '',
+        selector: x.selector || `#pack-${x.slug || x.key || ''}`,
+      }));
+    }
+
+    // {packs:[...]} 形式
+    if (raw && Array.isArray(raw.packs)) {
+      return raw.packs.map(x => ({
+        key: x.key || x.slug || x.en,
+        nameMain: x.en || x.nameMain || '',
+        nameSub:  x.jp || x.nameSub || '',
+        selector: x.selector || `#pack-${x.slug || x.key || ''}`,
+      }));
+    }
+
+    return [];
+  }
+
   (async () => {
     try {
-      if (!Array.isArray(window.packs) || !window.packs.length) {
-        const res = await fetch('public/packs.json');
-        const packs = await res.json();
-        window.packs = packs;
-      }
+      // 既にpacksが配列で埋まっているなら何もしない
+      if (Array.isArray(window.packs) && window.packs.length) return;
+
+      const res = await fetch('public/packs.json', { cache: 'no-store' });
+      const raw = await res.json();
+      const arr = normalizePacks_(raw);
+
+      if (arr.length) window.packs = arr;
+      else console.warn('[card-checker-page] packs.json は読み込めたが配列に正規化できませんでした', raw);
     } catch (e) {
-      console.warn('packs.json の読み込みに失敗', e);
+      console.warn('[card-checker-page] packs.json の読み込みに失敗', e);
     }
   })();
 
-  /*===================
-      3.メニューボタン
-  ====================*/
+  // =====================================================
+  // 3) メニューボタン（HTML onclick から呼ばれる）
+  // =====================================================
 
-  // 所持率データ保存（保存後は未保存フラグをクリア & A更新）
+  // 所持率データ保存（保存後は未保存フラグをクリア & スナップショット更新）
   window.saveOwnership = function saveOwnership() {
     if (!window.OwnedStore?.save) { alert('保存機能が初期化されていません'); return; }
     try {
       window.OwnedStore.save();
-      // A更新
       try { window.commitOwnedSnapshot?.(); } catch {}
     } catch (e) {
       console.warn(e);
@@ -46,7 +91,7 @@
     }
   };
 
-  // （必要なら）モバイルのパック選択 → ジャンプ
+  // モバイルのパック選択 → ジャンプ
   window.selectMobilePack = function selectMobilePack(value) {
     const sel = document.getElementById('pack-selector');
     if (sel) sel.value = value;

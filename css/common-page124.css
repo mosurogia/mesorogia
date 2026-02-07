@@ -45,6 +45,7 @@
     flex: 1;
     font-size: 16px;
     padding: 6px 12px;
+    min-width: 0;
     height: 36px;
     box-sizing: border-box;
 }
@@ -53,7 +54,6 @@
     .search-bar input {
         font-size: clamp(5px, 2.5vw, 18px);
         padding: 5px;
-        min-width: 0;
     }
 }
 
@@ -782,6 +782,9 @@
     border-bottom: 1px solid #e7e7e7;
     backdrop-filter: saturate(120%) blur(2px);
     padding: 2px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 #active-chips-bar .chips-scroll {
@@ -789,6 +792,20 @@
     overflow-x: auto;
     white-space: nowrap;
     scrollbar-width: thin;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#active-chips-bar .chips-left {
+    flex: 0 0 auto;
+    padding-left: 6px;
+    white-space: nowrap;
+    font-size: 12px;
+    opacity: .85;
+}
+
+#active-chips-bar .chips-count {
+    display: inline-block;
 }
 
 #active-chips-bar .chip-mini {

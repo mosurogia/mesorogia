@@ -393,30 +393,57 @@
 
     // アクティブチップ表示
     function renderActiveFilterChips() {
-        const grid = document.getElementById('grid');
-        if (!grid) return;
+    const grid = document.getElementById('grid');
+    if (!grid) return;
 
-        let bar = document.getElementById('active-chips-bar');
-        if (!bar) {
+    let bar = document.getElementById('active-chips-bar');
+    if (!bar) {
         bar = document.createElement('div');
         bar.id = 'active-chips-bar';
-        const sc = document.createElement('div');
-        sc.className = 'chips-scroll';
-        bar.appendChild(sc);
+        bar.innerHTML = `<div class="chips-scroll"></div>`;
+
         const sb = document.querySelector('.search-bar');
         if (sb && sb.parentNode) sb.insertAdjacentElement('afterend', bar);
         else grid.parentNode.insertBefore(bar, grid);
-        }
+    }
 
-        const scroll = bar.querySelector('.chips-scroll');
-        scroll.innerHTML = '';
+    // ✅ 既存barでも「左：枚数」を必ず持つように補完
+    if (!bar.querySelector('.chips-left')) {
+        const left = document.createElement('div');
+        left.className = 'chips-left';
+
+        const cnt = document.createElement('span');
+        cnt.className = 'chips-count';
+        cnt.textContent = '0枚';
+
+        left.appendChild(cnt);
+
+        // 右側スクロールより前に入れる
+        const sc = bar.querySelector('.chips-scroll');
+        if (sc) bar.insertBefore(left, sc);
+        else bar.appendChild(left);
+    }
+
+    const scroll = bar.querySelector('.chips-scroll');
+    const countEl = bar.querySelector('.chips-count');
+    if (!scroll) return;
+    scroll.innerHTML = '';
+
+    // ✅ 表示枚数（フィルター結果）
+    let visible = 0;
+    grid.querySelectorAll('.card').forEach(el => {
+        if (el.hidden) return;
+        if (el.style.display === 'none') return;
+        visible++;
+    });
+    if (countEl) countEl.textContent = `${visible}枚表示`;
 
         const chips = [];
 
-        // キーワード
-        const kwEl = document.getElementById('keyword');
-        const kw = (kwEl?.value || '').trim();
-        if (kw) chips.push({ label: `検索:${kw}`, onRemove: () => { kwEl.value = ''; applyFilters(); } });
+    // キーワード
+    const kwEl = document.getElementById('keyword');
+    const kw = (kwEl?.value || '').trim();
+    if (kw) chips.push({ label: `検索:${kw}`, onRemove: () => { kwEl.value = ''; applyFilters(); } });
 
         // 範囲
         const cminEl = document.getElementById('cost-min');
@@ -428,78 +455,92 @@
         const pmin = pminEl?.value, pmax = pmaxEl?.value;
 
         if (cminEl && cmaxEl) {
-        const isDefault = (cmin | 0) === (cminEl.options[0]?.value | 0) && cmax === '上限なし';
-        if (!isDefault) chips.push({
-            label: `コスト:${cmin}–${cmax === '上限なし' ? '∞' : cmax}`,
-            onRemove: () => { cminEl.selectedIndex = 0; cmaxEl.selectedIndex = cmaxEl.options.length - 1; applyFilters(); }
-        });
+            const isDefault = (cmin | 0) === (cminEl.options[0]?.value | 0) && cmax === '上限なし';
+            if (!isDefault) chips.push({
+                label: `コスト:${cmin}–${cmax === '上限なし' ? '∞' : cmax}`,
+                onRemove: () => { cminEl.selectedIndex = 0; cmaxEl.selectedIndex = cmaxEl.options.length - 1; applyFilters(); }
+            });
         }
         if (pminEl && pmaxEl) {
-        const isDefault = (pmin | 0) === (pminEl.options[0]?.value | 0) && pmax === '上限なし';
-        if (!isDefault) chips.push({
-            label: `パワー:${pmin}–${pmax === '上限なし' ? '∞' : pmax}`,
-            onRemove: () => { pminEl.selectedIndex = 0; pmaxEl.selectedIndex = pmaxEl.options.length - 1; applyFilters(); }
-        });
+            const isDefault = (pmin | 0) === (pminEl.options[0]?.value | 0) && pmax === '上限なし';
+            if (!isDefault) chips.push({
+                label: `パワー:${pmin}–${pmax === '上限なし' ? '∞' : pmax}`,
+                onRemove: () => { pminEl.selectedIndex = 0; pmaxEl.selectedIndex = pmaxEl.options.length - 1; applyFilters(); }
+            });
         }
 
         // ボタン系
         const GROUPS = [
-        ['種族', 'race'], ['カテゴリ', 'category'],
-        // ✅ ['タイプ', 'type'] は削除（チップバーに出さない）
-        ['レア', 'rarity'], ['パック', 'pack'],
-        ['効果名', 'effect'], ['フィールド', 'field'],
-        ['BP', 'bp'], ['特効', 'ability'],
-        ['その他', 'draw'], ['その他', 'cardsearch'], ['その他', 'graveyard_recovery'],
-        ['その他', 'destroy_opponent'], ['その他', 'destroy_self'],
-        ['その他', 'heal'], ['その他', 'power_up'], ['その他', 'power_down'],
+            ['種族', 'race'], ['カテゴリ', 'category'],
+            // ✅ ['タイプ', 'type'] は削除（チップバーに出さない）
+            ['レア', 'rarity'], ['パック', 'pack'],
+            ['効果名', 'effect'], ['フィールド', 'field'],
+            ['BP', 'bp'], ['特効', 'ability'],
+            ['その他', 'draw'], ['その他', 'cardsearch'], ['その他', 'graveyard_recovery'],
+            ['その他', 'destroy_opponent'], ['その他', 'destroy_self'],
+            ['その他', 'heal'], ['その他', 'power_up'], ['その他', 'power_down'],
         ];
 
         GROUPS.forEach(([title, key]) => {
-        document.querySelectorAll(`.filter-btn.selected[data-${key}]`).forEach(btn => {
-            const val = btn.dataset[key];
-            let labelText;
+            document.querySelectorAll(`.filter-btn.selected[data-${key}]`).forEach(btn => {
+                const val = btn.dataset[key];
+                let labelText;
 
-            if (key === 'pack') {
-            const jp = (window.__PACK_EN_TO_JP && window.__PACK_EN_TO_JP[val]) || '';
-            labelText = jp ? `${val} / ${jp}` : val;
-            } else if (['draw', 'cardsearch', 'graveyard_recovery', 'destroy_opponent', 'destroy_self', 'heal', 'power_up', 'power_down'].includes(key)) {
-            labelText = DISPLAY_LABELS[key] ?? key;
-            } else {
-            labelText = (DISPLAY_LABELS && DISPLAY_LABELS[val] != null) ? DISPLAY_LABELS[val] : val;
-            }
+                if (key === 'pack') {
+                    const jp = (window.__PACK_EN_TO_JP && window.__PACK_EN_TO_JP[val]) || '';
+                    labelText = jp ? `${val} / ${jp}` : val;
+                } else if (['draw', 'cardsearch', 'graveyard_recovery', 'destroy_opponent', 'destroy_self', 'heal', 'power_up', 'power_down'].includes(key)) {
+                    labelText = DISPLAY_LABELS[key] ?? key;
+                } else {
+                    labelText = (DISPLAY_LABELS && DISPLAY_LABELS[val] != null) ? DISPLAY_LABELS[val] : val;
+                }
 
-            chips.push({
-            label: `${title}:${labelText}`,
-            onRemove: () => { btn.classList.remove('selected'); applyFilters(); }
+                chips.push({
+                    label: `${title}:${labelText}`,
+                    onRemove: () => { btn.classList.remove('selected'); applyFilters(); }
+                });
             });
-        });
         });
 
         chips.forEach(({ label, onRemove }) => {
-        const chip = document.createElement('span');
-        chip.className = 'chip-mini';
-        chip.textContent = label;
+            const chip = document.createElement('span');
+            chip.className = 'chip-mini';
+            chip.textContent = label;
 
-        const x = document.createElement('button');
-        x.className = 'x';
-        x.type = 'button';
-        x.textContent = '×';
-        x.addEventListener('click', (e) => { e.stopPropagation(); onRemove(); });
-        chip.appendChild(x);
+            const x = document.createElement('button');
+            x.className = 'x';
+            x.type = 'button';
+            x.textContent = '×';
+            x.addEventListener('click', (e) => { e.stopPropagation(); onRemove(); });
+            chip.appendChild(x);
 
-        scroll.appendChild(chip);
+            scroll.appendChild(chip);
         });
 
         // 全解除
         if (chips.length) {
-        const clr = document.createElement('span');
-        clr.className = 'chip-mini chip-clear';
-        clr.textContent = 'すべて解除';
-        clr.addEventListener('click', () => resetFilters());
-        scroll.appendChild(clr);
+            const clr = document.createElement('span');
+            clr.className = 'chip-mini chip-clear';
+            clr.textContent = 'すべて解除';
+            clr.addEventListener('click', () => resetFilters());
+            scroll.appendChild(clr);
         }
 
-        bar.style.display = chips.length ? '' : 'none';
+        // ✅ 「タイプ絞り込み中」でも枚数だけは見せたい
+        const left = bar.querySelector('.chips-left');
+
+        // タイプはチップに出さないので、選択中タイプがあるか別判定する
+        const hasTypeFilter =
+        document.querySelectorAll('.filter-btn.selected[data-type]').length > 0;
+
+        // 表示条件：チップがある or タイプ絞り込み中
+        const showBar = (chips.length > 0) || hasTypeFilter;
+
+        // 左（枚数）
+        if (left) left.style.display = showBar ? '' : 'none';
+
+        // バー自体（枚数だけ出す用途もあるので showBar で表示）
+        bar.style.display = showBar ? '' : 'none';
     }
 
     // ==============================
@@ -700,19 +741,16 @@
         const isList = !!gridRoot.classList?.contains?.('is-list');
 
         if (isList) {
-            // ✅ グリッド時に付いた display:none が残る事故を防ぐ
-            // （リストでは row で制御するので card は必ず表示状態に戻す）
-            card.style.display = '';
+        // ✅ リストでも card の display を visible と同期させる
+        //    （syncListRowVisibility_ が card.display を見て row を上書きするため）
+        card.style.display = visible ? '' : 'none';
 
-            const row = card.closest('.list-row');
-            if (row) {
-                row.style.display = visible ? '' : 'none';
-            } else {
-                // 万一 list-row が無いカードは保険で card 側を制御
-                card.style.display = visible ? '' : 'none';
-            }
+        const row = card.closest('.list-row');
+        if (row) {
+            row.style.display = visible ? '' : 'none';
+        }
         } else {
-            card.style.display = visible ? '' : 'none';
+        card.style.display = visible ? '' : 'none';
         }
         });
 
@@ -844,27 +882,73 @@
         // ==============================
         // タイプ即時フィルター（search-bar）
         //  - 押したら「1種類に上書き」
+        //  - 同じボタンを押したら「全解除」（単独選択時のみ）
+        //  - 切替時はカード一覧の先頭にスクロール
         //  - チップバーにタイプは出さない
         // ==============================
         const typeBtn = e.target.closest('.type-icon-btn');
-            if (typeBtn) {
-            const type = normalizeQuickType_(typeBtn.dataset.type || '');
+        if (typeBtn) {
+        const type = normalizeQuickType_(typeBtn.dataset.type || '');
 
-            // ✅ モーダル側 type を全解除→単一選択に上書き
-            document.querySelectorAll('.filter-group[data-key="タイプ"] .filter-btn[data-type]')
-                .forEach(fb => fb.classList.remove('selected'));
+        // ✅ いまモーダル側で選ばれているタイプ一覧
+        const selectedTypeBtns = Array.from(
+            document.querySelectorAll('.filter-group[data-key="タイプ"] .filter-btn.selected[data-type]')
+        );
+        const selectedTypes = selectedTypeBtns
+            .map(b => normalizeQuickType_(b.dataset.type))
+            .filter(Boolean);
 
-            if (type) {
-                const target = document.querySelector(`.filter-group[data-key="タイプ"] .filter-btn[data-type="${CSS.escape(type)}"]`);
-                if (target) target.classList.add('selected');
-                setQuickTypeUI_('single', type);
-            } else {
-                setQuickTypeUI_('all');
-            }
+        // ✅ スクロール（sticky top-bar 分のオフセット込み）
+        function scrollToFirstVisibleCard_() {
+        const grid = document.getElementById('grid');
+        if (!grid) return;
 
-            applyFilters();
-            return; // ← 下の filter-btn 処理へ落とさない
+        const topBar = document.querySelector('.top-bar'); // sticky のやつ
+        const offset = (topBar?.offsetHeight || 0) + 6;     // ちょい余白
+
+        // “見える最初のカード”に寄せる（無ければgrid先頭）
+        const first = Array.from(grid.querySelectorAll('.card'))
+            .find(el => el.style.display !== 'none' && !el.hidden);
+
+        const target = first || grid;
+
+        // 現在位置（ページ全体のY）
+        const y = window.pageYOffset + target.getBoundingClientRect().top - offset;
+
+        // すでに上の方ならスクロールしない（ガタつき防止）
+        const curTop = window.pageYOffset;
+        if (Math.abs(curTop - y) < 24) return;
+
+        window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
         }
+
+        // ✅ ④：同じタイプが「単独で」選択済みなら全解除に戻す
+        const isSameSingle =
+            type &&
+            selectedTypes.length === 1 &&
+            selectedTypes[0] === type;
+
+        // ✅ まずモーダル側 type を全解除
+        document.querySelectorAll('.filter-group[data-key="タイプ"] .filter-btn[data-type]')
+            .forEach(fb => fb.classList.remove('selected'));
+
+        if (!type || isSameSingle) {
+            // 全カード
+            setQuickTypeUI_('all');
+        } else {
+            // 単一タイプに上書き
+            const target = document.querySelector(
+            `.filter-group[data-key="タイプ"] .filter-btn[data-type="${CSS.escape(type)}"]`
+            );
+            if (target) target.classList.add('selected');
+            setQuickTypeUI_('single', type);
+        }
+
+        applyFilters();
+        scrollToFirstVisibleCard_();
+        return; // ← 下の filter-btn 処理へ落とさない
+        }
+
 
         // ==============================
         // 既存：filter-btn
@@ -889,6 +973,18 @@
         const modal = document.getElementById('filterModal');
         if (e.key === 'Escape' && modal && modal.style.display === 'flex') closeFilterModal();
         });
+        // モーダル外（背景）タップで閉じる（1回だけバインド）
+        if (!window.__filterModalBackdropBound) {
+        window.__filterModalBackdropBound = true;
+
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('filterModal');
+            if (!modal || modal.style.display !== 'flex') return;
+
+            // 背景（モーダルの外側）そのものをクリックした時だけ閉じる
+            if (e.target === modal) closeFilterModal();
+        });
+        }
 
         // UI生成
         generateFilterUI().catch(console.warn);

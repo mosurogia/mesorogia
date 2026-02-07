@@ -23,11 +23,23 @@ function initCardListPage_(){
   // owned-mark sync (card list)
   try { window.OwnedUI?.bind?.("#grid"); } catch (e) { console.warn('[card-list] OwnedUI.bind(#grid) failed', e); }
 
+  // ✅ 並び替え：grid/list どちらでも反映
+  const sortEl = document.getElementById('sort-select');
+  if (sortEl && !sortEl.dataset.bound) {
+    sortEl.dataset.bound = '1';
+    sortEl.addEventListener('change', () => {
+      try { window.sortCards?.(); } catch (e) { console.warn('[card-list] sortCards failed', e); }
+      try { window.applyFilters?.(); } catch (e) { console.warn('[card-list] applyFilters failed', e); }
+      try { window.syncListRowVisibility_?.(); } catch {}
+    });
+  }
+
   // 長押し（画像ズーム）
   setTimeout(() => {
     try { window.__bindLongPressForCards?.('list'); } catch {}
   }, 0);
 }
+
 
 // loader経由でも確実に動くように両対応
 window.addEventListener('DOMContentLoaded', initCardListPage_);

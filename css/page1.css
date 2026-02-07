@@ -2,12 +2,9 @@
 .view-toggle {
     display: flex;
     gap: 6px;
-    padding: 6px 4px;
+    padding: 2px 4px;
     background: #fff;
     border-bottom: 1px solid #e7e7e7;
-    position: sticky;
-    top: 40px;
-    /* search-bar が sticky なので下に 붙ける。必要なら調整 */
     z-index: 1900;
 }
 

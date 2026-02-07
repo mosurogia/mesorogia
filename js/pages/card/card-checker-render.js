@@ -92,10 +92,21 @@ function buildPackSectionHTML(packEn, packJp, cardsGroupedByRace){
   html += `  </h3>`;
 
   // パック単位の操作
-  html += `  <div class="race-controls">`;
-  html += `    <button class="pack-select-all-btn">シルバーブロンズ+3</button>`;
-  html += `    <button class="pack-clear-all-btn">全て選択解除</button>`;
-  html += `    <button class="missing-pack-btn">不足カード</button>`;
+  // パック単位の操作
+  html += `  <div class="race-controls pack-controls">`;
+
+  // 左：一括操作
+  html += `    <div class="control-group control-group--bulk">`;
+  html += `      <button class="pack-select-all-btn">シルバーブロンズ+3</button>`;
+  html += `      <button class="pack-clear-all-btn">全て選択解除</button>`;
+  html += `    </div>`;
+
+  // 右：表示切替（セグメント）
+  html += `    <div class="control-group control-group--view view-toggle">`;
+  html += `      <button type="button" class="toggle-pack-view-btn is-active" data-view="all">全カード表示</button>`;
+  html += `      <button type="button" class="toggle-pack-view-btn" data-view="incomplete">不足カード表示</button>`;
+  html += `    </div>`;
+
   html += `  </div>`;
 
   html += `  <div id="card-list-${packSlug}">`;
@@ -179,11 +190,16 @@ async function renderAllPacks({
 
   // --- パック並び順 ---
   const allPackEns = Array.from(byPack.keys());
+
+  // ✅ PACK_ORDER は window 側を正とする（未定義でも落ちない）
+  const PACK_ORDER_SAFE = Array.isArray(window.PACK_ORDER) ? window.PACK_ORDER
+                      : (Array.isArray(window.PACK_ORDER) ? window.PACK_ORDER : []);
+
   const rest = allPackEns
-    .filter(p => !PACK_ORDER.includes(p))
+    .filter(p => !PACK_ORDER_SAFE.includes(p))
     .sort((a,b)=>a.localeCompare(b));
 
-  const orderedPacks = [...PACK_ORDER.filter(p=>byPack.has(p)), ...rest];
+  const orderedPacks = [...PACK_ORDER_SAFE.filter(p=>byPack.has(p)), ...rest];
 
   // --- パックごとに種族で整列 ---
   const parts = [];
@@ -424,6 +440,87 @@ function hideCardPreview(){
   if (box) box.style.display = 'none';
 }
 
+// =====================================================
+// 5) 一括操作（高速版：まとめて更新）
+// =====================================================
+
+function getOwnedEntry_(map, cd){
+  const e = map[String(cd)];
+  if (e && typeof e === 'object') return {
+    normal: Number(e.normal||0),
+    shine: Number(e.shine||0),
+    premium: Number(e.premium||0),
+  };
+  // 旧形式（数値）も一応吸収
+  return { normal: Number(e||0), shine: 0, premium: 0 };
+}
+
+function setOwnedTotalToNormal_(map, cd, total){
+  map[String(cd)] = { normal: total|0, shine: 0, premium: 0 };
+}
+
+// ✅ 一括変更：OwnedStore.replaceAll を1回だけ呼ぶ
+function bulkUpdateOwned_(mutator){
+  const S = window.OwnedStore;
+  if (!S) return false;
+
+  // ✅ patch があるなら差分だけで更新（速い）
+  if (typeof S.patch === 'function') {
+    const patch = {};
+    mutator(patch);          // mutator は patch に cd->entry を詰める
+    S.patch(patch);
+    return true;
+  }
+
+  // フォールバック：replaceAll
+  if (!S.getAll || !S.replaceAll) return false;
+  const next = S.getAll() || {};
+  mutator(next);
+  S.replaceAll(next);
+  return true;
+}
+
+
+// packが不足表示中なら、操作後にそのpackだけ再判定して表示を更新する
+function reapplyPackIfIncomplete_(packSection){
+  if (!packSection) return;
+  const mode = packSection.dataset.viewMode || 'all';
+  if (mode === 'incomplete') {
+    // ✅ “切替時だけ再判定” ルールを保ちつつ、ここだけは明示的に更新
+    applyPackView_(packSection, 'incomplete', true);
+  }
+}
+
+// ✅ 一括操作後の重い処理は「次の描画フレーム」に逃がす（INP対策）
+function schedulePostBulkUIUpdate_(packSection){
+  const sel = (packSection && packSection.id)
+    ? `#${CSS.escape(packSection.id)}`
+    : '#packs-root';
+
+  // ✅ INP対策：次タスクに逃がして先に描画させる
+  setTimeout(() => {
+    try {
+      window.OwnedUI?.sync?.(sel, { grayscale: true, skipSummary: true, skipOwnedTotal: true });
+    } catch (e) {
+      window.OwnedUI?.sync?.('#packs-root', { grayscale: true, skipSummary: true, skipOwnedTotal: true });
+    }
+
+    // 不足表示中なら、そのpackだけ再判定
+    reapplyPackIfIncomplete_(packSection);
+
+    // summary は idle に（これも重い）
+    const runSummary = () => {
+      try {
+        if (typeof window.updateSummary === 'function') window.updateSummary();
+        else if (window.Summary?.updateSummary) window.Summary.updateSummary();
+      } catch {}
+    };
+
+    if (window.requestIdleCallback) requestIdleCallback(runSummary, { timeout: 700 });
+    else setTimeout(runSummary, 0);
+  }, 0);
+}
+
 
 // =====================================================
 // 5) 一括操作（+1/+3/解除）
@@ -444,32 +541,195 @@ function attachPackControls(root) {
     const btn = e.target.closest('button');
     if (!btn) return;
 
-    const packSection = e.target.closest('.pack-section');
-    const raceGroup   = e.target.closest('.race-group');
+    // ✅ e.target ではなく btn を起点に closest を取る（これが重要）
+    const packSection = btn.closest('.pack-section');
+    const raceGroup   = btn.closest('.race-group');
 
+    // ------------------------------
+    // ✅ パック：シルバーブロンズ+3（=最大まで埋める扱い）
+    // ------------------------------
     if (btn.classList.contains('pack-select-all-btn') && packSection) {
       const targets = packSection.querySelectorAll('.card.rarity-silver, .card.rarity-bronze');
-      targets.forEach(el => bump_(el, 3));
+
+      const ok = bulkUpdateOwned_((map) => {
+        targets.forEach(el => {
+          const cd = el.dataset.cd;
+          if (!cd) return;
+
+          // 旧神=1 / それ以外=3（ただし対象はsilver/bronze想定なので基本3）
+          const max = maxOwnedOfCardEl_(el);
+          // “+3” は結局 max まで埋まるので max にしてOK
+          setOwnedTotalToNormal_(map, cd, max);
+        });
+      });
+
+      if (!ok) {
+        // フォールバック（遅いけど動く）
+        targets.forEach(el => bump_(el, 3));
+      }
+
+      // ✅ まとめて同期は1回だけ
+schedulePostBulkUIUpdate_(packSection);
       return;
     }
 
+    // ------------------------------
+    // ✅ パック：全て選択解除（=0）
+    // ------------------------------
     if (btn.classList.contains('pack-clear-all-btn') && packSection) {
-      const targets = packSection.querySelectorAll('.card');
-      targets.forEach(el => clearCard_(el));
+      const targets = packSection.querySelectorAll('.card[data-cd]');
+
+      const ok = bulkUpdateOwned_((map) => {
+        targets.forEach(el => {
+          const cd = el.dataset.cd;
+          if (!cd) return;
+          setOwnedTotalToNormal_(map, cd, 0);
+        });
+      });
+
+      if (!ok) {
+        targets.forEach(el => clearCard_(el));
+      }
+
+schedulePostBulkUIUpdate_(packSection);
       return;
     }
 
+    // ------------------------------
+    // ✅ 全カード/不足カード（パック単位）
+    // ------------------------------
+    if (btn.classList.contains('toggle-pack-view-btn') && packSection) {
+      const mode = btn.dataset.view; // 'all' | 'incomplete'
+      applyPackView_(packSection, mode, true);
+      return;
+    }
+
+    // ------------------------------
+    // ✅ 種族：全て選択+1（=1枚増やす、上限で止める）
+    // ------------------------------
     if (btn.classList.contains('select-all-btn') && raceGroup) {
-      const targets = raceGroup.querySelectorAll('.card');
-      targets.forEach(el => bump_(el, 1));
+      const targets = raceGroup.querySelectorAll('.card[data-cd]');
+
+      const ok = bulkUpdateOwned_((map) => {
+        targets.forEach(el => {
+          const cd = el.dataset.cd;
+          if (!cd) return;
+
+          const cur = getOwnedEntry_(map, cd);
+          const curTotal = (cur.normal|0) + (cur.shine|0) + (cur.premium|0);
+          const max = maxOwnedOfCardEl_(el);
+          const nextTotal = Math.min(max, curTotal + 1);
+
+          // 合計だけ合ってればよい前提で normal に寄せる
+          setOwnedTotalToNormal_(map, cd, nextTotal);
+        });
+      });
+
+      if (!ok) {
+        targets.forEach(el => bump_(el, 1));
+      }
+
+schedulePostBulkUIUpdate_(packSection);
       return;
     }
 
+    // ------------------------------
+    // ✅ 種族：全て選択解除（=0）
+    // ------------------------------
     if (btn.classList.contains('clear-all-btn') && raceGroup) {
-      const targets = raceGroup.querySelectorAll('.card');
-      targets.forEach(el => clearCard_(el));
+      const targets = raceGroup.querySelectorAll('.card[data-cd]');
+
+      const ok = bulkUpdateOwned_((map) => {
+        targets.forEach(el => {
+          const cd = el.dataset.cd;
+          if (!cd) return;
+          setOwnedTotalToNormal_(map, cd, 0);
+        });
+      });
+
+      if (!ok) {
+        targets.forEach(el => clearCard_(el));
+      }
+
+schedulePostBulkUIUpdate_(packSection);
       return;
     }
+  });
+}
+
+
+// =====================================================
+// 5.5) 表示切替：パック単位（全カード / 不足カード）
+// =====================================================
+
+// 旧神=1 / それ以外=3
+function maxOwnedOfCardEl_(cardEl){
+  const race = cardEl?.dataset?.race || '';
+  return (race === '旧神') ? 1 : 3;
+}
+
+// ✅ パック内のボタン状態だけ更新
+function syncPackToggleUI_(packSection, mode){
+  packSection.querySelectorAll('.toggle-pack-view-btn').forEach(b => {
+    const on = (b.dataset.view === mode);
+    b.classList.toggle('is-active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+}
+
+// ✅ パック単位で “不足カードのみ” を適用（JSでdisplayも確実に切る）
+function applyPackView_(packSection, mode, forceRecalc = false){
+  if (!packSection) return;
+
+  // mode: 'all' | 'incomplete'
+  packSection.dataset.viewMode = mode;
+
+  // 不足表示中は “切替時だけ” 再計算（カード操作で勝手に消さない）
+  if (
+    mode === 'incomplete' &&
+    packSection.classList.contains('is-incomplete-only') &&
+    !forceRecalc
+  ){
+    syncPackToggleUI_(packSection, mode);
+    return;
+  }
+
+  // all / incomplete のクラス切替
+  packSection.classList.toggle('is-incomplete-only', mode === 'incomplete');
+
+  const cards = packSection.querySelectorAll('.card[data-cd]');
+  cards.forEach(el => {
+    const cd  = el.dataset.cd;
+    const own = ownedTotal(cd);
+    const max = maxOwnedOfCardEl_(el);
+    const isIncomplete = own < max;
+
+    el.classList.toggle('is-incomplete', isIncomplete);
+    el.classList.toggle('is-complete', !isIncomplete);
+
+    // ✅ ここが重要：CSSに頼らずJSで確実に表示制御
+    if (mode === 'incomplete') {
+      el.style.display = isIncomplete ? '' : 'none';
+    } else {
+      el.style.display = '';
+    }
+  });
+
+  // 種族グループ：不足表示中のみ「中身が空なら隠す」
+  packSection.querySelectorAll('.race-group').forEach(group => {
+    if (mode !== 'incomplete') { group.style.display = ''; return; }
+    group.style.display = group.querySelector('.card.is-incomplete') ? '' : 'none';
+  });
+
+  syncPackToggleUI_(packSection, mode);
+}
+
+
+
+// 初期化：全パックを all にそろえる
+function initPackViews_(){
+  document.querySelectorAll('#packs-root .pack-section').forEach(pack => {
+    applyPackView_(pack, 'all', true);
   });
 }
 
@@ -514,12 +774,14 @@ async function initPacksThenRender() {
     sortInRace: typeCostPowerCd
   });
 
-  // チェッカー側も所持枚数を同期
-  try { window.OwnedUI?.bind?.('#packs-root'); } catch (e) { console.warn('[checker] OwnedUI.bind(#packs-root) failed', e); }
+  // チェッカー側だけ 0枚をグレー化する
+  try { window.OwnedUI?.bind?.('#packs-root', { grayscale: true }); }
+  catch (e) { console.warn('[checker] OwnedUI.bind(#packs-root) failed', e); }
 
   if (typeof window.applyGrayscaleFilter === 'function') window.applyGrayscaleFilter();
   if (typeof window.updateSummary === 'function') window.updateSummary();
   else if (window.Summary?.updateSummary) window.Summary.updateSummary();
+  initPackViews_();
 }
 
 if (document.readyState === 'loading') {

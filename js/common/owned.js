@@ -62,7 +62,20 @@ function readOwnedDataSafe() {
         },
         onChange(fn) {
             if (typeof fn === 'function') listeners.add(fn);
+        },
+        patch(partial) {
+        if (!partial || typeof partial !== 'object') return;
+        for (const [cd, v] of Object.entries(partial)) {
+            const e = v && typeof v === 'object' ? v : {};
+            map[String(cd)] = {
+            normal: Number(e.normal || 0),
+            shine: Number(e.shine || 0),
+            premium: Number(e.premium || 0),
+            };
         }
+        writeOwnedMap_(map);
+        listeners.forEach(fn => { try { fn(); } catch(e){} });
+        },
         };
     }
 
@@ -127,62 +140,98 @@ function readOwnedDataSafe() {
         return (race === '旧神') ? 1 : 3;
     }
 
-    /* ---------- 見た目反映（owned-mark / grayscale） ---------- */
-    function paintCard(cardEl, total) {
-    const count = Math.max(0, Math.min(3, total | 0));
+// ---------- 表示反映（1枚カード） ----------
+function paintCard(cardEl, count, opts = {}) {
+  if (!cardEl) return;
 
-    // ✅ 0も含めて段階クラスを一旦全部剥がす
-    cardEl.classList.remove('owned-0', 'owned-1', 'owned-2', 'owned-3', 'owned', 'grayscale');
+  count = Number(count || 0);
 
-    // ✅ 0でも owned-0 を付ける（CSSを統一できる）
-    cardEl.classList.add(`owned-${count}`);
-    cardEl.classList.add('owned'); // 既存CSS互換（必要なら）
+  // ✅ 変化がないなら何もしない（ここが効く）
+  const prev = Number(cardEl.dataset.count || 0);
+  const prevGray = cardEl.classList.contains('grayscale');
+  const nextGray = !!(opts.grayscale && count === 0);
+  if (prev === count && prevGray === nextGray) return;
 
-    // owned-mark は常に表示、0 も明示
-    const mark = cardEl.querySelector('.owned-mark');
-    if (mark) {
-        mark.textContent = String(count);   // ★ 0 を表示
-        mark.style.display = 'flex';
+  // 以降は今まで通り…
+  cardEl.classList.remove('owned-0','owned-1','owned-2','owned-3','owned','grayscale');
+  cardEl.classList.add(`owned-${count}`);
+  cardEl.classList.add('owned');
+  if (nextGray) cardEl.classList.add('grayscale');
+
+  const mark = cardEl.querySelector('.owned-mark');
+  if (mark) {
+    mark.textContent = String(count);
+    mark.style.display = 'flex';
+  }
+  cardEl.dataset.count = String(count);
+}
+
+
+// ---------- 一括同期 ----------
+function syncOwnedMarks(rootSelector = '#packs-root', opts = {}) {
+  const owned = readOwnedMap_();
+  const root = document.querySelector(rootSelector);
+  if (!root) return;
+
+  root.querySelectorAll('.card').forEach((el) => {
+    const cd = String(el.dataset.cd || '');
+    const e = owned[cd] || { normal: 0, shine: 0, premium: 0 };
+    const total = (e.normal|0) + (e.shine|0) + (e.premium|0);
+    paintCard(el, total, opts);
+  });
+
+  // ✅ ここ：チェッカー一括操作では summary を呼ばない
+  if (!opts.skipSummary) {
+    try { window.updateSummary?.(); } catch {}
+  }
+  if (!opts.skipOwnedTotal) {
+    try { window.updateOwnedTotal?.(); } catch {}
+  }
+}
+
+
+// ---------- 初回：カードDOM生成待ち→同期 ----------
+function waitForCardsAndSync(rootSelector = '#packs-root', opts = {}) {
+  const root = document.querySelector(rootSelector);
+  if (!root) return;
+
+  if (root.querySelector('.card')) {
+    syncOwnedMarks(rootSelector, opts);
+    return;
+  }
+  const mo = new MutationObserver(() => {
+    if (root.querySelector('.card')) {
+      mo.disconnect();
+      syncOwnedMarks(rootSelector, opts);
+    }
+  });
+  mo.observe(root, { childList: true, subtree: true });
+}
+
+// ---------- 公開I/F ----------
+window.OwnedUI = {
+  bind(rootSelector = '#packs-root', opts = {}) {
+    ensureOwnedStore_();
+
+    waitForCardsAndSync(rootSelector, opts);
+
+    if (typeof window.OwnedStore?.onChange === 'function') {
+      window.OwnedStore.onChange(() => syncOwnedMarks(rootSelector, opts));
     }
 
-    cardEl.dataset.count = String(count);
+    // ✅ 既存互換：ただし上書きしない（競合防止）
+    if (typeof window.applyGrayscaleFilter !== 'function') {
+      window.applyGrayscaleFilter = () => syncOwnedMarks(rootSelector, opts);
     }
+  },
+  sync(rootSelector = '#packs-root', opts = {}) {
+    return syncOwnedMarks(rootSelector, opts);
+  },
+  paintCard,
+  maxAllowedCount,
+};
 
-    // ---------- 一括同期 ---------- */
-    function syncOwnedMarks(rootSelector = '#packs-root') {
-        const owned = readOwnedMap_();
-        const root = document.querySelector(rootSelector);
-        if (!root) return;
 
-        const cards = root.querySelectorAll('.card');
-        cards.forEach((el) => {
-        const cd = String(el.dataset.cd || '');
-        const e = owned[cd] || { normal: 0, shine: 0, premium: 0 };
-        const total = (e.normal | 0) + (e.shine | 0) + (e.premium | 0);
-        paintCard(el, total);
-        });
-
-        // page3 側にあれば追従（無ければ何もしない）
-        try { window.updateSummary?.(); } catch {}
-        try { window.updateOwnedTotal?.(); } catch {}
-    }
-
-    function waitForCardsAndSync(rootSelector = '#packs-root') {
-        const root = document.querySelector(rootSelector);
-        if (!root) return;
-
-        if (root.querySelector('.card')) {
-        syncOwnedMarks(rootSelector);
-        return;
-        }
-        const mo = new MutationObserver(() => {
-        if (root.querySelector('.card')) {
-            mo.disconnect();
-            syncOwnedMarks(rootSelector);
-        }
-        });
-        mo.observe(root, { childList: true, subtree: true });
-    }
 
     /* ---------- 操作系（ボタン/クリック用） ---------- */
     function totalOf(cd) {
@@ -241,26 +290,6 @@ function readOwnedDataSafe() {
         }
     }
 
-    /* ---------- 公開I/F ---------- */
-    window.OwnedUI = {
-        bind(rootSelector = '#packs-root') {
-        ensureOwnedStore_();
-
-        // 初回同期（描画待ち）
-        waitForCardsAndSync(rootSelector);
-
-        // OwnedStore 変更で再反映
-        if (typeof window.OwnedStore?.onChange === 'function') {
-            window.OwnedStore.onChange(() => syncOwnedMarks(rootSelector));
-        }
-
-        // 既存互換：フィルタ後に applyGrayscaleFilter() が呼ばれる前提ならここを乗っ取る
-        window.applyGrayscaleFilter = () => syncOwnedMarks(rootSelector);
-        },
-        sync: syncOwnedMarks,
-        paintCard,
-        maxAllowedCount,
-    };
 
     // 既存互換（古いコードが window.* を探しに来る）
     window.maxAllowedCount = maxAllowedCount;

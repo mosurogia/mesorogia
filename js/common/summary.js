@@ -36,26 +36,39 @@ window.buildShareText = window.buildShareText || function buildShareText({
 
 
 (function(){
-  // ノードリストから所持情報を計算する
-    function calcSummary(nodeList){
+  // cdから所持数を取得する
+  function ownedTotalByCd_(cd){
+    const S = window.OwnedStore;
+    if (!S?.get) return 0;
+    const e = S.get(String(cd));
+    return (e?.normal|0) + (e?.shine|0) + (e?.premium|0);
+  }
+
+  // nodeListから所持率・コンプ率を計算する
+  function calcSummary(nodeList){
     let owned = 0, ownedTypes = 0, total = 0, totalTypes = 0;
+
     nodeList.forEach(card => {
-        const cnt = parseInt(card.dataset.count) || 0;
-        owned += cnt;
-        if (cnt > 0) ownedTypes++;
-      // 旧神=1、それ以外=3 を分母に採用
-        total += (card.dataset.race === '旧神') ? 1 : 3;
-        });
-        totalTypes = nodeList.length;
-        const percent = total ? Math.round((owned/total)*100) : 0;
-        const typePercent = totalTypes ? Math.round((ownedTypes/totalTypes)*100) : 0;
-        return { owned, ownedTypes, total, totalTypes, percent, typePercent };
-    }
+      const cd = card.dataset.cd;
+      const cnt = cd ? ownedTotalByCd_(cd) : 0;
+
+      owned += cnt;
+      if (cnt > 0) ownedTypes++;
+
+      total += (card.dataset.race === '旧神') ? 1 : 3;
+    });
+
+    totalTypes = nodeList.length;
+    const percent = total ? Math.round((owned/total)*100) : 0;
+    const typePercent = totalTypes ? Math.round((ownedTypes/totalTypes)*100) : 0;
+    return { owned, ownedTypes, total, totalTypes, percent, typePercent };
+  }
 
     // 全体所持率を更新する
     function updateOverallSummary(){
         const allCards = document.querySelectorAll('#packs-root .card');
         const s = calcSummary(allCards);
+        (window.Summary ||= {})._lastOverall = s;
 
     // PCサイドバー
     const pcRate = document.querySelector('#summary .summary-rate');
@@ -68,7 +81,7 @@ window.buildShareText = window.buildShareText || function buildShareText({
     // PC共有リンク
     const pcTweet = document.querySelector('#summary .summary-share a');
     if (pcTweet){
-        const txt = buildShareText({ header: '全カード', sum: s });
+        const txt = window.buildShareText({ header: '全カード', sum: s });
         pcTweet.href = `https://twitter.com/intent/tweet?text=${txt}`;
     }
 
@@ -98,11 +111,11 @@ window.buildShareText = window.buildShareText || function buildShareText({
             if (selPack){
             const selCards = queryCardsByPack(selPack);
             const sum = calcSummary(selCards);
-            mtxt = buildShareText({ header: selPack.nameMain, sum });
+            mtxt = window.buildShareText({ header: selPack.nameMain, sum });
             }
         }
 
-        if (!mtxt) mtxt = buildShareText({ header: '全カード', sum: s });
+        if (!mtxt) mtxt = window.buildShareText({ header: '全カード', sum: s });
         mobileTweet.href = `https://twitter.com/intent/tweet?text=${mtxt}`;
         }
     }
@@ -115,7 +128,7 @@ window.buildShareText = window.buildShareText || function buildShareText({
             <div class="meter-label">所持率</div>
             <div class="meter-track" role="progressbar"
                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="${s.typePercent}">
-                <span class="meter-bar" style="width:${s.typePercent}%"></span>
+                <span class="meter-bar -own" style="width:${s.typePercent}%"></span>
             </div>
             <div class="meter-val">${s.ownedTypes}/${s.totalTypes} (${s.typePercent}%)</div>
             </div>
@@ -135,7 +148,11 @@ function updatePackSummary(){
   const pcList = document.getElementById('pack-summary-list');
   const mobileSelect = document.getElementById('pack-selector');
   const mobileSummary = document.getElementById('mobile-pack-summary');
-  if (!pcList) return;
+
+  // ✅ pcListが無いならPC側の生成はしない
+  const hasPC = !!pcList;
+  const hasMobile = !!mobileSelect || !!mobileSummary;
+  if (!hasPC && !hasMobile) return;
 
   function getPackArray_(){
     const p = window.packs;
@@ -176,7 +193,7 @@ function updatePackSummary(){
   const packArr = getPackArray_();
 
   // UI初期化
-  pcList.innerHTML = '';
+  if (pcList) pcList.innerHTML = '';
 
   let prev = '';
   if (mobileSelect) {
@@ -215,12 +232,17 @@ function updatePackSummary(){
       </a>
     `;
     share.querySelector('a').href =
-      `https://twitter.com/intent/tweet?text=${buildShareText({ header: pack.nameMain, sum: s })}`;
+      `https://twitter.com/intent/tweet?text=${window.buildShareText({ header: pack.nameMain, sum: s })}`;
 
     wrap.appendChild(share);
     pcList.appendChild(wrap);
 
-    // mobile select
+    // PCパック一覧
+    if (pcList) {
+      pcList.appendChild(wrap);
+    }
+
+    // モバイルパックセレクタ
     if (mobileSelect){
       const opt = document.createElement('option');
       opt.value = pack.key;
@@ -262,6 +284,7 @@ function updatePackSummary(){
     function updateSummary(){
         updateOverallSummary();
         updatePackSummary();
+        window.dispatchEvent(new Event('summary:updated'));
     }
 
     // グローバルに公開

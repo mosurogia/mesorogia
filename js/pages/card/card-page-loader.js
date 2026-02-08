@@ -20,9 +20,8 @@
 
     // checker
     'card-checker-owned-ops.js',
-    'card-checker-page.js',
     'card-checker-render.js',
-    'owned-save-flow.js',
+    'card-checker-page.js',
   ];
 
   function loadSequential(i) {

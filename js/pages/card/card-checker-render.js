@@ -82,10 +82,10 @@ function typeCostPowerCd(a, b) {
 // =====================================================
 
 // パック1つ分のHTMLを組み立てる
-function buildPackSectionHTML(packEn, packJp, cardsGroupedByRace){
+function buildPackSectionHTML(packEn, packJp, cardsGroupedByRace, packKey){
   const packSlug = makePackSlug(packEn);
   let html = '';
-  html += `<section id="pack-${packSlug}" class="pack-section">`;
+  html += `<section id="pack-${packSlug}" class="pack-section" data-packkey="${esc(packKey||'')}">`;
   html += `  <h3 class="pack-title">`;
   html += `    <span class="pack-name-main">${esc(packEn)}</span><br>`;
   html += `    <small class="pack-name-sub">${esc(packJp)}</small>`;
@@ -129,12 +129,19 @@ function buildPackSectionHTML(packEn, packJp, cardsGroupedByRace){
     for (const c of list){
       const rarityCls = rarityClassOf(c.rarity);
 
-      html += `        <div class="card ${rarityCls}" data-name="${esc(c.name)}" data-cd="${esc(c.cd)}"`;
-      html += `          data-pack="${esc(c.pack_name)}" data-race="${esc(c.race)}" data-category="${esc(c.category)}"`;
-      html += `          data-rarity="${esc(c.rarity)}" data-type="${esc(c.type)}" onclick="toggleOwnership(this)">`;
+      html += `<div class="card ${rarityCls}" data-name="${esc(c.name)}" data-cd="${esc(c.cd)}"`;
+      html += `data-pack="${esc(c.pack_name)}" data-race="${esc(c.race)}" data-category="${esc(c.category)}"`;
+      html += `data-rarity="${esc(c.rarity)}" data-type="${esc(c.type)}" onclick="toggleOwnership(this)">`;
 
-      html += `          <img alt="${esc(c.name)}" loading="lazy" src="img/${esc(c.cd)}.webp"
-              onerror="if(!this.dataset.fallback){this.dataset.fallback=1;this.src='img/00000.webp';}" />`;
+      html += `<img
+                alt="${esc(c.name)}"
+                loading="lazy"
+                decoding="async"
+                width="424"
+                height="532"
+                src="img/${esc(c.cd)}.webp"
+                onerror="if(!this.dataset.fallback){this.dataset.fallback=1;this.src='img/00000.webp';}"
+              />`;
 
       html += `          <div class="owned-mark"></div>`;
       html += `        </div>`;
@@ -191,9 +198,8 @@ async function renderAllPacks({
   // --- パック並び順 ---
   const allPackEns = Array.from(byPack.keys());
 
-  // ✅ PACK_ORDER は window 側を正とする（未定義でも落ちない）
-  const PACK_ORDER_SAFE = Array.isArray(window.PACK_ORDER) ? window.PACK_ORDER
-                      : (Array.isArray(window.PACK_ORDER) ? window.PACK_ORDER : []);
+  // グローバルPACK_ORDERを安全に取得
+  const PACK_ORDER_SAFE = Array.isArray(window.PACK_ORDER) ? window.PACK_ORDER : [];
 
   const rest = allPackEns
     .filter(p => !PACK_ORDER_SAFE.includes(p))
@@ -234,8 +240,10 @@ async function renderAllPacks({
 
 // 所持合計（OwnedStore優先）
 function ownedTotal(cd){
-  if (!window.OwnedStore) return 0;
-  const e = OwnedStore.get(String(cd));
+  const S = window.OwnedStore;
+  if (!S || typeof S.get !== 'function') return 0;
+
+  const e = S.get(String(cd));
   return (e?.normal|0) + (e?.shine|0) + (e?.premium|0);
 }
 
@@ -601,6 +609,7 @@ schedulePostBulkUIUpdate_(packSection);
     if (btn.classList.contains('toggle-pack-view-btn') && packSection) {
       const mode = btn.dataset.view; // 'all' | 'incomplete'
       applyPackView_(packSection, mode, true);
+      setTimeout(() => { try { window.updateSummary?.(); } catch {} }, 0);
       return;
     }
 
@@ -715,10 +724,16 @@ function applyPackView_(packSection, mode, forceRecalc = false){
     }
   });
 
-  // 種族グループ：不足表示中のみ「中身が空なら隠す」
+  // ✅ 種族グループ：枠は残す。全コンプなら「comp済み」表示にする
   packSection.querySelectorAll('.race-group').forEach(group => {
-    if (mode !== 'incomplete') { group.style.display = ''; return; }
-    group.style.display = group.querySelector('.card.is-incomplete') ? '' : 'none';
+    // 常に表示は戻しておく（消さない）
+    group.style.display = '';
+
+    const hasIncomplete = !!group.querySelector('.card.is-incomplete');
+    const isCompleteRace = !hasIncomplete; // ＝全部コンプ
+
+    // 不足表示のときだけ「コンプ済み」見た目にする
+    group.classList.toggle('is-race-complete', mode === 'incomplete' && isCompleteRace);
   });
 
   syncPackToggleUI_(packSection, mode);
@@ -773,6 +788,9 @@ async function initPacksThenRender() {
     isLatestOnly: true,
     sortInRace: typeCostPowerCd
   });
+  try {
+  window.rebuildMobilePackTabs?.();
+} catch(e) {}
 
   // チェッカー側だけ 0枚をグレー化する
   try { window.OwnedUI?.bind?.('#packs-root', { grayscale: true }); }
@@ -782,6 +800,7 @@ async function initPacksThenRender() {
   if (typeof window.updateSummary === 'function') window.updateSummary();
   else if (window.Summary?.updateSummary) window.Summary.updateSummary();
   initPackViews_();
+  window.dispatchEvent(new Event('card-page:ready'));// カードページ準備完了イベント
 }
 
 if (document.readyState === 'loading') {

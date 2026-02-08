@@ -146,25 +146,36 @@ function paintCard(cardEl, count, opts = {}) {
 
   count = Number(count || 0);
 
-  // ✅ 変化がないなら何もしない（ここが効く）
+  // ✅ owned-mark の表示ズレも検知する（0枚のときに消えがち問題対策）
+  const mark = cardEl.querySelector('.owned-mark');
+  const wantText = String(count);
+
+  const markNeedsFix = !!(mark && (
+    mark.textContent !== wantText ||
+    mark.style.display === 'none' ||
+    mark.hidden
+  ));
+
+  // ✅ 変化がないなら何もしない（ただしマーク表示ズレがあるなら更新する）
   const prev = Number(cardEl.dataset.count || 0);
   const prevGray = cardEl.classList.contains('grayscale');
   const nextGray = !!(opts.grayscale && count === 0);
-  if (prev === count && prevGray === nextGray) return;
+  if (prev === count && prevGray === nextGray && !markNeedsFix) return;
 
-  // 以降は今まで通り…
   cardEl.classList.remove('owned-0','owned-1','owned-2','owned-3','owned','grayscale');
   cardEl.classList.add(`owned-${count}`);
   cardEl.classList.add('owned');
   if (nextGray) cardEl.classList.add('grayscale');
 
-  const mark = cardEl.querySelector('.owned-mark');
   if (mark) {
-    mark.textContent = String(count);
+    mark.textContent = wantText;
     mark.style.display = 'flex';
+    mark.hidden = false;
   }
+
   cardEl.dataset.count = String(count);
 }
+
 
 
 // ---------- 一括同期 ----------

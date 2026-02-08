@@ -2752,6 +2752,7 @@ function packAbbr_(enName){
   return s;
 }
 
+// パック略称からパックキーを得る（A〜E or SPECIAL/COLLAB or ''）
 function packKeyFromAbbr_(abbr){
   const s = String(abbr || '');
 

@@ -1,4 +1,6 @@
-/* ===== 表示切替トグル ===== */
+/* =====================================================
+   View Toggle（カード表示 / 一覧表示）
+===================================================== */
 .view-toggle {
     display: flex;
     gap: 6px;
@@ -10,9 +12,9 @@
 
 .view-btn {
     flex: 1 1 auto;
-    border: 1px solid rgba(0, 0, 0, .15);
-    border-radius: 999px;
     padding: 6px 10px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 999px;
     background: #f7f7f9;
     cursor: pointer;
     font-size: 14px;
@@ -24,77 +26,48 @@
     color: #fff;
 }
 
-/* ===== リスト表示レイアウト ===== */
+
+/* =====================================================
+   List View Layout（図鑑：リスト表示）
+===================================================== */
 .grid.is-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
-
 /* 1カード分の行 */
 .list-row {
     display: flex;
     gap: 8px;
     padding-left: 2px;
-    border: 1px solid rgba(0, 0, 0, .12);
+    border: 1px solid rgba(0, 0, 0, 0.12);
     border-radius: 10px;
     background: #fff;
 }
 
-/* ✅ 横長PCは2列リストにして余白を有効活用 */
-@media (min-width: 1100px) {
-    .grid.is-list {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 5px;
-    }
-}
-
-/* 左：画像（既存.cardを中で使う想定） */
+/* 左：画像（既存 .card を中で使用） */
 .list-row .card {
     width: 92px;
     flex: 0 0 92px;
 }
 
-/* 右：詳細（既存 .card-detail を常時表示に） */
+/* 右：詳細（既存 .card-detail を常時表示） */
 .list-row .card-detail {
     display: block;
-    margin: 0;
-    padding: 5px 0px 5px 5px;
     flex: 1 1 auto;
+    margin: 0;
+    padding: 5px 0 5px 5px;
 }
 
-/* SPは画像少し小さく */
-@media (max-width: 768px) {
-    .grid.is-list {
-        gap: 3px;
-    }
-    .list-row{
-        gap: 3px;
-    }
-
-    .list-row .card {
-        width: 87px;
-        flex-basis: 87px;
-    }
-
-    .list-row .card-detail {
-        padding: 6px 2px 6px 4px;
-    }
-}
-/* ===============================
-   リスト表示時：詳細の文字サイズ調整
-   =============================== */
+/* 詳細：文字サイズ（PC基準） */
 .grid.is-list .card-detail {
     font-size: 0.85rem;
-    /* 全体を一段落とす */
     line-height: 1.4;
 }
 
 .grid.is-list .card-detail .card-name {
     font-size: 1rem;
-    /* 名前だけ少し大きめ */
 }
 
 .grid.is-list .card-detail .card-meta {
@@ -115,8 +88,34 @@
     line-height: 1.45;
 }
 
-/* SPはさらに少し詰める */
+/* ✅ 横長PCは2列リストにして余白を有効活用 */
+@media (min-width: 1100px) {
+    .grid.is-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 5px;
+    }
+}
+
+/* SPは全体を少し詰める */
 @media (max-width: 768px) {
+    .grid.is-list {
+        gap: 3px;
+    }
+
+    .list-row {
+        gap: 3px;
+    }
+
+    .list-row .card {
+        width: 87px;
+        flex-basis: 87px;
+    }
+
+    .list-row .card-detail {
+        padding: 6px 2px 6px 4px;
+    }
+
     .grid.is-list .card-detail {
         font-size: 0.8rem;
     }
@@ -124,4 +123,376 @@
     .grid.is-list .card-detail .card-name {
         font-size: 0.95rem;
     }
+}
+
+
+/* =====================================================
+   Card Groups UI（サイドバー）
+   - 2段レイアウト + 右端に≣
+   - グループ名は1段目で見切れにくく（2行まで許可）
+===================================================== */
+.cg-head {
+    padding: 10px 12px;
+    margin-top: auto;
+    margin-bottom: 10px;
+}
+
+.cg-head-row,
+.cg-head-row2 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.cg-head-row2 {
+    margin-top: 6px;
+}
+
+/* ✅ 見出しを大きく */
+.cg-head-title {
+    font-weight: 900;
+    font-size: 16px;
+    /* ← ここで調整 */
+    letter-spacing: .02em;
+}
+
+.cg-current {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+/* ✅ 編集完了（フラット寄りの緑：メタリック/グラデ無し） */
+#cg-exit-edit.cg-head-btn {
+    background: #22c55e;
+    color: #fff;
+    border-color: rgba(0, 0, 0, .12);
+    box-shadow: 0 2px 6px rgba(34, 197, 94, .25);
+    font-weight: 1000;
+}
+
+#cg-exit-edit.cg-head-btn:hover {
+    background: #1fb455;
+}
+
+.cg-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* ✅ 行全体：右端にハンドル専用レーンを作る */
+.cg-row {
+    display: grid;
+    grid-template-columns: 1fr 40px;
+    grid-auto-rows: auto;
+    column-gap: 10px;
+
+    /* 既存の見た目 */
+    gap: 5px;
+    padding: 2px 3px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 12px;
+    background: #fff;
+
+    position: relative;
+}
+
+.cg-row.is-active {
+    outline: 2px solid rgba(43, 144, 255, 0.45);
+}
+
+.cg-row.is-editing {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.18), rgba(129, 199, 132, 0.18));
+}
+
+/* ✅ 1〜3段の本体は左列に */
+.cg-row-top,
+.cg-row-bot,
+.cg-mini {
+    grid-column: 1;
+}
+
+/* --- 1段目：グループ名 + 右端に ✏️ と ≣ --- */
+.cg-row-top {
+    display: grid;
+    grid-template-columns: 1fr 34px;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ✅ グループ名：2行まで許可（横幅が狭くても見えやすい） */
+.cg-name {
+    font-weight: 900;
+    line-height: 1.15;
+    overflow: hidden;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    /* 2行 */
+    -webkit-box-orient: vertical;
+}
+
+/* rename */
+.cg-rename {
+    width: 34px;
+    height: 30px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    background: #f7f7f9;
+    cursor: pointer;
+}
+
+.cg-rename:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ✅ ハンドル：右列に固定＆縦中央 */
+.cg-handle {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    /* 1〜3段をまたいで中央に置く */
+    align-self: stretch;
+    /* 高さいっぱい */
+    justify-self: stretch;
+
+    display: flex;
+    align-items: center;
+    /* 縦中央 */
+    justify-content: center;
+    /* 横中央 */
+
+    cursor: grab;
+    user-select: none;
+    opacity: .85;
+
+    border: 1px solid rgba(0, 0, 0, .18);
+    margin: 2px 2px 2px 0;
+    min-width: 38px;
+    border-radius: 10px;
+    background: #f7f7f9;
+
+    /* 狭い環境での競合軽減 */
+    touch-action: none;
+}
+
+.cg-handle:active {
+    cursor: grabbing;
+}
+
+/* ✅ ボタン列：スペースが余る時も自然に埋まる */
+.cg-row-bot {
+    display: grid;
+    grid-template-columns: 1fr 1fr 40px;
+    /* 表示/編集を“太く” + 削除 */
+    align-items: center;
+    gap: 6px;
+}
+
+/* ✅ 表示/編集を大きく */
+.cg-show,
+.cg-edit {
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 11px;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+/* ✅ 削除も少し大きく */
+.cg-del {
+    width: 38px;
+    height: 34px;
+    border-radius: 9px;
+}
+
+.cg-del:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+
+/* =====================================================
+    Card Groups UI（サイドバー）
+    - 行間の挿入ライン
+===================================================== */
+
+/* DnD：行間の挿入ライン（上/下） */
+.cg-row.drop-before,
+.cg-row.drop-after {
+    position: relative;
+}
+
+.cg-row.drop-before::before {
+    content: "";
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    top: -4px;
+    height: 3px;
+    border-radius: 999px;
+    background: rgba(43, 144, 255, 0.9);
+}
+
+.cg-row.drop-after::after {
+    content: "";
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: -4px;
+    height: 3px;
+    border-radius: 999px;
+    background: rgba(43, 144, 255, 0.9);
+}
+
+.cg-row.is-dragging {
+    opacity: .55;
+}
+
+
+/* =========================
+   cg-mini：カードサムネ（重ね表示）
+========================= */
+/* ✅ サムネは左から詰める（左の空白を消す） */
+.cg-mini {
+    grid-column: 1;
+    display: flex;
+    justify-content: flex-start;
+    /* ← ここが重要 */
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+    padding: 3px 0 0 0;
+    margin-top: 3px;
+    border-top: 1px dashed rgba(0, 0, 0, .10);
+}
+
+/* 1枚分：半分重ねる */
+.cg-mini-card {
+    width: 34px;
+    height: 48px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, .12);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .10);
+    margin-left: -34px;
+    position: relative;
+    z-index: calc(10 + var(--i));
+    /* 右側が上に来る */
+}
+
+.cg-mini-card:first-child {
+    margin-left: 0;
+}
+
+.cg-mini-card img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+/* +N 表示 */
+.cg-mini-more {
+    margin-left: 6px;
+    font-size: 11px;
+    font-weight: 900;
+    opacity: .75;
+    white-space: nowrap;
+}
+
+/* 狭い時：4枚くらい見せる */
+@container sidebar (max-width: 260px) {
+    .cg-mini-card:nth-child(n+5) {
+        display: none;
+    }
+
+    /* 1〜4枚 */
+    .cg-mini-card {
+        width: 44px;
+        height: 70px;
+        margin-left: -30px;
+    }
+
+    /* ボタンもさらに少しだけ詰める */
+    .cg-show,
+    .cg-edit {
+        height: 32px;
+        font-size: 12.5px;
+        padding: 0 4px;
+        font-weight: 700;
+    }
+
+    .cg-del {
+        width: 36px;
+        height: 32px;
+    }
+}
+
+/* 余裕ある時：7枚見せる */
+@container sidebar (min-width: 261px) {
+/* ✅ 6枚まで見せる（7だと縦圧が強い時に潰れやすい） */
+    .cg-mini-card:nth-child(n+7) {
+        display: none;
+    }
+
+    /* 1〜7枚 */
+    .cg-mini-card {
+        width: 52px;
+        height: 80px;
+        margin-left: -34px;
+    }
+}
+
+/* 追加 */
+.cg-add {
+    margin-top: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    background: #fff;
+    cursor: pointer;
+    font-weight: 900;
+}
+
+.cg-limit {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #c62828;
+    font-weight: 800;
+}
+
+/* =====================================================
+   List view：🔎（zoom-btn）は不要なので非表示
+===================================================== */
+.grid.is-list .zoom-btn {
+    display: none !important;
+}
+
+/* 編集時にzoomを見せるのは「グリッド表示」のみ */
+body.is-group-editing .grid:not(.is-list) .card .zoom-btn {
+    display: flex !important;
+}
+
+
+/* =====================================================
+   Group Editing Mode（グループ編集時：カード側の見た目）
+===================================================== */
+body.is-group-editing #grid .card img {
+    filter: grayscale(100%);
+    opacity: 0.35;
+}
+
+/* グループに入ってるカードは色戻す */
+body.is-group-editing #grid .card.group-picked img {
+    filter: none;
+    opacity: 1;
+}
+
+/* 編集時：zoom-btn を表示 */
+body.is-group-editing #grid .card .zoom-btn {
+    display: flex !important;
 }

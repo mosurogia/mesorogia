@@ -95,7 +95,9 @@
     <div class="top-bar">
         <!--メニューバー-->
         <div class="search-bar">
-            <input id="keyword" oninput="applyFilters()" placeholder="カード検索" type="text">
+            <div class="search-bar-left">
+                <!-- キーワード検索 -->
+                <input id="keyword" oninput="applyFilters()" placeholder="カード検索" type="text">
                 <!-- タイプ即時フィルター -->
                 <div class="type-quick-filter">
                     <button type="button" class="type-icon-btn is-active" data-type="">
@@ -111,16 +113,19 @@
                         <img src="img/type-blocker.webp" alt="Blocker">
                     </button>
                 </div>
-            <select id="sort-select" onchange="sortCards()">
-                <option value="default">通常順</option>
-                <option value="cost-asc">コスト昇順</option>
-                <option value="cost-desc">コスト降順</option>
-                <option value="power-asc">パワー昇順</option>
-                <option value="power-desc">パワー降順</option>
-                <option value="category-order">カテゴリ順</option>
-                <option value="rarity-order">レアリティ順</option>
-            </select>
-            <button onclick="openFilterModal()">📊 フィルター</button>
+            </div>
+            <div class="search-bar-right">
+                <select id="sort-select" onchange="sortCards()">
+                    <option value="default">通常順</option>
+                    <option value="cost-asc">コスト昇順</option>
+                    <option value="cost-desc">コスト降順</option>
+                    <option value="power-asc">パワー昇順</option>
+                    <option value="power-desc">パワー降順</option>
+                    <option value="category-order">カテゴリ順</option>
+                    <option value="rarity-order">レアリティ順</option>
+                </select>
+                <button class="search-icon-btn" onclick="openFilterModal()">📊 フィルター</button>
+            </div>
         </div>
         <!-- 選択中チップバー -->
         <div id="active-chips-bar" style="display:none;">

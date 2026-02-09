@@ -81,26 +81,9 @@
 
     <!-- ===== サマリーパネル（カード一覧用）===== -->
     <aside class="summary-panel" id="cards-summary-panel">
-
-        <!-- ブロック1：タイトル・補助 -->
-        <div class="summary-block" id="cards-summary-block">
-            <h4>📚 カード一覧</h4>
-            <div class="summary-rate" id="cards-summary-text">
-                （カードグループ機能の土台）
-            </div>
-        </div>
-
-        <!-- ブロック2：カードグループ（将来ここにUIを増やす） -->
+        <!-- カードグループ -->
         <div class="summary-block" id="cards-groups-block">
-            <h4>🗂️ カードグループ</h4>
-
-            <!-- ここは後で「作成」「選択中」「保存済み一覧」などを足す想定 -->
-            <div class="cards-group-hint">
-                ・よく使うカード集合を保存して呼び出せる予定<br>
-                ・共有グループも後で追加予定
-            </div>
-
-            <!-- 将来：グループ一覧をここに描画 -->
+            <!-- ループ一覧をここに描画 -->
             <div id="cards-groups-list"></div>
         </div>
 
@@ -118,35 +101,45 @@
             </div>
             <!--メニューバー-->
             <div class="search-bar">
-                <input id="keyword" oninput="applyFilters()" placeholder="キーワード検索" type="text">
+                <div class="search-bar-left">
+                    <!-- キーワード検索 -->
+                    <input id="keyword" oninput="applyFilters()" placeholder="キーワード検索" type="text">
 
-                <!-- タイプ即時フィルター -->
-                <div class="type-quick-filter">
-                    <button type="button" class="type-icon-btn is-active" data-type="">
-                        <img src="img/type-all.webp" alt="All">
-                    </button>
-                    <button type="button" class="type-icon-btn" data-type="チャージャー">
-                        <img src="img/type-charger.webp" alt="Charger">
-                    </button>
-                    <button type="button" class="type-icon-btn" data-type="アタッカー">
-                        <img src="img/type-attacker.webp" alt="Attacker">
-                    </button>
-                    <button type="button" class="type-icon-btn" data-type="ブロッカー">
-                        <img src="img/type-blocker.webp" alt="Blocker">
-                    </button>
+                    <!-- タイプ即時フィルター -->
+                    <div class="type-quick-filter">
+                        <button type="button" class="type-icon-btn is-active" data-type="">
+                            <img src="img/type-all.webp" alt="All">
+                        </button>
+                        <button type="button" class="type-icon-btn" data-type="チャージャー">
+                            <img src="img/type-charger.webp" alt="Charger">
+                        </button>
+                        <button type="button" class="type-icon-btn" data-type="アタッカー">
+                            <img src="img/type-attacker.webp" alt="Attacker">
+                        </button>
+                        <button type="button" class="type-icon-btn" data-type="ブロッカー">
+                            <img src="img/type-blocker.webp" alt="Blocker">
+                        </button>
+                    </div>
                 </div>
 
-                <select id="sort-select" onchange="sortCards()">
-                    <option value="default">通常順</option>
-                    <option value="cost-asc">コスト昇順</option>
-                    <option value="cost-desc">コスト降順</option>
-                    <option value="power-asc">パワー昇順</option>
-                    <option value="power-desc">パワー降順</option>
-                    <option value="category-order">カテゴリ順</option>
-                    <option value="rarity-order">レアリティ順</option>
-                </select>
+                <div class="search-bar-right">
+                    <select id="sort-select" onchange="sortCards()">
+                        <option value="default">通常順</option>
+                        <option value="cost-asc">コスト昇順</option>
+                        <option value="cost-desc">コスト降順</option>
+                        <option value="power-asc">パワー昇順</option>
+                        <option value="power-desc">パワー降順</option>
+                        <option value="category-order">カテゴリ順</option>
+                        <option value="rarity-order">レアリティ順</option>
+                    </select>
 
-                <button onclick="openFilterModal()">📊 フィルター</button>
+                    <button class="search-icon-btn" type="button" onclick="openFilterModal('filters')">
+                        <span class="icon">📊</span><span class="label">フィルター</span>
+                    </button>
+                    <button class="search-icon-btn" type="button" onclick="openFilterModal('groups')">
+                        <span class="icon">🗂</span><span class="label">グループ</span>
+                    </button>
+                </div>
             </div>
             <!-- 選択中チップバー -->
             <div id="active-chips-bar" style="display:none;">
@@ -154,19 +147,66 @@
             </div>
         </div>
 
-
         <!-- フィルターモーダル（カード一覧用） -->
         <div class="modal" id="filterModal">
             <div class="modal-content">
-                <h3 class="filter-maintitle">フィルター内容</h3>
-                <div id="main-filters">
-                    <!--フィルターボタン内容-->
-                </div>
-                <!-- 詳細フィルター -->
-                <h4 class="filter-subtitle">さらに詳しい条件フィルター</h4>
-                <div id="detail-filters"></div>
+                <h3 class="filter-maintitle">絞り込み</h3>
 
-                <!--下部ボタン-->
+                <!-- ✅ タブ（フィルター / グループ） -->
+                <div class="filter-modal-tabs" role="tablist" aria-label="フィルターとグループの切り替え">
+                    <button type="button" class="filter-modal-tab is-active" data-tab="filters" role="tab" aria-selected="true">
+                        📊 フィルター
+                    </button>
+                    <button type="button" class="filter-modal-tab" data-tab="groups" role="tab" aria-selected="false">
+                        🗂 グループ
+                    </button>
+                </div>
+
+                <!-- ✅ Pane: フィルター -->
+                <section class="filter-modal-pane is-active" data-pane="filters" role="tabpanel">
+                    <div id="main-filters">
+                        <!-- フィルターボタン内容（JS生成） -->
+                    </div>
+
+                    <!-- 詳細フィルター -->
+                    <h4 class="filter-subtitle">さらに詳しい条件フィルター</h4>
+                    <div id="detail-filters"></div>
+                </section>
+
+                <!-- ✅ Pane: グループ（まずは土台だけ） -->
+                <section class="filter-modal-pane" data-pane="groups" role="tabpanel" aria-hidden="true">
+                    <div class="group-pane">
+                        <div class="group-pane-head">
+                            <div class="group-pane-title">カードグループ</div>
+                            <div class="group-pane-sub">端末内保存（あとで同期/公開対応）</div>
+                        </div>
+
+                        <div class="group-pane-actions">
+                            <button type="button" class="group-btn" id="group-create-btn">＋ 新規作成</button>
+                            <button type="button" class="group-btn" id="group-select-btn">☑ 選択して作成</button>
+                            <button type="button" class="group-btn" id="group-clear-btn">✖ 選択解除</button>
+                        </div>
+
+                        <div class="group-pane-current" id="group-current">
+                            <div class="group-current-label">選択中グループ：</div>
+                            <div class="group-current-value">(未選択)</div>
+                        </div>
+
+                        <div class="group-pane-list">
+                            <div class="group-list-title">保存済み</div>
+                            <div id="modal-groups-list" class="group-list-body">
+                                <!-- ✅ ここにJSでグループ一覧を描画予定 -->
+                                <div class="group-empty-hint">（まだグループがありません）</div>
+                            </div>
+                        </div>
+
+                        <div class="group-pane-note">
+                            ※ ここでグループを選ぶと、カード一覧/デッキメーカーから呼び出せるようにしていきます
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 下部ボタン（共通） -->
                 <div class="modal-footer">
                     <button class="modal-buttun" id="applyFilterBtn">この条件で絞り込む</button>
                     <button class="modal-buttun" onclick="resetFilters()">リセット</button>
@@ -311,6 +351,7 @@
 <script src="js/common/card-core.js"></script>
 <script src="js/common/app-common.js"></script>
 <script src="js/common/owned.js"></script>
+<script src="js/common/card-groups.js"></script>
 <!--カード生成-->
 <script src="js/features/cardGrid.js"></script>
 <script src="js/ui/card-detail-template.js"></script>

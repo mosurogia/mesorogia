@@ -1,88 +1,112 @@
-
 /* =====================================================
-   0) SEARCH BAR（カード一覧上部）
-   - sticky / 高さ揃え / ボタン共通
+   0) TOP BAR / SEARCH BAR（カード一覧上部）
+   - PC：flex 1段
+   - SP：flex-wrap 2段（要素欠けても穴が空かない）
 ===================================================== */
 
+/* トップバー（全体） */
 .top-bar {
     position: sticky;
-    top: 0px;
+    top: 0;
     background: #fff;
     z-index: 2000;
     border-bottom: 1px solid #ccc;
 }
 
+/* 検索バー（PC基本：flex） */
 .search-bar {
+    padding: 0 4px;
     position: sticky;
     top: 0;
     z-index: 2000;
     display: flex;
-    gap: .3rem;
-    padding: 4px;
+    align-items: center;
     background: #fff;
     border-bottom: 1px solid #ccc;
 }
 
-@media (max-width: 768px) {
-    .search-bar {
-            display: grid !important;
-            grid-template-columns: 1fr auto;
-            grid-template-areas:
-                "kw owned"
-                "sort filter";
-            gap: 3px;
-            align-items: center;
-            width: 100%;
-            box-sizing: border-box;
-            padding: 0;
-            flex-wrap: wrap;
-        }
+/* 左右ラッパ */
+.search-bar-left,
+.search-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+}
+
+.search-bar-left {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.search-bar-right {
+    flex: 0 0 auto;
+    margin-left: auto;
+    justify-content: flex-end;
 }
 
 /* 入力 */
 .search-bar input {
     order: 1;
     flex: 1;
-    font-size: 16px;
-    padding: 6px 12px;
     min-width: 0;
     height: 36px;
     box-sizing: border-box;
+    font-size: 16px;
+    padding: 6px 12px;
 }
 
-@media (max-width: 768px) {
-    .search-bar input {
-        font-size: clamp(5px, 2.5vw, 18px);
-        padding: 5px;
-    }
+/* sort */
+.search-bar-right #sort-select {
+    order: 3;
+    white-space: nowrap;
+    width: auto;
+    height: 36px;
+    flex: 0 0 auto;
+    min-width: 4rem;
+    font-size: clamp(13px, 3vw, 18px);
+    padding: 0 8px;
+    margin-right: auto;
 }
 
-/* 並び替え（search-bar 内だけに限定） */
-.search-bar select {
-    font-size: .8rem;
+/* フィルター/グループ（openFilterModal系 共通） */
+.search-bar button[onclick*="openFilterModal"] {
+    order: 4;
+    min-width: 4rem;
+    padding: 0 10px;
+    font-size: 1.05rem;
+    height: 36px;
+
+    background: linear-gradient(180deg, #e9f5fb 0%, #d4ecfa 100%);
+    color: #1f3f5f;
+    border: 1px solid #b5d9f3;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: filter .15s ease, transform .06s ease, box-shadow .15s ease;
 }
 
-/* =========================
-   タイプ即時フィルター
-========================= */
+/* 0.2) タイプ即時フィルター（PC基本） */
 .type-quick-filter {
     order: 2;
     display: flex;
     gap: 4px;
-    margin: 0px 2px;
+    margin: 0 2px;
 }
 
 .type-icon-btn {
     width: 36px;
     height: 36px;
     padding: 3px;
+
     border-radius: 8px;
     border: 1px solid rgba(0, 0, 0, .15);
     background: #fff;
     cursor: pointer;
+
     display: flex;
     align-items: center;
     justify-content: center;
+
     transition: transform .08s ease, box-shadow .15s ease, opacity .15s ease;
 }
 
@@ -109,14 +133,9 @@
     opacity: .55;
 }
 
-/* ==============================
-   タイプ即時フィルター：共通（枠＝グラデ）
-============================== */
+/* 枠＝グラデ（タイプ共通） */
 .type-quick-filter .type-icon-btn {
-    /* 枠線の色（各data-typeで上書き） */
     --_filter-border: linear-gradient(90deg, rgba(0, 0, 0, .22), rgba(0, 0, 0, .22));
-
-    /* 背景（白 or タイプ色にしたいので変数化） */
     --_filter-fill: #fff;
 
     border: 2px solid transparent;
@@ -125,41 +144,24 @@
         var(--_filter-border) border-box;
 }
 
-/* ==============================
-   タイプ即時フィルター：枠色
-============================== */
-
-/* All（無指定） */
+/* 枠色 */
 .type-quick-filter .type-icon-btn[data-type=""] {
-    --_filter-border: linear-gradient(90deg,
-            rgba(180, 180, 180, .5),
-            rgba(180, 180, 180, .5));
+    --_filter-border: linear-gradient(90deg, rgba(180, 180, 180, .5), rgba(180, 180, 180, .5));
 }
 
-/* チャージャー */
 .type-quick-filter .type-icon-btn[data-type="チャージャー"] {
-    --_filter-border: linear-gradient(90deg,
-            rgba(var(--type-charger-rgb), .75),
-            rgba(var(--type-charger-rgb), .75));
+    --_filter-border: linear-gradient(90deg, rgba(var(--type-charger-rgb), .75), rgba(var(--type-charger-rgb), .75));
 }
 
-/* アタッカー */
 .type-quick-filter .type-icon-btn[data-type="アタッカー"] {
-    --_filter-border: linear-gradient(90deg,
-            rgba(var(--type-attacker-rgb), .75),
-            rgba(var(--type-attacker-rgb), .75));
+    --_filter-border: linear-gradient(90deg, rgba(var(--type-attacker-rgb), .75), rgba(var(--type-attacker-rgb), .75));
 }
 
-/* ブロッカー */
 .type-quick-filter .type-icon-btn[data-type="ブロッカー"] {
-    --_filter-border: linear-gradient(90deg,
-            rgba(var(--type-blocker-rgb), .9),
-            rgba(var(--type-blocker-rgb), .9));
+    --_filter-border: linear-gradient(90deg, rgba(var(--type-blocker-rgb), .9), rgba(var(--type-blocker-rgb), .9));
 }
-/* ==============================
-   タイプ即時フィルター：背景色（選択中のみ）
-============================== */
 
+/* 背景色（選択中のみ） */
 .type-quick-filter .type-icon-btn.is-active[data-type=""] {
     --_filter-fill: #e0e0e0;
 }
@@ -176,66 +178,126 @@
     --_filter-fill: var(--type-blocker-bg);
 }
 
-#sort-select {
-    order: 3;
-    white-space: nowrap;
-    width: auto;
-    flex: 0 0 auto;
-    min-width: 4rem;
-    font-size: clamp(5px, 3vw, 18px);
-}
+/* 0.3) search-bar：アイコンボタン（共通見た目用） */
+.search-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 
-/* 高さ揃え（モバイル） */
-@media (max-width: 768px) {
+    height: 36px;
+    padding: 0 10px;
+    min-width: 3.2rem;
 
-    .search-bar #keyword,
-    .search-bar #toggleOwnedBtn,
-    .search-bar #sort-select,
-    .search-bar button[onclick*="openFilterModal"] {
-        height: 1.8rem;
-        line-height: 1.2rem;
-    }
-}
-
-/* 所持／フィルターボタン（共通寄せ） */
-#toggleOwnedBtn,
-.search-bar button[onclick*="openFilterModal"] {
-    order: 2;
     background: linear-gradient(180deg, #e9f5fb 0%, #d4ecfa 100%);
     color: #1f3f5f;
     border: 1px solid #b5d9f3;
     border-radius: 4px;
     cursor: pointer;
     transition: filter .15s ease, transform .06s ease, box-shadow .15s ease;
+    font-weight: 900;
 }
 
-.search-bar button[onclick*="openFilterModal"] {
-    order: 4;
-    padding: 0;
-    font-size: 1.05rem;
-    min-width: 4rem;
-}
-
-@media (max-width: 768px) {
-    .search-bar button {
-        font-size: clamp(12px, 2vw, 18px);
-    }
-}
-
-#toggleOwnedBtn:hover,
-.search-bar button[onclick*="openFilterModal"]:hover {
+.search-icon-btn:hover {
     filter: brightness(.98);
     box-shadow: 0 1px 4px rgba(90, 150, 200, .25);
 }
 
-#toggleOwnedBtn:active,
-.search-bar button[onclick*="openFilterModal"]:active {
+.search-icon-btn:active {
     transform: translateY(1px);
 }
+
+.search-icon-btn .icon {
+    font-size: 1.05rem;
+    line-height: 1;
+}
+
+.search-icon-btn .label {
+    font-size: .95rem;
+    white-space: nowrap;
+}
+/* onclick属性セレクタは“配置だけ” */
+.search-bar button[onclick*="openFilterModal"] {
+    order: 4;
+}
+
+/* 0.4) SP（<=768px）：2段（flex-wrap） */
+@media (max-width: 768px) {
+    .search-bar {
+            flex-wrap: wrap;
+    }
+
+    /* ✅ 1段目：left を1行固定 */
+    .search-bar-left {
+        flex: 1 1 100%;
+    }
+
+    /* ✅ 2段目：right を1行固定（右寄せ） */
+    .search-bar-right {
+        flex: 1 1 100%;
+    }
+
+    /* 1段目：キーワード + タイプ（右寄せ） */
+    .search-bar #keyword,
+    .search-bar input#keyword,
+    .search-bar input[type="search"],
+    .search-bar input[type="text"] {
+        order: 1;
+        flex: 1 1 10rem;
+        min-width: 0;
+
+        padding: 5px 8px;
+        font-size: 14px;
+    }
+
+    .search-bar .type-quick-filter {
+        order: 2;
+        flex: 0 0 auto;
+        margin-left: auto;
+    }
+
+    /* 2段目：sort + filter/group ボタン（左寄せ） */
+    .search-bar-right #sort-select {
+        flex: 1 1 7.5rem;
+        min-width: 7.5rem;
+        padding: 0 6px;
+        font-size: 13px;
+    }
+
+    .search-bar button[onclick*="openFilterModal('filters"] {
+        order: 4;
+        margin-left: auto;
+    }
+
+    .search-bar button[onclick*="openFilterModal('groups"] {
+        order: 5;
+    }
+
+    .type-icon-btn {
+        width: 32px;
+        height: 32px;
+    }
+
+    /* アイコンボタンはSPでラベル非表示（幅節約） */
+    .search-icon-btn {
+        min-width: 2.4rem;
+        padding: 0 8px;
+    }
+    .search-bar-left .type-icon-btn {
+        width: 32px;
+    }
+
+    .search-bar-right .search-icon-btn {
+        min-width: 2.6rem;
+        padding: 0 8px;
+    }
+}
+
 
 /* =====================================================
    1) FILTER MODAL（外枠 / 中身 / タイトル）
 ===================================================== */
+
 #filterModal {
     display: none;
     flex-direction: column;
@@ -286,6 +348,145 @@
     font-size: clamp(12px, 2.8vw, 16px);
 }
 
+
+/* =====================================================
+   1.x) フィルターモーダル：タブ（フィルター / グループ）
+===================================================== */
+
+.filter-modal-tabs {
+    position: sticky;
+    top: 48px;
+    z-index: 2;
+
+    display: flex;
+    gap: 6px;
+    padding: 8px 0 10px;
+
+    background: linear-gradient(180deg, rgba(255, 255, 255, .95), rgba(255, 255, 255, .85));
+    border-bottom: 1px solid #eee;
+    backdrop-filter: blur(2px);
+}
+
+.filter-modal-tab {
+    flex: 1 1 0;
+    min-height: 36px;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, .16);
+    background: #f7f7f9;
+    cursor: pointer;
+    font-size: clamp(12px, 2.6vw, 15px);
+    font-weight: 800;
+}
+
+.filter-modal-tab.is-active {
+    background: #2b90ff;
+    border-color: #2b90ff;
+    color: #fff;
+}
+
+.filter-modal-pane {
+    display: none;
+    padding-top: 6px;
+}
+
+.filter-modal-pane.is-active {
+    display: block;
+}
+
+
+/* =====================================================
+   1.y) グループPane（土台）
+===================================================== */
+
+.group-pane {
+    padding: 6px 2px 2px;
+}
+
+.group-pane-head {
+    display: grid;
+    gap: 2px;
+    margin-bottom: 10px;
+}
+
+.group-pane-title {
+    font-weight: 900;
+    font-size: 15px;
+}
+
+.group-pane-sub {
+    font-size: 12px;
+    opacity: .75;
+}
+
+.group-pane-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 8px 0 10px;
+}
+
+.group-btn {
+    flex: 1 1 auto;
+    min-height: 36px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, .14);
+    background: #fff;
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.group-pane-current {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 8px 10px;
+    border: 1px dashed rgba(0, 0, 0, .18);
+    border-radius: 10px;
+    background: rgba(120, 160, 255, .10);
+    margin: 6px 0 12px;
+}
+
+.group-current-label {
+    font-size: 12px;
+    opacity: .8;
+}
+
+.group-current-value {
+    font-weight: 900;
+}
+
+.group-pane-list {
+    border-top: 1px dashed rgba(0, 0, 0, .12);
+    padding-top: 10px;
+}
+
+.group-list-title {
+    font-weight: 900;
+    margin-bottom: 6px;
+}
+
+.group-list-body {
+    display: grid;
+    gap: 6px;
+}
+
+.group-empty-hint {
+    font-size: 12px;
+    opacity: .75;
+    padding: 10px;
+    border: 1px solid rgba(0, 0, 0, .08);
+    border-radius: 10px;
+    background: #fafafa;
+}
+
+.group-pane-note {
+    margin-top: 10px;
+    font-size: 12px;
+    opacity: .75;
+}
+
+
 /* =====================================================
    2) FILTER BLOCK（区切り）
 ===================================================== */
@@ -298,6 +499,7 @@
     border-top: 1px dashed rgba(0, 0, 0, .08);
 }
 
+
 /* =====================================================
    3) FILTER GROUP（ボタン群グリッド：唯一の定義）
 ===================================================== */
@@ -305,7 +507,6 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     grid-auto-flow: row dense;
-    /* denseを使うなら row dense で固定 */
     gap: 4px;
     align-items: stretch;
     font-size: initial;
@@ -317,6 +518,7 @@
         gap: 6px;
     }
 }
+
 
 /* =====================================================
    4) FILTER BUTTON（共通ベース）
@@ -353,7 +555,6 @@
     transform: translateY(1px);
 }
 
-/* 選択中（青背景） */
 .filter-btn.selected {
     background: #2b90ff;
     border-color: #2b90ff;
@@ -365,6 +566,7 @@
     outline: 2px solid #2b90ff;
     outline-offset: 2px;
 }
+
 
 /* =====================================================
    5) GROUP EXCEPTIONS（横一列チップ）
@@ -385,6 +587,7 @@
     width: 100%;
     white-space: nowrap;
 }
+
 
 /* =====================================================
    6) TITLE ROW + HELP（？ボタン／説明文）
@@ -438,10 +641,9 @@
     margin-top: 0;
 }
 
+
 /* =====================================================
-   7) RING SYSTEM（is-ring：共通“外枠色 + selectedで内側リング”）
-   - パック／種族／カテゴリ などをここに寄せる
-   - 色は --ring / --ring-accent で注入
+   7) RING SYSTEM（is-ring）
 ===================================================== */
 .filter-btn.is-ring {
     --ring: rgba(0, 0, 0, .18);
@@ -462,9 +664,9 @@
     box-shadow: 0 0 0 1px rgba(255, 255, 255, .55), inset 0 0 0 2px var(--ring);
 }
 
+
 /* =====================================================
    8) TYPE / RARITY（2層background：枠線だけ色）
-   - is-ring は使わずこの方式で固定
 ===================================================== */
 :where(.filter-group[data-key="タイプ"], .filter-group[data-key="レアリティ"]) .filter-btn {
     border: 2px solid transparent;
@@ -481,7 +683,7 @@
     --_filter-fill: #2b90ff;
 }
 
-/* type：枠色（root変数前提） */
+/* type枠色 */
 .filter-group[data-key="タイプ"] .filter-btn[data-type="チャージャー"] {
     --_filter-border: linear-gradient(90deg, rgba(var(--type-charger-rgb), .75), rgba(var(--type-charger-rgb), .75));
 }
@@ -494,7 +696,7 @@
     --_filter-border: linear-gradient(90deg, rgba(var(--type-blocker-rgb), .95), rgba(var(--type-blocker-rgb), .95));
 }
 
-/* rarity：枠色（root変数前提） */
+/* rarity枠色 */
 .filter-group[data-key="レアリティ"] .filter-btn[data-rarity="レジェンド"] {
     --_filter-border: var(--rarity-border-legend);
 }
@@ -511,9 +713,9 @@
     --_filter-border: var(--rarity-border-bronze);
 }
 
+
 /* =====================================================
    9) PACK（is-ring + pack色注入）
-   - ボタン側に is-ring を付ける想定
 ===================================================== */
 .filter-group[data-key="パック名"] .filter-btn {
     display: block;
@@ -529,7 +731,7 @@
     opacity: .85;
 }
 
-/* パック色の注入（--ring / --ring-accent へ） */
+/* パック色注入（--ring / --ring-accent） */
 .filter-group[data-key="パック名"] .filter-btn[data-pack="Awaking The Oracle"] {
     --ring: rgb(var(--pack-a-rgb));
     --ring-accent: rgb(var(--pack-a-accent-rgb));
@@ -554,6 +756,7 @@
     --ring: rgb(var(--pack-e-rgb));
     --ring-accent: rgb(var(--pack-e-accent-rgb));
 }
+
 .filter-group[data-key="パック名"] .filter-btn[data-pack="Fallen Fate"] {
     --ring: rgb(var(--pack-f-rgb));
     --ring-accent: rgb(var(--pack-f-accent-rgb));
@@ -569,9 +772,9 @@
     --ring-accent: rgb(var(--pack-collab-accent-rgb));
 }
 
+
 /* =====================================================
    10) RACE（is-ring + 種族色注入 / 旧神は別処理）
-   - ボタン側に is-ring を付ける想定
 ===================================================== */
 .filter-group[data-key="種族"] .filter-btn[data-race="ドラゴン"] {
     --ring: var(--race-dragon);
@@ -597,7 +800,7 @@
     --ring: var(--race-innocent);
 }
 
-/* 旧神：border-image を維持（is-ring 併用しない） */
+/* 旧神：border-image維持 */
 .filter-group[data-key="種族"] .filter-btn[data-race="旧神"] {
     border: 3px solid transparent;
     border-image: var(--old-god) 1;
@@ -607,9 +810,9 @@
     box-shadow: 0 0 0 1px rgba(255, 255, 255, .55), inset 0 0 0 2px rgba(255, 255, 255, .4);
 }
 
+
 /* =====================================================
    11) CATEGORY（is-ring + data-cat-race で種族色注入）
-   - ボタン側に is-ring を付ける想定
 ===================================================== */
 .filter-group[data-key="カテゴリ"] .filter-btn[data-cat-race="ドラゴン"] {
     --ring: var(--race-dragon);
@@ -635,9 +838,9 @@
     --ring: rgba(0, 0, 0, .18);
 }
 
+
 /* =====================================================
    12) COST/POWER RANGE（横並び / selectの幅）
-   - 影響範囲をここに限定
 ===================================================== */
 .filter-range-wrapper {
     display: grid;
@@ -672,6 +875,7 @@
         font-size: clamp(.6rem, 2.4vw, .85rem);
     }
 }
+
 
 /* =====================================================
    13) EXTRA CONDITIONS（さらに詳しい条件）
@@ -712,6 +916,7 @@
     white-space: nowrap;
 }
 
+
 /* =====================================================
    14) MODAL FOOTER（下部ボタン固定）
 ===================================================== */
@@ -733,6 +938,7 @@
     padding: 8px 12px;
     border-radius: 8px;
 }
+
 
 /* =====================================================
    15) FLOW MODAL（使い方モーダル）
@@ -775,6 +981,7 @@
     color: #6b7280;
     margin: 0;
 }
+
 
 /* =====================================================
    16) ACTIVE CHIPS BAR（選択中フィルタ表示バー）
@@ -853,12 +1060,9 @@
 }
 
 
-
-
-
-
-
-/*=====カード一覧======*/
+/* =====================================================
+   20) CARD GRID（カード一覧）
+===================================================== */
 .grid {
     display: flex;
     flex-wrap: wrap;
@@ -870,23 +1074,27 @@
     box-sizing: border-box;
     position: relative;
 }
+
 @media (max-width: 1024px) {
     .card {
         width: calc(100% / 5 - 4px);
     }
 }
+
 @media (max-width: 768px) {
     .card {
         width: calc(100% / 4 - 4px);
         font-size: .75rem;
-        padding: 0px;
+        padding: 0;
     }
 }
-/*非表示種族*/
+
+/* 非表示種族 */
 .hidden-by-grayscale {
     display: none !important;
 }
-/*詳細展開ボタン*/
+
+/* 詳細展開ボタン */
 .zoom-btn {
     position: absolute;
     bottom: 4px;
@@ -899,7 +1107,6 @@
     cursor: pointer;
     z-index: 10;
     pointer-events: auto;
-
 }
 
 .card.grayscale .zoom-btn {
@@ -907,13 +1114,15 @@
     pointer-events: auto;
 }
 
-/*ズーム画像*/
-.card-zoom{
+/* ズーム画像 */
+.card-zoom {
     width: 100%;
 }
 
 
-/*=====カード詳細======*/
+/* =====================================================
+   21) CARD DETAIL（カード詳細）
+===================================================== */
 .card-detail {
     display: none;
     width: 100%;
@@ -921,18 +1130,22 @@
     border-radius: 6px;
     box-sizing: border-box;
 }
-/*カード名*/
+
 .card-name {
     font-weight: bold;
     font-size: 1.2rem;
 }
 
-/* =====================================================
-   Owned Editor（詳細内の所持編集UI）
-   - 右上に“浮かせる” → カード名の高さを増やさない
-   - 2段（上：所持枚数＋編集 / 下：－ 0 ＋）
-===================================================== */
+@media (max-width: 768px) {
+    .card-detail {
+        font-size: 13px;
+    }
+}
 
+
+/* =====================================================
+   22) Owned Editor（詳細内の所持編集UI）
+===================================================== */
 .card-title-row {
     position: relative;
     display: flex;
@@ -941,11 +1154,9 @@
     gap: 3px;
     flex-wrap: wrap;
 
-    /* ✅ 右上に被らないよう、右側を予約（必要なら数値微調整OK） */
     padding-right: var(--owned-editor-w, 132px);
 }
 
-/* ✅ 2段レイアウト：grid-template-areas の列数を揃えるのが重要 */
 .owned-editor {
     position: absolute;
     top: 0;
@@ -960,12 +1171,10 @@
     grid-template-rows: auto auto;
     justify-content: center;
 
-    /* ここで“中の間”を詰める */
     column-gap: 8px;
     row-gap: 4px;
     align-items: center;
 
-    /* 余白を少し詰めて、左に寄って見えるのを軽減 */
     padding: 4px 4px 4px 6px;
     border-radius: 8px;
     background: rgba(255, 255, 255, .55);
@@ -973,20 +1182,17 @@
     white-space: nowrap;
 }
 
-/* 上段 */
 .owned-editor-label {
     grid-area: label;
     justify-self: start;
     font-size: .85em;
     opacity: .85;
     padding-left: 2px;
-    /* 視覚的に左端ピタを避ける */
 }
 
 .owned-editor-toggle {
     grid-area: toggle;
     justify-self: end;
-
     height: 26px;
     padding: 0 8px;
     border-radius: 8px;
@@ -996,10 +1202,8 @@
     cursor: pointer;
 }
 
-/* 下段 */
 .owned-editor-btn {
     width: 30px;
-    /* ←広く感じるなら 28px でもOK */
     height: 26px;
     line-height: 1;
     border-radius: 6px;
@@ -1026,39 +1230,29 @@
     justify-self: start;
 }
 
-/* ロック中 / 上限下限の無効見た目 */
 .owned-editor.is-locked .owned-editor-btn,
 .owned-editor-btn.is-disabled {
     opacity: .35;
     cursor: not-allowed;
 }
 
-/* =====================================================
-   Owned Editor：小さいスマホは横1列に戻す
-===================================================== */
+/* 小さいスマホは横1列に戻す */
 @media (max-width: 480px) {
     .card-title-row {
         padding-right: 0;
-        /* 右上予約を解除 */
     }
 
     .owned-editor {
         background: rgba(255, 255, 255, .7);
         backdrop-filter: blur(1px);
         position: static;
-        /* absolute解除 */
         display: inline-flex;
-        /* ← 横1列に戻す */
         align-items: center;
         gap: 4px;
-
-        justify-content:flex-start;
-
+        justify-content: flex-start;
         padding: 3px 6px;
-
     }
 
-    /* サイズを一段詰める */
     .owned-editor-btn {
         width: 26px;
         height: 24px;
@@ -1075,35 +1269,32 @@
     }
 }
 
-/*パック名、種族、カテゴリ*/
+
+/* =====================================================
+   23) META / EFFECT / TYPE BACKGROUND
+===================================================== */
 .card-meta {
     color: #333;
 }
-/*パック名*/
+
 .card-meta.card-pack {
     font-size: 0.8em;
     margin-bottom: 2px;
 }
-/*カード効果*/
+
 .card-effect {
     line-height: 1.5;
 }
 
-/*タイプ別背景色*/
+/* タイプ別背景色 */
 .type-アタッカー {
-    background: rgba(125, 91, 155, 0.5); /* 紫 */
+    background: rgba(125, 91, 155, 0.5);
 }
 
 .type-チャージャー {
-    background: rgba(119, 170, 212, 0.5); /* 水色 */
+    background: rgba(119, 170, 212, 0.5);
 }
 
 .type-ブロッカー {
-    background: rgba(214, 212, 204, 0.5); /* 灰色 */
-}
-
-@media (max-width: 768px) {
-.card-detail {
-        font-size: 13px;
-    }
+    background: rgba(214, 212, 204, 0.5);
 }

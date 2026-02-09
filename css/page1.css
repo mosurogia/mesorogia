@@ -127,39 +127,64 @@
 
 
 /* =====================================================
-   Card Groups UI（サイドバー）
-   - 2段レイアウト + 右端に≣
-   - グループ名は1段目で見切れにくく（2行まで許可）
+   cg-head：3段（title / status / ops）
 ===================================================== */
 .cg-head {
     padding: 10px 12px;
     margin-top: auto;
     margin-bottom: 10px;
+    display: grid;
+    gap: 6px;
 }
 
-.cg-head-row,
-.cg-head-row2 {
+.cg-head-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
+    min-width: 0;
 }
 
-.cg-head-row2 {
-    margin-top: 6px;
+/* タイトルは潰さない */
+.cg-head-row-title {
+    justify-content: flex-start;
 }
 
-/* ✅ 見出しを大きく */
 .cg-head-title {
     font-weight: 900;
     font-size: 16px;
-    /* ← ここで調整 */
     letter-spacing: .02em;
+    white-space: nowrap;
+}
+
+/* 状態はここで折り返しOK */
+.cg-head-row-status {
+    justify-content: flex-start;
 }
 
 .cg-current {
     font-size: 13px;
     opacity: 0.9;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* 操作行：ボタン3つを並べる（狭ければ折り返し） */
+.cg-head-row-ops {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* ベースボタン（既存 #cg-exit-edit の上書きも活きる） */
+.cg-head-btn {
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, .15);
+    background: #f7f7f9;
+    cursor: pointer;
+    font-weight: 900;
+    font-size: 12.5px;
 }
 
 /* ✅ 編集完了（フラット寄りの緑：メタリック/グラデ無し） */
@@ -189,13 +214,14 @@
     column-gap: 10px;
 
     /* 既存の見た目 */
-    gap: 5px;
+    gap: 2px;
     padding: 2px 3px;
     border: 1px solid rgba(0, 0, 0, 0.12);
     border-radius: 12px;
     background: #fff;
 
     position: relative;
+    -webkit-user-drag: none;
 }
 
 .cg-row.is-active {
@@ -275,19 +301,24 @@
 
     /* 狭い環境での競合軽減 */
     touch-action: none;
+    user-select: none;
+    -webkit-user-drag: element;
 }
 
 .cg-handle:active {
     cursor: grabbing;
 }
 
+body:not(.is-group-editing) .cg-handle {
+    display: none;
+}
+
 /* ✅ ボタン列：スペースが余る時も自然に埋まる */
 .cg-row-bot {
     display: grid;
-    grid-template-columns: 1fr 1fr 40px;
-    /* 表示/編集を“太く” + 削除 */
+    grid-template-columns: 1fr 1fr auto;
     align-items: center;
-    gap: 6px;
+    gap: 2px;
 }
 
 /* ✅ 表示/編集を大きく */
@@ -363,8 +394,7 @@
     align-items: center;
     min-width: 0;
     overflow: hidden;
-    padding: 3px 0 0 0;
-    margin-top: 3px;
+    padding-top: 3px;
     border-top: 1px dashed rgba(0, 0, 0, .10);
 }
 

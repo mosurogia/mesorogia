@@ -44,21 +44,29 @@
         const st = window.CardGroups.getState();
         const groups = st.order.map(id => st.groups[id]).filter(Boolean);
 
-        // 上部：整理されたヘッダ（余分な summary-block は消す想定）
+        // 上部：整理されたヘッダ＋状態＋操作行
         host.innerHTML = `
         <div class="cg-head">
-            <div class="cg-head-row">
+            <div class="cg-head-row cg-head-row-title">
             <div class="cg-head-title">🗂️ カードグループ</div>
-            <button type="button" class="cg-head-btn" id="cg-exit-edit" style="display:${st.editingId ? '' : 'none'};">編集完了</button>
             </div>
 
-            <div class="cg-head-row2">
+            <div class="cg-head-row cg-head-row-status">
             <div class="cg-current">
-                ${st.editingId ? `編集中：<b>${escapeHtml_(st.groups[st.editingId]?.name || '')}</b>` :
-                (st.activeId ? `適用中：<b>${escapeHtml_(st.groups[st.activeId]?.name || '')}</b>` : '（全カード表示）')}
+                ${st.editingId
+                ? `編集中：<b>${escapeHtml_(st.groups[st.editingId]?.name || '')}</b>`
+                : (st.activeId
+                    ? `適用中：<b>${escapeHtml_(st.groups[st.activeId]?.name || '')}</b>`
+                    : '（全カード表示）')}
+            </div>
             </div>
 
-            <button type="button" class="cg-head-btn" id="cg-clear-filter" style="display:${st.activeId ? '' : 'none'};">フィルター解除</button>
+            <div class="cg-head-row cg-head-row-ops">
+            <button type="button" class="cg-head-btn" id="cg-exit-edit"
+                style="display:${st.editingId ? '' : 'none'};">編集完了</button>
+
+            <button type="button" class="cg-head-btn" id="cg-clear-filter"
+                style="display:${st.activeId ? '' : 'none'};">フィルター解除</button>
             </div>
         </div>
 
@@ -93,7 +101,7 @@
         });
 
         bindRowEvents_(host);
-        bindDnD_(host);
+        bindPointerReorder_(host);
     }
 
     function rowHtml_(g, st) {
@@ -105,6 +113,8 @@
     const allCds = Object.keys(g.cards || {});
     const cds = allCds.slice(0, 7).map(cd => String(cd).padStart(5, '0'));
     const more = Math.max(0, allCds.length - cds.length);
+
+    const canDrag = !!st.editingId;
 
     return `
         <div class="cg-row ${isActive ? 'is-active' : ''} ${isEditing ? 'is-editing' : ''}" data-gid="${g.id}">
@@ -131,7 +141,9 @@
         </div>
 
         <!-- ✅ ハンドルは cg-row の右端に固定（overlay） -->
-        <span class="cg-handle" title="並び替え" draggable="true">≣</span>
+            <span class="cg-handle"
+            title="${canDrag ? '並び替え' : '編集モード中のみ並び替えできます'}"
+            aria-disabled="${canDrag ? 'false' : 'true'}">≣</span>
         </div>
     `.trim();
     }
@@ -200,22 +212,24 @@
     }
 
     // 並び替え（簡易D&D）— 行間ライン版
-    function bindDnD_(root){
-    if (root.dataset.cgDnDBound) return;
-    root.dataset.cgDnDBound = '1';
+    function bindPointerReorder_(root){
+    if (root.dataset.cgPointerReorderBound) return;
+    root.dataset.cgPointerReorderBound = '1';
 
-    let dropPos = 'before'; // 'before' | 'after'
+    let dragging = null; // { fromId, fromIndex, rowEl }
 
-    function clearDropMarks_(){
-        root.querySelectorAll('.cg-row.drop-before, .cg-row.drop-after, .cg-row.is-dragover')
-        .forEach(el => el.classList.remove('drop-before','drop-after','is-dragover'));
+    function isEditing_(){
+        return !!window.CardGroups?.getState?.().editingId;
     }
 
-    // ✅ dragover / drop で「rowが取れない」時の保険（隣領域に持っていかれる対策）
+    function clearMarks_(){
+        root.querySelectorAll('.cg-row.drop-before, .cg-row.drop-after, .cg-row.is-dragging, .cg-row.is-dragover')
+        .forEach(el => el.classList.remove('drop-before','drop-after','is-dragging','is-dragover'));
+    }
+
     function pickRowFromPoint_(clientY){
         const rows = Array.from(root.querySelectorAll('.cg-row'));
         if (!rows.length) return null;
-        // clientY に一番近い行を拾う
         let best = null;
         let bestDist = Infinity;
         for (const r of rows) {
@@ -227,73 +241,87 @@
         return best;
     }
 
-    function getRowFromEvent_(e){
-        return e.target.closest?.('.cg-row') || pickRowFromPoint_(e.clientY);
-    }
-
-    root.addEventListener('dragstart', (e) => {
-    const handle = e.target.closest('.cg-handle');
-    if (!handle) return; // ハンドル以外はドラッグ開始しない
-
-    const row = handle.closest('.cg-row');
-    if (!row) return;
-
-    const gid = row.dataset.gid || '';
-    if (!gid) return;
-
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', gid);
-
-    // “ハンドルだけ浮く”対策：行をドラッグ画像にする
-    try { e.dataTransfer.setDragImage(row, 24, 24); } catch {}
-
-    row.classList.add('is-dragging');
-    });
-
-    root.addEventListener('dragend', (e) => {
-        e.target.closest('.cg-row')?.classList.remove('is-dragging');
-        clearDropMarks_();
-    });
-
-    root.addEventListener('dragover', (e) => {
-        const row = getRowFromEvent_(e);
-        if (!row) return;
-
-        e.preventDefault(); // drop許可
-
+    function getDropInfo_(clientY){
+        const row = pickRowFromPoint_(clientY);
+        if (!row) return null;
         const rect = row.getBoundingClientRect();
         const midY = rect.top + rect.height / 2;
-        dropPos = (e.clientY < midY) ? 'before' : 'after';
+        const pos = (clientY < midY) ? 'before' : 'after';
+        return { row, pos };
+    }
 
-        clearDropMarks_();
-        row.classList.add('is-dragover');
-        row.classList.add(dropPos === 'before' ? 'drop-before' : 'drop-after');
-    });
+    root.addEventListener('pointerdown', (e) => {
+        const handle = e.target.closest('.cg-handle');
+        if (!handle) return;
+        if (!isEditing_()) return;
 
-    root.addEventListener('drop', (e) => {
-        const row = getRowFromEvent_(e);
+        const row = handle.closest('.cg-row');
         if (!row) return;
-        e.preventDefault();
 
-        const fromId = e.dataTransfer.getData('text/plain');
-        const toId = row.dataset.gid;
-        if (!fromId || !toId || fromId === toId) { clearDropMarks_(); return; }
+        const fromId = row.dataset.gid;
+        if (!fromId) return;
+
+        // クリックやスクロール暴発を抑える
+        e.preventDefault();
 
         const st = window.CardGroups.getState();
         const fromIndex = st.order.indexOf(fromId);
-        const baseIndex = st.order.indexOf(toId);
-        if (fromIndex < 0 || baseIndex < 0) { clearDropMarks_(); return; }
+        if (fromIndex < 0) return;
 
-        let toIndex = baseIndex + (dropPos === 'after' ? 1 : 0);
+        dragging = { fromId, fromIndex, rowEl: row };
+
+        row.classList.add('is-dragging');
+        handle.setPointerCapture?.(e.pointerId);
+    });
+
+    root.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        if (!isEditing_()) { dragging = null; clearMarks_(); return; }
+
+        const info = getDropInfo_(e.clientY);
+        if (!info) return;
+
+        clearMarks_();
+        info.row.classList.add('is-dragover');
+        info.row.classList.add(info.pos === 'before' ? 'drop-before' : 'drop-after');
+    });
+
+    root.addEventListener('pointerup', (e) => {
+        if (!dragging) return;
+
+        const info = getDropInfo_(e.clientY);
+        if (!info) { dragging = null; clearMarks_(); return; }
+
+        const st = window.CardGroups.getState();
+        const fromId = dragging.fromId;
+        const toId = info.row.dataset.gid;
+
+        if (!fromId || !toId || fromId === toId) {
+        dragging = null;
+        clearMarks_();
+        return;
+        }
+
+        const fromIndex = st.order.indexOf(fromId);
+        const baseIndex = st.order.indexOf(toId);
+        if (fromIndex < 0 || baseIndex < 0) {
+        dragging = null;
+        clearMarks_();
+        return;
+        }
+
+        let toIndex = baseIndex + (info.pos === 'after' ? 1 : 0);
         if (toIndex > fromIndex) toIndex -= 1;
         toIndex = Math.max(0, Math.min(st.order.length - 1, toIndex));
 
+        dragging = null;
+        clearMarks_();
         window.CardGroups.moveGroup(fromId, toIndex);
-        clearDropMarks_();
     });
 
-    root.addEventListener('dragleave', (e) => {
-        if (!e.relatedTarget || !root.contains(e.relatedTarget)) clearDropMarks_();
+    root.addEventListener('pointercancel', () => {
+        dragging = null;
+        clearMarks_();
     });
     }
 

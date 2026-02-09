@@ -210,7 +210,7 @@
             <!--所持率サマリー上部バー -->
             <div class="top-summary">
                 <div class="summary-bar">
-                    <!-- ✅ 見せるのは「全カード」ボタン -->
+                    <!-- 「全カード」ボタン -->
                     <button id="show-all-btn" class="show-all-btn" type="button" onclick="showAllCardsTop()">
                         全カード
                     </button>
@@ -221,12 +221,18 @@
                     </a>
                 </div>
 
-                <!-- ✅ トップのゲージは全カードのみ -->
+                <!-- トップのゲージ(全カードのみ) -->
                 <div id="mobile-pack-summary"></div>
 
                 <!-- 1段目 -->
                 <div class="menu-mobile menu-mobile-row1">
-                    <button id="show-missing-all-mobile" class="menu-btn">🧩 不足カード</button>
+                    <!-- 全体（全カード/不足）切替 -->
+                    <div id="top-pack-view-toggle" class="view-toggle top-pack-view-toggle" role="tablist" aria-label="表示切替">
+                        <button type="button" class="toggle-pack-view-btn is-active" data-view="all">全カード表示</button>
+                        <button type="button" class="toggle-pack-view-btn" data-view="incomplete">不足カード表示</button>
+                    </div>
+                    <!--不足カード-->
+                    <button id="show-missing-all-mobile" class="menu-btn">不足カードリスト</button>
                 </div>
 
                 <!-- 2段目 -->

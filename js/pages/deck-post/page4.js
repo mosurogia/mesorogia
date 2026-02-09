@@ -2753,7 +2753,7 @@ function packAbbr_(enName){
   return s;
 }
 
-// パック略称からパックキーを得る（A〜E or SPECIAL/COLLAB or ''）
+// パック略称からパックキーを得る（A〜Z or SPECIAL/COLLAB or ''）
 function packKeyFromAbbr_(abbr){
   const s = String(abbr || '');
 
@@ -2818,7 +2818,7 @@ function buildPackChipsHtml_(item){
     if (!n) continue;
 
     const abbr = packAbbr_(k);
-    const packKey = packKeyFromAbbr_(abbr); // A〜Eなら入る
+    const packKey = packKeyFromAbbr_(abbr); // A〜Zなら入る
 
     const attr = packKey ? ` data-pack="${packKey}"` : '';
     out.push(

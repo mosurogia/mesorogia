@@ -16,6 +16,7 @@
   const FILES = [
     'card-list.js',
     'cardsViewMode.js',
+    'card-groups-ui.js',
 
     // checker
     'card-checker-owned-ops.js',

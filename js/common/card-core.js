@@ -227,7 +227,7 @@
   window.loadPackCatalog = window.loadPackCatalog || loadPackCatalog;
 
   // =====================================================
-  // 5) パック略称キー（A〜E / SPECIAL / COLLAB / ''）
+  // 5) パック略称キー（A〜Z / SPECIAL / COLLAB / ''）
   // =====================================================
 
   window.packKeyFromAbbr = window.packKeyFromAbbr || function packKeyFromAbbr(abbr) {

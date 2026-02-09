@@ -148,7 +148,7 @@ function ensureRaceContainers_(){
   if (!pc && packList && packList.parentElement){
     pc = document.createElement('div');
     pc.id = 'race-summary-list';
-    pc.className = 'race-summary-block -pc';
+    pc.className = 'summary-breakdown-block -race -pc';
     packList.parentElement.insertBefore(pc, packList);
   }
 
@@ -158,7 +158,7 @@ function ensureRaceContainers_(){
   if (!mo && packsRoot){
     mo = document.createElement('div');
     mo.id = 'race-summary-mobile';
-    mo.className = 'race-summary-block -mobile';
+    mo.className = 'summary-breakdown-block -race -mobile';
     packsRoot.insertBefore(mo, packsRoot.firstChild);
   }
 
@@ -231,11 +231,11 @@ function ensureRaceContainers_(){
       const s = r.sum;
       const raceClass = `race-${r.name}`;
       return `
-        <div class="race-summary-item ${raceClass}" style="--race-accent:${r.accent}">
-          <div class="race-summary-head">
-            <span class="race-dot" aria-hidden="true"></span>
-            <span class="race-name">${r.name}</span>
-            <span class="race-val">${s.ownedTypes}/${s.totalTypes} (${s.typePercentText}%)</span>
+        <div class="summary-breakdown-item ${raceClass}" style="--accent:${r.accent}">
+          <div class="summary-breakdown-head">
+            <span class="summary-breakdown-dot" aria-hidden="true"></span>
+            <span class="summary-breakdown-name">${r.name}</span>
+            <span class="summary-breakdown-val">${s.ownedTypes}/${s.totalTypes} (${s.typePercentText}%)</span>
           </div>
 
           <!-- ✅ 所持率（種類） -->
@@ -243,7 +243,7 @@ function ensureRaceContainers_(){
             <div class="meter-label">所持率</div>
             <div class="meter-track" role="progressbar"
               aria-valuemin="0" aria-valuemax="100" aria-valuenow="${s.typePercent}">
-              <span class="meter-bar -raceOwn" style="width:${s.typePercentText}%"></span>
+              <span class="meter-bar -own" style="width:${s.typePercentText}%"></span>
             </div>
             <div class="meter-val">
               <span class="meter-frac">${s.ownedTypes}/${s.totalTypes}</span>
@@ -256,7 +256,7 @@ function ensureRaceContainers_(){
             <div class="meter-label">コンプ率</div>
             <div class="meter-track" role="progressbar"
               aria-valuemin="0" aria-valuemax="100" aria-valuenow="${s.percent}">
-              <span class="meter-bar -raceComp" style="width:${s.percentText}%"></span>
+              <span class="meter-bar -comp" style="width:${s.percentText}%"></span>
             </div>
             <div class="meter-val">
               <span class="meter-frac">${s.owned}/${s.total}</span>
@@ -267,19 +267,19 @@ function ensureRaceContainers_(){
       `;
     }).join('');
 
-    return `
-      <div class="race-summary-header" role="button" tabindex="0"
-           data-race-toggle="header" aria-expanded="false">
-        <span class="race-summary-title">種族別所持率</span>
-        <span class="race-summary-toggle" data-race-toggle="icon" aria-hidden="true">＋</span>
-      </div>
-
-      <div class="race-summary-body" data-race-toggle="body" hidden>
-        <div class="race-summary-list">
-          ${items}
+      return `
+        <div class="summary-breakdown-header" role="button" tabindex="0"
+            data-break-toggle="header" aria-expanded="false">
+          <span class="summary-breakdown-title">種族別所持率</span>
+          <span class="summary-breakdown-toggle" data-break-toggle="icon" aria-hidden="true">＋</span>
         </div>
-      </div>
-    `;
+
+        <div class="summary-breakdown-body" data-break-toggle="body" hidden>
+          <div class="summary-breakdown-list">
+            ${items}
+          </div>
+        </div>
+      `;
   }
 
 
@@ -332,9 +332,9 @@ function ensureRaceContainers_(){
         root.dataset.wiredRaceToggle = '1';
 
         const toggle = () => {
-          const header = root.querySelector('[data-race-toggle="header"]');
-          const body   = root.querySelector('[data-race-toggle="body"]');
-          const icon   = root.querySelector('[data-race-toggle="icon"]');
+          const header = root.querySelector('[data-break-toggle="header"]');
+          const body   = root.querySelector('[data-break-toggle="body"]');
+          const icon   = root.querySelector('[data-break-toggle="icon"]');
           if (!header || !body || !icon) return;
 
           const isOpen = !body.hidden;
@@ -344,11 +344,10 @@ function ensureRaceContainers_(){
         };
 
         root.addEventListener('click', (e) => {
-          if (e.target.closest('[data-race-toggle="header"]')) toggle();
+          if (e.target.closest('[data-break-toggle="header"]')) toggle();
         });
-
         root.addEventListener('keydown', (e) => {
-          if (!e.target.closest('[data-race-toggle="header"]')) return;
+          if (!e.target.closest('[data-break-toggle="header"]')) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             toggle();
@@ -357,9 +356,9 @@ function ensureRaceContainers_(){
       }
 
       // ✅ 毎回描画後に「初期は折りたたみ」を適用（DOM差し替えに対応）
-      const header = root.querySelector('[data-race-toggle="header"]');
-      const body   = root.querySelector('[data-race-toggle="body"]');
-      const icon   = root.querySelector('[data-race-toggle="icon"]');
+      const header = root.querySelector('[data-break-toggle="header"]');
+      const body   = root.querySelector('[data-break-toggle="body"]');
+      const icon   = root.querySelector('[data-break-toggle="icon"]');
       if (header && body && icon) {
         body.hidden = true;
         header.setAttribute('aria-expanded', 'false');
@@ -391,11 +390,11 @@ function ensureRaceContainers_(){
   // レアリティ → ゲージ用アクセント色（好みで調整OK）
   function rarityToAccent_(rar){
     switch (rar) {
-      case 'レジェンド': return 'var(--rarity-border-legend)';
-      case 'ゴールド':   return 'var(--rarity-border-gold)';
-      case 'シルバー':   return 'var(--rarity-border-silver)';
-      case 'ブロンズ':   return 'var(--rarity-border-bronze)';
-      default:           return 'linear-gradient(90deg, #aaa, #eee, #aaa)';
+      case 'レジェンド': return '#91e4fb';
+      case 'ゴールド':   return '#eab308';
+      case 'シルバー':   return '#94a3b8';
+      case 'ブロンズ':   return '#c08457';
+      default:           return '#aaa';
     }
   }
 
@@ -410,7 +409,7 @@ function ensureRaceContainers_(){
     if (!pc) {
       pc = document.createElement('div');
       pc.id = 'rarity-summary-list';
-      pc.className = 'rarity-summary-block -pc';
+      pc.className = 'summary-breakdown-block -rarity -pc';
 
       if (raceList && raceList.parentElement) {
         // ✅ 種族別の直下に入れる
@@ -431,7 +430,7 @@ function ensureRaceContainers_(){
     if (!mo && packsRoot) {
       mo = document.createElement('div');
       mo.id = 'rarity-summary-mobile';
-      mo.className = 'rarity-summary-block -mobile';
+      mo.className = 'summary-breakdown-block -rarity -mobile';
 
       const raceMobile = document.getElementById('race-summary-mobile');
       if (raceMobile && raceMobile.parentElement === packsRoot) {
@@ -451,11 +450,11 @@ function ensureRaceContainers_(){
       const s = r.sum;
       const rarClass = `rarity-${r.name}`;
       return `
-        <div class="rarity-summary-item ${rarClass}" style="--rarity-accent:${r.accent}">
-          <div class="rarity-summary-head">
-            <span class="rarity-dot" aria-hidden="true"></span>
-            <span class="rarity-name">${r.name}</span>
-            <span class="rarity-val">${s.ownedTypes}/${s.totalTypes} (${s.typePercentText}%)</span>
+        <div class="summary-breakdown-item ${rarClass}" style="--accent:${r.accent}">
+          <div class="summary-breakdown-head">
+            <span class="summary-breakdown-dot" aria-hidden="true"></span>
+            <span class="summary-breakdown-name">${r.name}</span>
+            <span class="summary-breakdown-val">${s.ownedTypes}/${s.totalTypes} (${s.typePercentText}%)</span>
           </div>
 
           <!-- 所持率（種類） -->
@@ -463,7 +462,7 @@ function ensureRaceContainers_(){
             <div class="meter-label">所持率</div>
             <div class="meter-track" role="progressbar"
               aria-valuemin="0" aria-valuemax="100" aria-valuenow="${s.typePercent}">
-              <span class="meter-bar -rarityOwn" style="width:${s.typePercentText}%"></span>
+              <span class="meter-bar -own" style="width:${s.typePercentText}%"></span>
             </div>
             <div class="meter-val">
               <span class="meter-frac">${s.ownedTypes}/${s.totalTypes}</span>
@@ -476,7 +475,7 @@ function ensureRaceContainers_(){
             <div class="meter-label">コンプ率</div>
             <div class="meter-track" role="progressbar"
               aria-valuemin="0" aria-valuemax="100" aria-valuenow="${s.percent}">
-              <span class="meter-bar -rarityComp" style="width:${s.percentText}%"></span>
+              <span class="meter-bar -comp" style="width:${s.percentText}%"></span>
             </div>
             <div class="meter-val">
               <span class="meter-frac">${s.owned}/${s.total}</span>
@@ -487,19 +486,19 @@ function ensureRaceContainers_(){
       `;
     }).join('');
 
-    return `
-      <div class="rarity-summary-header" role="button" tabindex="0"
-           data-rarity-toggle="header" aria-expanded="false">
-        <span class="rarity-summary-title">レアリティ別所持率</span>
-        <span class="rarity-summary-toggle" data-rarity-toggle="icon" aria-hidden="true">＋</span>
-      </div>
-
-      <div class="rarity-summary-body" data-rarity-toggle="body" hidden>
-        <div class="rarity-summary-list">
-          ${items}
+      return `
+        <div class="summary-breakdown-header" role="button" tabindex="0"
+            data-break-toggle="header" aria-expanded="false">
+          <span class="summary-breakdown-title">レアリティ別所持率</span>
+          <span class="summary-breakdown-toggle" data-break-toggle="icon" aria-hidden="true">＋</span>
         </div>
-      </div>
-    `;
+
+        <div class="summary-breakdown-body" data-break-toggle="body" hidden>
+          <div class="summary-breakdown-list">
+            ${items}
+          </div>
+        </div>
+      `;
   }
 
   function updateRaritySummary(){
@@ -542,9 +541,9 @@ function ensureRaceContainers_(){
         root.dataset.wiredRarityToggle = '1';
 
         const toggle = () => {
-          const header = root.querySelector('[data-rarity-toggle="header"]');
-          const body   = root.querySelector('[data-rarity-toggle="body"]');
-          const icon   = root.querySelector('[data-rarity-toggle="icon"]');
+          const header = root.querySelector('[data-break-toggle="header"]');
+          const body   = root.querySelector('[data-break-toggle="body"]');
+          const icon   = root.querySelector('[data-break-toggle="icon"]');
           if (!header || !body || !icon) return;
 
           const isOpen = !body.hidden;
@@ -554,11 +553,10 @@ function ensureRaceContainers_(){
         };
 
         root.addEventListener('click', (e) => {
-          if (e.target.closest('[data-rarity-toggle="header"]')) toggle();
+          if (e.target.closest('[data-break-toggle="header"]')) toggle();
         });
-
         root.addEventListener('keydown', (e) => {
-          if (!e.target.closest('[data-rarity-toggle="header"]')) return;
+          if (!e.target.closest('[data-break-toggle="header"]')) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             toggle();
@@ -567,9 +565,9 @@ function ensureRaceContainers_(){
       }
 
       // 初期は折りたたみ
-      const header = root.querySelector('[data-rarity-toggle="header"]');
-      const body   = root.querySelector('[data-rarity-toggle="body"]');
-      const icon   = root.querySelector('[data-rarity-toggle="icon"]');
+      const header = root.querySelector('[data-break-toggle="header"]');
+      const body   = root.querySelector('[data-break-toggle="body"]');
+      const icon   = root.querySelector('[data-break-toggle="icon"]');
       if (header && body && icon) {
         body.hidden = true;
         header.setAttribute('aria-expanded', 'false');
@@ -642,7 +640,7 @@ function ensureRaceContainers_(){
         if (selKey && selKey !== 'all') {
             const selPack = Array.isArray(window.packs) ? window.packs.find(p=>p.key===selKey) : null;
             if (selPack){
-            const selCards = queryCardsByPack(selPack);
+            const selCards = window.queryCardsByPack(selPack);
             const sum = calcSummary(selCards);
             mtxt = window.buildShareText({ header: selPack.nameMain, sum });
             }
@@ -733,9 +731,41 @@ function updatePackSummary(){
     };
   }
 
-  const packArr = getPackArray_();
+const packArr = getPackArray_();
 
-  // ✅ 並び順を制御する（A〜E → コラボ → 特殊）
+// ★ 追加：通常パックに a,b,c,d,e,f... を自動割当して Map 化
+const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
+const isCollabOrSpecial = (pack) => {
+  const key = String(pack?.key ?? '').toLowerCase();
+  const nameMain = String(pack?.nameMain ?? '');
+  const nameSub  = String(pack?.nameSub ?? '');
+  const any = (key + ' ' + nameMain + ' ' + nameSub).toLowerCase();
+
+  if (any.includes('コラボ') || any.includes('collab')) return 'collab';
+  if (any.includes('特殊') || any.includes('special')) return 'special';
+  return null;
+};
+
+const normalPacks = packArr.filter(p => !isCollabOrSpecial(p));
+const normalGroupByKey = new Map();
+normalPacks.forEach((p, i) => {
+  normalGroupByKey.set(p.key, letters[i] || 'z'); // 27個超えたら z で妥協
+});
+
+  // ★ 追加：パックの色グループを判定する関数
+  function detectPackGroup_(pack){
+    const tag = isCollabOrSpecial(pack);
+    if (tag) return tag;
+
+    const k = pack?.key;
+    if (k && normalGroupByKey.has(k)) return normalGroupByKey.get(k);
+
+    // 最後の保険：分からなければ special
+    return 'special';
+  }
+
+
+  // ✅ 並び順を制御する（A〜Z → コラボ → 特殊）
   packArr.sort((a, b) => {
     const rank = (p) => {
       const key = String(p?.key ?? '').toLowerCase();
@@ -743,7 +773,7 @@ function updatePackSummary(){
       const nameSub  = String(p?.nameSub ?? '');
       const any = (key + ' ' + nameMain + ' ' + nameSub).toLowerCase();
 
-      // A〜E は packs.json の順を維持（idx依存なのでここでは触らない）
+      // A〜Z は packs.json の順を維持（idx依存なのでここでは触らない）
       // コラボ
       if (any.includes('コラボ') || any.includes('collab')) return 10;
       // 特殊
@@ -777,37 +807,12 @@ function updatePackSummary(){
     const wrap = document.createElement('div');
     wrap.className = 'pack-summary';
 
-    // -----------------------------
-    // 1) パック色グループ判定（追加パックが来ても増やしやすい）
-    //    基本：packs.json の順（A〜F → コラボ → 特殊）で自動割当
-    //    例外：名前/キーに「コラボ」が含まれてたら collab
-    // -----------------------------
-function detectPackGroup_(pack, idx) {
-  const key = String(pack?.key ?? '').toLowerCase();
-  const nameMain = String(pack?.nameMain ?? '');
-  const nameSub  = String(pack?.nameSub ?? '');
-  const any = (key + ' ' + nameMain + ' ' + nameSub).toLowerCase();
 
-  // packs.json の並び想定：0..4がA..E、5がF
-  if (idx === 0) return 'a';
-  if (idx === 1) return 'b';
-  if (idx === 2) return 'c';
-  if (idx === 3) return 'd';
-  if (idx === 4) return 'e';
-  if (idx === 5) return 'f';
-
-  // ✅ コラボ判定を「特殊」より先に
-  if (any.includes('コラボ') || any.includes('collab')) return 'collab';
-
-  // それ以外
-  return 'special';
-}
-
-    const group = detectPackGroup_(pack, idx);
+    const group = detectPackGroup_(pack);
     wrap.dataset.packGroup = group;
 
     // -----------------------------
-    // 2) card-checker-page.js が読む数値を data-* で渡す（テキストは作らない）
+    // 2) データ属性に所持率情報をセット
     // -----------------------------
     wrap.dataset.ownedTypes = String(s.ownedTypes);
     wrap.dataset.totalTypes = String(s.totalTypes);

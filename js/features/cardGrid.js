@@ -95,16 +95,22 @@
         setData_(cardDiv, 'data-keywords', buildKeywords_(card));
 
         // ---------- UI ----------
-        // 🔎ボタンのデフォルト：
-        // - deck(デッキメーカー) = 表示
-        // - list/checker(図鑑/所持率) = 非表示（カード全体タップでズームするため）
-        const defaultZoom = (mode === 'deck');
-        const enableZoomBtn = ('enableZoomBtn' in opts) ? !!opts.enableZoomBtn : defaultZoom;
+       // 🔎ボタン（zoom-btn）
+        // - deck: 表示
+        // - list/checker: “要素は作るが普段は非表示”（グループ編集などで表示するため）
+        const defaultZoomVisible = (mode === 'deck');
+        const forceCreateZoomBtn = (mode === 'list' || mode === 'checker'); // ✅ 常設
+        const enableZoomBtn =
+          ('enableZoomBtn' in opts)
+            ? !!opts.enableZoomBtn
+            : (defaultZoomVisible || forceCreateZoomBtn);
 
-        if (enableZoomBtn){
+        if (enableZoomBtn) {
             const zoomBtn = document.createElement('div');
             zoomBtn.classList.add('zoom-btn');
             zoomBtn.innerText = '🔎';
+            // ✅ list/checker は普段非表示（CSSで編集時だけ表示してもOK）
+            if (mode !== 'deck') zoomBtn.style.display = 'none';
             zoomBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             // ✅ window 経由で確実に呼ぶ（スコープ問題を潰す）

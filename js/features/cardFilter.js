@@ -207,9 +207,20 @@
     // ==============================
     // モーダル制御
     // ==============================
-    function openFilterModal() {
-        const m = document.getElementById('filterModal');
-        if (m) m.style.display = 'flex';
+    function openFilterModal(tab = null) {
+    const m = document.getElementById('filterModal');
+    if (!m) return;
+
+    m.style.display = 'flex';
+
+    // ✅ 開くタブ：引数 > 保存値 > filters
+    const pick = (() => {
+        if (tab) return tab;
+        try { return localStorage.getItem('cardFilterModalTab') || 'filters'; } catch { return 'filters'; }
+    })();
+
+    // ✅ タブUIに反映（関数がまだなら何もしない）
+    try { setTimeout(() => { try { setModalTab_(pick); } catch {} }, 0); } catch {}
     }
     function closeFilterModal() {
         const m = document.getElementById('filterModal');
@@ -219,6 +230,42 @@
         const detail = document.getElementById('detail-filters');
         if (!detail) return;
         detail.style.display = (detail.style.display === 'none') ? 'block' : 'none';
+    }
+    // ==============================
+    // フィルターモーダル：タブ切替（フィルター / グループ）
+    // ==============================
+    function setModalTab_(tab) {
+    const modal = document.getElementById('filterModal');
+    if (!modal) return;
+
+    const tabs = Array.from(modal.querySelectorAll('.filter-modal-tab'));
+    const panes = Array.from(modal.querySelectorAll('.filter-modal-pane'));
+
+    tabs.forEach(b => {
+        const on = (b.dataset.tab === tab);
+        b.classList.toggle('is-active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+
+    panes.forEach(p => {
+        const on = (p.dataset.pane === tab);
+        p.classList.toggle('is-active', on);
+        p.setAttribute('aria-hidden', on ? 'false' : 'true');
+    });
+
+    try { localStorage.setItem('cardFilterModalTab', tab); } catch {}
+    }
+
+    function bindModalTabs_() {
+    const modal = document.getElementById('filterModal');
+    if (!modal || modal.dataset.tabsBound) return;
+    modal.dataset.tabsBound = '1';
+
+    modal.addEventListener('click', (e) => {
+        const btn = e.target.closest('.filter-modal-tab');
+        if (!btn) return;
+        setModalTab_(btn.dataset.tab || 'filters');
+    });
     }
 
     // ==============================
@@ -650,6 +697,7 @@
 
         const gridRoot = document.getElementById('grid') || document;
 
+        const groupSet = window.CardGroups?.getActiveFilterSet?.() || null;
         gridRoot.querySelectorAll('.card').forEach(card => {
         const haystack =
             (card.dataset.keywords?.toLowerCase()) ||
@@ -710,6 +758,12 @@
         const matchesPower = cardData.power >= powerMin && cardData.power <= powerMax;
 
         let visible = matchesKeyword && matchesFilters && matchesCost && matchesPower;
+
+        // ✅ グループフィルター（通常時のみ。編集モード中は groupSet=null）
+        if (visible && groupSet) {
+            const cd = String(card.dataset.cd || '').padStart(5, '0');
+            if (!groupSet.has(cd)) visible = false;
+        }
 
         // 所持フィルター反映
         if (ownedBtnOn || compBtnOn || unCompBtnOn) {
@@ -985,6 +1039,53 @@
             if (e.target === modal) closeFilterModal();
         });
         }
+
+        // ==============================
+        // フィルターモーダル：タブ切替（フィルター / グループ）
+        // ==============================
+        function setModalTab_(tab) {
+        const modal = document.getElementById('filterModal');
+        if (!modal) return;
+
+        const tabs = Array.from(modal.querySelectorAll('.filter-modal-tab'));
+        const panes = Array.from(modal.querySelectorAll('.filter-modal-pane'));
+
+        tabs.forEach(b => {
+            const on = (b.dataset.tab === tab);
+            b.classList.toggle('is-active', on);
+            b.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+
+        panes.forEach(p => {
+            const on = (p.dataset.pane === tab);
+            p.classList.toggle('is-active', on);
+            p.setAttribute('aria-hidden', on ? 'false' : 'true');
+        });
+
+        try { localStorage.setItem('cardFilterModalTab', tab); } catch {}
+        }
+
+        function bindModalTabs_(){
+        const modal = document.getElementById('filterModal');
+        if (!modal || modal.dataset.tabsBound) return;
+        modal.dataset.tabsBound = '1';
+
+        modal.addEventListener('click', (e) => {
+            const btn = e.target.closest('.filter-modal-tab');
+            if (!btn) return;
+            setModalTab_(btn.dataset.tab || 'filters');
+        });
+        }
+
+        // init() の中で呼ぶ
+        bindModalTabs_();
+
+        // open時に「最後に開いてたタブ」を復元（なければfilters）
+        const savedTab = (() => {
+        try { return localStorage.getItem('cardFilterModalTab') || 'filters'; } catch { return 'filters'; }
+        })();
+        setModalTab_(savedTab);
+
 
         // UI生成
         generateFilterUI().catch(console.warn);

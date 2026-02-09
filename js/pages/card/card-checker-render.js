@@ -81,17 +81,45 @@ function typeCostPowerCd(a, b) {
 // 2) チェッカーDOM生成（パック→種族→カード）
 // =====================================================
 
+function detectPackGroup_(packEn, packJp, packKey, idx){
+  const any = `${packEn||''} ${packJp||''} ${packKey||''}`.toLowerCase();
+
+
+  // 基本：packs.json の並び想定（0..4がA..E、それ以降は特殊）
+  if (idx === 0) return 'a';
+  if (idx === 1) return 'b';
+  if (idx === 2) return 'c';
+  if (idx === 3) return 'd';
+  if (idx === 4) return 'e';
+  if (idx === 5) return 'f';
+
+  // 例外：コラボっぽい名前が入ってたら collab
+  if (any.includes('コラボ') || any.includes('collab')) return 'collab';
+
+  return 'special';
+}
+
 // パック1つ分のHTMLを組み立てる
-function buildPackSectionHTML(packEn, packJp, cardsGroupedByRace, packKey){
-  const packSlug = makePackSlug(packEn);
+function buildPackSectionHTML(packEn, packJp, cardsGroupedByRace, packKey, packGroup){
+
+  const packSlug = (packKey != null && String(packKey).trim() !== '')
+    ? String(packKey)
+    : makePackSlug(packEn);
+
   let html = '';
-  html += `<section id="pack-${packSlug}" class="pack-section" data-packkey="${esc(packKey||'')}">`;
-  html += `  <h3 class="pack-title">`;
-  html += `    <span class="pack-name-main">${esc(packEn)}</span><br>`;
-  html += `    <small class="pack-name-sub">${esc(packJp)}</small>`;
+
+  html += `<section id="pack-${packSlug}" class="pack-section" data-packkey="${esc(packKey||'')}" data-packgroup="${esc(packGroup||'')}">`;
+  html += `  <h3 class="pack-title pack-title-row">`;
+  html += `    <span class="pack-title-text">`;
+  html += `      <span class="pack-name-main">${esc(packEn)}</span><br>`;
+  html += `      <small class="pack-name-sub">${esc(packJp)}</small>`;
+  html += `    </span>`;
+  html += `    <a class="pack-tweet-link custom-tweet-button" href="#" target="_blank" rel="noopener">`;
+  html += `      <img src="img/x-logo.svg" alt="Post" class="tweet-icon">`;
+  html += `      <span>ポスト</span>`;
+  html += `    </a>`;
   html += `  </h3>`;
 
-  // パック単位の操作
   // パック単位の操作
   html += `  <div class="race-controls pack-controls">`;
 
@@ -209,7 +237,8 @@ async function renderAllPacks({
 
   // --- パックごとに種族で整列 ---
   const parts = [];
-  for (const packEn of orderedPacks){
+  for (let i = 0; i < orderedPacks.length; i++){
+    const packEn = orderedPacks[i];
     const { jp, cards } = byPack.get(packEn);
 
     const byRace = new Map();
@@ -222,7 +251,10 @@ async function renderAllPacks({
       byRace.get(r).sort(sortInRace);
     }
 
-    parts.push(buildPackSectionHTML(packEn, jp, byRace));
+    const packKey = (window.__packKeyByEn && window.__packKeyByEn[packEn]) || '';
+    const packGroup = detectPackGroup_(packEn, jp, packKey, i);
+
+    parts.push(buildPackSectionHTML(packEn, jp, byRace, packKey, packGroup));
   }
 
   const mount = document.querySelector(mountSelector);
@@ -235,8 +267,144 @@ async function renderAllPacks({
 
 
 // =====================================================
-// 3) 不足カード（全体/パック別）
+// 3) 不足カード（全体/パック別） - divモーダル版（dialog不使用）
 // =====================================================
+
+// 不足カードモーダルの確保＆初期化
+function ensureMissingDialog_(){
+  let wrap = document.getElementById('missing-dialog');
+  let back = document.getElementById('missing-backdrop');
+
+  // backdrop（クリックで閉じる）
+  if (!back) {
+    back = document.createElement('div');
+    back.id = 'missing-backdrop';
+    back.addEventListener('click', closeMissingDialog_);
+    document.body.appendChild(back);
+  }
+
+  // modal本体
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'missing-dialog';
+    wrap.setAttribute('role', 'dialog');
+    wrap.setAttribute('aria-modal', 'true');
+    wrap.setAttribute('aria-labelledby', 'missing-title');
+
+    wrap.innerHTML = `
+      <div class="missing-dialog-inner">
+        <div class="missing-dialog-head">
+          <h3 id="missing-title">不足カード</h3>
+          <button type="button" id="missing-close" aria-label="閉じる">×</button>
+        </div>
+
+        <div id="missing-body" class="missing-body"></div>
+
+        <div class="missing-dialog-foot">
+          <button type="button" id="missing-copy">一覧をコピー</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(wrap);
+  }
+
+  // ✅ wrap が既存でも毎回「閉じる」を配線（ここが大事）
+  const closeBtn =
+    wrap.querySelector('#missing-close')
+    || wrap.querySelector('.icon-btn')
+    || wrap.querySelector('[data-missing-close]');
+
+  if (closeBtn && !closeBtn.dataset.wiredClose) {
+    closeBtn.dataset.wiredClose = '1';
+    closeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeMissingDialog_();
+    });
+  }
+
+  // ✅ Escも「一度だけ」配線（wrap生成の中に入れると重複登録になりやすい）
+  if (!document.body.dataset.wiredMissingEsc) {
+    document.body.dataset.wiredMissingEsc = '1';
+    document.addEventListener('keydown', (e) => {
+      const w = document.getElementById('missing-dialog');
+      if (e.key === 'Escape' && w && w.classList.contains('is-open')) closeMissingDialog_();
+    });
+  }
+
+  // 初期は非表示
+  back.style.display = 'none';
+  wrap.style.display = 'none';
+  wrap.classList.remove('is-open');
+
+  return { wrap, back };
+}
+
+function openMissingDialog(title, items){
+  const { wrap, back } = ensureMissingDialog_();
+  const body = wrap.querySelector('#missing-body');
+  const ttl  = wrap.querySelector('#missing-title');
+  if (!body || !ttl) return;
+
+  ttl.textContent = title;
+
+  if (!items.length){
+    body.innerHTML = '<p>不足カードはありません。</p>';
+  } else {
+    const info = document.createElement('p');
+    info.className = 'missing-info';
+    info.textContent = (/Mobi|Android/i.test(navigator.userAgent))
+      ? '📱 タップで画像表示'
+      : '🖱️ カーソル合わせて画像表示';
+
+    const ul = document.createElement('ul');
+    items.forEach(it=>{
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="missing-name">${it.name}x${it.need}</span>`;
+      li.dataset.cd  = String(it.cd || '');
+      li.classList.add('missing-item');
+      if (it.race) li.classList.add(`race-${it.race}`);
+      ul.appendChild(li);
+    });
+
+    body.replaceChildren(info, ul);
+  }
+
+  const copyBtn = wrap.querySelector('#missing-copy');
+  const text = items.map(it => `${it.name}x${it.need}`).join('\n');
+  if (copyBtn) {
+    copyBtn.onclick = async ()=>{
+      try{
+        if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+        else prompt('以下をコピーしてください', text);
+        copyBtn.textContent = 'コピーしました';
+        setTimeout(()=> copyBtn.textContent = '一覧をコピー', 1400);
+      }catch{ alert('コピーに失敗しました'); }
+    };
+  }
+
+  // ✅ 表示（z-index世界）
+  back.style.display = 'block';
+  wrap.style.display = 'block';
+  wrap.classList.add('is-open');
+
+  // ✅ プレビューをモーダルより上に（bodyに置く）
+  try {
+    const pop = document.getElementById('card-preview-pop');
+    if (pop && pop.parentElement !== document.body) document.body.appendChild(pop);
+  } catch {}
+}
+
+function closeMissingDialog_(){
+  const wrap = document.getElementById('missing-dialog');
+  const back = document.getElementById('missing-backdrop');
+
+  if (wrap) { wrap.style.display = 'none'; wrap.classList.remove('is-open'); }
+  if (back) back.style.display = 'none';
+
+  // プレビューも閉じる
+  try { hideCardPreview(); } catch {}
+}
+
 
 // 所持合計（OwnedStore優先）
 function ownedTotal(cd){
@@ -245,6 +413,49 @@ function ownedTotal(cd){
 
   const e = S.get(String(cd));
   return (e?.normal|0) + (e?.shine|0) + (e?.premium|0);
+}
+
+// === パック順インデックス（PACK_ORDER優先→残りは英名の自然順） ===
+let __PACK_INDEX_CACHE = null;
+
+function getPackOrderIndex() {
+  if (__PACK_INDEX_CACHE) return __PACK_INDEX_CACHE;
+
+  // cardsCache から en 一覧を作る
+  const cards = Array.isArray(window.__cardsCache) ? window.__cardsCache : [];
+  const byEn = new Map(); // en -> jp
+  for (const c of cards) {
+    const pn = splitPackName(c.pack_name || c.pack || '');
+    if (!pn.en) continue;
+    if (!byEn.has(pn.en)) byEn.set(pn.en, pn.jp || '');
+  }
+
+  // PACK_ORDER が無くても落ちないように
+  const PACK_ORDER_SAFE = Array.isArray(window.PACK_ORDER) ? window.PACK_ORDER : [];
+
+  const rest = [...byEn.keys()]
+    .filter(en => !PACK_ORDER_SAFE.includes(en))
+    .sort((a, b) => String(a).localeCompare(String(b), 'ja'));
+
+  const ordered = [...PACK_ORDER_SAFE.filter(en => byEn.has(en)), ...rest];
+
+  const idx = {};
+  ordered.forEach((en, i) => { idx[en] = i; });
+
+  __PACK_INDEX_CACHE = idx;
+  return idx;
+}
+
+// カードからパック英名(en)を取り出す（collectMissingのsortで使う）
+function packEnOf(card){
+  const pn = splitPackName(card.pack_name || card.pack || '');
+  return pn.en || '';
+}
+
+// 種族→数値順位（RACE_ORDER を使う）
+function raceRankOf(r){
+  const i = RACE_ORDER.indexOf(r);
+  return (i >= 0) ? i : 999;
 }
 
 // 不足カード収集（scope === 'all' or packオブジェクト）
@@ -310,54 +521,6 @@ function collectMissing(scope='all'){
   return missing;
 }
 
-function openMissingDialog(title, items){
-  const dlg  = document.getElementById('missing-dialog');
-  const body = document.getElementById('missing-body');
-  const ttl  = document.getElementById('missing-title');
-  if (!dlg || !body || !ttl) return;
-
-  ttl.textContent = title;
-
-  if (!items.length){
-    body.innerHTML = '<p>不足カードはありません。</p>';
-  } else {
-    const info = document.createElement('p');
-    info.className = 'missing-info';
-    info.textContent = (/Mobi|Android/i.test(navigator.userAgent))
-      ? '📱 タップで画像表示'
-      : '🖱️ カーソル合わせて画像表示';
-
-    const ul = document.createElement('ul');
-    items.forEach(it=>{
-      const li = document.createElement('li');
-      li.innerHTML = `<span class="missing-name">${it.name}x${it.need}</span>`;
-      li.dataset.cd  = String(it.cd || '');
-      li.classList.add('missing-item');
-      if (it.race) li.classList.add(`race-${it.race}`);
-      ul.appendChild(li);
-    });
-
-    body.replaceChildren(info, ul);
-  }
-
-  const copyBtn = document.getElementById('missing-copy');
-  const text = items.map(it => `${it.name}x${it.need}`).join('\n');
-  copyBtn.onclick = async ()=>{
-    try{
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
-      else prompt('以下をコピーしてください', text);
-      copyBtn.textContent = 'コピーしました';
-      setTimeout(()=> copyBtn.textContent = '一覧をコピー', 1400);
-    }catch{ alert('コピーに失敗しました'); }
-  };
-
-  dlg.style.left = '50%';
-  dlg.style.top  = '15vh';
-  dlg.style.transform = 'translateX(-50%)';
-  dlg.showModal();
-}
-
-
 // =====================================================
 // 4) 不足リスト：カード画像プレビュー（PC hover / SP long-press）
 // =====================================================
@@ -406,16 +569,22 @@ if (!window.__wiredMissingPreview){
     }, {passive:true});
   });
 
-  document.getElementById('missing-dialog')?.addEventListener('close', hideCardPreview);
 }
 
 function ensurePreviewEl(){
-  let el = document.getElementById('card-preview-pop');
-  const dlg = document.getElementById('missing-dialog');
-  if (dlg && dlg.open && el && el.parentElement !== dlg) dlg.appendChild(el);
-  if (el) el.style.position = 'fixed';
+  const el = document.getElementById('card-preview-pop');
+  if (!el) return null;
+
+  // ✅ 常に body 直下へ（これが一番安全）
+  if (el.parentElement !== document.body) {
+    document.body.appendChild(el);
+  }
+
+  el.style.position = 'fixed';
+  el.style.zIndex = '9999';
   return el;
 }
+
 
 function showCardPreviewAt(x, y, cd){
   const box = ensurePreviewEl();
@@ -609,8 +778,23 @@ schedulePostBulkUIUpdate_(packSection);
     if (btn.classList.contains('toggle-pack-view-btn') && packSection) {
       const mode = btn.dataset.view; // 'all' | 'incomplete'
       applyPackView_(packSection, mode, true);
+      updateTopToggleByPacks_();
       setTimeout(() => { try { window.updateSummary?.(); } catch {} }, 0);
       return;
+    }
+
+
+    // ------------------------------
+    // ✅ 全カード/不足カード（全体：トップバー）
+    // ------------------------------
+    if (btn.classList.contains('toggle-pack-view-btn') && !packSection) {
+      const topToggle = btn.closest('#top-pack-view-toggle');
+      if (topToggle) {
+        const mode = btn.dataset.view; // 'all' | 'incomplete'
+        applyGlobalPackView_(mode);
+        setTimeout(() => { try { window.updateSummary?.(); } catch {} }, 0);
+        return;
+      }
     }
 
     // ------------------------------
@@ -743,8 +927,56 @@ function applyPackView_(packSection, mode, forceRecalc = false){
 
 // 初期化：全パックを all にそろえる
 function initPackViews_(){
+  const mode = window.__topPackViewMode || 'all';
   document.querySelectorAll('#packs-root .pack-section').forEach(pack => {
-    applyPackView_(pack, 'all', true);
+    applyPackView_(pack, mode, true);
+  });
+  // トップUIも同期
+  syncTopToggleUI_(mode);
+}
+
+// =====================================================
+// 5.6) 表示切替：トップ（全パック一括）
+// =====================================================
+
+function syncTopToggleUI_(mode){
+  const root = document.getElementById('top-pack-view-toggle');
+  if (!root) return;
+
+  root.querySelectorAll('.toggle-pack-view-btn').forEach(b => {
+    const on = (b.dataset.view === mode);
+    b.classList.toggle('is-active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+}
+
+// ✅ トップ切替 → 全パックへ適用
+function applyTopPackView_(mode, forceRecalc = true){
+  // 記憶（初期化時にも使う）
+  window.__topPackViewMode = mode;
+
+  document.querySelectorAll('#packs-root .pack-section').forEach(pack => {
+    applyPackView_(pack, mode, forceRecalc);
+  });
+
+  syncTopToggleUI_(mode);
+}
+
+// ✅ トップ切替のクリックを拾う（#packs-root の外なので別で必要）
+function wireTopPackViewToggle_(){
+  const root = document.getElementById('top-pack-view-toggle');
+  if (!root || root.dataset.wired) return;
+  root.dataset.wired = '1';
+
+  root.addEventListener('click', (e) => {
+    const btn = e.target.closest('button.toggle-pack-view-btn');
+    if (!btn) return;
+
+    const mode = btn.dataset.view; // 'all' | 'incomplete'
+    applyTopPackView_(mode, true);
+
+    // summary は次タスクに逃がす
+    setTimeout(() => { try { window.updateSummary?.(); } catch {} }, 0);
   });
 }
 
@@ -770,16 +1002,23 @@ async function initPacksThenRender() {
   try {
     const catalog = await window.loadPackCatalog();
     window.PACK_ORDER = catalog.order;
+
+    // ✅ 追加：en -> key
+    window.__packKeyByEn = {};
+    catalog.list.forEach(p => { window.__packKeyByEn[p.en] = p.key; });
+
     window.packs = catalog.list.map(p => ({
       key: p.key,
       nameMain: p.en,
       nameSub:  p.jp,
-      selector: `#pack-${p.slug}`
+      // selector: `#pack-${p.slug}`
+      selector: `#pack-${p.key}`
     }));
   } catch (e) {
     console.warn('packカタログ初期化に失敗:', e);
     window.PACK_ORDER = [];
     window.packs = [];
+    window.__packKeyByEn = {};
   }
 
   await renderAllPacks({
@@ -800,8 +1039,33 @@ async function initPacksThenRender() {
   if (typeof window.updateSummary === 'function') window.updateSummary();
   else if (window.Summary?.updateSummary) window.Summary.updateSummary();
   initPackViews_();
+  wireTopPackViewToggle_();
+  wireMissingAllButtons_();
   window.dispatchEvent(new Event('card-page:ready'));// カードページ準備完了イベント
 }
+
+function wireMissingAllButtons_(){
+  const bind = (id) => {
+    const btn = document.getElementById(id);
+    if (!btn || btn.dataset.wired) return;
+    btn.dataset.wired = '1';
+
+    btn.addEventListener('click', () => {
+      const items = collectMissing('all');
+      openMissingDialog('不足カード（全カード）', items);
+    });
+  };
+
+  bind('show-missing-all-mobile');
+  bind('show-missing-all'); // PC側があれば
+}
+
+// ✅ どこからでも呼べるように（必要なら）
+window.openMissingAll = function(){
+  const items = collectMissing('all');
+  openMissingDialog('不足カード（全カード）', items);
+};
+
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initPacksThenRender, { once: true });

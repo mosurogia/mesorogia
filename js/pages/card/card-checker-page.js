@@ -18,9 +18,14 @@
   // 0) 小ユーティリティ
   // =====================================================
 
-  function getTopSummaryOffset_() {
-    const headerEl = document.querySelector('.top-summary');
-    return headerEl ? Math.ceil(headerEl.getBoundingClientRect().height) : 0;
+  function getStickyOffset_() {
+    const topSummary = document.querySelector('.top-summary');
+    const topBar     = document.querySelector('.top-bar'); // ← あなたのstickyバー
+
+    const h1 = topSummary ? Math.ceil(topSummary.getBoundingClientRect().height) : 0;
+    const h2 = topBar     ? Math.ceil(topBar.getBoundingClientRect().height)     : 0;
+
+    return h1 + h2;
   }
 
   function scrollToY_(y) {
@@ -136,7 +141,7 @@ window.jumpToPack = function jumpToPack(packSlug) {
     const target = document.getElementById(targetId);
     if (!target) return false;
 
-    const offset = getTopSummaryOffset_();
+    const offset = getStickyOffset_();
     const y = window.scrollY + target.getBoundingClientRect().top - offset - 8;
     scrollToY_(y);
     return true;
@@ -177,10 +182,10 @@ window.jumpToPack = function jumpToPack(packSlug) {
     if (/その他特殊カード/.test(en) || /特殊/.test(jp)) return '特殊';
     if (/コラボカード/.test(en) || /コラボ/.test(jp)) return 'コラボ';
 
-    // 2) 次に PACK_ORDER の index から A〜E を生成（最優先）
+    // 2) PACK_ORDER の index から A〜Z を生成（最優先）
     const ord = Array.isArray(window.PACK_ORDER) ? window.PACK_ORDER : [];
     const idx = ord.indexOf(en);
-    if (idx >= 0 && idx < 5) return `${String.fromCharCode(65 + idx)}パック`; // 0->A ... 4->E
+    if (idx >= 0 && idx < 26) return `${String.fromCharCode(65 + idx)}パック`;
 
     // 3) フォールバック（英名短縮）
     const base = (en || jp || 'PACK').replace(/\s+/g, ' ').trim();
@@ -210,6 +215,7 @@ window.jumpToPack = function jumpToPack(packSlug) {
 
     if (!force && tabsRoot.dataset.built === '1') return true;
 
+    reorderCollabAndSpecialSections_(); // ✅ tabs生成前に順番補正
     const sections = Array.from(document.querySelectorAll('#packs-root .pack-section[id^="pack-"]'));
     if (!sections.length) return false;
 
@@ -253,7 +259,11 @@ window.jumpToPack = function jumpToPack(packSlug) {
     const tick = () => {
       tries++;
       const ok = buildMobilePackTabs_();
-      if (ok) return;
+      if (ok) {
+        // ✅ タブ生成が完了した後に、もう一度DOM順を整える
+        swapMobilePackTabAndSelectOrder_();
+        return;
+      }
       if (tries < 30) requestAnimationFrame(tick);
     };
     tick();
@@ -264,8 +274,71 @@ window.jumpToPack = function jumpToPack(packSlug) {
     buildMobilePackTabs_({ force: true });
   };
 
-  window.addEventListener('card-page:ready', initMobileTabsWithRetry_);
-  window.addEventListener('DOMContentLoaded', initMobileTabsWithRetry_);
+    // =====================================================
+  // 4.1) pack-section の並び順を補正（コラボを特殊より上に）
+  // =====================================================
+  function reorderCollabAndSpecialSections_() {
+    const root = document.getElementById('packs-root');
+    if (!root) return;
+
+    // packs.json の slug/id をそのまま使ってる前提
+    const collab  = root.querySelector(`#pack-${CSS.escape('コラボカード')}`);
+    const special = root.querySelector(`#pack-${CSS.escape('その他特殊カード')}`);
+
+    if (!collab || !special) return;
+
+    // ✅ いま special が先、collab が後なら入れ替える（collab を special の前へ）
+    const collabIsAfter = !!(special.compareDocumentPosition(collab) & Node.DOCUMENT_POSITION_FOLLOWING);
+    if (collabIsAfter) {
+      root.insertBefore(collab, special);
+    }
+  }
+
+    // =====================================================
+  // 4.5) SP：パックタブとセレクション（select）の表示順を入れ替える
+  // =====================================================
+  function swapMobilePackTabAndSelectOrder_() {
+    const tabs = document.getElementById('mobile-pack-tabs');
+    if (!tabs) return;
+
+    // セレクション（select）候補：あなたのHTMLに合わせて拾えるように複数対応
+    const sel =
+      document.getElementById('pack-select') ||
+      document.getElementById('packSelect') ||
+      document.getElementById('mobile-pack-select') ||
+      document.querySelector('.pack-select') ||
+      document.querySelector('#checker select');
+
+    if (!sel) return;
+
+    const parent = tabs.parentElement;
+    if (!parent || sel.parentElement !== parent) return;
+
+    // ---- ここで「どっちを上にするか」を決める ----
+    const ORDER = 'tabs-first'; // 'tabs-first' or 'select-first'
+
+    if (ORDER === 'tabs-first') {
+      // ✅ タブ → セレクション の順にする
+      if (parent.firstElementChild !== tabs) parent.insertBefore(tabs, parent.firstChild);
+      parent.insertBefore(sel, tabs.nextSibling); // tabsの直後へ
+    } else {
+      // ✅ セレクション → タブ の順にする
+      parent.insertBefore(sel, parent.firstChild);
+      parent.insertBefore(tabs, sel.nextSibling); // selの直後へ
+    }
+  }
+
+
+function initMobilePackUi_(){
+  // ✅ まず pack-section を入れ替える（＝タブの元になる順番を直す）
+  reorderCollabAndSpecialSections_();
+
+  // ✅ 次にタブ生成（sectionsの順で作られるので、タブも入れ替わる）
+  initMobileTabsWithRetry_();
+}
+
+window.addEventListener('card-page:ready', initMobilePackUi_);
+window.addEventListener('DOMContentLoaded', initMobilePackUi_);
 
   // =====================================================
   // 5) スクロールスパイ：表示中パックに合わせてタブを強調
@@ -289,7 +362,7 @@ window.jumpToPack = function jumpToPack(packSlug) {
     const sections = Array.from(document.querySelectorAll('#packs-root .pack-section[id^="pack-"]'));
     if (!sections.length) return '';
 
-    const offset = getTopSummaryOffset_();
+    const offset = getStickyOffset_();
     const anchorY = offset + 12; // stickyヘッダ直下基準
 
     // 「ヘッダ直下を過ぎた最後のセクション」を採用（自然な追従）
@@ -335,7 +408,7 @@ window.jumpToPack = function jumpToPack(packSlug) {
       scheduleSpySync_();
     }, {
       root: null,
-      rootMargin: `-${getTopSummaryOffset_()}px 0px -70% 0px`,
+      rootMargin: `-${getStickyOffset_()}px 0px -70% 0px`,
       threshold: [0, 0.1, 0.2],
     });
 
@@ -350,44 +423,77 @@ window.jumpToPack = function jumpToPack(packSlug) {
   // 6) ゲージ同期（SP: 全カードはトップ / 各パックは見出し下、PC: サイドバーにゲージ）
   // =====================================================
 
-  function getOverallPctFromSummary_() {
-    const last = window.Summary?._lastOverall;
-    if (!last) return null;
+function getOverallFromSummary_() {
+  const last = window.Summary?._lastOverall;
+  if (!last) return null;
 
-    const ownPct  = Number(last.typePercent);
-    const compPct = Number(last.percent);
+  const ownPct  = Number(last.typePercent);
+  const compPct = Number(last.percent);
+  if (!Number.isFinite(ownPct) || !Number.isFinite(compPct)) return null;
 
-    if (!Number.isFinite(ownPct) || !Number.isFinite(compPct)) return null;
-    return { ownPct, compPct };
-  }
+  return {
+    ownPct, compPct,
+    ownN: Number(last.ownedTypes),
+    ownD: Number(last.totalTypes),
+    compN: Number(last.owned),
+    compD: Number(last.total),
+    ownPctText: String(last.typePercentText ?? ownPct.toFixed(1)),
+    compPctText: String(last.percentText ?? compPct.toFixed(1)),
+  };
+}
+
 
   function parseRateText_(text) {
     const t = String(text || '');
     const own  = t.match(/所持率:\s*(\d+)\s*\/\s*(\d+)\s*\(([\d.]+)%\)/);
     const comp = t.match(/コンプ率:\s*(\d+)\s*\/\s*(\d+)\s*\(([\d.]+)%\)/);
+
+    const ownPct = own ? Number(own[3]) : 0;
+    const compPct = comp ? Number(comp[3]) : 0;
+
     return {
-      ownPct: own  ? Number(own[3])  : 0,
-      compPct: comp ? Number(comp[3]) : 0,
+      ownPct, compPct,
+      ownN: own ? Number(own[1]) : 0,
+      ownD: own ? Number(own[2]) : 0,
+      compN: comp ? Number(comp[1]) : 0,
+      compD: comp ? Number(comp[2]) : 0,
+      ownPctText: (ownPct || 0).toFixed(1),
+      compPctText: (compPct || 0).toFixed(1),
     };
   }
 
-  function renderMetersHtml_(ownPct, compPct) {
-    const ownW  = Math.max(0, Math.min(100, ownPct));
-    const compW = Math.max(0, Math.min(100, compPct));
+  function renderMetersHtml_(d) {
+    const ownW  = Math.max(0, Math.min(100, Number(d.ownPct || 0)));
+    const compW = Math.max(0, Math.min(100, Number(d.compPct || 0)));
+
+    const ownPctText  = d.ownPctText  ?? ownW.toFixed(1);
+    const compPctText = d.compPctText ?? compW.toFixed(1);
 
     return `
       <div class="meter">
         <div class="meter-label">所持率</div>
-        <div class="meter-track"><span class="meter-bar -own" style="width:${ownW}%;"></span></div>
-        <div class="meter-val">${ownW.toFixed(1)}%</div>
+        <div class="meter-track">
+          <span class="meter-bar -own" style="width:${ownW}%;"></span>
+        </div>
+        <div class="meter-val">
+          <span class="meter-frac">${d.ownN ?? 0}/${d.ownD ?? 0}</span>
+          <span class="meter-pct">(${ownPctText}%)</span>
+        </div>
       </div>
+
       <div class="meter">
         <div class="meter-label">コンプ率</div>
-        <div class="meter-track"><span class="meter-bar -comp" style="width:${compW}%;"></span></div>
-        <div class="meter-val">${compW.toFixed(1)}%</div>
+        <div class="meter-track">
+          <span class="meter-bar -comp" style="width:${compW}%;"></span>
+        </div>
+        <div class="meter-val">
+          <span class="meter-frac">${d.compN ?? 0}/${d.compD ?? 0}</span>
+          <span class="meter-pct">(${compPctText}%)</span>
+        </div>
       </div>
     `;
   }
+
 
   function ensureSidebarMeter_(hostEl) {
     if (!hostEl) return null;
@@ -420,7 +526,7 @@ window.jumpToPack = function jumpToPack(packSlug) {
     ensurePackTitleMeters_();
 
     // ✅ 全カード%：Summaryの計算結果から取る（#summary依存を廃止）
-    let overall = getOverallPctFromSummary_();
+    let overall = getOverallFromSummary_();
 
     // ✅ フォールバック：#summary が存在する時だけ読む（消してたら0固定になるので注意）
     if (!overall) {
@@ -436,7 +542,7 @@ window.jumpToPack = function jumpToPack(packSlug) {
     const mobileTop = document.getElementById('mobile-pack-summary');
     if (mobileTop) {
       mobileTop.innerHTML = overall
-        ? `<div class="pack-meters">${renderMetersHtml_(overall.ownPct, overall.compPct)}</div>`
+        ? `<div class="pack-meters">${renderMetersHtml_(overall)}</div>`
         : '';
     }
 
@@ -447,18 +553,29 @@ window.jumpToPack = function jumpToPack(packSlug) {
     const items = Array.from(packList.querySelectorAll('.pack-summary'));
     items.forEach(item => {
       const href = item.querySelector('a.pack-summary-link')?.getAttribute('href') || '';
-      const m = href.match(/#pack-([A-Za-z0-9_-]+)/);
-      if (!m) return;
+      if (!href.startsWith('#pack-')) return;
 
-      const slug = m[1];
-      const rateText = item.querySelector('.pack-summary-rate')?.textContent || '';
-      const p = parseRateText_(rateText);
+      // ✅ 日本語slugでもOK（正規表現で落ちる問題を回避）
+      const slug = href.slice('#pack-'.length);
+
+      // ✅ pack-summary-rate 廃止：data-* から読む
+      const ownPct = Number(item.dataset.typePercent || 0);
+      const compPct = Number(item.dataset.percent || 0);
+
+      const p = {
+        ownPct,
+        compPct,
+        ownN: Number(item.dataset.ownedTypes || 0),
+        ownD: Number(item.dataset.totalTypes || 0),
+        compN: Number(item.dataset.owned || 0),
+        compD: Number(item.dataset.total || 0),
+      };
 
       const meter = ensureSidebarMeter_(item);
-      if (meter) meter.innerHTML = renderMetersHtml_(p.ownPct, p.compPct);
+      if (meter) meter.innerHTML = renderMetersHtml_(p);
 
-      const targetBox = document.querySelector(`#pack-${slug} .pack-mobile-meters`);
-      if (targetBox) targetBox.innerHTML = renderMetersHtml_(p.ownPct, p.compPct);
+      const targetBox = document.querySelector(`#pack-${CSS.escape(slug)} .pack-mobile-meters`);
+      if (targetBox) targetBox.innerHTML = renderMetersHtml_(p);
     });
   }
 
@@ -510,8 +627,13 @@ window.jumpToPack = function jumpToPack(packSlug) {
     // ✅ 下に出す（足りなければ上に逃がす）
     const gap = 14;
 
-    // 下に出してみる
+    // まず「下」に置く
     let top = y + gap;
+
+    // 画面下にはみ出すなら「上」に切替
+    if (top + h + pad > window.innerHeight) {
+      top = y - h - gap;
+    }
 
 // それでもはみ出すケースを最後にクランプ
 top = clamp_(top, pad, window.innerHeight - h - pad);

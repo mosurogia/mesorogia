@@ -14,7 +14,6 @@ cardページ専用は `js/pages/card/` 配下に集約し、依存順は **card
 1) 一覧（card-list）
 2) 表示切替（cardsViewMode）
 3) checker（owned-ops → page wiring → render）
-4) 保存フロー（owned-save-flow）
 
 ### ✅ “準備完了”合図
 最後まで読み終わったら `window` に **`card-page:ready`** を dispatch。
@@ -30,7 +29,6 @@ cardページ専用は `js/pages/card/` 配下に集約し、依存順は **card
 - `card-checker-owned-ops.js`：所持率チェッカー用の **所持数の増減ロジック**（上限/循環など）。
 - `card-checker-page.js`：所持率チェッカーの **ページ配線**（onclickから呼ばれる関数をwindow公開、packsフォールバック読み込み等）。
 - `card-checker-render.js`：所持率チェッカーの **DOM生成の本体**（#packs-root、足りないカード、パック/種族一括操作など）。
-- `owned-save-flow.js`：所持データの **保存フロー**（「保存が必要」状態管理など）。
 
 > 旧：`card-checker.js` は「まとめ役」だったものの残骸（移植中の互換/退避用途）。今後は上の分割群が正。
 

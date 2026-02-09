@@ -234,9 +234,9 @@
     // 「」や空白を除去してから判定
     const s = String(abbr || '').replace(/[「」\s]/g, '');
 
-    if (/^([A-E])パック/.test(s)) return s[0]; // A〜E
-    if (s.includes('特殊')) return 'SPECIAL';
+    if (/^([A-Z])パック/.test(s)) return s[0]; // A〜Z
     if (s.includes('コラボ')) return 'COLLAB';
+    if (s.includes('特殊')) return 'SPECIAL';
     return '';
   };
 

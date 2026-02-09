@@ -2742,6 +2742,7 @@ function packAbbr_(enName){
   if (low.includes('creeping souls')) return 'Cパック';
   if (low.includes('drawn sword')) return 'Dパック';
   if (low.includes('ensemble of silence') || low.includes('ensemble of slience')) return 'Eパック';
+  if (low.includes('fallen fate')) return 'Fパック';
 
   // packs.json の「コラボカード」などが enName 側に来る可能性もあるので保険
   if (s.includes('コラボ') || low.includes('collab')) return 'コラボ';
@@ -2756,8 +2757,8 @@ function packAbbr_(enName){
 function packKeyFromAbbr_(abbr){
   const s = String(abbr || '');
 
-  if (/^([A-E])パック/.test(s)) {
-    return s[0]; // A〜E
+  if (/^([A-Z])パック/.test(s)) {
+    return s[0]; // A〜Z
   }
   if (s.includes('特殊')) {
     return 'SPECIAL';

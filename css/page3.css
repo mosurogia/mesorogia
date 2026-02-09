@@ -4,9 +4,47 @@
    - 並び順整理 / 重複統合 / パックタブをタブ風に変更
 ===================================================== */
 
+/* =====================================================
+   0. 変数（タブ色 / 種族サマリー背景など）
+===================================================== */
+:root {
+    /* --- pack tab --- */
+    --packtab-active-text: #1d4ed8;
+    /* active文字 */
+    --packtab-active-border: #93c5fd;
+    /* active枠 */
+    --packtab-rail: #e5e7eb;
+    /* 下レール */
+
+    /* =====================================================
+     Race Summary（ここだけ触れば雰囲気をまとめて変えられる）
+     - 目的：白すぎず、でも重くならない “薄いカード感”
+  ===================================================== */
+
+    /* ブロック全体（外枠） */
+    --race-summary-block-bg1: rgba(219, 234, 254, .78);
+    /* blue-100 */
+    --race-summary-block-bg2: rgba(255, 255, 255, .90);
+    --race-summary-block-border: rgba(59, 130, 246, .16);
+
+    /* 折りたたみヘッダー */
+    --race-summary-header-bg1: rgba(255, 255, 255, .86);
+    --race-summary-header-bg2: rgba(226, 232, 240, .72);
+    /* slate-200 */
+    --race-summary-header-border: rgba(15, 23, 42, .10);
+
+    /* 各アイテム（種族行） */
+    --race-summary-item-bg1: rgba(255, 255, 255, .90);
+    --race-summary-item-bg2: rgba(239, 246, 255, .78);
+    /* blue-50 */
+    --race-summary-item-border: rgba(59, 130, 246, .12);
+
+    /* 影（まとめて調整） */
+    --race-summary-shadow: 0 2px 10px rgba(0, 0, 0, .05);
+}
 
 /* =====================================================
-   0. タブ画像（上部タブ）
+   1. タブ画像（上部タブ）
 ===================================================== */
 #tab1 {
     background-image: url("../img/chekertab1.webp");
@@ -24,11 +62,9 @@
     text-shadow: 1px 1px 2px black;
 }
 
-
 /* =====================================================
-   1. X（ポスト）ボタン
+   2. X（ポスト）ボタン
 ===================================================== */
-
 .custom-tweet-button {
     display: inline-flex;
     align-items: center;
@@ -52,10 +88,8 @@
     height: 16px;
 }
 
-
 /* =====================================================
-   2. 共通：meter（ゲージUI）統合
-   - 3箇所に散っていた meter を共通化
+   3. 共通：meter（ゲージUI）
 ===================================================== */
 .meter {
     display: grid;
@@ -97,16 +131,14 @@
     background: linear-gradient(90deg, #2196f3, #64b5f6);
 }
 
-/* アニメーションを抑制したいユーザー配慮（任意） */
 @media (prefers-reduced-motion: reduce) {
     .meter-bar {
         transition: none;
     }
 }
 
-
 /* =====================================================
-   3. レイアウト（PC：サイドバー / SP：上部バー）
+   4. レイアウト（PC：サイドバー / SP：上部バー）
 ===================================================== */
 .page-wrapper {
     display: flex;
@@ -155,30 +187,19 @@
     padding: 0 0.4rem;
 }
 
-
 /* =====================================================
-   4. 上部：所持率（sticky top）
-   - ✅ PCでも表示する
-   - ✅ pack-selector（select）は廃止済み前提
+   5. 上部：所持率（sticky top）
 ===================================================== */
-
-/* ✅ 以前: display:none; + SPだけ表示
-   ✅ 変更: デフォルトで表示 */
 .top-summary {
     display: flex;
     flex-direction: column;
-
     position: sticky;
     top: 0;
     z-index: 2000;
-
     background: #fff;
     border-bottom: 2px solid #ccc;
-
     padding: 4px 6px;
     gap: 4px;
-
-    /* ちょい見やすく */
     box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
 }
 
@@ -187,15 +208,12 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-
     flex-wrap: wrap;
     gap: 6px;
-
     padding: 2px 0;
     font-size: clamp(13px, 1.3vw, 18px);
 }
 
-/* ✅ PCのときは少し余裕を増やす */
 @media (min-width: 701px) {
     .top-summary {
         padding: 6px 10px;
@@ -207,13 +225,11 @@
     }
 }
 
-/* ✅ SPのときは従来通り（フォントだけ少し大きめでもOK） */
 @media (max-width: 700px) {
     .top-summary {
         font-size: clamp(14px, 3vw, 20px);
     }
 }
-
 
 /* 互換用 select は残すが見せない（summary.js参照対策） */
 @media (max-width: 700px) {
@@ -222,7 +238,6 @@
     }
 }
 
-/* パック名選択（もし表示する場合） */
 .summary-bar select {
     font-size: 0.6rem;
     padding: 0.2rem;
@@ -266,7 +281,7 @@
     text-align: right;
 }
 
-/* ✅ 全カードボタン */
+/* 全カードボタン */
 .show-all-btn {
     display: inline-flex;
     align-items: center;
@@ -280,23 +295,12 @@
 }
 
 /* --- SP：パックタブ（タブ風） --- */
-/* 色だけ変えたくなったらここを触る */
-:root {
-    --packtab-active-text: #1d4ed8;
-    /* active文字 */
-    --packtab-active-border: #93c5fd;
-    /* active枠 */
-    --packtab-rail: #e5e7eb;
-    /* 下レール */
-}
-
 .mobile-pack-tabs {
     margin-top: 0.25rem;
     display: flex;
     gap: 6px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-
     border-bottom: 2px solid var(--packtab-rail);
     padding: 0 2px 0;
 }
@@ -308,22 +312,18 @@
 .mobile-pack-tabs button {
     flex: 0 0 auto;
     padding: 0.32rem 0.65rem;
-
     border: 1px solid transparent;
     border-bottom: none;
     border-radius: 10px 10px 0 0;
-
     background: transparent;
     color: #374151;
     font-size: 12px;
     font-weight: 800;
     white-space: nowrap;
     cursor: pointer;
-
     max-width: 9.5em;
     overflow: hidden;
     text-overflow: ellipsis;
-
     transition: background .15s ease, color .15s ease, border-color .15s ease;
 }
 
@@ -338,7 +338,6 @@
     position: relative;
 }
 
-/* 選択中タブをレールと一体化 */
 .mobile-pack-tabs button.is-active::after {
     content: "";
     position: absolute;
@@ -385,51 +384,109 @@
     }
 }
 
-
 /* =====================================================
-   5. PCサイドバー：全体所持率 / 各パック所持率
+   6. PCサイドバー：全体所持率 / 各パック所持率
 ===================================================== */
-/* 各パック所持率ブロック */
-#pack-summary-list {
-    margin: 0.5em 0;
-}
-
-.pack-summary {
+#pack-summary-list .pack-summary {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid rgba(var(--pack-border-rgb, 0, 0, 0), .35);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .06);
     margin-bottom: 0.3em;
     background: #fff;
 }
 
-/* パック名リンク */
-.pack-summary-link {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    text-decoration: none;
-    color: #333;
-    margin: 0.5em 0;
-}
-
-/* パック名（メイン） */
-.pack-summary-name {
-    font-weight: bold;
-    font-size: clamp(0.5rem, 1.7vw, 1.1rem);
-    line-height: 1.4;
-}
-
-/* パック名（サブ） */
-.pack-summary-name small {
+#pack-summary-list .pack-summary-link {
     display: block;
+    text-decoration: none;
+    cursor: pointer;
+    position: relative;
+    padding: .55rem .6rem;
+    color: inherit;
+    background: linear-gradient(135deg,
+            rgba(var(--pack-accent-rgb, 0, 0, 0), .10),
+            rgba(255, 255, 255, 1));
+    border-left: 8px solid rgba(var(--pack-accent-rgb, 0, 0, 0), .85);
+}
+
+#pack-summary-list .pack-summary-link:hover {
+    filter: brightness(0.98);
+    text-decoration: underline;
+}
+
+#pack-summary-list .pack-summary-link::after {
+    content: "↧";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: .55;
+    font-size: 12px;
+}
+
+#pack-summary-list .pack-summary-link:focus-visible {
+    outline: 2px solid rgba(0, 0, 0, .35);
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+
+#pack-summary-list .pack-summary-name {
+    display: block;
+    font-weight: 900;
+    line-height: 1.15;
+    font-size: clamp(0.5rem, 1.7vw, 1.1rem);
+}
+
+#pack-summary-list .pack-summary-name small {
+    font-weight: 700;
+    opacity: .75;
     font-size: 80%;
     margin-left: 0;
 }
 
-/* パック所持率コンプ率表記 */
-.pack-summary-rate {
-    font-size: clamp(0.5rem, 1.5vw, 1.1rem);
-    margin-top: 0.2em;
-    align-self: flex-end;
-    width: 100%;
-    text-align: right;
+#pack-summary-list .summary-meter {
+    padding: .45rem .6rem .55rem;
+}
+
+/* --- パック色の割当（data-pack-group で付与） --- */
+#pack-summary-list .pack-summary[data-pack-group="a"] {
+    --pack-border-rgb: var(--pack-a-accent-rgb);
+    --pack-accent-rgb: var(--pack-a-rgb);
+}
+
+#pack-summary-list .pack-summary[data-pack-group="b"] {
+    --pack-border-rgb: var(--pack-b-accent-rgb);
+    --pack-accent-rgb: var(--pack-b-rgb);
+}
+
+#pack-summary-list .pack-summary[data-pack-group="c"] {
+    --pack-border-rgb: var(--pack-c-accent-rgb);
+    --pack-accent-rgb: var(--pack-c-rgb);
+}
+
+#pack-summary-list .pack-summary[data-pack-group="d"] {
+    --pack-border-rgb: var(--pack-d-accent-rgb);
+    --pack-accent-rgb: var(--pack-d-rgb);
+}
+
+#pack-summary-list .pack-summary[data-pack-group="e"] {
+    --pack-border-rgb: var(--pack-e-accent-rgb);
+    --pack-accent-rgb: var(--pack-e-rgb);
+}
+
+#pack-summary-list .pack-summary[data-pack-group="f"] {
+    --pack-border-rgb: var(--pack-f-accent-rgb);
+    --pack-accent-rgb: var(--pack-f-rgb);
+}
+
+#pack-summary-list .pack-summary[data-pack-group="special"] {
+    --pack-border-rgb: var(--pack-special-accent-rgb);
+    --pack-accent-rgb: var(--pack-special-rgb);
+}
+
+#pack-summary-list .pack-summary[data-pack-group="collab"] {
+    --pack-border-rgb: var(--pack-collab-accent-rgb);
+    --pack-accent-rgb: var(--pack-collab-rgb);
 }
 
 /* PCサイドバー：ゲージ */
@@ -444,72 +501,155 @@
     font-size: clamp(11px, 1.2vw, 14px);
 }
 
-
 /* =====================================================
-   6. メニュー（不足カード等）
+   7. メニュー（トップバー：不足カード + 全体切替）
 ===================================================== */
-
 .menu-mobile {
     display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-/* SP：2段 */
-@media (max-width: 700px) {
-    .menu-mobile {
-        display: flex;
-        gap: 6px;
-        align-items: center;
-    }
+.menu-mobile-row1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 
-    .menu-mobile-row1 {
-        margin-top: 4px;
-    }
-
-    .menu-mobile-row2 {
-        margin-top: 2px;
-    }
+    /* ✅ 折り返し禁止＆はみ出し抑制 */
+    flex-wrap: nowrap;
+    min-width: 0;
 }
 
-/* メニューボタン（SP：不足カードボタンだけ） */
-.menu-mobile-row1 .menu-btn {
-    font-size: 0.6rem;
-    width: 100%;
-    padding: 8px 6px;
-    margin: 0.1rem;
-    border: none;
-    border-radius: 6px;
-    background: linear-gradient(135deg, #4caf50, #81c784);
-    color: #fff;
-    font-weight: bold;
+/* 不足カードボタン（SP上部） */
+.menu-mobile-row1 #show-missing-all-mobile {
+    /* ✅ 可変で縮められるように */
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 40%;
+
+    /* ✅ 小さい端末で自動で詰める */
+    padding: clamp(6px, 1.8vw, 8px) clamp(8px, 2.6vw, 14px);
+    margin: 0;
+
+    border: 1px solid #86efac;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    color: #065f46;
+    font-weight: 800;
     cursor: pointer;
-    transition: background 0.3s, transform 0.2s;
-    text-align: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+    transition: background .2s ease, transform .12s ease, opacity .12s ease;
+
+    /* ✅ 折り返し禁止＋省略表示 */
+    white-space: nowrap;
+    text-overflow: ellipsis;
+
+    /* ✅ 文字サイズも自動縮小 */
+    font-size: clamp(10.5px, 3.0vw, 13.5px);
+    line-height: 1.1;
 }
 
-.menu button:hover,
-.menu-mobile-row1 .menu-btn:hover {
-    background: linear-gradient(135deg, #388e3c, #66bb6a);
-    transform: translateY(-2px);
+.menu-mobile-row1 #show-missing-all-mobile:hover {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    transform: translateY(-1px);
 }
 
-.menu button:active,
-.menu-mobile-row1 .menu-btn:active {
+.menu-mobile-row1 #show-missing-all-mobile:active {
     transform: translateY(0);
-    opacity: 0.9;
+    opacity: .92;
 }
 
-/* 保存ボタン（残骸があっても安全） */
-#save-btn {
+/* 不足カード：件数バッジ（data-count） */
+.menu-btn[data-count] {
     position: relative;
 }
 
+.menu-btn[data-count]::after {
+    content: attr(data-count);
+    position: absolute;
+    top: -9px;
+    right: -7px;
+
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+
+    /* ✅ 小端末で少しだけ詰める */
+    font-size: clamp(10px, 2.8vw, 12px);
+    font-weight: 600;
+    line-height: 1;
+
+    background: #10b981;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+}
+
+.menu-btn[data-count="0"]::after {
+    display: none;
+}
+
+/* トップの切替トグル：横いっぱい */
+#top-pack-view-toggle.top-pack-view-toggle {
+    flex: 1 1 0;
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: stretch;
+    padding: 3px;
+}
+
+#top-pack-view-toggle .toggle-pack-view-btn {
+    flex: 1 1 0;
+    min-width: 0;
+
+    text-align: center;
+    white-space: nowrap;
+
+    /* ✅ 端末幅に合わせて自動で詰める */
+    padding: clamp(6px, 1.8vw, 7px) clamp(8px, 2.4vw, 12px);
+    font-size: clamp(10.5px, 2.9vw, 14px);
+    line-height: 1.1;
+
+    text-overflow: ellipsis;
+}
+
+.menu-mobile-row2 {
+    display: flex;
+    margin-top: 2px;
+}
+
+@media (max-width: 700px) {
+    .menu-mobile {
+        gap: 6px;
+    }
+}
+
+/* ✅ ここ重要：360pxでもwrapさせない（縮めて収める） */
+@media (max-width: 360px) {
+    .menu-mobile-row1 {
+        gap: 6px;
+    }
+
+    .menu-mobile-row1 #show-missing-all-mobile {
+        max-width: 38%;
+    }
+}
 
 /* =====================================================
-   7. 不足カードモーダル
+   8. 不足カードモーダル
 ===================================================== */
 #missing-dialog {
     position: fixed;
+    left: 50%;
+    top: 8vh;
+    transform: translateX(-50%);
+    width: min(560px, 92vw);
+    max-height: 84vh;
+    overflow: auto;
     margin: 0;
     padding: .6rem .4rem;
     border: 1px solid #e5e7eb;
@@ -517,11 +657,27 @@
     background: #fff;
     box-shadow: 0 10px 24px rgba(0, 0, 0, .18);
     z-index: 4000;
-    width: min(560px, 92vw);
+    display: none;
+}
+
+@media (max-width: 480px) {
+    #missing-dialog {
+        top: 4vh;
+        max-height: 90vh;
+    }
 }
 
 #missing-dialog::backdrop {
     background: rgba(0, 0, 0, .2);
+}
+
+/* div版 backdrop（dialog ::backdrop 代わり） */
+#missing-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .2);
+    z-index: 3990;
+    display: none;
 }
 
 .missing-info {
@@ -531,7 +687,6 @@
 
 #missing-body ul {
     margin: .2rem 0 0;
-    padding-left: 1.1em;
     list-style: disc inside;
     padding-left: 1em;
 }
@@ -549,7 +704,6 @@
     color: currentColor;
 }
 
-/* 種族色 marker */
 #missing-body li.race-ドラゴン::marker {
     color: var(--race-dragon);
 }
@@ -578,7 +732,6 @@
     color: var(--race-accent);
 }
 
-/* プレビュー判定 */
 #missing-body .missing-name {
     display: inline-block;
     cursor: pointer;
@@ -601,7 +754,7 @@
     width: 180px;
     height: auto;
     display: block;
-    border-radius: 4px;
+    border-radius: 6px;
 }
 
 @media (max-width: 480px) {
@@ -610,37 +763,124 @@
     }
 }
 
+/* 不足カード：一覧をコピー */
+#missing-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    font-weight: 900;
+    font-size: 13px;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+    transition: transform .12s ease, background .15s ease, opacity .12s ease;
+}
+
+#missing-copy:hover {
+    background: #f9fafb;
+    transform: translateY(-1px);
+}
+
+#missing-copy:active {
+    transform: translateY(0);
+    opacity: .92;
+}
+
+#missing-dialog .icon-btn,
+#missing-close {
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 10px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-weight: 800;
+}
+
+#missing-dialog .icon-btn:hover,
+#missing-close:hover {
+    background: #f3f4f6;
+}
 
 /* =====================================================
-   8. カード一覧（パック枠 / 種族枠 / カード）
+   9. カード一覧（パック枠 / 種族枠 / カード）
 ===================================================== */
-/* 各パックセクション */
-.pack-section {
-    border: 6px solid #646464;
-    padding: 0.5rem 1rem 1rem 1rem;
-    margin-bottom: 1rem;
-    border-radius: 12px;
-    background: #fff;
-}
-
-@media (max-width: 700px) {
-    .pack-section {
-        padding: 0.1rem 0.4rem 0.4rem 0.4rem;
-    }
-}
-
-/* パック名 */
-.pack-section h3 {
-    display: block;
-    margin: 0.5rem 0;
+.pack-section .pack-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .6rem;
+    margin: 0.5rem 0 0.5rem 3px;
     padding: 0.7em 1em;
-    background: linear-gradient(90deg, #f7f7f7, #e0e0e0);
-    border-left: 8px solid #646464;
+    background: linear-gradient(90deg,
+            rgba(var(--pack-accent-rgb), .10),
+            rgba(255, 255, 255, 1));
+    border-left: 8px solid rgba(var(--pack-accent-rgb), .90);
     border-radius: 4px;
     font-size: 1.1rem;
     font-weight: bold;
     color: #333;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* pack-section：色は data-packgroup で付与 */
+.pack-section {
+    --pack-rgb: var(--pack-special-rgb);
+    --pack-accent-rgb: var(--pack-special-accent-rgb);
+    border: 5px solid rgba(var(--pack-rgb), 0.95);
+    box-shadow: 0 0 0 1px rgba(var(--pack-accent-rgb), 0.25) inset;
+}
+
+.pack-section[data-packgroup="a"] {
+    --pack-rgb: var(--pack-a-rgb);
+    --pack-accent-rgb: var(--pack-a-accent-rgb);
+}
+
+.pack-section[data-packgroup="b"] {
+    --pack-rgb: var(--pack-b-rgb);
+    --pack-accent-rgb: var(--pack-b-accent-rgb);
+}
+
+.pack-section[data-packgroup="c"] {
+    --pack-rgb: var(--pack-c-rgb);
+    --pack-accent-rgb: var(--pack-c-accent-rgb);
+}
+
+.pack-section[data-packgroup="d"] {
+    --pack-rgb: var(--pack-d-rgb);
+    --pack-accent-rgb: var(--pack-d-accent-rgb);
+}
+
+.pack-section[data-packgroup="e"] {
+    --pack-rgb: var(--pack-e-rgb);
+    --pack-accent-rgb: var(--pack-e-accent-rgb);
+}
+
+.pack-section[data-packgroup="f"] {
+    --pack-rgb: var(--pack-f-rgb);
+    --pack-accent-rgb: var(--pack-f-accent-rgb);
+}
+
+.pack-section[data-packgroup="collab"] {
+    --pack-rgb: var(--pack-collab-rgb);
+    --pack-accent-rgb: var(--pack-collab-accent-rgb);
+}
+
+.pack-section[data-packgroup="special"] {
+    --pack-rgb: var(--pack-special-rgb);
+    --pack-accent-rgb: var(--pack-special-accent-rgb);
+}
+
+.pack-title-text {
+    min-width: 0;
+}
+
+@media (max-width: 520px) {
+    .pack-section .pack-tweet-link {
+        margin-left: auto;
+    }
 }
 
 /* SP：各パック見出し直下ゲージ */
@@ -666,16 +906,13 @@
     }
 }
 
-/* =========================
-   操作ボタン（race-controls / pack-controls）統合
-========================= */
+/* 操作ボタン（race-controls / pack-controls） */
 .race-controls {
     display: flex;
     gap: 0.2rem;
     padding: 0.2rem;
 }
 
-/* 共通ボタン（重複統合） */
 .race-controls button {
     flex: 1 1 auto;
     width: 100%;
@@ -698,7 +935,6 @@
     opacity: .92;
 }
 
-/* pack-controls（4ボタン） */
 .race-controls.pack-controls {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -731,7 +967,7 @@
     }
 }
 
-/* +1 */
+/* +1 / 全解除 */
 .pack-select-all-btn,
 .select-all-btn {
     background: linear-gradient(135deg, #e3f2fd, #bbdefb);
@@ -740,7 +976,6 @@
     font-weight: 600;
 }
 
-/* 全解除 */
 .pack-clear-all-btn,
 .clear-all-btn {
     background: linear-gradient(135deg, #ffebee, #ffcdd2);
@@ -770,7 +1005,7 @@ section h4 {
 
 /* 種族枠 */
 .race-group {
-    margin: 0.3rem auto;
+    margin: 0.3rem 3px;
     border-radius: 6px;
     box-sizing: border-box;
     padding: 0.3rem;
@@ -802,8 +1037,7 @@ section h4 {
 }
 
 .race-group.race-旧神 {
-    background:
-        linear-gradient(90deg,
+    background: linear-gradient(90deg,
             rgba(255, 255, 255, 0.2),
             rgba(255, 215, 140, 0.3),
             rgba(180, 255, 255, 0.3),
@@ -838,12 +1072,10 @@ section h4 {
     }
 }
 
-/* カード画像（このページでは丸みをなくす） */
 .card-list .cardimg {
     border-radius: 0px;
 }
 
-/* 端末幅 */
 @media (max-width: 1024px) {
     .card-list .card {
         width: calc(100% / 6 - 5px);
@@ -921,9 +1153,8 @@ section h4 {
     border-image-slice: 1;
 }
 
-
 /* =====================================================
-   9. セグメント切替（全カード / 不足カード）
+   10. セグメント切替（全カード / 不足カード）
 ===================================================== */
 .view-toggle {
     background: #f3f4f6;
@@ -961,664 +1192,459 @@ section h4 {
     color: #7e57c2;
 }
 
+/* =====================================================
+   11. カード分析（owned-*） ※元構造維持（略：あなたの現状通り）
+   - ここは page3.css の元のまま（省略せず残したい場合は、今の版を貼り替えてOK）
+===================================================== */
+/* ★ ここから下は、あなたの既存 page3.css をそのまま使ってください（変更なし） */
+/*   ただし「race-summary」節だけはこの後の 14. で上書きされる想定です。 */
+
+
 
 /* =====================================================
-   10. カード分析（owned-*)  ※ここは元の構造を維持
-   - あまり触らず並び順だけ整えています
+   12. チェッカーノート
 ===================================================== */
-/* 全体レイアウト */
-.owned-container {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    gap: 3%;
-    position: relative;
-}
-
-/* 小見出し */
-.owned-aside h4,
-.owned-mobile h4 {
-    display: block;
-    margin: 0 0 0.3rem;
-    padding: 0.7em 0.7em 0.6em;
-    color: #fff;
-    font-weight: bold;
+/* SP：所持率メモ（race-summary-mobile の上） */
+.checker-note {
+    margin: 10px 0 6px;
+    padding: 4px 5px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, .04);
+    border: 1px solid rgba(0, 0, 0, .08);
+    font-size: 12px;
     line-height: 1.35;
-    background-color: #646464;
-    font-size: clamp(6px, 1.3vw, 19px);
-    padding: 0.6vw 6px;
 }
 
-/* 下部ページ送り */
-.pagination-controls {
-    text-align: center;
-    font-size: 20px;
-}
-
-/* 左右aside */
-.owned-aside {
-    width: 15%;
-    background: #f7f7f7;
-    padding: 5px;
-    border-radius: 8px;
-    font-size: clamp(10px, 1.4vw, 20px);
-    max-height: 45vw;
-    overflow-y: auto;
-}
-
-@media (max-width: 1024px) {
-    .owned-aside {
-        max-height: 120vw;
-    }
-}
-
-@media (max-width: 700px) {
-    .owned-aside {
-        display: none;
-    }
-}
-
-.owned-aside p {
-    margin: 0.5vw 0;
-}
-
-/* SP：検索、所持内訳 */
-.owned-search-mobile,
-.owned-summary-mobile {
-    display: none;
-}
-
-@media (max-width: 700px) {
-
-    .owned-search-mobile,
-    .owned-summary-mobile {
-        display: block;
-        width: 100%;
-        padding: 3px;
-        box-sizing: border-box;
-    }
-}
-
-/* 所持率反映ボタン */
-#apply-to-checker {
-    font-size: clamp(6px, 0.95vw, 15px);
-    width: 100%;
-    margin-bottom: 2px;
-    padding: 1px;
-}
-
-/* PC種族リスト */
-#owned-race-summary ul {
-    padding: 0;
-    list-style: none;
-}
-
-#owned-race-summary li {
-    font-size: clamp(10px, 1vw, 15px);
-    margin: 0.5vw 5px 0.5vw 0;
-    padding: 5px 0;
-    border-radius: 6px;
-    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
-    border-width: 3px;
-}
-
-#owned-race-summary div {
-    font-size: clamp(11px, 1.3vw, 18px);
-}
-
-#owned-race-summary p {
-    margin: 2px 0;
-}
-
-/* SP：所持枚数内訳 */
-@media (max-width: 700px) {
-    .owned-summary-mobile {
-        overflow-x: auto;
-        background: #f9f9f9;
-        border-top: 2px solid #ccc;
-        font-size: clamp(13px, 3.5vw, 25px);
-    }
-
-    .owned-summary-mobile h4 {
-        font-size: clamp(9px, 2.5vw, 18px);
-    }
-
-    .owned-summary-mobile .owned-total-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.5rem;
-        margin: 2px 0;
-    }
-
-    .owned-summary-mobile .owned-total-row p {
-        margin: 0;
-        font-size: clamp(9px, 2.5vw, 18px);
-    }
-
-    #apply-to-checker-mobile {
-        flex: 0 0 auto;
-        font-size: clamp(9px, 2.5vw, 18px);
-        padding: 5px;
-    }
-
-    .summary-scroll {
-        display: flex;
-        width: 100%;
-    }
-
-    .owned-summary-mobile .summary-card {
-        flex: 1 0 auto;
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
-        padding: 0.1rem;
-        text-align: center;
-    }
-
-    .owned-summary-mobile .summary-card span {
-        font-weight: bold;
-        margin-top: 0.2rem;
-    }
-
-    /*（変更予定）*/
-    #owned-race-summary-mobile.summary-scroll {
-        display: block;
-    }
-
-    .race-row {
-        display: flex;
-        justify-content: space-between;
-    }
-}
-
-/* フィルター検索 */
-.type-btn.selected {
-    background-color: #333;
-    color: white;
-}
-
-/* PC検索枠 */
-.owned-aside.right {
-    overflow-x: hidden;
-    max-width: 100%;
-}
-
-#keyword-input {
-    font-size: clamp(9px, 0.9vw, 14px);
-    width: 95%;
-    height: 1vw;
-}
-
-#open-filter-modal {
-    font-size: clamp(11px, 1vw, 15px);
-    width: 100%;
-}
-
-#type-toggle button {
-    display: block;
-    width: 100%;
-    box-sizing: border-box;
-    margin: 4px 0;
-}
-
-.type-btn {
-    font-size: clamp(11px, 1vw, 15px);
-}
-
-/* SP検索 */
-@media (max-width: 700px) {
-    .owned-search-mobile {
-        display: block;
-        background: #f9f9f9;
-        border-bottom: 2px solid #ccc;
-    }
-
-    .owned-search-mobile h4 {
-        margin-top: 5px;
-        font-size: clamp(9px, 2.5vw, 18px);
-    }
-
-    #keyword-input-mobile {
-        width: 100%;
-        font-size: 15px;
-    }
-
-    #open-filter-mobile {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.2rem;
-        align-items: center;
-    }
-
-    #open-filter-modal-mobile {
-        flex: 0 0 auto;
-        font-size: clamp(7px, 2vw, 15px);
-    }
-
-    .modal-backdrop {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 900;
-    }
-
-    #type-toggle-mobile .type-btn {
-        flex: 1 1 auto;
-        white-space: nowrap;
-        padding: 1px;
-        font-size: clamp(7px, 2vw, 15px);
-    }
-
-    #type-toggle-mobile {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.2rem;
-        flex: 1;
-    }
-}
-
-/* カード枚数一覧 */
-.owned-main {
-    position: relative;
-    width: 100%;
-}
-
-@media (max-width: 1024px) {
-    .owned-main {
-        max-width: 65%;
-        min-width: 400px;
-    }
-}
-
-@media (max-width: 700px) {
-    .owned-main {
-        max-width: 80%;
-        min-width: 200px;
-    }
-}
-
-/* グリッド */
-.owned-card-grid {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-}
-
-.owned-card-grid .card {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    margin: 1px;
-    padding: 2px;
-    border-radius: 6px;
-    text-align: center;
-    box-sizing: border-box;
-    min-width: 0;
-    flex: 0 0 calc(25% - 2px);
-}
-
-#owned-card-grid .card img {
-    width: 50%;
-    height: auto;
-    cursor: pointer;
-}
-
-@media (max-width: 1024px) {
-    #owned-card-grid .card img {
-        width: 100%;
-        height: auto;
-    }
-
-    #owned-card-grid .card {
-        display: block;
-        flex-direction: column;
-        align-items: center;
-    }
-}
-
-/* 種族別背景 + 変数 */
-.owned-race-ドラゴン {
-    background: rgba(255, 100, 100, 0.1);
-    --race-accent: var(--race-dragon);
-}
-
-.owned-race-アンドロイド {
-    background: rgba(100, 200, 255, 0.1);
-    --race-accent: var(--race-android);
-}
-
-.owned-race-エレメンタル {
-    background: rgba(100, 255, 150, 0.1);
-    --race-accent: var(--race-elemental);
-}
-
-.owned-race-ルミナス {
-    background: rgba(255, 250, 150, 0.2);
-    --race-accent: var(--race-luminous);
-}
-
-.owned-race-シェイド {
-    background: rgba(200, 150, 255, 0.2);
-    --race-accent: var(--race-shade);
-}
-
-.owned-race-イノセント {
-    background: rgba(220, 220, 220, 0.2);
-    --race-accent: var(--race-innocent);
-}
-
-.owned-race-旧神 {
-    background:
-        linear-gradient(90deg,
-            rgba(255, 255, 255, 0.2),
-            rgba(255, 215, 140, 0.3),
-            rgba(180, 255, 255, 0.3),
-            rgba(220, 180, 255, 0.3),
-            rgba(255, 255, 255, 0.2));
-    --race-accent: #a78bfa;
-}
-
-/* カード情報 */
-.owned-card-info {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    padding-left: 2px;
-    gap: 2px;
-    width: 50%;
-    min-width: 0;
-}
-
-@media (max-width: 1024px) {
-    .owned-card-info {
-        width: 100%;
-        margin-top: 3px;
-        padding-left: 0;
-    }
-}
-
-/* ±ボタン */
-.owned-card-controls {
+.checker-note-row {
     display: flex;
     align-items: center;
-    gap: 0;
-    height: auto;
-}
-
-.owned-card-controls button {
-    flex: 1 1 auto;
-    padding: 3px 0;
-    font-size: clamp(10px, 1.2vw, 1rem);
-}
-
-.count-display {
-    text-align: center;
-    width: 20%;
-    line-height: 20px;
-    font-size: clamp(10px, 0.9vw, 1rem);
-}
-
-/* メタ */
-.owned-card-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    text-align: left;
-    font-size: clamp(0.3rem, 0.7vw, 1rem);
-}
-
-.owned-card-meta br {
-    display: none;
-}
-
-@media (max-width: 1024px) {
-    .owned-card-meta {
-        font-size: clamp(5px, 1.3vw, 14px);
-    }
-}
-
-.owned-card-meta .meta-row {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: baseline;
-}
-
-.owned-card-meta .meta-label {
-    white-space: nowrap;
-    opacity: 0.8;
-}
-
-.owned-card-meta .meta-value {
-    justify-self: end;
-    text-align: right;
-    font-weight: 600;
-}
-
-/* 効果文ダイアログ */
-#effect-dialog {
-    position: fixed;
-    margin: 0;
-    padding: .4rem .6rem;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    background: #fff;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, .18);
-    z-index: 4000;
-}
-
-@media (max-width: 1024px) {
-    #effect-dialog {
-        padding: .2rem .4rem;
-    }
-}
-
-#effect-dialog::backdrop {
-    background: transparent;
-}
-
-#effect-dialog header {
-    display: flex;
     justify-content: space-between;
+    gap: 10px;
+}
+
+.checker-note-toggle {
+    display: flex;
     align-items: center;
+    gap: 8px;
+    min-width: 0;
 }
 
-#dlg-title {
-    font-size: clamp(0.3rem, 1.5vw, 20px);
+.checker-note-toggle span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-#effect-dialog header form {
-    display: inline-flex;
-    align-self: center;
-    margin: 0;
-    padding: 0;
+.checker-note-sub {
+    margin-top: 3px;
+    opacity: .85;
 }
 
-.icon-btn {
-    margin: auto 0;
-    border: 1px solid #e5e7eb;
-    background: #fff;
-    border-radius: .5rem;
-    padding: .25rem .5rem;
-    line-height: 1;
-    font-size: 18px;
+
+/* =====================================================
+   14. 種族別サマリー（PC/SP） ← 背景色を調整＆集約（今回のメイン）
+===================================================== */
+.race-summary-block {
+    padding: 10px 10px 12px;
+    border-radius: 12px;
+
+    /* ✅ ブロック背景：少し主張 */
+    background: linear-gradient(135deg, var(--race-summary-block-bg1), var(--race-summary-block-bg2));
+    border: 1px solid var(--race-summary-block-border);
+    box-shadow: var(--race-summary-shadow);
+
+    /* ✅ サイドバーの巨大 font-size clamp を打ち消す */
+    font-size: 12px;
+    line-height: 1.25;
 }
 
-#dlg-body {
-    white-space: pre-wrap;
-    line-height: 1.6;
-    font-size: clamp(0.3rem, 1.2vw, 15px);
+/* ✅ PCでは packs-root 側（-mobile）を出さない */
+@media (min-width: 701px) {
+    .race-summary-block.-mobile {
+        display: none;
+    }
 }
 
-/* グリッド左右矢印 */
-.grid-page-arrow {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background: #333;
-    color: #fff;
-    padding: 30px 4px;
+/* 折りたたみヘッダー（色を変えたい時は変数だけ） */
+.race-summary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--race-summary-header-border);
+
+    /* ✅ ヘッダー背景：白より少し色が乗る */
+    background: linear-gradient(135deg, var(--race-summary-header-bg1), var(--race-summary-header-bg2));
+
     cursor: pointer;
-    border-radius: 4px;
     user-select: none;
 }
 
-.grid-page-arrow.left-arrow {
-    left: -30px;
+.race-summary-header:focus-visible {
+    outline: 2px solid rgba(0, 0, 0, .25);
+    outline-offset: 2px;
 }
 
-.grid-page-arrow.right-arrow {
-    right: -30px;
+.race-summary-title {
+    font-weight: 900;
+    font-size: 13px;
+    margin: 0;
+    opacity: .95;
 }
 
-
-/* =====================================================
-   11. カード分析：フィルターモーダル
-===================================================== */
-#filter-modal {
-    display: none;
-    position: fixed;
-    left: 50%;
-    top: 10vh;
-    transform: translateX(-50%);
-    width: min(800px, 92vw);
-    max-height: 80vh;
-    overflow: auto;
-    background: #fff;
-    padding: 12px;
+.race-summary-toggle {
+    font-weight: 900;
+    font-size: 16px;
+    line-height: 1;
+    width: 1.6em;
+    text-align: center;
     border-radius: 8px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, .25);
-    z-index: 1001;
+    border: 1px solid rgba(0, 0, 0, .10);
+    background: rgba(255, 255, 255, .86);
 }
 
-#filter-modal h4 {
-    display: block;
-    margin: 0 0 0.3rem;
-    padding: 0.7em 0.7em 0.6em;
-    color: #fff;
-    font-weight: bold;
-    line-height: 1.35;
-    background-color: #646464;
-    font-size: clamp(15px, 4vw, 25px);
-    padding: 0.6vw 6px;
+.race-summary-body {
+    margin-top: 8px;
 }
 
-#filter-modal button.selected {
-    background-color: #333;
-    color: white;
-}
-
-#modal-backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, .5);
-    z-index: 1000;
-}
-
-
-/* =====================================================
-   12. （残置）パック枠：card-item 系
-   ※ここは他ページと共用の可能性があるので触らず整列のみ
-===================================================== */
-.card-item {
+.race-summary-list {
     display: grid;
-    grid-template-columns: 88px 1fr;
-    gap: .75rem;
-    align-items: start;
-    padding: .75rem;
-    border: 1px solid #e5e7eb;
-    border-radius: .75rem;
-    background: #fff;
+    gap: 2px;
 }
 
-.card-item img {
-    width: 88px;
-    height: 124px;
-    object-fit: cover;
-    border-radius: .5rem;
+@media (max-width: 700px) and (min-width: 520px) {
+    #race-summary-mobile .race-summary-list {
+        grid-template-columns: 1fr 1fr;
+        gap: 3px;
+    }
 }
 
-.meta {
-    display: flex;
-    flex-direction: column;
-    gap: .5rem;
+@media (max-width: 519px) {
+    #race-summary-mobile .race-summary-list {
+        grid-template-columns: 1fr;
+    }
 }
 
-.badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: .4rem;
-    font-size: .8rem;
+/* ✅ 各アイテム：背景にほんのり色を載せる */
+.race-summary-item {
+    padding: 8px 8px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--race-summary-item-border);
+    background: linear-gradient(135deg, var(--race-summary-item-bg1), var(--race-summary-item-bg2));
 }
 
-.badge {
-    padding: .15rem .45rem;
-    border-radius: 999px;
-    background: #f3f4f6;
-}
-
-.badge.rarity-legend {
-    background: #fde68a;
-}
-
-.badge.rarity-gold {
-    background: #ffe08a;
-}
-
-.badge.rarity-silver {
-    background: #e5e7eb;
-}
-
-.badge.rarity-bronze {
-    background: #f5d0a9;
-}
-
-.controls {
+.race-summary-head {
     display: flex;
     align-items: center;
-    gap: .4rem;
+    gap: 8px;
+    margin-bottom: 6px;
 }
 
-.count {
-    min-width: 3.5rem;
-    text-align: center;
+.race-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--race-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--race-accent), transparent 82%);
+}
+
+.race-name {
+    font-weight: 900;
+    font-size: 13px;
+}
+
+.race-val {
+    margin-left: auto;
     font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    font-size: 12px;
+    opacity: .9;
 }
 
-.step {
-    width: 2rem;
-    height: 2rem;
+/* サブ行（所持率/コンプ率） */
+.race-sub {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0 4px;
+    font-size: 12px;
+    opacity: .9;
+}
+
+.race-sub-label {
+    font-weight: 800;
+}
+
+.race-sub-val {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+/* 種族別 meter（ここだけ専用サイズ＆折り返し） */
+.race-summary-block .meter {
     display: grid;
-    place-items: center;
+    grid-template-columns: 50px 1fr auto;
+    align-items: center;
+    gap: .35rem;
 }
 
-.preview {
-    font-size: .85rem;
-    color: #6b7280;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+.race-summary-block .meter-label,
+.race-summary-block .meter-val {
+    font-size: 12px;
+    line-height: 1.15;
 }
 
+.race-summary-block .meter-val {
+    white-space: normal;
+    min-width: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+    flex-wrap: wrap;
+}
 
-/* =========================
-   Card name tooltip
-========================= */
+.race-summary-block .meter-frac,
+.race-summary-block .meter-pct {
+    white-space: nowrap;
+}
+
+.race-summary-block .meter-track {
+    min-width: 0;
+}
+
+/* さらに狭い時は縦積み（最終保険） */
+@media (max-width: 420px) {
+    .race-summary-block .meter {
+        grid-template-columns: 56px 1fr;
+        grid-template-areas:
+            "label value"
+            "bar   bar";
+    }
+
+    .race-summary-block .meter-label {
+        grid-area: label;
+    }
+
+    .race-summary-block .meter-track {
+        grid-area: bar;
+    }
+
+    .race-summary-block .meter-val {
+        grid-area: value;
+    }
+}
+
+/* meter の色（種族色） */
+.meter-bar.-raceOwn {
+    background: linear-gradient(90deg,
+            color-mix(in srgb, var(--race-accent), white 28%),
+            var(--race-accent));
+}
+
+.meter-bar.-raceComp {
+    background: linear-gradient(90deg,
+            color-mix(in srgb, var(--race-accent), white 55%),
+            color-mix(in srgb, var(--race-accent), black 10%));
+}
+
+.meter.-sub .meter-track {
+    height: 8px;
+}
+
+/* 旧神だけはドット＆ゲージを特別扱い */
+.race-summary-item.race-旧神 .race-dot {
+    background: var(--old-god);
+    box-shadow: none;
+}
+
+.race-summary-item.race-旧神 .meter-bar.-raceOwn,
+.race-summary-item.race-旧神 .meter-bar.-raceComp {
+    background:
+        linear-gradient(90deg, rgba(167, 139, 250, .75), rgba(167, 139, 250, .95)),
+        var(--old-god);
+    background-blend-mode: multiply;
+}
+
+/* =====================================================
+   15. レアリティ別サマリー（PC/SP）
+   - 種族別と同じUI
+===================================================== */
+
+.rarity-summary-block {
+    padding: 10px 10px 12px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--race-summary-block-bg1), var(--race-summary-block-bg2));
+    border: 1px solid var(--race-summary-block-border);
+    box-shadow: var(--race-summary-shadow);
+    font-size: 12px;
+    line-height: 1.25;
+}
+
+/* PCでは packs-root 側（-mobile）を出さない */
+@media (min-width: 701px) {
+    .rarity-summary-block.-mobile {
+        display: none;
+    }
+}
+
+/* 折りたたみヘッダー */
+.rarity-summary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--race-summary-header-border);
+    background: linear-gradient(135deg, var(--race-summary-header-bg1), var(--race-summary-header-bg2));
+    cursor: pointer;
+    user-select: none;
+}
+
+.rarity-summary-header:focus-visible {
+    outline: 2px solid rgba(0, 0, 0, .25);
+    outline-offset: 2px;
+}
+
+.rarity-summary-title {
+    font-weight: 900;
+    font-size: 13px;
+    margin: 0;
+    opacity: .95;
+}
+
+.rarity-summary-toggle {
+    font-weight: 900;
+    font-size: 16px;
+    opacity: .75;
+}
+
+.rarity-summary-body {
+    margin-top: 8px;
+}
+
+.rarity-summary-list {
+    display: grid;
+    gap: 2px;
+}
+
+@media (max-width: 700px) and (min-width: 520px) {
+    #rarity-summary-mobile .rarity-summary-list {
+        grid-template-columns: 1fr 1fr;
+        gap: 3px;
+    }
+}
+
+@media (max-width: 519px) {
+    #rarity-summary-mobile .rarity-summary-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+.rarity-summary-item {
+    padding: 8px 8px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--race-summary-item-border);
+    background: linear-gradient(135deg, var(--race-summary-item-bg1), var(--race-summary-item-bg2));
+}
+
+.rarity-summary-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.rarity-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--rarity-accent);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, .6);
+}
+.rarity-name {
+    font-weight: 900;
+    font-size: 13px;
+}
+
+.rarity-val {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    font-size: 12px;
+    opacity: .9;
+}
+
+/* meter レイアウトは種族別と同じ */
+.rarity-summary-block .meter {
+    display: grid;
+    grid-template-columns: 50px 1fr auto;
+    align-items: center;
+    gap: .35rem;
+}
+
+.rarity-summary-block .meter-label,
+.rarity-summary-block .meter-val {
+    font-size: 12px;
+    line-height: 1.15;
+}
+
+.rarity-summary-block .meter-val {
+    white-space: normal;
+    min-width: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.rarity-summary-block .meter-frac,
+.rarity-summary-block .meter-pct {
+    white-space: nowrap;
+}
+
+.rarity-summary-block .meter-track {
+    min-width: 0;
+}
+
+@media (max-width: 420px) {
+    .rarity-summary-block .meter {
+        grid-template-columns: 56px 1fr;
+        grid-template-areas:
+            "label value"
+            "bar   bar";
+    }
+
+    .rarity-summary-block .meter-label {
+        grid-area: label;
+    }
+
+    .rarity-summary-block .meter-track {
+        grid-area: bar;
+    }
+}
+
+/* ✅ レアリティ別ゲージ色 */
+.meter-bar.-rarityOwn,
+.meter-bar.-rarityComp {
+    background: var(--rarity-accent);
+}
+
+/* =====================================================
+    16. カード名ツールチップ (共通PC/SP)
+===================================================== */
 #card-name-tooltip {
     position: fixed;
     z-index: 99999;
     pointer-events: none;
     display: none;
-
     max-width: min(280px, 80vw);
     padding: 6px 10px;
     border-radius: 10px;
-
     background: rgba(20, 20, 20, 0.92);
     color: #fff;
     font-size: 12px;

@@ -115,6 +115,7 @@ body {
     display: block;
     border-radius: 6px;
     cursor:pointer;
+    aspect-ratio: 424/532;
 }
 /*カードでのダブルタップ防止（スマホ）*/
 button,
@@ -243,6 +244,47 @@ button,
     }
 }
 
+/* =========================
+    SP用：フローティング📸ボタン＆モーダル背景
+   ======================== */
+
+.floating-btn{
+    display: none;
+}
+
+@media (max-width: 768px) {
+
+    /* ===== 📸ボタン（小さめ＆分かりやすく） ===== */
+    .floating-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        position: fixed;
+        left: 10px;
+        bottom: calc(10px + env(safe-area-inset-bottom));
+        z-index: 1500;
+        padding: 12px 16px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, .95);
+        border: 1px solid rgba(0, 0, 0, .14);
+        box-shadow: 0 10px 22px rgba(0, 0, 0, .16);
+    }
+
+    .floating-btn .shot-btn-ico {
+        font-size: 14px;
+        line-height: 1;
+    }
+
+    .floating-btn .shot-btn-txt {
+        font-size: 18px;
+        font-weight: 900;
+        line-height: 1;
+    }
+}
+
+/* =========================
+       ヘッダー・フッター
+   ======================== */
 
 /*ヘッダー関連*/
 .main-header {

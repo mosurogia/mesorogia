@@ -614,13 +614,35 @@ function ensureRaceContainers_(){
     const moOwned       = document.getElementById('mobile-owned-count');
     const moTotal       = document.getElementById('mobile-total-count');
     const moPercent     = document.getElementById('mobile-owned-percent');
-    const missingTypes = Math.max(0, s.totalTypes - s.ownedTypes);
+    // ✅ 不足カード種類数（最大枚数に達していない種類）
+    // 通常カード：3枚 / 旧神：1枚
+    const missingTypes = (() => {
+      const S = window.OwnedStore;
+
+      // OwnedStore が無い/未初期化なら「未所持扱い」で全種類不足
+      if (!S || typeof S.get !== 'function') return s.totalTypes | 0;
+
+      let n = 0;
+      allCards.forEach(cardEl => {
+        const cd = cardEl?.dataset?.cd;
+        if (!cd) return;
+
+        const e = S.get(String(cd));
+        const own = (e?.normal | 0) + (e?.shine | 0) + (e?.premium | 0);
+
+        const race = cardEl?.dataset?.race || '';
+        const max = (race === '旧神') ? 1 : 3;
+
+        if (own < max) n++;
+      });
+      return n;
+    })();
 
     // モバイルの不足カードボタン
     const missBtnMobile = document.getElementById('show-missing-all-mobile');
     if (missBtnMobile) missBtnMobile.dataset.count = String(missingTypes);
 
-    // PC側にもボタンがあるなら（idは実際のものに合わせて）
+    // PC側にもボタンがあるなら
     const missBtnPc = document.getElementById('show-missing-all');
     if (missBtnPc) missBtnPc.dataset.count = String(missingTypes);
 

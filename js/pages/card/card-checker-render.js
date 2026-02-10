@@ -14,6 +14,22 @@
  */
 
 // =====================================================
+// 0) 依存関数のフォールバック（読み込み順が崩れても落ちない）
+// =====================================================
+const splitPackName_ = window.splitPackName || function(s){
+  const m = String(s || '').match(/^([^「]+)(?:「([^」]*)」)?/);
+  return { en: (m?.[1] || '').trim(), jp: (m?.[2] || '').trim() };
+};
+
+const makePackSlug_ = window.makePackSlug || function(en){
+  return String(en || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9\-]/g, '');
+};
+
+// =====================================================
 // 1) 定数・ユーティリティ
 // =====================================================
 
@@ -104,7 +120,7 @@ function buildPackSectionHTML(packEn, packJp, cardsGroupedByRace, packKey, packG
 
   const packSlug = (packKey != null && String(packKey).trim() !== '')
     ? String(packKey)
-    : makePackSlug(packEn);
+    : makePackSlug_(packEn);
 
   let html = '';
 
@@ -197,7 +213,7 @@ async function renderAllPacks({
   // --- JSON取得 ---
   let all;
   try {
-    const res = await fetch(jsonUrl, { cache: 'no-store' });
+    const res = await fetch(jsonUrl, { cache: 'no-cache' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     all = await res.json();
   } catch (err) {
@@ -217,7 +233,7 @@ async function renderAllPacks({
   // --- パック検出＆グループ化 ---
   const byPack = new Map(); // en -> {jp, cards:[]}
   for (const c of source){
-    const pn = splitPackName(c.pack_name);
+    const pn = splitPackName_(c.pack_name);
     if (!byPack.has(pn.en)) byPack.set(pn.en, { jp: pn.jp, cards: [] });
     byPack.get(pn.en).cards.push(c);
   }
@@ -425,7 +441,7 @@ function getPackOrderIndex() {
   const cards = Array.isArray(window.__cardsCache) ? window.__cardsCache : [];
   const byEn = new Map(); // en -> jp
   for (const c of cards) {
-    const pn = splitPackName(c.pack_name || c.pack || '');
+    const pn = splitPackName_(c.pack_name || c.pack || '');
     if (!pn.en) continue;
     if (!byEn.has(pn.en)) byEn.set(pn.en, pn.jp || '');
   }
@@ -448,7 +464,7 @@ function getPackOrderIndex() {
 
 // カードからパック英名(en)を取り出す（collectMissingのsortで使う）
 function packEnOf(card){
-  const pn = splitPackName(card.pack_name || card.pack || '');
+  const pn = splitPackName_(card.pack_name || card.pack || '');
   return pn.en || '';
 }
 
@@ -1000,7 +1016,8 @@ window.queryCardsByPack = window.queryCardsByPack || queryCardsByPack;
 
 async function initPacksThenRender() {
   try {
-    const catalog = await window.loadPackCatalog();
+    const catalog = await window.loadPackCatalog?.();
+    if (!catalog) throw new Error('loadPackCatalog missing');
     window.PACK_ORDER = catalog.order;
 
     // ✅ 追加：en -> key

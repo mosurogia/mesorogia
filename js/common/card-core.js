@@ -38,8 +38,10 @@
     './packs.json',
   ];
 
+
   // =====================================================
   // 1) JSON取得：最初に成功したものを返す（404/HTML混入も弾く）
+  //  - 重要: Promiseキャッシュの前提として「ここはキャッシュ許可」で取る
   // =====================================================
 
   async function fetchJsonFirstOk_(urls) {
@@ -47,15 +49,18 @@
 
     for (const url of (urls || [])) {
       try {
-        const res = await fetch(url, { cache: 'no-store' });
+        const res = await fetch(url, { cache: 'force-cache' }); // ✅ no-cache をやめる
         if (!res.ok) continue;
 
-        // content-type が怪しくても text→JSON.parse で判定
+        // content-type がJSONっぽいなら json() 優先（速い）
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+        if (ct.includes('application/json')) {
+          return await res.json();
+        }
+
+        // 怪しい場合だけ text → 判定 → parse
         const text = await res.text();
-
-        // 404 HTML を JSON として読んで落ちるのを防ぐ
-        if (/^\s*</.test(text)) continue;
-
+        if (/^\s*</.test(text)) continue; // HTML混入
         return JSON.parse(text);
       } catch (e) {
         lastErr = e;
@@ -66,165 +71,103 @@
   }
 
   // =====================================================
-  // 2) cards_latest.json：latest抽出
+  // 2) cards_latest.json：latest抽出（Promiseキャッシュ）
   // =====================================================
 
+  let __latestCardsPromise = null;
+
   async function fetchLatestCards() {
-    const allCards = await fetchJsonFirstOk_(window.CARDS_JSON_CANDIDATES);
-    if (!Array.isArray(allCards)) return [];
-    return allCards.filter(card => card && card.is_latest === true);
+    if (__latestCardsPromise) return __latestCardsPromise;
+
+    __latestCardsPromise = (async () => {
+      const allCards = await fetchJsonFirstOk_(window.CARDS_JSON_CANDIDATES);
+      if (!Array.isArray(allCards)) return [];
+      // is_latest だけ抽出
+      return allCards.filter(card => card && card.is_latest === true);
+    })();
+
+    return __latestCardsPromise;
   }
 
-  // グローバル公開（common-page124.js 等が呼ぶ）
+  // グローバル公開
   window.fetchLatestCards = window.fetchLatestCards || fetchLatestCards;
 
   // =====================================================
-  // 3) cardMap 構築（cd5正規化）
+  // 4) packs.json：カタログ（Promiseキャッシュ）
   // =====================================================
 
-  function normalizeCd5_(cdRaw) {
-    const cd5 = String(cdRaw ?? '').trim().padStart(5, '0');
-    return cd5 && cd5 !== '00000' ? cd5 : '';
-  }
-
-  function buildCardMapFromCards_(cards) {
-    if (!Array.isArray(cards)) return;
-
-    for (const card of cards) {
-      const cd5 = normalizeCd5_(card.cd ?? card.id);
-      if (!cd5) continue;
-
-      window.cardMap[cd5] = {
-        cd: cd5,
-        name: card.name || '',
-        race: card.race || '',
-        type: card.type || '',
-        cost: Number(card.cost ?? 0) || 0,
-        power: Number(card.power ?? 0) || 0,
-        rarity: card.rarity || '',
-        packName: card.pack_name || '',
-        category: card.category || '',
-        effect_name1: card.effect_name1 || '',
-        effect_text1: card.effect_text1 || '',
-        effect_name2: card.effect_name2 || '',
-        effect_text2: card.effect_text2 || '',
-      };
-    }
-  }
-
-  async function ensureCardMapLoaded() {
-    if (window.cardMap && Object.keys(window.cardMap).length > 0) return window.cardMap;
-
-    try {
-      const cards = await window.fetchLatestCards();
-      buildCardMapFromCards_(cards);
-    } catch (e) {
-      console.error('[card-core] ensureCardMapLoaded: カードマスタ読み込み失敗', e);
-    }
-    return window.cardMap;
-  }
-
-  window.ensureCardMapLoaded = window.ensureCardMapLoaded || ensureCardMapLoaded;
-
-  // =====================================================
-  // 4) packs.json：カタログ（packs.json → フォールバック）
-  // =====================================================
-
-  window.__PackCatalog = window.__PackCatalog || null;
-
-  function splitPackName(name = '') {
-    const s = String(name || '');
-
-    // 英名 + 「日本語」形式
-    if (s.includes('「')) {
-      const i = s.indexOf('「');
-      return { en: s.slice(0, i).trim(), jp: s.slice(i).trim() };
-    }
-
-    // 英名／日本語 形式（「」に寄せる）
-    if (s.includes('／')) {
-      const [en, jp = ''] = s.split('／');
-      return { en: en.trim(), jp: jp.trim() ? `「${jp.trim()}」` : '' };
-    }
-
-    return { en: s.trim(), jp: '' };
-  }
-
-  function makePackSlug(en = '') {
-    const base = String(en || '').trim();
-    const ascii = base
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    return ascii || base;
-  }
+  let __packCatalogPromise = null;
 
   async function loadPackCatalog() {
     if (window.__PackCatalog) return window.__PackCatalog;
+    if (__packCatalogPromise) return __packCatalogPromise;
 
-    try {
-      const raw = await fetchJsonFirstOk_(window.PACKS_JSON_CANDIDATES);
+    __packCatalogPromise = (async () => {
+      try {
+        const raw = await fetchJsonFirstOk_(window.PACKS_JSON_CANDIDATES);
 
-      const arr = Array.isArray(raw?.packs) ? raw.packs
-                : Array.isArray(raw?.list) ? raw.list
-                : [];
+        const arr = Array.isArray(raw?.packs) ? raw.packs
+                  : Array.isArray(raw?.list) ? raw.list
+                  : [];
 
-      const order = Array.isArray(raw?.order) ? raw.order : null;
+        const order = Array.isArray(raw?.order) ? raw.order : null;
 
-      const list = arr.map(p => {
-        const enRaw = String(p?.en ?? '').trim();
-        const jpRaw = String(p?.jp ?? '').trim();
+        const list = arr.map(p => {
+          const enRaw = String(p?.en ?? '').trim();
+          const jpRaw = String(p?.jp ?? '').trim();
 
-        const en = enRaw || (jpRaw ? jpRaw.replace(/[「」]/g, '') : '');
-        const jp = jpRaw || '';
+          const en = enRaw || (jpRaw ? jpRaw.replace(/[「」]/g, '') : '');
+          const jp = jpRaw || '';
 
-        const slug = p?.slug || makePackSlug(en);
-        const key = p?.key || slug;
+          const slug = p?.slug || makePackSlug(en);
+          const key = p?.key || slug;
 
-        return {
-          key,
-          en,
-          jp,
-          slug,
-          labelTwoLine: `${en}${jp ? `\n${jp}` : ''}`,
+          return {
+            key,
+            en,
+            jp,
+            slug,
+            labelTwoLine: `${en}${jp ? `\n${jp}` : ''}`,
+          };
+        });
+
+        const byEn = new Map(list.map(x => [x.en, x]));
+        const ord = (order && order.length) ? order : list.map(x => x.en);
+
+        window.__PackCatalog = { list, byEn, order: ord };
+        return window.__PackCatalog;
+
+      } catch (e) {
+        console.warn('[card-core] packs.json 読み込み失敗 → cards_latest.json から検出にフォールバック', e);
+
+        const cards = await window.fetchLatestCards();
+        const byEn = new Map();
+
+        cards.forEach(c => {
+          const { en, jp } = splitPackName(c.pack_name || '');
+          if (en && !byEn.has(en)) byEn.set(en, { en, jp, slug: makePackSlug(en) });
+        });
+
+        const list = [...byEn.values()].sort((a, b) => a.en.localeCompare(b.en, 'ja'));
+        list.forEach(x => {
+          x.key = x.slug;
+          x.labelTwoLine = `${x.en}${x.jp ? `\n${x.jp}` : ''}`;
+        });
+
+        window.__PackCatalog = {
+          list,
+          byEn: new Map(list.map(x => [x.en, x])),
+          order: list.map(x => x.en),
         };
-      });
+        return window.__PackCatalog;
+      }
+    })();
 
-      const byEn = new Map(list.map(x => [x.en, x]));
-      const ord = (order && order.length) ? order : list.map(x => x.en);
-
-      window.__PackCatalog = { list, byEn, order: ord };
-      return window.__PackCatalog;
-
-    } catch (e) {
-      console.warn('[card-core] packs.json 読み込み失敗 → cards_latest.json から検出にフォールバック', e);
-
-      const cards = await window.fetchLatestCards();
-      const byEn = new Map();
-
-      cards.forEach(c => {
-        const { en, jp } = splitPackName(c.pack_name || '');
-        if (en && !byEn.has(en)) byEn.set(en, { en, jp, slug: makePackSlug(en) });
-      });
-
-      const list = [...byEn.values()].sort((a, b) => a.en.localeCompare(b.en, 'ja'));
-      list.forEach(x => {
-        x.key = x.slug;
-        x.labelTwoLine = `${x.en}${x.jp ? `\n${x.jp}` : ''}`;
-      });
-
-      window.__PackCatalog = {
-        list,
-        byEn: new Map(list.map(x => [x.en, x])),
-        order: list.map(x => x.en),
-      };
-      return window.__PackCatalog;
-    }
+    return __packCatalogPromise;
   }
 
-  window.splitPackName = window.splitPackName || splitPackName;
-  window.makePackSlug = window.makePackSlug || makePackSlug;
   window.loadPackCatalog = window.loadPackCatalog || loadPackCatalog;
+
 
   // =====================================================
   // 5) パック略称キー（A〜Z / SPECIAL / COLLAB / ''）

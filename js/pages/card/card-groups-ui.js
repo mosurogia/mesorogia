@@ -28,6 +28,12 @@ function ensureReady_() {
 // UI上の「選択中グループ」（activeId/editingIdとは別）
 let uiSelectedId = '';
 
+// UI側の選択解除を外部から呼べるようにする（cardFilter から使う）
+window.__CardGroupsUI = window.__CardGroupsUI || {};
+window.__CardGroupsUI.clearSelected = function () {
+  uiSelectedId = '';
+};
+
 // rAFで重い処理を“1回だけ”にまとめる（固まり対策）
 let rafQueued = false;
 function scheduleHeavySync_() {
@@ -208,33 +214,54 @@ function rowHtml_(g, st) {
     const isEditing = st.editingId === g.id;
     const isSelected = uiSelectedId === g.id;
 
+    // ✅ 合計枚数（cd->count 形式も、cd->true 形式も吸収）
+    const cardsObj = g.cards || {};
+    const total = Object.values(cardsObj).reduce((sum, v) => {
+    if (typeof v === 'number') return sum + (v | 0);
+    // boolean / null / {} などは “1枚扱い” に寄せる
+    return sum + 1;
+    }, 0);
+
     // サムネ：先頭8枚（必要なら9）
-    const allCds = Object.keys(g.cards || {});
+    const allCds = Object.keys(cardsObj);
     const cds = allCds.slice(0, 8).map(cd => String(cd).padStart(5, '0'));
     const more = Math.max(0, allCds.length - cds.length);
 
-    return `
-    <div class="cg-row ${isActive ? 'is-active' : ''} ${isEditing ? 'is-editing' : ''} ${isSelected ? 'is-selected' : ''}"
-        data-gid="${g.id}">
-        <div class="cg-row-top">
-        <!-- グループ名：クリックで編集 -->
-        <button type="button" class="cg-name-btn" title="クリックで名前変更">${escapeHtml_(g.name)}</button>
+    // 0枚時の表示文言（編集状態なら文言変えてもOK）
+    const emptyLabel = st.editingId === g.id
+    ? 'カード未選択（カードをタップして追加）'
+    : 'ここにカードが表示されます';
 
-        <!-- インライン編集 -->
-        <input class="cg-name-input" type="text" value="${escapeHtml_(g.name)}"
-                aria-label="グループ名を編集" />
+    return `
+        <div class="cg-row ${isActive ? 'is-active' : ''} ${isEditing ? 'is-editing' : ''} ${isSelected ? 'is-selected' : ''}"
+        data-gid="${g.id}" data-fixed="${g.fixed ? '1' : ''}">
+        <div class="cg-row-top">
+            <button type="button" class="cg-name-btn" title="グループ名をクリックで編集">
+            <span class="cg-name-text">${escapeHtml_(g.name)}</span>
+            </button>
+            <input class="cg-name-input" type="text" value="${escapeHtml_(g.name)}"
+            aria-label="グループ名を編集" />
+            <!-- 枚数表示 -->
+            <span class="cg-count" title="このグループの枚数">${total}枚</span>
+
         </div>
 
         <div class="cg-mini" aria-label="グループ内カードの簡易表示">
-        ${cds.map((cd, i) => `
-            <span class="cg-mini-card" style="--i:${i}">
-            <img src="img/${escapeHtml_(cd)}.webp" alt="" loading="lazy" decoding="async"
-                onerror="this.onerror=null;this.src='img/00000.webp';" />
-            </span>
-        `).join('')}
-        ${more ? `<span class="cg-mini-more">+${more}</span>` : ``}
+            ${
+            allCds.length === 0
+                ? `<div class="cg-mini-empty">${escapeHtml_(emptyLabel)}</div>`
+                : `
+                ${cds.map((cd, i) => `
+                    <span class="cg-mini-card" style="--i:${i}">
+                    <img src="img/${escapeHtml_(cd)}.webp" alt="" loading="lazy" decoding="async"
+                        onerror="this.onerror=null;this.src='img/00000.webp';" />
+                    </span>
+                `).join('')}
+                ${more ? `<span class="cg-mini-more">+${more}</span>` : ``}
+                `
+            }
         </div>
-    </div>
+        </div>
     `.trim();
 }
 
@@ -258,24 +285,29 @@ function bindRowEvents_(root) {
 
     const st = window.CardGroups.getState();
 
-    // ① グループ名クリック → 編集開始（インライン）
-    const nameBtn = e.target.closest('.cg-name-btn');
-    if (nameBtn) {
-      e.preventDefault();
-      e.stopPropagation();
+    // ① グループ名クリック → 名前編集モードへ（固定グループは除外）
+    const nameText = e.target.closest('.cg-name-text');
+    if (nameText) {
+    e.preventDefault();
+    e.stopPropagation();
 
-      // 選択もこの行に寄せる
-      uiSelectedId = gid;
+    // ✅ fixed（お気に入り / メタカード）は rename に入らない
+    const g = st.groups?.[gid];
+    if (g?.fixed) {
+        uiSelectedId = gid;          // 選択だけはする（好みで）
+        scheduleHeavySync_();        // 見た目更新（任意）
+        return;
+    }
 
-      // 入力を出す
-      const input = row.querySelector('.cg-name-input');
-      if (!input) return;
+    uiSelectedId = gid;
+    const input = row.querySelector('.cg-name-input');
+    if (!input) return;
 
-      row.classList.add('is-renaming');
-      input.style.display = '';
-      input.focus();
-      input.select();
-      return;
+    row.classList.add('is-renaming');
+    input.style.display = '';
+    input.focus();
+    input.select();
+    return;
     }
 
     // ② それ以外の部分 → 行選択（※解除時は後で外す）
@@ -294,6 +326,9 @@ function bindRowEvents_(root) {
         // 選択適用：activeにして、UI選択もそのまま
         window.CardGroups?.setActive?.(gid);
         uiSelectedId = gid;
+
+        // ✅ SPドロワー：必要なら「選択後に閉じる」（ユーザー設定ON時のみ）
+        try { window.__SpGroupDrawer?.onGroupSelected?.(); } catch {}
     }
     }
 
@@ -403,21 +438,31 @@ function bindCardTapOverride_() {
 }
 
 function init() {
-    if (!ensureReady_()) return;
+  if (!ensureReady_()) return;
 
-    window.CardGroups.onChange(() => {
-    // editingId が変わったら選択も追従（使いやすさ）
-    try {
-        const st = window.CardGroups.getState();
-        if (st.editingId) uiSelectedId = st.editingId;
-    } catch {}
-    scheduleHeavySync_();
-    });
+  // ✅ 再読込時はグループフィルターを解除
+  try {
+    window.CardGroups?.clearActiveOnBoot?.();
+  } catch {}
 
-    renderSidebar_();
-    applyEditVisual_();
-    bindCardTapOverride_();
+window.CardGroups.onChange(() => {
+  try {
+    const st = window.CardGroups.getState();
+    if (st.editingId) {
+      uiSelectedId = st.editingId;
+    } else if (!st.activeId) {
+      // ✅ 外部解除（チップ解除など）で「選択中」が残るのを防ぐ
+      uiSelectedId = '';
+    }
+  } catch {}
+  scheduleHeavySync_();
+});
+
+  renderSidebar_();
+  applyEditVisual_();
+  bindCardTapOverride_();
 }
+
 
 window.addEventListener('DOMContentLoaded', init);
 window.addEventListener('card-page:ready', init);

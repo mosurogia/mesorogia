@@ -97,13 +97,37 @@
     return st.order.length < MAX_GROUPS;
   }
 
+  // ✅ 同名回避用ユーティリティ
+function uniqueName_(base, st, exceptId = '') {
+  const raw = String(base || '').trim() || `グループ${st.order.length + 1}`;
+  const used = new Set(
+    st.order
+      .map(id => st.groups[id])
+      .filter(g => g && g.id !== exceptId)
+      .map(g => String(g.name || '').trim())
+      .filter(Boolean)
+  );
+
+  if (!used.has(raw)) return raw;
+
+  // すでにあるなら「（2）」から
+  let n = 2;
+  while (n < 999) {
+    const cand = `${raw}（${n}）`;
+    if (!used.has(cand)) return cand;
+    n++;
+  }
+  return `${raw}（${Date.now()}）`;
+}
+
   function createGroup(name = '新しいグループ') {
     const st = getState();
     if (st.order.length >= MAX_GROUPS) return { ok: false, reason: 'limit' };
 
     const id = nowId_();
-    // 同名OK、空は防ぐ（バグ回避）
-    const safeName = String(name || '').trim() || `グループ${st.order.length + 1}`;
+
+    // ✅ 同名回避（（2）（3）…）＋空防止
+    const safeName = uniqueName_(name, st);
 
     st.groups[id] = { id, name: safeName, fixed: false, cards: {} };
     st.order.push(id);
@@ -117,11 +141,15 @@
     if (!g) return { ok: false };
     if (g.fixed) return { ok: false, reason: 'fixed' };
 
-    const safeName = String(name || '').trim() || `グループ${st.order.indexOf(id) + 1}`;
+    // ✅ 自分以外との同名を回避（自分自身は許可）
+    const fallback = `グループ${st.order.indexOf(id) + 1}`;
+    const safeName = uniqueName_(String(name || '').trim() || fallback, st, id);
+
     g.name = safeName;
     setState_(st);
     return { ok: true };
   }
+
 
   function deleteGroup(id) {
     const st = getState();
@@ -181,15 +209,18 @@
     if (st.order.length >= MAX_GROUPS) return { ok:false, reason:'limit' };
 
     const id = nowId_();
-    const safeName = String(name || '').trim() || `グループ${st.order.length + 1}`;
+
+    // ✅ 同名回避（（2）（3）…）＋空防止
+    const safeName = uniqueName_(name, st);
+
     st.groups[id] = { id, name: safeName, fixed:false, cards:{} };
     st.order.push(id);
 
-    // ✅ 編集だけ開始（active=フィルターは触らない）
     st.editingId = id;
     setState_(st);
     return { ok:true, id };
   }
+
 
   function stopEditing() {
     const st = getState();
@@ -242,6 +273,14 @@
     if (typeof fn === 'function') listeners.add(fn);
   }
 
+  // card-groups.js の公開API付近
+  function clearActiveOnBoot_() {
+    const st = getState();
+    st.activeId = '';
+    st.editingId = '';
+    setState_(st);
+  }
+
   window.CardGroups = {
     MAX_GROUPS,
     getState,
@@ -261,5 +300,6 @@
     getActiveFilterSet,
     getEditingId,
     onChange,
+    clearActiveOnBoot: clearActiveOnBoot_,
   };
 })();

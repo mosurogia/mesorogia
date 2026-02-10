@@ -17,13 +17,15 @@
 ==================================================*/
 //#region 1. 初期設定
 
-function initCardListPage_(){
-  try { loadCards(); } catch (e) { console.warn('[card-list] loadCards failed', e); }
+let __cardListInited = false;
 
-  // owned-mark sync (card list)
+function initCardListPage_(){
+  if (__cardListInited) return;
+  __cardListInited = true;
+
+  try { loadCards(); } catch (e) { console.warn('[card-list] loadCards failed', e); }
   try { window.OwnedUI?.bind?.("#grid"); } catch (e) { console.warn('[card-list] OwnedUI.bind(#grid) failed', e); }
 
-  // ✅ 並び替え：grid/list どちらでも反映
   const sortEl = document.getElementById('sort-select');
   if (sortEl && !sortEl.dataset.bound) {
     sortEl.dataset.bound = '1';
@@ -34,12 +36,8 @@ function initCardListPage_(){
     });
   }
 
-  // 長押し（画像ズーム）
-  setTimeout(() => {
-    try { window.__bindLongPressForCards?.('list'); } catch {}
-  }, 0);
+  setTimeout(() => { try { window.__bindLongPressForCards?.('list'); } catch {} }, 0);
 }
-
 
 // loader経由でも確実に動くように両対応
 window.addEventListener('DOMContentLoaded', initCardListPage_);

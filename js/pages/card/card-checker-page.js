@@ -88,7 +88,7 @@
     try {
       if (Array.isArray(window.packs) && window.packs.length) return;
 
-      const res = await fetch('public/packs.json', { cache: 'no-store' });
+      const res = await fetch('public/packs.json', { cache: 'no-cache' });
       const raw = await res.json();
       const arr = normalizePacks_(raw);
 

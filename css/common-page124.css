@@ -269,10 +269,6 @@
         margin-left: auto;
     }
 
-    .search-bar button[onclick*="openFilterModal('groups"] {
-        order: 5;
-    }
-
     .type-icon-btn {
         width: 32px;
         height: 32px;
@@ -1057,6 +1053,46 @@
     #active-chips-bar .chip-mini {
         gap: 4px;
     }
+}
+
+/* =====================================================
+   17) CARDS EMPTY STATE（カードが見つからないときの表示）
+===================================================== */
+
+.cards-empty-state {
+    margin: 10px 8px;
+    padding: 12px 12px;
+    background: #fff;
+    border: 1px dashed rgba(0, 0, 0, .25);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+}
+
+.cards-empty-title {
+    font-weight: 900;
+    font-size: 14px;
+}
+
+.cards-empty-text {
+    margin-top: 4px;
+    font-size: 13px;
+    opacity: .85;
+}
+
+.cards-empty-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.cards-empty-btn {
+    border: 1px solid rgba(0, 0, 0, .18);
+    background: #f7f7f9;
+    border-radius: 999px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-weight: 800;
 }
 
 

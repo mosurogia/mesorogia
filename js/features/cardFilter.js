@@ -496,13 +496,15 @@
 
     // ✅ 編集中はフィルター適用しない方針なので、チップも出さない
     if (!editingId && activeId) {
-        chips.push({
+    chips.push({
         label: `グループ:${gName}`,
         onRemove: () => {
-            window.CardGroups?.setActive?.('');
-            applyFilters(); // 即反映
+        // ✅ UI側の「選択中」も解除（チップ解除でasideが選択中のまま残るバグ対策）
+        try { window.__CardGroupsUI?.clearSelected?.(); } catch {}
+        window.CardGroups?.setActive?.('');
+        applyFilters(); // 即反映
         }
-        });
+    });
     }
     } catch {}
 
@@ -609,6 +611,134 @@
         // バー自体（枚数だけ出す用途もあるので showBar で表示）
         bar.style.display = showBar ? '' : 'none';
     }
+
+
+    // =====================================================
+    // Empty state（表示0件メッセージ）
+    // - 空グループ適用中（cards=0）と、通常フィルター0件を出し分け
+    // =====================================================
+    function renderEmptyState_(visibleCount) {
+    const grid = document.getElementById('grid');
+    if (!grid) return;
+
+    // 既存を取得/生成
+    let box = document.getElementById('cards-empty-state');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'cards-empty-state';
+        box.className = 'cards-empty-state';
+        // chips bar の下に置きたい（無ければ grid の直前）
+        const bar = document.getElementById('active-chips-bar');
+        if (bar && bar.parentNode) bar.insertAdjacentElement('afterend', box);
+        else grid.parentNode?.insertBefore(box, grid);
+    }
+
+    // 0件じゃないなら隠す
+    if (visibleCount > 0) {
+        box.style.display = 'none';
+        box.innerHTML = '';
+        return;
+    }
+
+    // --- ここから 0件時の内容分岐 ---
+    let mode = 'normal';
+    let groupName = '';
+
+    try {
+        const st = window.CardGroups?.getState?.();
+        const editingId = st?.editingId || '';
+        const activeId  = st?.activeId  || '';
+
+        // 編集中は “カード選択のために全カード表示” の方針なので、
+        // ここでは空表示を出さない（必要なら変えてOK）
+        if (editingId) {
+        box.style.display = 'none';
+        box.innerHTML = '';
+        return;
+        }
+
+        if (activeId) {
+        const g = st?.groups?.[activeId];
+        const cnt = g ? Object.keys(g.cards || {}).length : 0;
+        groupName = g?.name || '';
+        if (cnt === 0) mode = 'empty-group';
+        else mode = 'group-nohit'; // グループはあるが、他フィルターで0件
+        }
+    } catch {}
+
+    // 表示文言
+    if (mode === 'empty-group') {
+        box.innerHTML = `
+        <div class="cards-empty-title">このグループは空です</div>
+        <div class="cards-empty-text">✏️で編集してカードを追加してください</div>
+        <div class="cards-empty-actions">
+            <button type="button" class="cards-empty-btn" data-act="edit">編集する</button>
+            <button type="button" class="cards-empty-btn" data-act="clear-group">全カードに戻る</button>
+        </div>
+        `;
+    } else if (mode === 'group-nohit') {
+        const name = groupName ? `（${groupName}）` : '';
+        box.innerHTML = `
+        <div class="cards-empty-title">表示できるカードがありません${name}</div>
+        <div class="cards-empty-text">グループ内カードが、現在の絞り込み条件に一致しません。</div>
+        <div class="cards-empty-actions">
+            <button type="button" class="cards-empty-btn" data-act="clear-filters">フィルターを解除</button>
+            <button type="button" class="cards-empty-btn" data-act="clear-group">全カードに戻る</button>
+        </div>
+        `;
+    } else {
+        box.innerHTML = `
+        <div class="cards-empty-title">表示できるカードがありません</div>
+        <div class="cards-empty-text">条件をゆるめて再検索してください。</div>
+        <div class="cards-empty-actions">
+            <button type="button" class="cards-empty-btn" data-act="clear-filters">フィルターを解除</button>
+        </div>
+        `;
+    }
+
+    // ボタン動作（イベント委譲）
+    if (!box.dataset.bound) {
+        box.dataset.bound = '1';
+        box.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-act]');
+        if (!btn) return;
+        const act = btn.dataset.act;
+
+        if (act === 'edit') {
+            // active を編集開始
+            try {
+            const st = window.CardGroups?.getState?.();
+            const activeId = st?.activeId || '';
+            if (activeId) window.CardGroups.startEditing(activeId);
+            } catch {}
+            applyFilters();
+            return;
+        }
+
+        if (act === 'clear-group') {
+        try {
+            // ✅ UI側の選択状態も解除（重要）
+            window.__CardGroupsUI?.clearSelected?.();
+
+            // グループフィルター解除（これで onChange → sidebar再描画が走る）
+            window.CardGroups?.setActive?.('');
+        } catch {}
+
+        applyFilters();
+        return;
+        }
+
+        if (act === 'clear-filters') {
+            // resetFilters はタイプUI等も戻すのでこれが一番確実
+            try { resetFilters(); } catch { applyFilters(); }
+            return;
+        }
+        });
+    }
+
+    box.style.display = '';
+    }
+
 
     // ==============================
     // 所持フィルター（サイクル）
@@ -717,7 +847,27 @@
 
         const gridRoot = document.getElementById('grid') || document;
 
-        const groupSet = window.CardGroups?.getActiveFilterSet?.() || null;
+        // ✅ グループフィルター：activeId があるなら「空でも」有効化する
+        // - 編集中(editingId)はグループ絞り込みしない（方針通り）
+        // - 空グループ(activeだが cards=0) → 全カードが弾かれて 0件になる
+        let groupSet = null;
+        let groupFilterActive = false;
+
+        try {
+        const stG = window.CardGroups?.getState?.();
+        const editingId = stG?.editingId || '';
+        const activeId  = stG?.activeId  || '';
+
+        if (!editingId && activeId) {
+            groupFilterActive = true;
+
+            // getActiveFilterSet が空のとき null を返す場合に備えて自前で Set を作る
+            const g = stG?.groups?.[activeId];
+            const cds = g ? Object.keys(g.cards || {}) : [];
+            groupSet = new Set(cds.map(cd => String(cd).padStart(5, '0')));
+        }
+        } catch {}
+
         gridRoot.querySelectorAll('.card').forEach(card => {
         const haystack =
             (card.dataset.keywords?.toLowerCase()) ||
@@ -779,10 +929,10 @@
 
         let visible = matchesKeyword && matchesFilters && matchesCost && matchesPower;
 
-        // ✅ グループフィルター（通常時のみ。編集モード中は groupSet=null）
-        if (visible && groupSet) {
-            const cd = String(card.dataset.cd || '').padStart(5, '0');
-            if (!groupSet.has(cd)) visible = false;
+        // ✅ グループフィルター（activeId があるなら空でも適用）
+        if (visible && groupFilterActive) {
+        const cd = String(card.dataset.cd || '').padStart(5, '0');
+        if (!groupSet || !groupSet.has(cd)) visible = false;
         }
 
         // 所持フィルター反映
@@ -832,6 +982,19 @@
         renderActiveFilterChips();
         // ✅ リスト表示の row 表示を最終確定（cardsViewMode 側の同期関数があれば呼ぶ）
         try { window.syncListRowVisibility_?.(); } catch {}
+        // ✅ 0件表示メッセージ
+        try {
+        const grid = document.getElementById('grid');
+        let visibleCount = 0;
+        if (grid) {
+            grid.querySelectorAll('.card').forEach(el => {
+            if (el.hidden) return;
+            if (el.style.display === 'none') return;
+            visibleCount++;
+            });
+        }
+        renderEmptyState_(visibleCount);
+        } catch {}
     }
 
     // ==============================
@@ -868,6 +1031,10 @@
             updateOwnedCycleBtn(cycleBtn);
         }
         }
+
+        try { window.CardGroups?.setActive?.(''); } catch {}
+        try { window.CardGroups?.stopEditing?.(); } catch {}
+        try { window.__CardGroupsUI?.clearSelected?.(); } catch {}
 
         applyFilters();
         setQuickTypeUI_('all');
@@ -949,6 +1116,9 @@
         document.getElementById('detail-filters');
 
         if (!hasCardFilterUI) return;
+
+        // CardGroups のアクティブ状態をクリア（ページ再訪問時の影響防止）
+        try { window.CardGroups?.clearActiveOnBoot?.(); } catch {}
 
         // フィルターボタン（selected切替）＋タイプ即時フィルター
         document.addEventListener('click', (e) => {
@@ -1060,52 +1230,14 @@
         });
         }
 
-        // ==============================
-        // フィルターモーダル：タブ切替（フィルター / グループ）
-        // ==============================
-        function setModalTab_(tab) {
-        const modal = document.getElementById('filterModal');
-        if (!modal) return;
-
-        const tabs = Array.from(modal.querySelectorAll('.filter-modal-tab'));
-        const panes = Array.from(modal.querySelectorAll('.filter-modal-pane'));
-
-        tabs.forEach(b => {
-            const on = (b.dataset.tab === tab);
-            b.classList.toggle('is-active', on);
-            b.setAttribute('aria-selected', on ? 'true' : 'false');
-        });
-
-        panes.forEach(p => {
-            const on = (p.dataset.pane === tab);
-            p.classList.toggle('is-active', on);
-            p.setAttribute('aria-hidden', on ? 'false' : 'true');
-        });
-
-        try { localStorage.setItem('cardFilterModalTab', tab); } catch {}
-        }
-
-        function bindModalTabs_(){
-        const modal = document.getElementById('filterModal');
-        if (!modal || modal.dataset.tabsBound) return;
-        modal.dataset.tabsBound = '1';
-
-        modal.addEventListener('click', (e) => {
-            const btn = e.target.closest('.filter-modal-tab');
-            if (!btn) return;
-            setModalTab_(btn.dataset.tab || 'filters');
-        });
-        }
-
-        // init() の中で呼ぶ
+        // タブバインド（上で定義済みの bindModalTabs_ を使う）
         bindModalTabs_();
 
-        // open時に「最後に開いてたタブ」を復元（なければfilters）
+        // 起動時：最後のタブを復元
         const savedTab = (() => {
         try { return localStorage.getItem('cardFilterModalTab') || 'filters'; } catch { return 'filters'; }
         })();
         setModalTab_(savedTab);
-
 
         // UI生成
         generateFilterUI().catch(console.warn);

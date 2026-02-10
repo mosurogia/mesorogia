@@ -335,43 +335,16 @@
   - パネル：最小UI
   - トリミング：別モーダル（ドラッグバー）
 ========================*/
-.floating-shot-btn,
 .shot-panel-backdrop {
     display: none;
 }
 
-.shot-crop-modal[hidden],
-.shot-panel-backdrop[hidden] {
+.shot-panel-backdrop[hidden],
+.shot-crop-modal[hidden] {
     display: none !important;
 }
 
 @media (max-width: 768px) {
-    /* ===== 📸ボタン（小さめ＆分かりやすく） ===== */
-    .floating-shot-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        position: fixed;
-        left: 10px;
-        bottom: 20px;
-        z-index: 2500;
-        padding: 15px 20px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, .95);
-        border: 1px solid #ddd;
-        box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
-    }
-
-    .floating-shot-btn .shot-btn-ico {
-        font-size: 14px;
-        line-height: 1;
-    }
-
-    .floating-shot-btn .shot-btn-txt {
-        font-size: 18px;
-        font-weight: 900;
-        line-height: 1;
-    }
 
     /* ===== パネル外タップ受け ===== */
     .shot-panel-backdrop {
@@ -387,7 +360,7 @@
         position: fixed;
         left: 10px;
         /* ✅ iOSの下側UI/安全領域ぶん持ち上げる */
-        bottom: calc(75px + env(safe-area-inset-bottom));
+        bottom: calc(60px + env(safe-area-inset-bottom));
         z-index: 3400;
 
         width: clamp(200px, 60vw, 500px);

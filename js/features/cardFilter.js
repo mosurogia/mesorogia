@@ -487,6 +487,26 @@
 
         const chips = [];
 
+    // ---カードグループフィルター（チップバー表示＆解除） ---
+    try {
+    const st = window.CardGroups?.getState?.();
+    const editingId = st?.editingId || '';
+    const activeId  = st?.activeId  || '';
+    const gName = activeId ? (st?.groups?.[activeId]?.name || 'グループ') : '';
+
+    // ✅ 編集中はフィルター適用しない方針なので、チップも出さない
+    if (!editingId && activeId) {
+        chips.push({
+        label: `グループ:${gName}`,
+        onRemove: () => {
+            window.CardGroups?.setActive?.('');
+            applyFilters(); // 即反映
+        }
+        });
+    }
+    } catch {}
+
+
     // キーワード
     const kwEl = document.getElementById('keyword');
     const kw = (kwEl?.value || '').trim();

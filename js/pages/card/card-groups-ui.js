@@ -51,16 +51,29 @@ function renderSidebar_() {
     // 選択が消えてたらクリア
     if (uiSelectedId && !st.groups[uiSelectedId]) uiSelectedId = '';
 
-    // status（未選択時の警告もここに出す）
-    const baseStatus = st.editingId
-    ? `編集中：<b>${escapeHtml_(st.groups[st.editingId]?.name || '')}</b>`
-    : (st.activeId
-        ? `適用中：<b>${escapeHtml_(st.groups[st.activeId]?.name || '')}</b>`
-        : '（全カード表示）');
+    // status（未選択時は warn のみ＋案内文を下に出す）
+    let baseStatus = '';
+    if (st.editingId) {
+    baseStatus = `編集中：<b>${escapeHtml_(st.groups[st.editingId]?.name || '')}</b>`;
+    } else if (st.activeId) {
+    baseStatus = `適用中：<b>${escapeHtml_(st.groups[st.activeId]?.name || '')}</b>`;
+    }
 
-    const selectedHint = uiSelectedId
-    ? ` / 選択：<b>${escapeHtml_(st.groups[uiSelectedId]?.name || '')}</b>`
-    : ` / <span class="cg-warn">グループ未選択</span>`;
+    // status：表示文字列を1本化（全部同じ場所に出す）
+    let statusLine = '';
+    let helpLine = '';
+
+    // 優先度：編集中 > 適用中 > 選択中 > 未選択
+    if (st.editingId) {
+    statusLine = `編集中：<b>${escapeHtml_(st.groups[st.editingId]?.name || '')}</b>`;
+    } else if (st.activeId) {
+    statusLine = `適用中：<b>${escapeHtml_(st.groups[st.activeId]?.name || '')}</b>`;
+    } else if (uiSelectedId) {
+    statusLine = `選択：<b>${escapeHtml_(st.groups[uiSelectedId]?.name || '')}</b>`;
+    } else {
+    statusLine = `<span class="cg-warn">グループ未選択</span>`;
+    helpLine = `<div class="cg-help">タップしてグループを選択してください</div>`;
+    }
 
     host.innerHTML = `
     <div class="cg-head">
@@ -69,7 +82,7 @@ function renderSidebar_() {
         </div>
 
         <div class="cg-head-row cg-head-row-status">
-        <div class="cg-current">${baseStatus}${selectedHint}</div>
+        <div class="cg-current">${statusLine}${helpLine}</div>
         </div>
 
         <div class="cg-head-row cg-head-row-ops cg-ops-grid">
@@ -195,9 +208,9 @@ function rowHtml_(g, st) {
     const isEditing = st.editingId === g.id;
     const isSelected = uiSelectedId === g.id;
 
-    // サムネ：先頭6枚
+    // サムネ：先頭8枚（必要なら9）
     const allCds = Object.keys(g.cards || {});
-    const cds = allCds.slice(0, 6).map(cd => String(cd).padStart(5, '0'));
+    const cds = allCds.slice(0, 8).map(cd => String(cd).padStart(5, '0'));
     const more = Math.max(0, allCds.length - cds.length);
 
     return `

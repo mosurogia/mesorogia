@@ -344,145 +344,6 @@
     font-size: clamp(12px, 2.8vw, 16px);
 }
 
-
-/* =====================================================
-   1.x) フィルターモーダル：タブ（フィルター / グループ）
-===================================================== */
-
-.filter-modal-tabs {
-    position: sticky;
-    top: 48px;
-    z-index: 2;
-
-    display: flex;
-    gap: 6px;
-    padding: 8px 0 10px;
-
-    background: linear-gradient(180deg, rgba(255, 255, 255, .95), rgba(255, 255, 255, .85));
-    border-bottom: 1px solid #eee;
-    backdrop-filter: blur(2px);
-}
-
-.filter-modal-tab {
-    flex: 1 1 0;
-    min-height: 36px;
-    border-radius: 999px;
-    border: 1px solid rgba(0, 0, 0, .16);
-    background: #f7f7f9;
-    cursor: pointer;
-    font-size: clamp(12px, 2.6vw, 15px);
-    font-weight: 800;
-}
-
-.filter-modal-tab.is-active {
-    background: #2b90ff;
-    border-color: #2b90ff;
-    color: #fff;
-}
-
-.filter-modal-pane {
-    display: none;
-    padding-top: 6px;
-}
-
-.filter-modal-pane.is-active {
-    display: block;
-}
-
-
-/* =====================================================
-   1.y) グループPane（土台）
-===================================================== */
-
-.group-pane {
-    padding: 6px 2px 2px;
-}
-
-.group-pane-head {
-    display: grid;
-    gap: 2px;
-    margin-bottom: 10px;
-}
-
-.group-pane-title {
-    font-weight: 900;
-    font-size: 15px;
-}
-
-.group-pane-sub {
-    font-size: 12px;
-    opacity: .75;
-}
-
-.group-pane-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 8px 0 10px;
-}
-
-.group-btn {
-    flex: 1 1 auto;
-    min-height: 36px;
-    padding: 8px 10px;
-    border-radius: 10px;
-    border: 1px solid rgba(0, 0, 0, .14);
-    background: #fff;
-    cursor: pointer;
-    font-weight: 800;
-}
-
-.group-pane-current {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    padding: 8px 10px;
-    border: 1px dashed rgba(0, 0, 0, .18);
-    border-radius: 10px;
-    background: rgba(120, 160, 255, .10);
-    margin: 6px 0 12px;
-}
-
-.group-current-label {
-    font-size: 12px;
-    opacity: .8;
-}
-
-.group-current-value {
-    font-weight: 900;
-}
-
-.group-pane-list {
-    border-top: 1px dashed rgba(0, 0, 0, .12);
-    padding-top: 10px;
-}
-
-.group-list-title {
-    font-weight: 900;
-    margin-bottom: 6px;
-}
-
-.group-list-body {
-    display: grid;
-    gap: 6px;
-}
-
-.group-empty-hint {
-    font-size: 12px;
-    opacity: .75;
-    padding: 10px;
-    border: 1px solid rgba(0, 0, 0, .08);
-    border-radius: 10px;
-    background: #fafafa;
-}
-
-.group-pane-note {
-    margin-top: 10px;
-    font-size: 12px;
-    opacity: .75;
-}
-
-
 /* =====================================================
    2) FILTER BLOCK（区切り）
 ===================================================== */
@@ -585,58 +446,203 @@
 }
 
 
-/* =====================================================
-   6) TITLE ROW + HELP（？ボタン／説明文）
-===================================================== */
-.filter-title-row {
+/* =========================================
+   Filter Help（タイトル右の ? / 説明文）
+========================================= */
+.filter-head {
     display: flex;
     align-items: center;
-    gap: 4px;
+    justify-content: space-between;
+    gap: 8px;
 }
 
-.filter-help-btn {
+.help-button {
     flex: 0 0 auto;
-    width: 18px;
-    height: 18px;
+    width: 26px;
+    height: 26px;
     border-radius: 999px;
-    border: 1px solid #ccc;
-    background: #fff;
-    font-size: 11px;
-    line-height: 1;
-    padding: 0;
+    border: 1px solid rgba(0, 0, 0, .18);
+    background: #f7f7f9;
     cursor: pointer;
-    color: #555;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    font-weight: 1000;
+    line-height: 1;
 }
 
-.filter-help-btn:hover {
-    background: #f3f3f3;
-}
-
-.filter-help-btn.active {
-    background: #2b90ff;
-    border-color: #2b90ff;
-    color: #fff;
+.help-button:hover {
+    background: rgba(43, 144, 255, 0.10);
+    border-color: rgba(43, 144, 255, 0.35);
 }
 
 .filter-help {
     display: none;
-    margin: 2px 4px 4px;
-    font-size: clamp(10px, 2.2vw, 11px);
-    line-height: 1.3;
-    color: #666;
+    margin: 6px 0;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, .10);
+    background: rgba(0, 0, 0, .03);
+    font-size: 12px;
+    line-height: 1.45;
 }
 
-.filter-help.is-open {
+.filter-help ul {
+    margin: 0;
+    padding-left: 1.2em;
+}
+
+.filter-help li {
+    margin: 2px 0;
+}
+
+.filter-block.is-help-open .filter-help {
+    display: block;
+}
+/* =====================================================
+   6) CARD GROUP PREVIEW（カードグループ専用拡張）
+===================================================== */
+/* グループボタン：右端に▼を置けるように */
+.filter-group[data-key="カードグループ"] .filter-btn[data-group] {
+    justify-content: space-between;
+    gap: 2px;
+    padding: 8px 4px;
+    font-size: clamp(.3rem, 2vw, 1rem);
+}
+
+/* 左側：グループ名 */
+.cg-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 右側：枚数 + ▼ */
+.cg-right {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+}
+
+/* 枚数 */
+.cg-count {
+    opacity: .75;
+}
+
+/* ▼ボタン */
+.cg-drop {
+    width: 25px;
+    height: 25px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, .16);
+    background: #fff;
+    background: linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-weight: 900;
+}
+
+.cg-drop:hover {
+    background: rgba(43, 144, 255, .10);
+    border-color: rgba(43, 144, 255, .35);
+}
+
+/* ▼が開いてる時（任意） */
+.filter-btn.is-preview-open .cg-drop {
+    background: rgba(43, 144, 255, .14);
+    border-color: rgba(43, 144, 255, .45);
+}
+
+/* プレビュー欄（カードグループブロックの下に出す） */
+#cg-preview-row {
+    display: none;
+    margin: 6px 2px 2px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, .12);
+    background: rgba(0, 0, 0, .03);
+}
+
+#cg-preview-row.is-open {
     display: block;
 }
 
-.owned-filter-help {
-    margin-top: 0;
+#cg-preview-row .cgpr-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
 }
 
+#cg-preview-row .cgpr-title {
+    font-size: 12px;
+    font-weight: 900;
+    opacity: .9;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+#cg-preview-row .cgpr-close {
+    border: 1px solid rgba(0, 0, 0, .16);
+    background: #fff;
+    border-radius: 10px;
+    padding: 2px 10px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* 横1列 + 横スクロール */
+#cg-preview-row .cgpr-body {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+}
+
+#cg-preview-row .cgpr-img {
+    height: 72px;
+    width: auto;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, .10);
+    background: #f3f4f6;
+    flex: 0 0 auto;
+}
+
+#cg-preview-row .cgpr-empty {
+    font-size: 13px;
+    opacity: .75;
+    padding: 6px 2px;
+}
+
+/*「＋グループを作る」専用見た目 */
+.filter-btn.is-link {
+    border-style: dashed;
+    opacity: .95;
+    font-weight: 800;
+    justify-content: center;
+    gap: 6px;
+
+    border: 1px dashed rgba(34, 197, 94, .55);
+    background: linear-gradient(180deg, rgba(220, 252, 231, .95) 0%, rgba(187, 247, 208, .95) 100%);
+    color: #14532d;
+
+    font-weight: 900;
+}
+
+.filter-btn.is-link:hover {
+    background: linear-gradient(180deg, rgba(220, 252, 231, 1) 0%, rgba(167, 243, 208, 1) 100%);
+    border-color: rgba(34, 197, 94, .75);
+    box-shadow: 0 2px 10px rgba(34, 197, 94, .18);
+}
+
+.filter-btn.is-link:active {
+    transform: translateY(1px);
+}
 
 /* =====================================================
    7) RING SYSTEM（is-ring）
@@ -1203,11 +1209,11 @@
     grid-template-areas:
         "label label toggle"
         "minus num   plus";
-    grid-template-columns: 30px 28px 30px;
+    grid-template-columns: 40px 10px 40px;
     grid-template-rows: auto auto;
     justify-content: center;
 
-    column-gap: 8px;
+    column-gap: 10px;
     row-gap: 4px;
     align-items: center;
 

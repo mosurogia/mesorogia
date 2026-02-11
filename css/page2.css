@@ -3454,21 +3454,6 @@ font-size: .8rem;
 }
 
 /* ===== デッキ投稿ヘルプ（？ボタン＋モーダル） ===== */
-
-/* デッキバー右側の「？」ボタン */
-.analyze-help-button {
-    background: #eef2ff;
-    color: #4b5563;
-    font-weight: 600;
-    align-items: center;
-    line-height: 1;
-    flex:0;
-}
-.analyze-help-button:hover {
-    background: #e0e7ff;
-    transform: translateY(-1px);
-}
-
 /* 投稿フォーム上部の「❓ デッキ投稿の流れを確認」 */
 .post-flow-hint {
     margin: 0.5rem 0 0.75rem;

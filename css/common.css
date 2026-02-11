@@ -350,7 +350,7 @@ button,
 
 
 /* 「？」ボタン */
-.subtab-help-button {
+.help-button {
     margin: 0 4px;
     padding: 4px 8px;
     border-radius: 999px;
@@ -358,6 +358,7 @@ button,
     background: #f5f5ff;
     color: #555;
     font-size: .7rem;
+    font-weight: 600;
     cursor: pointer;
     line-height: 1;
     display: inline-flex;
@@ -365,12 +366,12 @@ button,
     justify-content: center;
 }
 
-.subtab-help-button:hover {
+.help-button:hover {
     background: #e3e3ff;
 }
 
 @media (max-width: 768px) {
-    .subtab-help-button {
+    .help-button {
         padding: 3px 6px;
         font-size: .6rem;
     }

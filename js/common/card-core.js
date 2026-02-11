@@ -92,6 +92,71 @@
   // グローバル公開
   window.fetchLatestCards = window.fetchLatestCards || fetchLatestCards;
 
+// =====================================================
+// 3) cardMap 構築 & ensureCardMapLoaded（互換）
+// =====================================================
+
+// cards -> window.cardMap を構築
+function buildCardMapFromCards(cards){
+  if (!Array.isArray(cards)) return;
+
+  for (const card of cards){
+    const cdRaw = card.cd ?? card.id ?? '';
+    const cd5   = String(cdRaw || '').trim().padStart(5, '0');
+    if (!cd5) continue;
+
+    window.cardMap[cd5] = {
+      cd     : cd5,
+      name   : card.name   || '',
+      race   : card.race   || '',
+      type   : card.type   || '',
+      cost   : Number(card.cost  ?? 0) || 0,
+      power  : Number(card.power ?? 0) || 0,
+      rarity : card.rarity || '',
+      packName : card.packName ?? card.pack_name ?? '',
+      pack_name: card.pack_name ?? '',          // 互換（古い側が見ることがある）
+      category : card.category  || '',
+      effect_name1: card.effect_name1 || '',
+      effect_text1: card.effect_text1 || '',
+      effect_name2: card.effect_name2 || '',
+      effect_text2: card.effect_text2 || '',
+      field: card.field ?? '',
+      special_ability: card.special_ability ?? '',
+      BP_flag: card.BP_flag,
+      draw: card.draw,
+      graveyard_recovery: card.graveyard_recovery,
+      cardsearch: card.cardsearch,
+      destroy_opponent: card.destroy_opponent,
+      destroy_self: card.destroy_self,
+      heal: card.heal,
+      power_up: card.power_up,
+      power_down: card.power_down,
+      link: card.link,
+      link_cd: card.link_cd,
+    };
+  }
+}
+
+// 一度だけカードマスタを読み込んで cardMap を埋める（互換API）
+async function ensureCardMapLoaded(){
+  if (window.cardMap && Object.keys(window.cardMap).length > 0){
+    return window.cardMap;
+  }
+
+  try{
+    const cards = await window.fetchLatestCards(); // card-core の関数を使う
+    buildCardMapFromCards(cards);
+  }catch(e){
+    console.error('[card-core] ensureCardMapLoaded: カードマスタ読み込み失敗', e);
+    throw e;
+  }
+  return window.cardMap;
+}
+
+// グローバル公開（重要）
+window.ensureCardMapLoaded = window.ensureCardMapLoaded || ensureCardMapLoaded;
+window.buildCardMapFromCards = window.buildCardMapFromCards || buildCardMapFromCards;
+
   // =====================================================
   // 4) packs.json：カタログ（Promiseキャッシュ）
   // =====================================================

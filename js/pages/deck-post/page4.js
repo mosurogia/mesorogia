@@ -3705,7 +3705,7 @@ function buildCardSp(item, opts = {}){
 
           <dt>
             マナ効率
-            <button type="button" class="subtab-help-button" aria-label="マナ効率の説明を確認">？</button>
+            <button type="button" class="help-button" aria-label="マナ効率の説明を確認">？</button>
           </dt>
           <dd class="mana-eff-row">
             <span id="mana-efficiency-${escapeHtml(spPaneId)}" class="mana-eff">-</span>
@@ -4063,7 +4063,7 @@ function oneCard(item, opts = {}){
               }
               <dt>
                 マナ効率
-                <button type="button" class="subtab-help-button" aria-label="マナ効率の説明を確認">？</button>
+                <button type="button" class="help-button" aria-label="マナ効率の説明を確認">？</button>
               </dt>
               <dd class="mana-eff-row">
                 <span id="mana-efficiency-${paneUid}" class="mana-eff">-</span>
@@ -5712,7 +5712,7 @@ function wireCardEvents(root){
 
     // (E) マナ効率ヘルプモーダル（deck-post）
     // 開く（aria-label に "マナ効率" が含まれる ? ボタン）
-    const helpBtn = e.target.closest('.subtab-help-button');
+    const helpBtn = e.target.closest('.help-button');
     if (helpBtn){
       const label = String(helpBtn.getAttribute('aria-label') || '');
       if (label.includes('マナ効率')){
@@ -6290,7 +6290,7 @@ async function renderCampaignBanner(){
       // showListStatusMessage が未定義の場合は無視
     }
     try {
-      await ensureCardMapLoaded();
+      await window.ensureCardMapLoaded();
       console.log('cardMap loaded, size =', Object.keys(window.cardMap || {}).length);
     } catch (e) {
       console.error('カードマスタ読み込みに失敗しました', e);

@@ -26,33 +26,6 @@
     window.DISPLAY_LABELS = DISPLAY_LABELS;
 
     // -----------------------
-    // Safe owned reader（無ければフォールバック）
-    // ※ owned.js 側に同名があるならそっちが優先される
-    // -----------------------
-    function readOwnedDataSafe() {
-        try {
-        if (window.readOwnedDataSafe) return window.readOwnedDataSafe();
-        } catch {}
-
-        // OwnedStore 優先
-        try {
-        if (window.OwnedStore?.getAll) {
-            const s = window.OwnedStore.getAll();
-            if (s && typeof s === 'object') return s;
-        }
-        } catch {}
-
-        // localStorage フォールバック
-        try {
-        const raw = localStorage.getItem('ownedCards');
-        const obj = raw ? JSON.parse(raw) : {};
-        if (obj && typeof obj === 'object') return obj;
-        } catch {}
-
-        return {};
-    }
-
-    // -----------------------
     // debounce
     // -----------------------
     function debounce(fn, ms = 300) {
@@ -64,18 +37,525 @@
     }
 
     // ==============================
-    // UI生成ヘルパ
+    // 所持フィルター（4ボタン） UI生成
+    // - OFF / 所持 / 未コンプ / コンプ
+    // - 排他（1つだけ選択）
+    // ==============================
+    function createOwnedFilter4Buttons_() {
+    const { wrapper } = createFilterBlock_('所持フィルター');
+
+    const groupDiv = document.createElement('div');
+    groupDiv.className = 'filter-group';
+    groupDiv.dataset.key = '所持フィルター';
+
+    const items = [
+        { label: 'OFF', key: 'off' },
+        { label: '所持', key: 'owned' },
+        { label: '未コンプ', key: 'incomplete' },
+        { label: 'コンプ', key: 'complete' },
+    ];
+
+    items.forEach(it => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'filter-btn';
+        btn.dataset.owned = it.key;      // ✅ data-owned
+        btn.textContent = it.label;
+
+        // 初期選択：OFF
+        if (it.key === 'off') btn.classList.add('selected');
+
+        groupDiv.appendChild(btn);
+    });
+
+    wrapper.appendChild(groupDiv);
+    return wrapper;
+    }
+
+    // ==============================
+    // カードグループフィルター UI生成
+    // ==============================
+    function createCardGroupFilterBlock_(){
+        const { wrapper } = createFilterBlock_('カードグループ');
+
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'filter-group';
+        groupDiv.dataset.key = 'カードグループ';
+        wrapper.appendChild(groupDiv);
+
+        // ▼プレビュー欄（カードグループの下に出す：普段は非表示）
+        (function ensureCgPreviewRow_(){
+        if (document.getElementById('cg-preview-row')) return;
+
+        const row = document.createElement('div');
+        row.id = 'cg-preview-row';
+        row.innerHTML = `
+            <div class="cgpr-head">
+            <div class="cgpr-title" id="cgpr-title"></div>
+            <button type="button" class="cgpr-close" id="cgpr-close">閉じる</button>
+            </div>
+            <div class="cgpr-body" id="cgpr-body"></div>
+        `;
+        wrapper.appendChild(row);
+
+        row.querySelector('#cgpr-close').addEventListener('click', () => {
+            row.classList.remove('is-open');
+            // ボタン側の開状態も戻す
+            document.querySelectorAll('.filter-btn.is-preview-open[data-group]')
+            .forEach(b => b.classList.remove('is-preview-open'));
+        });
+        })();
+
+        // 末尾：図鑑へ（新規作成）
+        const go = document.createElement('button');
+        go.type = 'button';
+        go.className = 'filter-btn is-link';
+        go.dataset.action = 'go-create-group';
+        go.textContent = '＋グループを作る';
+        groupDiv.appendChild(go);
+
+        // 初期描画
+        try { refreshCardGroupFilterUI_(); } catch {}
+        return wrapper;
+        }
+
+    /* ============================
+    サムネ（グループプレビュー）
+    - hover / long-press で表示
+    - 画面下固定なので邪魔になりにくい
+    ============================ */
+    let __cgThumbTimer = null;
+
+    function ensureGroupThumbPop_(){
+    let pop = document.getElementById('group-thumb-pop');
+    if (pop) return pop;
+
+    pop = document.createElement('div');
+    pop.id = 'group-thumb-pop';
+    pop.innerHTML = `
+        <div class="gtp-head">
+        <span class="gtp-title" id="gtp-title"></span>
+        <button type="button" class="gtp-close" aria-label="close">×</button>
+        </div>
+        <div class="gtp-body" id="gtp-body"></div>
+    `;
+    document.body.appendChild(pop);
+
+    pop.querySelector('.gtp-close').addEventListener('click', hideGroupThumbPop_);
+    return pop;
+    }
+
+    function hideGroupThumbPop_(){
+    const pop = document.getElementById('group-thumb-pop');
+    if (!pop) return;
+    pop.classList.remove('is-open');
+    }
+
+    function getCardThumbUrl_(cd){
+    // できれば card-core 側の関数があればそれを優先
+    if (typeof window.getCardImageUrl === 'function') {
+        try { return window.getCardImageUrl(cd); } catch (e) {}
+    }
+    // フォールバック（環境に合わせてパスを調整OK）
+    return `img/${String(cd).padStart(5,'0')}.webp`;
+    }
+
+    function showCgPreviewRow_(groupId){
+    const st = window.CardGroups?.getState?.();
+    const g = st?.groups?.[groupId];
+    if (!g) return;
+
+    const row = document.getElementById('cg-preview-row');
+    if (!row) return;
+
+    const cardsObj = g.cards || {};
+    const cds = Object.keys(cardsObj).map(n => Number(n)).slice(0, 60); // 先頭60枚（多すぎ防止）
+
+    row.querySelector('#cgpr-title').textContent =
+        `${g.name || 'グループ'}（${Object.keys(cardsObj).length}枚）`;
+
+    const body = row.querySelector('#cgpr-body');
+    body.innerHTML = '';
+
+    if (!cds.length) {
+        body.innerHTML = `<div class="cgpr-empty">カード未選択</div>`;
+    } else {
+        cds.forEach(cd => {
+        const img = document.createElement('img');
+        img.className = 'cgpr-img';
+        img.loading = 'lazy';
+        img.alt = String(cd);
+        img.src = getCardThumbUrl_(cd);
+        body.appendChild(img);
+        });
+    }
+
+    row.classList.add('is-open');
+    }
+
+
+    /* ============================
+    グループフィルターボタンのクリック処理
+    - 既存の filterModal click handler の中に混ぜてもOK
+    ============================ */
+    function showGroupThumbPop_(groupId){
+    const st = (window.CardGroups && window.CardGroups.getState) ? window.CardGroups.getState() : null;
+    const g = st?.groups?.[groupId];
+    if (!g) return;
+
+    const cardsObj = g.cards || {};
+    const cds = Object.keys(cardsObj).map(n => Number(n)).slice(0, 12);// 先頭12枚だけ
+
+    const pop = ensureGroupThumbPop_();
+    pop.querySelector('#gtp-title').textContent = `${g.name || 'グループ'}（先頭${cds.length}枚）`;
+
+    const body = pop.querySelector('#gtp-body');
+    body.innerHTML = '';
+
+    if (!cds.length) {
+        body.innerHTML = `<div class="gtp-empty">カード未選択</div>`;
+    } else {
+        cds.forEach(cd => {
+        const img = document.createElement('img');
+        img.className = 'gtp-img';
+        img.loading = 'lazy';
+        img.alt = String(cd);
+        img.src = getCardThumbUrl_(cd);
+        body.appendChild(img);
+        });
+    }
+
+    pop.classList.add('is-open');
+    }
+
+    function isDeckmakerPage_() {
+    return /deckmaker/i.test(location.pathname) || document.body?.classList?.contains('deckmaker');
+    }
+
+    function isMobile_() {
+    return window.matchMedia && window.matchMedia('(max-width: 900px)').matches;
+    }
+
+    function handleCreateGroupAction_() {
+    // ② デッキメーカー：図鑑へ飛ばす
+    if (isDeckmakerPage_()) {
+        location.href = 'cards.html';
+        return;
+    }
+
+    // ② 図鑑ページ：PCは閉じるだけ、SPはドロワーも開く
+    try { closeFilterModal(); } catch {}
+
+    const addBtn = document.getElementById('cg-sidebar-add');
+
+    if (isMobile_() && window.__SpGroupDrawer?.open) {
+        window.__SpGroupDrawer.open();
+        // ドロワーを開いた後に作成ボタンを押す
+        setTimeout(() => { try { addBtn?.click(); } catch {} }, 0);
+    } else {
+        // PC：サイドバーにあるのでそのまま作成
+        try { addBtn?.click(); } catch {}
+    }
+    }
+
+
+    /* ============================
+    クリック/hover/長押しの配線
+    - 既存の filterModal click handler の中に混ぜてもOK
+    ============================ */
+    document.addEventListener('click', (e) => {
+
+    const drop = e.target.closest('.cg-drop');
+    if (drop) {
+        e.preventDefault();
+        e.stopImmediatePropagation(); // ▼は他のclickへ行かせない
+
+        const groupBtn = drop.closest('.filter-btn[data-group]');
+        const gid = groupBtn?.dataset.group;
+        if (!gid) return;
+
+        const row = document.getElementById('cg-preview-row');
+        const isOpen = row?.classList.contains('is-open');
+        const isSame = groupBtn.classList.contains('is-preview-open');
+
+        document.querySelectorAll('.filter-btn.is-preview-open[data-group]')
+        .forEach(b => b.classList.remove('is-preview-open'));
+
+        if (isOpen && isSame) {
+        row.classList.remove('is-open');
+        return;
+        }
+
+        groupBtn.classList.add('is-preview-open');
+        showCgPreviewRow_(gid);
+        return;
+    }
+
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+
+    // ✅ 「＋グループを作る」だけはここで処理して二重実行を止める
+    if (btn.dataset.action === 'go-create-group') {
+        e.preventDefault();
+        e.stopImmediatePropagation(); // init側にも行かせない
+        handleCreateGroupAction_();
+        return; // ★ これ重要（落ちない）
+    }
+
+    // ✅ それ以外の filter-btn は “ここでは何もしない”
+    // （選択処理は init() 内の click 1本に任せる）
+    });
+
+    // hover（PC）
+    document.addEventListener('pointerover', (e) => {
+    const btn = e.target.closest('.filter-btn[data-group]');
+    if (!btn) return;
+    if (e.pointerType === 'touch') return; // touch は長押しへ
+
+    showGroupThumbPop_(btn.dataset.group);
+    });
+    document.addEventListener('pointerout', (e) => {
+    const btn = e.target.closest('.filter-btn[data-group]');
+    if (!btn) return;
+    if (e.pointerType === 'touch') return;
+    hideGroupThumbPop_();
+    });
+
+    // 長押し（SP）
+    document.addEventListener('pointerdown', (e) => {
+    const btn = e.target.closest('.filter-btn[data-group]');
+    if (!btn) return;
+    if (e.pointerType !== 'touch') return;
+
+    clearTimeout(__cgThumbTimer);
+    __cgThumbTimer = setTimeout(() => {
+        showGroupThumbPop_(btn.dataset.group);
+    }, 350);
+    });
+    document.addEventListener('pointerup', () => {
+    clearTimeout(__cgThumbTimer);
+    });
+    document.addEventListener('pointercancel', () => {
+    clearTimeout(__cgThumbTimer);
+    });
+
+
+    // ==============================
+    // カードグループ（フィルターUI）を再描画（差し替え専用）
+    // ==============================
+    function refreshCardGroupFilterUI_() {
+    const gWrap = document.querySelector('.filter-group[data-key="カードグループ"]');
+    if (!gWrap) return;
+
+    // 「図鑑へ」ボタンは残して作り直したいので一旦退避
+    const goBtn = gWrap.querySelector('.filter-btn[data-action="go-create-group"]');
+    gWrap.innerHTML = '';
+    if (goBtn) gWrap.appendChild(goBtn);
+
+    try {
+        const st = window.CardGroups?.getState?.();
+        const groups = st?.groups || {};
+
+        const ids = Object.keys(groups).sort((a, b) => {
+        const ga = groups[a], gb = groups[b];
+        const oa = (ga?.order ?? 9999), ob = (gb?.order ?? 9999);
+        if (oa !== ob) return oa - ob;
+        return String(ga?.name || '').localeCompare(String(gb?.name || ''), 'ja');
+        });
+
+        ids.forEach(id => {
+        const g = groups[id];
+        if (!g) return;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'filter-btn';
+        btn.dataset.group = String(id);
+
+        const cnt = Object.keys(g.cards || {}).length;
+        const name = g.name || 'グループ';
+        btn.innerHTML = `
+        <span class="cg-label">${escapeHtml_(name)}</span>
+        <span class="cg-right">
+            <small class="cg-count">(${cnt})</small>
+            <span class="cg-drop" role="button" tabindex="0" aria-label="プレビュー">▼</span>
+        </span>
+        `;
+
+        // goBtn の手前に入れる
+        if (goBtn) gWrap.insertBefore(btn, goBtn);
+        else gWrap.appendChild(btn);
+        });
+    } catch {}
+
+    try { syncGroupFilterUIFromState_(); } catch {}
+    }
+
+    // ==============================
+    // グループUI（モーダル側）を state と同期
+    // ==============================
+    function syncGroupFilterUIFromState_() {
+    const gWrap = document.querySelector('.filter-group[data-key="カードグループ"]');
+    if (!gWrap) return;
+
+    let activeId = '';
+    let editingId = '';
+
+    try {
+        const st = window.CardGroups?.getState?.();
+        activeId = st?.activeId || '';
+        editingId = st?.editingId || '';
+    } catch {}
+
+    const want = (editingId ? '' : String(activeId || ''));
+
+    gWrap.querySelectorAll('.filter-btn[data-group]').forEach(b => b.classList.remove('selected'));
+
+    if (want) {
+        const hit = gWrap.querySelector(`.filter-btn[data-group="${CSS.escape(want)}"]`);
+        if (hit) hit.classList.add('selected');
+    }
+    }
+
+    // ==============================
+    // ヘルプ文言（必要に応じて追記/調整OK）
+    // ==============================
+    const FILTER_HELP = {
+    '所持フィルター': `
+        <ul>
+        <li>サイトに入力した所持情報から絞り込み</li>
+        <li><b>OFF</b>：所持条件で絞り込みしない</li>
+        <li><b>所持</b>：1枚以上持っているカードだけ表示</li>
+        <li><b>未コンプ</b>：最大枚数まで揃っていないカード（通常3/旧神1）</li>
+        <li><b>コンプ</b>：最大枚数まで揃っているカード（通常3/旧神1）</li>
+        </ul>
+    `,
+    'カードグループ': `
+        <ul>
+            <li>カードグループで絞り込み（単一選択）</li>
+            <li>▼からリストの確認が可能</li>
+            <li>カードグループの作成・編集は、図鑑ページで行えます</li>
+        </ul>
+        `,
+    'タイプ': `
+        <ul>
+        <li>チャージャー / アタッカー / ブロッカー で絞り込み</li>
+        <li>複数選択も可能</li>
+        </ul>
+    `,
+    'レアリティ': `
+        <ul>
+        <li>レアリティ別で絞り込み</li>
+        <li>複数選択も可能</li>
+        </ul>
+    `,
+    'パック名': `
+        <ul>
+        <li>パック名で絞り込み</li>
+        <li>複数選択も可能</li>
+        </ul>
+    `,
+    '種族': `
+        <ul>
+        <li>種族で絞り込み</li>
+        <li>複数選択も可能</li>
+        </ul>
+    `,
+    'カテゴリ': `
+        <ul>
+        <li>カテゴリで絞り込み</li>
+        <li>枠線はカテゴリの種族に準拠</li>
+        <li>複数選択も可能</li>
+        </ul>
+    `,
+    'コスト': `
+        <ul>
+        <li>数値の範囲で絞り込み</li>
+        </ul>
+    `,
+    'パワー': `
+        <ul>
+        <li>数値の範囲で絞り込み</li>
+        </ul>
+    `,
+    '効果名': `
+        <ul>
+        <li>カードの効果別で絞り込み</li>
+        <li>複数選択も可能</li>
+        </ul>
+    `,
+    'フィールド': `
+        <ul>
+        <li>フィールド関係のカードで絞り込み（表示は短縮名）</li>
+        <li>複数選択も可能</li>
+        </ul>
+    `,
+    'BP（ブレッシングポイント）要素': `
+        <ul>
+        <li><b>BPあり</b>：BP要素を持つカード</li>
+        <li><b>BPなし</b>：BP要素を持たないカード</li>
+        </ul>
+    `,
+    '特殊効果': `
+        <ul>
+        <li>燃焼 / 拘束 / 沈黙 などで絞り込み</li>
+        <li><b>特殊効果未所持</b>：特殊効果を持たないカード</li>
+        </ul>
+    `,
+    'その他': `
+        <ul>
+        <li>ドロー / サーチ / 回復 など、効果系フラグで絞り込み</li>
+        </ul>
+    `,
+    };
+
+    // ==============================
+    // UI生成ヘルパ（helpボタン付き）
     // ==============================
     function createFilterBlock_(titleText) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'filter-block';
+    const wrapper = document.createElement('div');
+    wrapper.className = 'filter-block';
 
-        const strong = document.createElement('strong');
-        strong.className = 'filter-title';
-        strong.textContent = titleText;
+    // タイトル行（左：タイトル / 右：?ボタン）
+    const head = document.createElement('div');
+    head.className = 'filter-head';
 
-        wrapper.appendChild(strong);
+    const strong = document.createElement('strong');
+    strong.className = 'filter-title';
+    strong.textContent = titleText;
+
+    head.appendChild(strong);
+
+    // help（該当文言がある時だけ表示）
+    const helpHtml = FILTER_HELP[titleText];
+    if (helpHtml) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'help-button';
+        btn.setAttribute('aria-label', `${titleText} の説明を表示`);
+        btn.setAttribute('aria-expanded', 'false');
+        btn.textContent = '?';
+
+        head.appendChild(btn);
+
+        const help = document.createElement('div');
+        help.className = 'filter-help';
+        help.innerHTML = helpHtml;
+
+        btn.addEventListener('click', () => {
+        const open = !wrapper.classList.contains('is-help-open');
+        wrapper.classList.toggle('is-help-open', open);
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+
+        wrapper.appendChild(head);
+        wrapper.appendChild(help);
         return { wrapper, titleEl: strong };
+    }
+
+    // help無し
+    wrapper.appendChild(head);
+    return { wrapper, titleEl: strong };
     }
 
     function createButtonGroup_(title, list, filterKey) {
@@ -120,88 +600,78 @@
 
     // 2択/複数の横並び（タイプ・レア・BP・特殊効果など）
     function createRangeStyleWrapper_(title, list, filterKey) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'filter-block filter-range-wrapper';
+    const { wrapper } = createFilterBlock_(title);
+    wrapper.classList.add('filter-range-wrapper');
 
-        const strong = document.createElement('strong');
-        strong.className = 'filter-title';
-        strong.textContent = title;
-        wrapper.appendChild(strong);
+    const groupDiv = document.createElement('div');
+    groupDiv.className = 'filter-group';
+    groupDiv.dataset.key = title;
 
-        const groupDiv = document.createElement('div');
-        groupDiv.className = 'filter-group';
-        groupDiv.dataset.key = title;
-
-        list.forEach(item => {
+    list.forEach(item => {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'filter-btn';
         btn.dataset[filterKey] = item;
 
         btn.textContent =
-            (window.DISPLAY_LABELS && window.DISPLAY_LABELS[item] != null)
+        (window.DISPLAY_LABELS && window.DISPLAY_LABELS[item] != null)
             ? window.DISPLAY_LABELS[item]
             : item;
 
         groupDiv.appendChild(btn);
-        });
+    });
 
-        wrapper.appendChild(groupDiv);
-        return wrapper;
+    wrapper.appendChild(groupDiv);
+    return wrapper;
     }
 
     // 範囲セレクタ（コスト/パワー）
     function createRangeSelector_(title, filterKey, list, onChange) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'filter-block filter-range-wrapper';
+    const { wrapper } = createFilterBlock_(title);
+    wrapper.classList.add('filter-range-wrapper');
 
-        const strong = document.createElement('strong');
-        strong.className = 'filter-title';
-        strong.textContent = title;
-        wrapper.appendChild(strong);
+    const groupDiv = document.createElement('div');
+    groupDiv.className = 'filter-group';
+    groupDiv.dataset.key = title;
 
-        const groupDiv = document.createElement('div');
-        groupDiv.className = 'filter-group';
-        groupDiv.dataset.key = title;
+    const selectMin = document.createElement('select');
+    const selectMax = document.createElement('select');
+    selectMin.id = `${filterKey}-min`;
+    selectMax.id = `${filterKey}-max`;
 
-        const selectMin = document.createElement('select');
-        const selectMax = document.createElement('select');
-        selectMin.id = `${filterKey}-min`;
-        selectMax.id = `${filterKey}-max`;
+    const minOptions = [...list];
+    const maxOptions = [...list, '上限なし'];
 
-        const minOptions = [...list];
-        const maxOptions = [...list, '上限なし'];
-
-        minOptions.forEach(v => {
+    minOptions.forEach(v => {
         const o = document.createElement('option');
         o.value = v;
         o.textContent = v;
         if (v === 0) o.selected = true;
         selectMin.appendChild(o);
-        });
+    });
 
-        maxOptions.forEach(v => {
+    maxOptions.forEach(v => {
         const o = document.createElement('option');
         o.value = v;
         o.textContent = v;
         if (v === '上限なし') o.selected = true;
         selectMax.appendChild(o);
-        });
+    });
 
-        groupDiv.appendChild(selectMin);
+    groupDiv.appendChild(selectMin);
 
-        const wave = document.createElement('span');
-        wave.className = 'tilde';
-        wave.textContent = '～';
-        groupDiv.appendChild(wave);
+    const wave = document.createElement('span');
+    wave.className = 'tilde';
+    wave.textContent = '～';
+    groupDiv.appendChild(wave);
 
-        groupDiv.appendChild(selectMax);
-        wrapper.appendChild(groupDiv);
+    groupDiv.appendChild(selectMax);
+    wrapper.appendChild(groupDiv);
 
-        selectMin.addEventListener('change', onChange);
-        selectMax.addEventListener('change', onChange);
+    selectMin.addEventListener('change', onChange);
+    selectMax.addEventListener('change', onChange);
 
-        return wrapper;
+    return wrapper;
     }
 
     // ==============================
@@ -221,6 +691,14 @@
 
     // ✅ タブUIに反映（関数がまだなら何もしない）
     try { setTimeout(() => { try { setModalTab_(pick); } catch {} }, 0); } catch {}
+
+    // ✅ 追加：モーダルを開くたびに「カードグループ」を必ず再描画
+    try {
+        setTimeout(() => {
+        try { refreshCardGroupFilterUI_(); } catch {}
+        try { renderActiveFilterChips(); } catch {}
+        }, 0);
+    } catch {}
     }
     function closeFilterModal() {
         const m = document.getElementById('filterModal');
@@ -303,13 +781,7 @@
         try { packCatalog = await window.loadPackCatalog?.(); } catch {}
         window.__PACK_EN_TO_JP = window.__PACK_EN_TO_JP || {};
 
-        const packWrapper = document.createElement('div');
-        packWrapper.className = 'filter-block';
-
-        const packTitle = document.createElement('strong');
-        packTitle.className = 'filter-title';
-        packTitle.textContent = 'パック名';
-        packWrapper.appendChild(packTitle);
+        const { wrapper: packWrapper } = createFilterBlock_('パック名');
 
         const packGroup = document.createElement('div');
         packGroup.className = 'filter-group';
@@ -365,7 +837,30 @@
         'heal', 'power_up', 'power_down'
         ];
 
+        // ✅ 所持データが “1枚でも” 入ってるか（チェッカー未使用判定）
+        function hasAnyOwned_() {
+        const map = (typeof window.readOwnedDataSafe === 'function')
+            ? window.readOwnedDataSafe()
+            : {};
+
+        if (!map || typeof map !== 'object') return false;
+
+        for (const v of Object.values(map)) {
+            if (typeof v === 'number') {
+            if ((v | 0) > 0) return true;
+            } else if (v && typeof v === 'object') {
+            const total = (v.normal | 0) + (v.shine | 0) + (v.premium | 0);
+            if (total > 0) return true;
+            }
+        }
+        return false;
+        }
+
         // ---- メイン ----
+        if (hasAnyOwned_()) {
+        mainFilters.appendChild(createOwnedFilter4Buttons_()); // 所持フィルター（所持データがある時だけ）
+        }
+        mainFilters.appendChild(createCardGroupFilterBlock_()); // カードグループフィルター
         mainFilters.appendChild(createRangeStyleWrapper_('タイプ', types, 'type'));
         mainFilters.appendChild(createRangeStyleWrapper_('レアリティ', rarities, 'rarity'));
         mainFilters.appendChild(packWrapper);
@@ -390,13 +885,8 @@
         detailFilters.appendChild(createRangeStyleWrapper_('特殊効果', SPECIAL_ABILITIES, 'ability'));
 
         // その他（boolean）
-        const otherWrap = document.createElement('div');
-        otherWrap.className = 'filter-block filter-range-wrapper';
-
-        const otherTitle = document.createElement('strong');
-        otherTitle.className = 'filter-title';
-        otherTitle.textContent = 'その他';
-        otherWrap.appendChild(otherTitle);
+        const { wrapper: otherWrap } = createFilterBlock_('その他');
+        otherWrap.classList.add('filter-range-wrapper');
 
         const otherGroup = document.createElement('div');
         otherGroup.className = 'filter-group';
@@ -487,27 +977,27 @@
 
         const chips = [];
 
-    // ---カードグループフィルター（チップバー表示＆解除） ---
+    // --- カードグループフィルター（チップバー表示＆解除） ---
     try {
     const st = window.CardGroups?.getState?.();
     const editingId = st?.editingId || '';
     const activeId  = st?.activeId  || '';
-    const gName = activeId ? (st?.groups?.[activeId]?.name || 'グループ') : '';
 
     // ✅ 編集中はフィルター適用しない方針なので、チップも出さない
     if (!editingId && activeId) {
-    chips.push({
+        const gName = st?.groups?.[activeId]?.name || 'グループ';
+
+        chips.push({
         label: `グループ:${gName}`,
         onRemove: () => {
-        // ✅ UI側の「選択中」も解除（チップ解除でasideが選択中のまま残るバグ対策）
-        try { window.__CardGroupsUI?.clearSelected?.(); } catch {}
-        window.CardGroups?.setActive?.('');
-        applyFilters(); // 即反映
+            try { window.CardGroups?.setActive?.(''); } catch {}
+            // ✅ モーダル側の選択状態も同期しておく
+            try { syncGroupFilterUIFromState_(); } catch {}
+            applyFilters();
         }
-    });
+        });
     }
     } catch {}
-
 
     // キーワード
     const kwEl = document.getElementById('keyword');
@@ -540,14 +1030,29 @@
 
         // ボタン系
         const GROUPS = [
-            ['種族', 'race'], ['カテゴリ', 'category'],
-            // ✅ ['タイプ', 'type'] は削除（チップバーに出さない）
-            ['レア', 'rarity'], ['パック', 'pack'],
-            ['効果名', 'effect'], ['フィールド', 'field'],
-            ['BP', 'bp'], ['特効', 'ability'],
-            ['その他', 'draw'], ['その他', 'cardsearch'], ['その他', 'graveyard_recovery'],
-            ['その他', 'destroy_opponent'], ['その他', 'destroy_self'],
-            ['その他', 'heal'], ['その他', 'power_up'], ['その他', 'power_down'],
+        // 所持（4ボタン）
+        ['所持', 'owned'],
+
+        // 通常
+        ['種族', 'race'],
+        ['カテゴリ', 'category'],
+        // ['タイプ', 'type'], // ← 出さない方針ならこのままコメント
+        ['レア', 'rarity'],
+        ['パック', 'pack'],
+        ['効果名', 'effect'],
+        ['フィールド', 'field'],
+        ['BP', 'bp'],
+        ['特効', 'ability'],
+
+        // その他（boolean）
+        ['その他', 'draw'],
+        ['その他', 'cardsearch'],
+        ['その他', 'graveyard_recovery'],
+        ['その他', 'destroy_opponent'],
+        ['その他', 'destroy_self'],
+        ['その他', 'heal'],
+        ['その他', 'power_up'],
+        ['その他', 'power_down'],
         ];
 
         GROUPS.forEach(([title, key]) => {
@@ -555,13 +1060,22 @@
                 const val = btn.dataset[key];
                 let labelText;
 
-                if (key === 'pack') {
-                    const jp = (window.__PACK_EN_TO_JP && window.__PACK_EN_TO_JP[val]) || '';
-                    labelText = jp ? `${val} / ${jp}` : val;
+                if (key === 'owned') {
+                // OFFはチップに出さない
+                if (val === 'off') return;
+
+                const map = { owned: '所持', incomplete: '未コンプ', complete: 'コンプ' };
+                labelText = map[val] || val;
+
+                } else if (key === 'pack') {
+                const jp = (window.__PACK_EN_TO_JP && window.__PACK_EN_TO_JP[val]) || '';
+                labelText = jp ? `${val} / ${jp}` : val;
+
                 } else if (['draw', 'cardsearch', 'graveyard_recovery', 'destroy_opponent', 'destroy_self', 'heal', 'power_up', 'power_down'].includes(key)) {
-                    labelText = DISPLAY_LABELS[key] ?? key;
+                labelText = DISPLAY_LABELS[key] ?? key;
+
                 } else {
-                    labelText = (DISPLAY_LABELS && DISPLAY_LABELS[val] != null) ? DISPLAY_LABELS[val] : val;
+                labelText = (DISPLAY_LABELS && DISPLAY_LABELS[val] != null) ? DISPLAY_LABELS[val] : val;
                 }
 
                 chips.push({
@@ -611,7 +1125,6 @@
         // バー自体（枚数だけ出す用途もあるので showBar で表示）
         bar.style.display = showBar ? '' : 'none';
     }
-
 
     // =====================================================
     // Empty state（表示0件メッセージ）
@@ -739,33 +1252,6 @@
     box.style.display = '';
     }
 
-
-    // ==============================
-    // 所持フィルター（サイクル）
-    // ==============================
-    function updateOwnedCycleBtn(btn) {
-        const state = btn.dataset.state || 'off';
-        let label = '';
-        switch (state) {
-        case 'owned': label = '所持カードのみ'; break;
-        case 'incomplete': label = '未コンプカードのみ'; break;
-        case 'complete': label = 'コンプカードのみ'; break;
-        default: label = '所持フィルターOFF';
-        }
-        btn.textContent = label;
-        btn.classList.toggle('selected', state !== 'off');
-    }
-
-    function cycleOwnedFilter(btn) {
-        const order = ['off', 'owned', 'incomplete', 'complete'];
-        const cur = btn.dataset.state || 'off';
-        const idx = order.indexOf(cur);
-        const next = order[(idx + 1) % order.length];
-        btn.dataset.state = next;
-        updateOwnedCycleBtn(btn);
-        applyFilters();
-    }
-
     // ==============================
     // applyFilters 本体
     // ==============================
@@ -831,19 +1317,23 @@
         : toIntOr(powerMaxVal, Infinity);
 
 
-        // 所持/コンプ（1ボタン）
+        // 所持フィルター（4ボタン：排他）
         const ownedFilterGroup = document.querySelector('.filter-group[data-key="所持フィルター"]');
-        let ownedBtnOn = false, compBtnOn = false, unCompBtnOn = false;
+        let ownedMode = 'off';
 
         if (ownedFilterGroup) {
-        const cycleBtn = ownedFilterGroup.querySelector('.filter-btn[data-mode="owned-cycle"]');
-        const state = cycleBtn?.dataset.state || 'off';
-        ownedBtnOn = (state === 'owned');
-        unCompBtnOn = (state === 'incomplete');
-        compBtnOn = (state === 'complete');
+        const sel = ownedFilterGroup.querySelector('.filter-btn.selected[data-owned]');
+        ownedMode = sel?.dataset.owned || 'off';
+        if (ownedMode === 'off') ownedMode = 'off';
         }
 
-        const ownedDataMap = readOwnedDataSafe();
+        const ownedBtnOn  = (ownedMode === 'owned');
+        const unCompBtnOn = (ownedMode === 'incomplete');
+        const compBtnOn   = (ownedMode === 'complete');
+
+        const ownedDataMap = (typeof window.readOwnedDataSafe === 'function')
+        ? window.readOwnedDataSafe()
+        : {};
 
         const gridRoot = document.getElementById('grid') || document;
 
@@ -1022,14 +1512,13 @@
         powerMax.selectedIndex = powerMax.options.length - 1;
         }
 
-        // 所持フィルター OFF
+        // 所持フィルター：OFFに戻す（4ボタン）
         const ownedGroup = document.querySelector('.filter-group[data-key="所持フィルター"]');
         if (ownedGroup) {
-        const cycleBtn = ownedGroup.querySelector('.filter-btn[data-mode="owned-cycle"]');
-        if (cycleBtn) {
-            cycleBtn.dataset.state = 'off';
-            updateOwnedCycleBtn(cycleBtn);
-        }
+        ownedGroup.querySelectorAll('.filter-btn[data-owned]')
+            .forEach(b => b.classList.remove('selected'));
+        ownedGroup.querySelector('.filter-btn[data-owned="off"]')
+            ?.classList.add('selected');
         }
 
         try { window.CardGroups?.setActive?.(''); } catch {}
@@ -1203,14 +1692,77 @@
         // 投稿フィルター用タグボタンは別処理
         if (btn.classList.contains('post-filter-tag-btn')) return;
 
-        btn.classList.toggle('selected');
+        // ==============================
+        // 所持フィルター（4ボタン：完全排他）
+        // ==============================
+        const ownedGroup = btn.closest('.filter-group[data-key="所持フィルター"]');
+        if (ownedGroup && btn.dataset.owned) {
+        const isAlready = btn.classList.contains('selected');
+        const isOffBtn  = (btn.dataset.owned === 'off');
+
+        // いったん全解除
+        ownedGroup.querySelectorAll('.filter-btn[data-owned]')
+            .forEach(b => b.classList.remove('selected'));
+
+        if (isOffBtn) {
+            // OFFは常にONにする
+            btn.classList.add('selected');
+        } else if (isAlready) {
+            // ✅ 同じボタンをもう一回 → OFFへ
+            ownedGroup.querySelector('.filter-btn[data-owned="off"]')
+            ?.classList.add('selected');
+        } else {
+            // 通常は押したものをON
+            btn.classList.add('selected');
+        }
+
+        applyFilters();
+        return;
+        }
+
+        // ==============================
+        // カードグループ（単一選択）
+        // ==============================
+        const groupFilter = btn.closest('.filter-group[data-key="カードグループ"]');
+        if (groupFilter && btn.dataset.group != null) {
+        const isAlready = btn.classList.contains('selected');
+        const id = String(btn.dataset.group || '');
+
+        // いったん全解除
+        groupFilter.querySelectorAll('.filter-btn[data-group]').forEach(b => b.classList.remove('selected'));
+
+        if (!isAlready && id) {
+            btn.classList.add('selected');
+            try { window.CardGroups?.setActive?.(id); } catch {}
+        } else {
+            // ✅ 指定なしボタンは無いので「全部未選択」にする
+            try { window.CardGroups?.setActive?.(''); } catch {}
+        }
+
+        applyFilters();
+        return;
+        }
 
         const group = btn.closest('.filter-group');
-        if (group && group.dataset.key === 'タイプ') {
-            // ✅ タイプ複数選択 → タイプボタンを「複数選択中」表示に
+
+        // ✅ 通常フィルター：selected トグル
+        if (group) {
+        // 単一選択にしたいグループがあればここに追加（例：BPなどを単一にするなら）
+        // const isSingle = (group.dataset.key === 'BP（ブレッシングポイント）要素');
+
+        // 基本は複数選択OKなので toggle
+        btn.classList.toggle('selected');
+
+        // タイプ複数選択 → 上部のタイプ即時ボタン表示も同期
+        if (group.dataset.key === 'タイプ') {
             syncQuickTypeFromModal_();
         }
 
+        applyFilters();
+        return;
+        }
+
+        // group が無いケースは一応そのまま
         applyFilters();
         });
         document.addEventListener('keydown', (e) => {
@@ -1239,8 +1791,22 @@
         })();
         setModalTab_(savedTab);
 
-        // UI生成
-        generateFilterUI().catch(console.warn);
+        // UI生成＋状態同期
+        generateFilterUI().catch(console.warn).then(() => {
+            try { syncGroupFilterUIFromState_(); } catch {}
+        });
+
+        // ==============================
+        // CardGroups 更新 → フィルター側「カードグループ」欄を差し替え
+        // ==============================
+        try {
+        if (window.CardGroups?.onChange) {
+            window.CardGroups.onChange(() => {
+            refreshCardGroupFilterUI_();       // ボタン一覧(名前/枚数)を更新
+            renderActiveFilterChips();         // チップ表示も更新（グループ名変わるので）
+            });
+        }
+        } catch {}
 
         updateChipsOffset();
         window.addEventListener('resize', updateChipsOffset);
@@ -1266,7 +1832,6 @@
         openFilterModal,
         closeFilterModal,
         toggleDetailFilters,
-        updateOwnedCycleBtn,
     };
 
     // 既存コード互換：グローバル関数名を維持
@@ -1275,8 +1840,6 @@
     window.openFilterModal = openFilterModal;
     window.closeFilterModal = closeFilterModal;
     window.toggleDetailFilters = toggleDetailFilters;
-    window.updateOwnedCycleBtn = updateOwnedCycleBtn;
-    window.cycleOwnedFilter = cycleOwnedFilter;
 
     // DOMContentLoaded で起動
     document.addEventListener('DOMContentLoaded', init);

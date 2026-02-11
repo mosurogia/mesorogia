@@ -4,17 +4,23 @@
  * ========================= */
 
 // ========================
-// 共通：HTMLエスケープ
+// 共通：HTMLエスケープ（堅牢版）
 // ========================
-window.escapeHtml_ = window.escapeHtml_ || function (s) {
-    return String(s ?? '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-};
-window.escapeHtml = window.escapeHtml || window.escapeHtml_;
+(function () {
+    'use strict';
+
+    function escapeHtml_(s) {
+        return String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    window.escapeHtml_ = window.escapeHtml_ || escapeHtml_;
+    window.escapeHtml  = window.escapeHtml  || window.escapeHtml_;
+})();
 
 
 // ローカル開発なら '', GitHub Pages なら '/mesorogia-cards/' などに調整

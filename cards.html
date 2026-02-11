@@ -145,15 +145,6 @@
                 <div class="modal-content">
                     <h3 class="filter-maintitle">絞り込み</h3>
 
-                    <!-- ✅ タブ（フィルター / グループ） -->
-                    <div class="filter-modal-tabs" role="tablist" aria-label="フィルターとグループの切り替え">
-                        <button type="button" class="filter-modal-tab is-active" data-tab="filters" role="tab" aria-selected="true">
-                            📊 フィルター
-                        </button>
-                        <button type="button" class="filter-modal-tab" data-tab="groups" role="tab" aria-selected="false">
-                            🗂 グループ
-                        </button>
-                    </div>
 
                     <!-- ✅ Pane: フィルター -->
                     <section class="filter-modal-pane is-active" data-pane="filters" role="tabpanel">
@@ -164,39 +155,6 @@
                         <!-- 詳細フィルター -->
                         <h4 class="filter-subtitle">さらに詳しい条件フィルター</h4>
                         <div id="detail-filters"></div>
-                    </section>
-
-                    <!-- ✅ Pane: グループ（まずは土台だけ） -->
-                    <section class="filter-modal-pane" data-pane="groups" role="tabpanel" aria-hidden="true">
-                        <div class="group-pane">
-                            <div class="group-pane-head">
-                                <div class="group-pane-title">カードグループ</div>
-                                <div class="group-pane-sub">端末内保存（あとで同期/公開対応）</div>
-                            </div>
-
-                            <div class="group-pane-actions">
-                                <button type="button" class="group-btn" id="group-create-btn">＋ 新規作成</button>
-                                <button type="button" class="group-btn" id="group-select-btn">☑ 選択して作成</button>
-                                <button type="button" class="group-btn" id="group-clear-btn">✖ 選択解除</button>
-                            </div>
-
-                            <div class="group-pane-current" id="group-current">
-                                <div class="group-current-label">選択中グループ：</div>
-                                <div class="group-current-value">(未選択)</div>
-                            </div>
-
-                            <div class="group-pane-list">
-                                <div class="group-list-title">保存済み</div>
-                                <div id="modal-groups-list" class="group-list-body">
-                                    <!-- ✅ ここにJSでグループ一覧を描画予定 -->
-                                    <div class="group-empty-hint">（まだグループがありません）</div>
-                                </div>
-                            </div>
-
-                            <div class="group-pane-note">
-                                ※ ここでグループを選ぶと、カード一覧/デッキメーカーから呼び出せるようにしていきます
-                            </div>
-                        </div>
                     </section>
 
                     <!-- 下部ボタン（共通） -->

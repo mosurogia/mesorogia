@@ -36,8 +36,16 @@
         // ✅ 枚数チェックは data.total を使う（投稿もデッキメーカーも同じ基準でOK）
         const total = data.total || 0;
 
-        if (total === 0){ alert('デッキが空です。カードを追加してください。'); return; }
-        if (!opts.skipSizeCheck && total > 40){ alert('デッキ枚数が多すぎます（40枚以内にしてください）'); return; }
+        if (total === 0){
+        alert('デッキが空です。カードを追加してください。');
+        window.__isExportingDeckImg = false;
+        return;
+        }
+        if (!opts.skipSizeCheck && total > 40){
+        alert('デッキ枚数が多すぎます（40枚以内にしてください）');
+        window.__isExportingDeckImg = false;
+        return;
+        }
 
         const aspect = '3:4';
         const kinds = data.uniqueList?.length || 0;
@@ -711,6 +719,12 @@ window.getCanvasSpecForPreview        = getCanvasSpec;
         overlay.remove();
     }
 
+    //他機能（グループ等）からローディングUIを使えるように公開
+    window.__DeckImgLoading = window.__DeckImgLoading || {
+    show: showLoadingOverlay,
+    hide: hideLoadingOverlay,
+    };
+
   // ============ ユーティリティ ============
     function nextFrame(){ return new Promise(r=>requestAnimationFrame(()=>r())); }
 
@@ -877,9 +891,8 @@ window.getCanvasSpecForPreview        = getCanvasSpec;
 
         document.body.appendChild(modal);
     }
-
-
-
+    /* ✅ 追加：他機能（カードグループ等）から同じプレビューを使えるように公開 */
+    window.showDeckImgPreviewModal = window.showDeckImgPreviewModal || downloadCanvas;
 
     function getPreferredScale(){
         const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));

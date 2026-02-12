@@ -28,6 +28,22 @@ function ensureReady_() {
 // UI上の「選択中グループ」（activeId/editingIdとは別）
 let uiSelectedId = '';
 
+// =====================================================
+// 画像生成の上限（カード合計枚数）
+// =====================================================
+const MAX_EXPORT_CARDS = 30;
+
+// g.cards の合計枚数（{cd:count} / {cd:true} 両対応）
+function sumGroupCards_(cardsObj) {
+  const obj = cardsObj || {};
+  let total = 0;
+  for (const v of Object.values(obj)) {
+    if (typeof v === 'number') total += (v | 0);
+    else if (v) total += 1; // boolean等は1枚扱い
+  }
+  return total;
+}
+
 // UI側の選択解除を外部から呼べるようにする（cardFilter から使う）
 window.__CardGroupsUI = window.__CardGroupsUI || {};
 window.__CardGroupsUI.clearSelected = function () {
@@ -37,14 +53,14 @@ window.__CardGroupsUI.clearSelected = function () {
 // rAFで重い処理を“1回だけ”にまとめる（固まり対策）
 let rafQueued = false;
 function scheduleHeavySync_() {
-    if (rafQueued) return;
-    rafQueued = true;
-    requestAnimationFrame(() => {
+  if (rafQueued) return;
+  rafQueued = true;
+  requestAnimationFrame(() => {
     rafQueued = false;
     try { renderSidebar_(); } catch {}
     try { applyEditVisual_(); } catch {}
     try { window.applyFilters?.(); } catch {}
-    });
+  });
 }
 
 function renderSidebar_() {
@@ -56,14 +72,6 @@ function renderSidebar_() {
 
     // 選択が消えてたらクリア
     if (uiSelectedId && !st.groups[uiSelectedId]) uiSelectedId = '';
-
-    // status（未選択時は warn のみ＋案内文を下に出す）
-    let baseStatus = '';
-    if (st.editingId) {
-    baseStatus = `編集中：<b>${escapeHtml_(st.groups[st.editingId]?.name || '')}</b>`;
-    } else if (st.activeId) {
-    baseStatus = `適用中：<b>${escapeHtml_(st.groups[st.activeId]?.name || '')}</b>`;
-    }
 
     // status：表示文字列を1本化（全部同じ場所に出す）
     let statusLine = '';
@@ -92,23 +100,26 @@ function renderSidebar_() {
         </div>
 
         <div class="cg-head-row cg-head-row-ops cg-ops-grid">
-        <!-- 1列目：編集/削除 -->
-        <div class="cg-ops-col">
-            <button type="button" class="cg-icon-btn" id="cg-op-edit" title="グループカード編集">✏️</button>
-            <button type="button" class="cg-icon-btn" id="cg-op-del"  title="グループ削除">🗑</button>
-        </div>
+            <!-- 1段目：編集 / 削除 / 画像生成 -->
+            <div class="cg-ops-row cg-ops-row-top">
+                <button type="button"
+                class="${st.editingId ? 'cg-head-btn cg-op-edit-done' : 'cg-icon-btn'}"
+                id="cg-op-edit"
+                title="${st.editingId ? '編集を終了（選択完了）' : 'グループカード編集'}"
+                data-mode="${st.editingId ? 'done' : 'edit'}"
+                >${st.editingId ? '選択完了' : '✏️'}</button>
 
-        <!-- 2列目：↑/↓ -->
-        <div class="cg-ops-col">
-            <button type="button" class="cg-icon-btn" id="cg-op-up"   title="上へ">↑</button>
-            <button type="button" class="cg-icon-btn" id="cg-op-down" title="下へ">↓</button>
-        </div>
+                <button type="button" class="cg-icon-btn" id="cg-op-del" title="グループ削除">🗑</button>
+                <button type="button" class="cg-icon-btn" id="cg-op-export" title="グループ画像生成（30枚以下のみ）">📷</button>
+            </div>
 
-        <!-- 3列目：完了（編集中のみ） -->
-        <div class="cg-ops-col cg-ops-col-right">
-            <button type="button" class="cg-head-btn" id="cg-exit-edit"
-            style="display:${st.editingId ? '' : 'none'};">選択完了</button>
-        </div>
+            ${st.editingId ? '' : `
+            <!-- 2段目：↑ / ↓（編集中は非表示） -->
+            <div class="cg-ops-row cg-ops-row-bottom">
+                <button type="button" class="cg-icon-btn" id="cg-op-up" title="上へ">↑</button>
+                <button type="button" class="cg-icon-btn" id="cg-op-down" title="下へ">↓</button>
+            </div>
+            `}
         </div>
     </div>
 
@@ -124,26 +135,59 @@ function renderSidebar_() {
     const hasSel = !!uiSelectedId;
     const isEditing = !!st.editingId;
 
-    // 普段は押せない（未選択時）
-    ['#cg-op-edit', '#cg-op-del', '#cg-op-up', '#cg-op-down'].forEach(sel => {
+    // 編集ボタン：通常は「選択が必要」／編集中は「終了ボタン」なので常に押せる
+    {
+    const b = qs('#cg-op-edit', host);
+    if (b) {
+        b.disabled = (!hasSel && !isEditing);
+        b.classList.toggle('is-disabled', b.disabled);
+    }
+    }
+
+    // 削除：選択が必要（編集中でも許可）
+    {
+    const b = qs('#cg-op-del', host);
+    if (b) {
+        b.disabled = !hasSel;
+        b.classList.toggle('is-disabled', b.disabled);
+    }
+    }
+
+    // 画像生成：選択が必要（編集中でもOK）
+    {
+    const b = qs('#cg-op-export', host);
+    if (b) {
+        b.disabled = !hasSel;
+        b.classList.toggle('is-disabled', b.disabled);
+    }
+    }
+
+    // ↑↓：選択が必要、かつ編集中は無効
+    ['#cg-op-up', '#cg-op-down'].forEach(sel => {
     const b = qs(sel, host);
     if (!b) return;
-    b.disabled = (!hasSel) || (isEditing && sel !== '#cg-op-del'); // 編集中は「削除」以外触らせないならここで制御
+    b.disabled = (!hasSel) || isEditing;
     b.classList.toggle('is-disabled', b.disabled);
     });
 
-    // 選択完了
-    qs('#cg-exit-edit', host)?.addEventListener('click', () => {
-    window.CardGroups.stopEditing();
-    scheduleHeavySync_();
-    });
-
-    // 編集（= startEditing）
+    // 編集（= startEditing）／編集中なら「選択完了（stopEditing）」にトグル
     qs('#cg-op-edit', host)?.addEventListener('click', () => {
     const st2 = window.CardGroups.getState();
+
+    // 編集中 → 終了（選択完了）
+    if (st2.editingId) {
+        window.CardGroups.stopEditing();
+        scheduleHeavySync_();
+        return;
+    }
+
+    // 通常 → 編集開始
     if (!uiSelectedId) return showSelectWarn_();
-    if (st2.editingId) return; // すでに編集中
     window.CardGroups.startEditing(uiSelectedId);
+
+    // ✅ 編集開始時だけ：選択済みを上に寄せた並びを反映
+    try { window.sortCards?.(); } catch {}
+
     scheduleHeavySync_();
     });
 
@@ -153,7 +197,7 @@ function renderSidebar_() {
     if (!uiSelectedId) return showSelectWarn_();
 
     const g = st2.groups[uiSelectedId];
-    if (!g || g.fixed) return;
+    if (!g) return;
 
     const count = Object.keys(g.cards || {}).length;
     const ok = confirm(`「${g.name}」を削除しますか？\n（登録カード：${count}枚）`);
@@ -168,6 +212,42 @@ function renderSidebar_() {
     qs('#cg-op-up', host)?.addEventListener('click', () => moveSelectedBy_(-1));
     qs('#cg-op-down', host)?.addEventListener('click', () => moveSelectedBy_(+1));
 
+    // 画像生成（グループ）
+    qs('#cg-op-export', host)?.addEventListener('click', async () => {
+    if (!uiSelectedId) return showSelectWarn_();
+
+    const st2 = window.CardGroups.getState();
+    const g = st2.groups?.[uiSelectedId];
+    if (!g) return;
+
+    const cardsObj = g.cards || {};
+
+    // ✅ 画像生成は30枚以下のみ
+    const total = sumGroupCards_(cardsObj);
+    if (total > MAX_EXPORT_CARDS) {
+    confirm(`画像生成は${MAX_EXPORT_CARDS}枚以下のみ対応です。\n（現在：${total}枚）\n\n30枚以下に調整してから再度お試しください。`);
+    return;
+    }
+
+    // ✅ 画像生成（グループ専用）
+    if (typeof window.exportGroupImage !== 'function') {
+        alert('グループ画像生成（group-image-export.js）が読み込まれていません');
+        return;
+    }
+
+    const cds = [];
+    for (const [cdRaw, v] of Object.entries(cardsObj)) {
+        const cd = String(cdRaw || '').padStart(5, '0');
+        const cnt = (typeof v === 'number') ? (v | 0) : (v ? 1 : 0);
+        for (let i = 0; i < cnt; i++) cds.push(cd);
+    }
+
+    window.exportGroupImage({
+        groupName: g.name || 'カードグループ',
+        cards: cds,
+    });
+    });
+
     // 追加
     qs('#cg-sidebar-add', host)?.addEventListener('click', () => {
     if (!window.CardGroups.canCreate()) {
@@ -175,6 +255,7 @@ function renderSidebar_() {
         return;
     }
     window.CardGroups.createGroupAndEdit();
+    try { window.sortCards?.(); } catch {}
     // createGroupAndEdit が editingId に入る想定：選択も追従
     try {
         const st3 = window.CardGroups.getState();
@@ -210,60 +291,61 @@ function moveSelectedBy_(delta) {
 }
 
 function rowHtml_(g, st) {
-    const isActive = st.activeId === g.id;
-    const isEditing = st.editingId === g.id;
-    const isSelected = uiSelectedId === g.id;
+  const isActive = st.activeId === g.id;
+  const isEditing = st.editingId === g.id;
+  const isSelected = uiSelectedId === g.id;
 
-    // ✅ 合計枚数（cd->count 形式も、cd->true 形式も吸収）
-    const cardsObj = g.cards || {};
-    const total = Object.values(cardsObj).reduce((sum, v) => {
-    if (typeof v === 'number') return sum + (v | 0);
-    // boolean / null / {} などは “1枚扱い” に寄せる
-    return sum + 1;
-    }, 0);
+  const cardsObj = g.cards || {};
+  const total = sumGroupCards_(cardsObj);
 
-    // サムネ：先頭8枚（必要なら9）
-    const allCds = Object.keys(cardsObj);
-    const cds = allCds.slice(0, 8).map(cd => String(cd).padStart(5, '0'));
-    const more = Math.max(0, allCds.length - cds.length);
+  // サムネ：先頭8枚
+  const allCdsRaw = Object.keys(cardsObj);
 
-    // 0枚時の表示文言（編集状態なら文言変えてもOK）
-    const emptyLabel = st.editingId === g.id
+  const allCds = allCdsRaw
+    .map(cd => String(cd).padStart(5, '0'))
+    .sort((a, b) => {
+      const A = window.getCardSortKeyFromCard(window.cardMap?.[a] || { cd: a });
+      const B = window.getCardSortKeyFromCard(window.cardMap?.[b] || { cd: b });
+      return window.compareCardKeys(A, B);
+    });
+
+  const miniCds = allCds.slice(0, 8);
+  const more = Math.max(0, allCds.length - miniCds.length);
+
+  const emptyLabel = st.editingId === g.id
     ? 'カード未選択（カードをタップして追加）'
     : 'ここにカードが表示されます';
 
-    return `
-        <div class="cg-row ${isActive ? 'is-active' : ''} ${isEditing ? 'is-editing' : ''} ${isSelected ? 'is-selected' : ''}"
-        data-gid="${g.id}" data-fixed="${g.fixed ? '1' : ''}">
-        <div class="cg-row-top">
-            <button type="button" class="cg-name-btn" title="グループ名をクリックで編集">
-            <span class="cg-name-text">${escapeHtml_(g.name)}</span>
-            </button>
-            <input class="cg-name-input" type="text" value="${escapeHtml_(g.name)}"
-            aria-label="グループ名を編集" />
-            <!-- 枚数表示 -->
-            <span class="cg-count" title="このグループの枚数">${total}枚</span>
+  return `
+    <div class="cg-row ${isActive ? 'is-active' : ''} ${isEditing ? 'is-editing' : ''} ${isSelected ? 'is-selected' : ''}"
+      data-gid="${g.id}" data-fixed="${g.fixed ? '1' : ''}">
+      <div class="cg-row-top">
+        <button type="button" class="cg-name-btn" title="グループ名をクリックで編集">
+          <span class="cg-name-text">${escapeHtml_(g.name)}</span>
+        </button>
+        <input class="cg-name-input" type="text" value="${escapeHtml_(g.name)}" aria-label="グループ名を編集" />
+        <span class="cg-count" title="このグループの枚数">${total}枚</span>
+      </div>
 
-        </div>
-
-        <div class="cg-mini" aria-label="グループ内カードの簡易表示">
-            ${
-            allCds.length === 0
-                ? `<div class="cg-mini-empty">${escapeHtml_(emptyLabel)}</div>`
-                : `
-                ${cds.map((cd, i) => `
-                    <span class="cg-mini-card" style="--i:${i}">
-                    <img src="img/${escapeHtml_(cd)}.webp" alt="" loading="lazy" decoding="async"
-                        onerror="this.onerror=null;this.src='img/00000.webp';" />
-                    </span>
-                `).join('')}
-                ${more ? `<span class="cg-mini-more">+${more}</span>` : ``}
-                `
-            }
-        </div>
-        </div>
-    `.trim();
+      <div class="cg-mini" aria-label="グループ内カードの簡易表示">
+        ${
+          allCds.length === 0
+            ? `<div class="cg-mini-empty">${escapeHtml_(emptyLabel)}</div>`
+            : `
+              ${miniCds.map((cd, i) => `
+                <span class="cg-mini-card" style="--i:${i}">
+                  <img src="img/${escapeHtml_(cd)}.webp" alt="" loading="lazy" decoding="async"
+                    onerror="this.onerror=null;this.src='img/00000.webp';" />
+                </span>
+              `).join('')}
+              ${more ? `<span class="cg-mini-more">+${more}</span>` : ``}
+            `
+        }
+      </div>
+    </div>
+  `.trim();
 }
+
 
 function showLimit_(sel) {
     const el = qs(sel);
@@ -290,14 +372,6 @@ function bindRowEvents_(root) {
     if (nameText) {
     e.preventDefault();
     e.stopPropagation();
-
-    // ✅ fixed（お気に入り / メタカード）は rename に入らない
-    const g = st.groups?.[gid];
-    if (g?.fixed) {
-        uiSelectedId = gid;          // 選択だけはする（好みで）
-        scheduleHeavySync_();        // 見た目更新（任意）
-        return;
-    }
 
     uiSelectedId = gid;
     const input = row.querySelector('.cg-name-input');
@@ -370,10 +444,10 @@ function bindRowEvents_(root) {
 
     const st = window.CardGroups.getState();
     const g = st.groups[gid];
-    if (!g || g.fixed) {
-      row.classList.remove('is-renaming');
-      input.style.display = 'none';
-      return;
+    if (!g) {
+    row.classList.remove('is-renaming');
+    input.style.display = 'none';
+    return;
     }
 
     const next = String(input.value || '').trim();
@@ -384,8 +458,8 @@ function bindRowEvents_(root) {
     row.classList.remove('is-renaming');
     input.style.display = 'none';
 
-    const btn = row.querySelector('.cg-name-btn');
-    if (btn && next) btn.textContent = next;
+    const nameSpan = row.querySelector('.cg-name-text');
+    if (nameSpan && next) nameSpan.textContent = next;
 
   }, true);
 }
@@ -439,6 +513,9 @@ function bindCardTapOverride_() {
 
 function init() {
   if (!ensureReady_()) return;
+
+// ★ サムネの並びを安定させる（cardMap を先に読む）
+  try { window.ensureCardMapLoaded?.().then(() => scheduleHeavySync_()); } catch {}
 
   // ✅ 再読込時はグループフィルターを解除
   try {

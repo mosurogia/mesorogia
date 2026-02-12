@@ -2,6 +2,7 @@
   CARD FILTER / カード一覧フィルター（UI生成＋適用）
   - filterModal / main-filters / detail-filters が存在するページだけ動作
   - グリッド/リスト切替（#grid.is-list）にも対応
+  -　escapeHtml_はdef.jsに記載
 ==================================================*/
 
 (function () {
@@ -98,12 +99,7 @@
         `;
         wrapper.appendChild(row);
 
-        row.querySelector('#cgpr-close').addEventListener('click', () => {
-            row.classList.remove('is-open');
-            // ボタン側の開状態も戻す
-            document.querySelectorAll('.filter-btn.is-preview-open[data-group]')
-            .forEach(b => b.classList.remove('is-preview-open'));
-        });
+        row.querySelector('#cgpr-close').addEventListener('click', closeCgPreviewRow_);
         })();
 
         // 末尾：図鑑へ（新規作成）
@@ -119,38 +115,6 @@
         return wrapper;
         }
 
-    /* ============================
-    サムネ（グループプレビュー）
-    - hover / long-press で表示
-    - 画面下固定なので邪魔になりにくい
-    ============================ */
-    let __cgThumbTimer = null;
-
-    function ensureGroupThumbPop_(){
-    let pop = document.getElementById('group-thumb-pop');
-    if (pop) return pop;
-
-    pop = document.createElement('div');
-    pop.id = 'group-thumb-pop';
-    pop.innerHTML = `
-        <div class="gtp-head">
-        <span class="gtp-title" id="gtp-title"></span>
-        <button type="button" class="gtp-close" aria-label="close">×</button>
-        </div>
-        <div class="gtp-body" id="gtp-body"></div>
-    `;
-    document.body.appendChild(pop);
-
-    pop.querySelector('.gtp-close').addEventListener('click', hideGroupThumbPop_);
-    return pop;
-    }
-
-    function hideGroupThumbPop_(){
-    const pop = document.getElementById('group-thumb-pop');
-    if (!pop) return;
-    pop.classList.remove('is-open');
-    }
-
     function getCardThumbUrl_(cd){
     // できれば card-core 側の関数があればそれを優先
     if (typeof window.getCardImageUrl === 'function') {
@@ -158,6 +122,36 @@
     }
     // フォールバック（環境に合わせてパスを調整OK）
     return `img/${String(cd).padStart(5,'0')}.webp`;
+    }
+
+    // ============================
+    // グループ内カードの表示順（他と同じ）
+    // type → cost → power → cd
+    // - cardMap が未ロードなら cd 昇順にフォールバック
+    // ============================
+    function getSortedGroupCds_(cardsObj, limit = 60) {
+    const keys = Object.keys(cardsObj || {});
+    if (!keys.length) return [];
+
+    const hasMap = (window.cardMap && Object.keys(window.cardMap).length > 0);
+    if (!hasMap || typeof window.getCardSortKeyFromCard !== 'function' || typeof window.compareCardKeys !== 'function') {
+        // フォールバック：cd昇順
+        return keys
+        .map(cd => String(cd).padStart(5, '0'))
+        .sort((a, b) => (Number(a) - Number(b)) || a.localeCompare(b))
+        .slice(0, limit);
+    }
+
+    const arr = keys.map(cd => {
+        const cd5 = String(cd).padStart(5, '0');
+        const card = window.cardMap[cd5];
+        // cardMap に無い場合も壊れないように最低限の形にする
+        const key = window.getCardSortKeyFromCard(card || { cd: cd5, type: '', cost: 0, power: 0 });
+        return { cd5, key };
+    });
+
+    arr.sort((a, b) => window.compareCardKeys(a.key, b.key));
+    return arr.slice(0, limit).map(x => x.cd5);
     }
 
     function showCgPreviewRow_(groupId){
@@ -169,7 +163,7 @@
     if (!row) return;
 
     const cardsObj = g.cards || {};
-    const cds = Object.keys(cardsObj).map(n => Number(n)).slice(0, 60); // 先頭60枚（多すぎ防止）
+    const cds = getSortedGroupCds_(cardsObj, 60); //先頭60枚
 
     row.querySelector('#cgpr-title').textContent =
         `${g.name || 'グループ'}（${Object.keys(cardsObj).length}枚）`;
@@ -180,12 +174,12 @@
     if (!cds.length) {
         body.innerHTML = `<div class="cgpr-empty">カード未選択</div>`;
     } else {
-        cds.forEach(cd => {
+        cds.forEach(cd5 => {
         const img = document.createElement('img');
         img.className = 'cgpr-img';
         img.loading = 'lazy';
-        img.alt = String(cd);
-        img.src = getCardThumbUrl_(cd);
+        img.alt = String(cd5);
+        img.src = getCardThumbUrl_(cd5);
         body.appendChild(img);
         });
     }
@@ -193,40 +187,15 @@
     row.classList.add('is-open');
     }
 
+    function closeCgPreviewRow_() {
+    const row = document.getElementById('cg-preview-row');
+    if (row) row.classList.remove('is-open');
 
-    /* ============================
-    グループフィルターボタンのクリック処理
-    - 既存の filterModal click handler の中に混ぜてもOK
-    ============================ */
-    function showGroupThumbPop_(groupId){
-    const st = (window.CardGroups && window.CardGroups.getState) ? window.CardGroups.getState() : null;
-    const g = st?.groups?.[groupId];
-    if (!g) return;
-
-    const cardsObj = g.cards || {};
-    const cds = Object.keys(cardsObj).map(n => Number(n)).slice(0, 12);// 先頭12枚だけ
-
-    const pop = ensureGroupThumbPop_();
-    pop.querySelector('#gtp-title').textContent = `${g.name || 'グループ'}（先頭${cds.length}枚）`;
-
-    const body = pop.querySelector('#gtp-body');
-    body.innerHTML = '';
-
-    if (!cds.length) {
-        body.innerHTML = `<div class="gtp-empty">カード未選択</div>`;
-    } else {
-        cds.forEach(cd => {
-        const img = document.createElement('img');
-        img.className = 'gtp-img';
-        img.loading = 'lazy';
-        img.alt = String(cd);
-        img.src = getCardThumbUrl_(cd);
-        body.appendChild(img);
-        });
+    // ボタン側の開状態も戻す
+    document.querySelectorAll('.filter-btn.is-preview-open[data-group]')
+        .forEach(b => b.classList.remove('is-preview-open'));
     }
 
-    pop.classList.add('is-open');
-    }
 
     function isDeckmakerPage_() {
     return /deckmaker/i.test(location.pathname) || document.body?.classList?.contains('deckmaker');
@@ -305,40 +274,6 @@
     // ✅ それ以外の filter-btn は “ここでは何もしない”
     // （選択処理は init() 内の click 1本に任せる）
     });
-
-    // hover（PC）
-    document.addEventListener('pointerover', (e) => {
-    const btn = e.target.closest('.filter-btn[data-group]');
-    if (!btn) return;
-    if (e.pointerType === 'touch') return; // touch は長押しへ
-
-    showGroupThumbPop_(btn.dataset.group);
-    });
-    document.addEventListener('pointerout', (e) => {
-    const btn = e.target.closest('.filter-btn[data-group]');
-    if (!btn) return;
-    if (e.pointerType === 'touch') return;
-    hideGroupThumbPop_();
-    });
-
-    // 長押し（SP）
-    document.addEventListener('pointerdown', (e) => {
-    const btn = e.target.closest('.filter-btn[data-group]');
-    if (!btn) return;
-    if (e.pointerType !== 'touch') return;
-
-    clearTimeout(__cgThumbTimer);
-    __cgThumbTimer = setTimeout(() => {
-        showGroupThumbPop_(btn.dataset.group);
-    }, 350);
-    });
-    document.addEventListener('pointerup', () => {
-    clearTimeout(__cgThumbTimer);
-    });
-    document.addEventListener('pointercancel', () => {
-    clearTimeout(__cgThumbTimer);
-    });
-
 
     // ==============================
     // カードグループ（フィルターUI）を再描画（差し替え専用）
@@ -1469,6 +1404,7 @@
         });
 
         try { window.applyGrayscaleFilter?.(); } catch {}
+        try { closeCgPreviewRow_(); } catch {} //フィルターが変わったらプレビューは閉じる
         renderActiveFilterChips();
         // ✅ リスト表示の row 表示を最終確定（cardsViewMode 側の同期関数があれば呼ぶ）
         try { window.syncListRowVisibility_?.(); } catch {}
@@ -1768,6 +1704,12 @@
         document.addEventListener('keydown', (e) => {
         const modal = document.getElementById('filterModal');
         if (e.key === 'Escape' && modal && modal.style.display === 'flex') closeFilterModal();
+
+        const drop = e.target?.closest?.('.cg-drop');
+            if (!drop) return;
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            drop.click();
         });
         // モーダル外（背景）タップで閉じる（1回だけバインド）
         if (!window.__filterModalBackdropBound) {

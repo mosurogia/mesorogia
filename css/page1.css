@@ -134,7 +134,7 @@
     top: 0;
     background: #fff;
     z-index: 2000;
-    padding: 10px 12px 8px;
+    padding: 10px 4px 8px;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -143,7 +143,7 @@
 .cg-head-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     min-width: 0;
 }
 
@@ -175,47 +175,84 @@
     overflow-wrap: anywhere;
 }
 
-/* ✅ ops：3ブロックを横並び（狭ければ折り返し） */
+/* ✅ ops：2段固定（1段目：編集/削除/画像、2段目：↑↓） */
 .cg-head-row-ops {
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
+    justify-content: flex-start;
 }
 
-/* HTML側に付いてるので定義しておく（grid禁止） */
+/* =====================================================
+   cg ops：基本は 1列（入るなら横一列）
+   入らない時だけ 2段（wrapで自然に折れる）
+===================================================== */
+
+/* ✅ まずは1列運用：横並び + wrap許可 */
 .cg-ops-grid {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    gap: 4px;
+    width: 100%;
 }
 
-.cg-ops-col {
+/* ✅ 上段（編集/削除/画像） */
+.cg-ops-row-top {
     display: flex;
-    align-items: center;
-    gap: 6px;
+    gap: 4px;
+    flex-wrap: nowrap;
 }
 
+/* 下段（↑↓）は “1行まるごと” 使う */
+.cg-ops-row-bottom {
+    display: flex;
+    gap: 4px;
+    flex-wrap: nowrap;
+    width: 100%;
+    /* ← ここが主役：行を幅いっぱいに */
+}
+
+/* 「選択完了」ボタン：通常時も見やすく濃く */
+.cg-op-edit-done {
+    background: #16a34a;
+    /* ✅ 少し濃い緑 */
+    color: #fff;
+    border: 1px solid rgba(0, 0, 0, .18);
+    box-shadow: 0 3px 10px rgba(22, 163, 74, .28);
+    /* ✅ 影強め */
+    font-weight: 1000;
+    height: 31px;
+    padding: 0 14px;
+    border-radius: 12px;
+    white-space: nowrap;
+
+    letter-spacing: .02em;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, .25);
+    /* ✅ 白文字が沈まない */
+}
+
+/* hoverがある環境だけ少し明るく */
+@media (hover:hover) {
+    .cg-op-edit-done:hover {
+        background: #22c55e;
+    }
+}
+
+/* 右列：中身は絶対に折り返さない */
 .cg-ops-col-right {
-    margin-left: auto;
-    /* ✅ 右寄せ */
+    justify-content: flex-end;
 }
 
-/* header buttons */
-.cg-head-btn {
-    height: 32px;
-    padding: 0 10px;
-    border-radius: 10px;
-    border: 1px solid rgba(0, 0, 0, .15);
-    background: #f7f7f9;
-    cursor: pointer;
-    font-weight: 900;
-    font-size: 12.5px;
+/* ✅ 狭い時は “右列だけ” を次の行へ（ボタン崩れ防止の最終手段） */
+@container sidebar (max-width: 260px) {
+    .cg-ops-col-right {
+        flex: 1 1 100%;
+        margin-left: 0;
+        justify-content: flex-start;
+        /* 右寄せのままが良ければ flex-end に */
+    }
 }
 
 /* ヘッダのアイコンボタン（JSで使ってる） */
 .cg-icon-btn {
-    width: 34px;
-    height: 34px;
+    width: 31px;
+    height: 31px;
     border-radius: 10px;
     border: 1px solid rgba(0, 0, 0, .15);
     background: #f7f7f9;
@@ -228,17 +265,14 @@
     cursor: not-allowed;
 }
 
-/* 編集完了ボタン */
-#cg-exit-edit.cg-head-btn {
-    background: #22c55e;
-    color: #fff;
-    border-color: rgba(0, 0, 0, .12);
-    box-shadow: 0 2px 6px rgba(34, 197, 94, .25);
-    font-weight: 1000;
-}
-
-#cg-exit-edit.cg-head-btn:hover {
-    background: #1fb455;
+/* ↑↓は均等に伸びる（右の余白が消える） */
+.cg-ops-row-bottom .cg-icon-btn {
+    flex: 1 1 0;
+    /* 均等割り */
+    width: auto;
+    /* 固定幅を殺す */
+    min-width: 0;
+    /* 余計な制約を外す */
 }
 
 /* status警告 */
@@ -272,7 +306,6 @@
     flex-direction: column;
     gap: 6px;
 }
-
 
 /* =====================================================
    SP Group Drawer（カードグループ：スマホ用ドロワー）

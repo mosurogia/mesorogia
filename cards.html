@@ -2,50 +2,48 @@
 <html lang="ja">
 
 <head>
-    <!-- ===== 共通head ここから ===== -->
+    <!-- ===== 基本設定 ===== -->
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="5NzYWNH5_YUg0dUV2iCzg_bSo7M1lLJi6IzOeF2dGXM" />
     <link rel="icon" href="favicon.ico">
-    <!-- ===== 共通head ここまで ===== -->
 
-    <!-- ===== ページ差分head ここから ===== -->
-    <title>モスロギア 神託のメソロギア カード一覧＆所持率チェッカー</title>
+    <!-- ===== タイトル ===== -->
+    <title>モスロギア図鑑｜神託のメソロギア カード一覧・所持率チェッカー</title>
 
-    <!-- 検索キーワード -->
-    <meta name="keywords" content="神託のメソロギア,神託,メソロギア,モスロギア,攻略,カードゲーム,DCG,カード一覧,カード検索,所持率チェッカー,所持率,カード管理,コレクション管理">
+    <!-- ===== SEO ===== -->
+    <meta name="description" content="『神託のメソロギア』のカード一覧・検索・ソート・所持率チェックが一つになった非公式図鑑サイト。スマホ対応で快適にカード管理ができます。">
 
-    <!-- ページの説明（検索結果の下に表示） -->
-    <meta name="description" content="このページでは『神託のメソロギア』のカード一覧表示と所持率チェックを一つの画面で行えます。カード検索やソート、所持率の確認がまとめてできます。">
+    <!-- canonical（評価をcards.htmlへ統一） -->
+    <link rel="canonical" href="https://mosurogia.github.io/mesorogia-cards/cards.html">
 
-    <!-- OGP基本 -->
-    <meta property="og:title" content="モスロギア | 神託のメソロギア カード一覧＆所持率チェッカー">
-    <meta property="og:description" content="神託のメソロギアのカード検索・デッキ構築・所持率チェックを一画面で行える非公式ツールです。">
+    <!-- ===== OGP ===== -->
+    <meta property="og:title" content="モスロギア図鑑｜神託のメソロギア カード一覧・所持率チェッカー">
+    <meta property="og:description" content="神託のメソロギアのカード検索・デッキ構築・所持率チェックができる非公式図鑑サイトです。">
     <meta property="og:image" content="https://mosurogia.github.io/mesorogia-cards/img/indexogp.jpg">
     <meta property="og:url" content="https://mosurogia.github.io/mesorogia-cards/cards.html">
     <meta property="og:type" content="website">
-    <meta property="og:site_name" content="モスロギア | 神託のメソロギア カード一覧＆所持率チェッカー">
+    <meta property="og:site_name" content="モスロギア図鑑">
 
-    <!-- Twitterカード向け -->
+    <!-- ===== Twitter Card ===== -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="モスロギア | 神託のメソロギア カード一覧＆所持率チェッカー">
-    <meta name="twitter:description" content="カード検索と所持率チェックが一つになった便利ツールを体験しよう！">
+    <meta name="twitter:title" content="モスロギア図鑑｜神託のメソロギア">
+    <meta name="twitter:description" content="カード一覧と所持率チェックが一つになった便利な非公式図鑑。">
     <meta name="twitter:image" content="https://mosurogia.github.io/mesorogia-cards/img/indexogp.jpg">
 
-    <!-- CSS -->
-    <!-- 共通スタイル -->
+    <!-- ===== CSS ===== -->
     <link rel="stylesheet" href="css/common.css">
-    <!-- 各ページの共通スタイル -->
     <link rel="stylesheet" href="css/common-page124.css">
     <link rel="stylesheet" href="css/common-page234.css">
-    <link rel="stylesheet" href="css/common-page24.css">
-    <!-- 一覧表示用スタイル -->
+
+    <!-- 図鑑専用 -->
     <link rel="stylesheet" href="css/page1.css">
-    <!-- 所持率チェッカー用スタイル -->
     <link rel="stylesheet" href="css/page3.css">
 
-    <!-- ===== ページ差分head ここまで ===== -->
+    <!-- ===== 外部リソース（必要なら） ===== -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
+
 
 <body>
 <!-- ヘッダー -->
@@ -326,6 +324,9 @@
 <script src="js/ui/card-detail-template.js"></script>
 <script src="js/ui/card-detail.js"></script>
 
+<!--画像生成-->
+<script src="js/features/image-export.js"></script>
+<script src="js/features/group-image-export.js"></script>
 
 <!--フィルター-->
 <script src="js/features/cardFilter.js"></script>

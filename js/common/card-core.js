@@ -253,15 +253,38 @@ window.buildCardMapFromCards = window.buildCardMapFromCards || buildCardMapFromC
   // ※将来は js/features/ に分離推奨（今は互換のためここに残す）
   // =====================================================
 
+// =====================================================
+// 6.x) 共通：カードの並びキー（type→cost→power→cd）
+// =====================================================
+window.getTypeOrder = window.getTypeOrder || function getTypeOrder(type) {
+  if (type === 'チャージャー') return 0;
+  if (type === 'アタッカー') return 1;
+  if (type === 'ブロッカー') return 2;
+  return 3;
+};
+
+window.getCardSortKeyFromCard = window.getCardSortKeyFromCard || function getCardSortKeyFromCard(card) {
+  const cd = String(card?.cd || card?.id || '').padStart(5, '0');
+  return {
+    type: window.getTypeOrder(card?.type),
+    cost: Number(card?.cost ?? 0) || 0,
+    power: Number(card?.power ?? 0) || 0,
+    cd,
+  };
+};
+
+window.compareCardKeys = window.compareCardKeys || function compareCardKeys(a, b) {
+  return (
+    (a.type - b.type) ||
+    (a.cost - b.cost) ||
+    (a.power - b.power) ||
+    a.cd.localeCompare(b.cd)
+  );
+};
+
+
   (function installSortCards_() {
     if (window.sortCards) return;
-
-    function getTypeOrder_(type) {
-      if (type === 'チャージャー') return 0;
-      if (type === 'アタッカー') return 1;
-      if (type === 'ブロッカー') return 2;
-      return 3;
-    }
 
     function getSortValue_() {
       const sortEl = document.getElementById('sort-select');
@@ -269,7 +292,7 @@ window.buildCardMapFromCards = window.buildCardMapFromCards || buildCardMapFromC
     }
 
     function getKeyFromCardEl_(cardEl) {
-      const type = getTypeOrder_(cardEl.dataset.type);
+      const type = window.getTypeOrder(cardEl.dataset.type);
       const cost = parseInt(cardEl.dataset.cost, 10) || 0;
       const power = parseInt(cardEl.dataset.power, 10) || 0;
       const cd = String(cardEl.dataset.cd || '').padStart(5, '0');
@@ -300,6 +323,7 @@ window.buildCardMapFromCards = window.buildCardMapFromCards || buildCardMapFromC
 
       if (!items.length) return;
 
+      // ① 既存ソート（今の仕様そのまま）
       items.sort((A, B) => {
         const aCard = isList ? A.querySelector('.card') : A;
         const bCard = isList ? B.querySelector('.card') : B;
@@ -326,9 +350,33 @@ window.buildCardMapFromCards = window.buildCardMapFromCards || buildCardMapFromC
         }
       });
 
-      // DOM反映
+      // ② 編集開始時だけ「選択済みを先頭へ」（sort結果は壊さない＝安定分割）
+      try {
+        const editingId = window.CardGroups?.getState?.().editingId || '';
+        if (editingId && typeof window.CardGroups?.hasCard === 'function') {
+          const picked = [];
+          const rest = [];
+
+          for (const it of items) {
+            const cardEl = isList ? it.querySelector('.card') : it;
+            const cd = String(cardEl?.dataset?.cd || '').padStart(5, '0');
+            if (!cd) { rest.push(it); continue; }
+
+            if (window.CardGroups.hasCard(editingId, cd)) picked.push(it);
+            else rest.push(it);
+          }
+
+          items.length = 0;
+          items.push(...picked, ...rest);
+        }
+      } catch (e) {
+        console.warn('[sortCards] group-pick partition failed', e);
+      }
+
+      // ③ DOM反映
       for (const el of items) grid.appendChild(el);
     };
+
   })();
 
 })();

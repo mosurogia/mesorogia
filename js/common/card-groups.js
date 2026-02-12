@@ -11,10 +11,46 @@
   const LS_KEY = 'cardGroupsV1';
   const MAX_GROUPS = 10;
 
-  const FIXED = [
-    { id: 'fav',  name: 'お気に入り', fixed: true },
-    { id: 'meta', name: 'メタカード', fixed: true },
-  ];
+    // ========================================
+  // 公式メタ（ここだけ日々更新する想定）
+  // ver を上げたら「未編集ユーザー」にだけ反映される
+  // ========================================
+  const OFFICIAL_META = {
+    ver: 1, // ←更新したら +1
+    cards: [
+      '90003',//アルテミス
+      '30111',//トラベス
+      '40104',//カロス
+      '80301',//クロノス
+      '90005',//タナトス
+      '90007',//アマテラス
+      '40106',//団長
+      '80015',//ラファエル
+      '80102',//月マディ
+      '80202',//火トゥリテ
+      '80302',//水メルクル
+      '80401',//木ヨーウィス
+      '80203',//ビギナーマジシャン
+      '20027',//義眼
+      '30024',//ヴァンテージ
+      '30304',//木霊
+      '80105',//薬師
+      '80206',//メアリー
+      '10029',//リザード
+      '20030',//結晶体
+      '30029',//親衛隊
+      '40024',//ガードナー
+      '50030',//スケスケルトン
+    ],
+  };
+
+  // sys（編集/削除などの“痕跡”管理）
+  function ensureSys_(st){
+    st.sys = st.sys || {};
+    st.sys.fav  = st.sys.fav  || { touched:false, deleted:false };
+    st.sys.meta = st.sys.meta || { touched:false, deleted:false, ver: 0 };
+    return st;
+  }
 
   function nowId_() {
     return 'g_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
@@ -40,25 +76,68 @@
     if (!st) {
       st = {
         v: 1,
-        order: FIXED.map(g => g.id),
-        groups: {
-          fav:  { id: 'fav',  name: 'お気に入り', fixed: true,  cards: {} },
-          meta: { id: 'meta', name: 'メタカード', fixed: true,  cards: {} },
-        },
-        activeId: '',     // フィルターとして使うグループ（通常時）
-        editingId: '',    // 編集モード中のグループ
+        order: [],
+        groups: {},
+        activeId: '',
+        editingId: '',
+        _editBase: null, // ★ 編集スナップショット（startEditingで入れる）
       };
+
+      ensureSys_(st);
+
+      // 初回：fav/meta を作る（deleted でない限り）
+      if (!st.sys.fav.deleted) {
+        st.groups.fav = { id:'fav', name:'お気に入り', fixed:true, cards:{} };
+        st.order.push('fav');
+      }
+      if (!st.sys.meta.deleted) {
+        const cardsObj = {};
+        OFFICIAL_META.cards.forEach(cd => { cardsObj[String(cd).padStart(5,'0')] = 1; });
+        st.groups.meta = { id:'meta', name:'メタカード', fixed:true, cards:cardsObj };
+        st.order.push('meta');
+        st.sys.meta.ver = OFFICIAL_META.ver;
+      }
+
       write_(st);
       return st;
     }
 
+
     // 固定2グループが消えてたら復旧
     st.groups = st.groups || {};
     st.order = Array.isArray(st.order) ? st.order : [];
-    for (const g of FIXED) {
-      if (!st.groups[g.id]) st.groups[g.id] = { ...g, cards: {} };
-      if (!st.order.includes(g.id)) st.order.unshift(g.id);
+    ensureSys_(st);
+
+    // fav
+    if (st.sys.fav.deleted) {
+      delete st.groups.fav;
+      st.order = st.order.filter(id => id !== 'fav');
+      if (st.activeId === 'fav') st.activeId = '';
+      if (st.editingId === 'fav') st.editingId = '';
+    } else {
+      if (!st.groups.fav) st.groups.fav = { id:'fav', name:'お気に入り', fixed:true, cards:{} };
+      if (!st.order.includes('fav')) st.order.unshift('fav');
     }
+
+    // meta
+    if (st.sys.meta.deleted) {
+      delete st.groups.meta;
+      st.order = st.order.filter(id => id !== 'meta');
+      if (st.activeId === 'meta') st.activeId = '';
+      if (st.editingId === 'meta') st.editingId = '';
+    } else {
+      if (!st.groups.meta) st.groups.meta = { id:'meta', name:'メタカード', fixed:true, cards:{} };
+      if (!st.order.includes('meta')) st.order.unshift('meta');
+
+      // ★ “未編集ユーザー”にだけ公式メタを反映
+      if (!st.sys.meta.touched && st.sys.meta.ver !== OFFICIAL_META.ver) {
+        const cardsObj = {};
+        OFFICIAL_META.cards.forEach(cd => { cardsObj[String(cd).padStart(5,'0')] = 1; });
+        st.groups.meta.cards = cardsObj;
+        st.sys.meta.ver = OFFICIAL_META.ver;
+      }
+    }
+
 
     // 余計なIDを order から掃除
     st.order = st.order.filter(id => st.groups[id]);
@@ -139,28 +218,48 @@ function uniqueName_(base, st, exceptId = '') {
     const st = getState();
     const g = st.groups[id];
     if (!g) return { ok: false };
-    if (g.fixed) return { ok: false, reason: 'fixed' };
+
+    const isSystem = (id === 'fav' || id === 'meta');
+    if (g.fixed && !isSystem) return { ok: false, reason: 'fixed' };
 
     // ✅ 自分以外との同名を回避（自分自身は許可）
     const fallback = `グループ${st.order.indexOf(id) + 1}`;
     const safeName = uniqueName_(String(name || '').trim() || fallback, st, id);
 
+    const prev = String(g.name || '');
     g.name = safeName;
+
+    // ✅ システムは「実際に変わった時だけ touched」
+    if (isSystem && safeName !== prev) {
+      ensureSys_(st);
+      if (id === 'fav')  st.sys.fav.touched  = true;
+      if (id === 'meta') st.sys.meta.touched = true;
+    }
+
     setState_(st);
     return { ok: true };
   }
-
 
   function deleteGroup(id) {
     const st = getState();
     const g = st.groups[id];
     if (!g) return { ok: false };
-    if (g.fixed) return { ok: false, reason: 'fixed' };
+
+    const isSystem = (id === 'fav' || id === 'meta');
+    if (g.fixed && !isSystem) return { ok: false, reason: 'fixed' };
+
+    // ✅ システムは「削除フラグ」を保存（次回復活させない）
+    if (isSystem) {
+      ensureSys_(st);
+      if (id === 'fav')  { st.sys.fav.deleted  = true; st.sys.fav.touched  = true; }
+      if (id === 'meta') { st.sys.meta.deleted = true; st.sys.meta.touched = true; }
+    }
 
     delete st.groups[id];
     st.order = st.order.filter(x => x !== id);
     if (st.activeId === id) st.activeId = '';
     if (st.editingId === id) st.editingId = '';
+
     setState_(st);
     return { ok: true };
   }
@@ -193,38 +292,79 @@ function uniqueName_(base, st, exceptId = '') {
     return { ok: true };
   }
 
+  function hashCardsObj_(cardsObj){
+    const keys = Object.keys(cardsObj || {}).map(s=>String(s).padStart(5,'0')).sort();
+    return keys.join(',');
+  }
+
   function startEditing(id) {
     const st = getState();
     st.editingId = (id && st.groups[id]) ? id : '';
-    // 編集中は “通常フィルター” を止めたいので activeId は保持しつつ、
-    // CardGroupsUI 側で applyFilters を「編集中はgroup filter無効」にする
+
+    // ★ 編集開始スナップショット
+    if (st.editingId) {
+      const g = st.groups[st.editingId];
+      st._editBase = {
+        id: g.id,
+        name: String(g.name || ''),
+        cardsHash: hashCardsObj_(g.cards),
+      };
+    } else {
+      st._editBase = null;
+    }
+
     setState_(st);
     return { ok: true };
   }
 
-
-  // ✅ 新規作成→編集開始を “1回の保存” で行う（固まり対策）
+  //新規作成→編集開始を “1回の保存” で行う（固まり対策）
   function createGroupAndEdit(name = '新しいグループ'){
     const st = getState();
     if (st.order.length >= MAX_GROUPS) return { ok:false, reason:'limit' };
 
     const id = nowId_();
-
-    // ✅ 同名回避（（2）（3）…）＋空防止
     const safeName = uniqueName_(name, st);
 
     st.groups[id] = { id, name: safeName, fixed:false, cards:{} };
     st.order.push(id);
 
     st.editingId = id;
+
+    // ✅ 編集開始スナップショット（新規は“空の状態”）
+    st._editBase = {
+      id,
+      name: String(safeName || ''),
+      cardsHash: hashCardsObj_(st.groups[id].cards),
+    };
+
     setState_(st);
     return { ok:true, id };
   }
 
 
+
   function stopEditing() {
     const st = getState();
+
+    // ★ 編集差分がある時だけ “touched” を立てる（fav/metaのみ）
+    const base = st._editBase;
+    if (base && st.groups[base.id]) {
+      const g = st.groups[base.id];
+      const now = {
+        name: String(g.name || ''),
+        cardsHash: hashCardsObj_(g.cards),
+      };
+      const changed = (now.name !== base.name) || (now.cardsHash !== base.cardsHash);
+
+      if (changed) {
+        ensureSys_(st);
+        if (base.id === 'fav')  st.sys.fav.touched  = true;
+        if (base.id === 'meta') st.sys.meta.touched = true;
+      }
+    }
+
     st.editingId = '';
+    st._editBase = null;
     setState_(st);
     return { ok: true };
   }
@@ -276,6 +416,7 @@ function uniqueName_(base, st, exceptId = '') {
   // card-groups.js の公開API付近
   function clearActiveOnBoot_() {
     const st = getState();
+    if (!st.activeId && !st.editingId) return; // 何もなければ保存しない
     st.activeId = '';
     st.editingId = '';
     setState_(st);

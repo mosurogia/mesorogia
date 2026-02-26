@@ -19,30 +19,35 @@
             if (id) openModal(id);
 
             // accountDataModal 開いた瞬間に既知情報を流し込み
-            if (id === 'accountDataModal') {
-            const uname = (window.Auth?.user?.username) || '';
-            const disp  = (window.Auth?.user?.displayName) || '';
-            const x     = (window.Auth?.user?.x) || '';
-            const lsName = localStorage.getItem('posterName') || '';
-            const lsX    = localStorage.getItem('xAccount') || '';
+            if (id === 'campaignDetailModal') {
+            try {
+                const camp =
+                window.__activeCampaign ||
+                await (window.fetchActiveCampaign?.() || Promise.resolve(null));
 
-            const loginName  = uname || '';
-            const posterName = disp || lsName || '';
-            const xAccount   = x || lsX || '';
+                // ルール（報酬/抽選文）を描画
+                window.setCampaignDetailRules?.(camp);
+            } catch(_) {}
 
-            const $login = document.getElementById('acct-login-name');
-            const $pname = document.getElementById('acct-poster-name');
-            const $x     = document.getElementById('acct-x');
+            // 開催期間（バナー表示を優先）
+            const $range = document.getElementById('campaignDetailRange');
+            const $srcRange = document.getElementById('campaign-banner-range');
+            if ($range) {
+                const t = ($srcRange?.textContent || '').trim();
+                $range.textContent = t || '（日程はバナー表示に合わせて運用）';
+            }
 
-            if ($login){ $login.placeholder = loginName ? `現在: ${loginName}` : '（未設定）'; $login.value = ''; }
-            if ($pname){ $pname.placeholder = posterName ? `現在: ${posterName}` : '（未設定）'; $pname.value = ''; }
-            if ($x)    { $x.placeholder     = xAccount ? `現在: ${xAccount}` : '（未設定）'; $x.value = ''; }
+            // キャンペーン名（バナー表示を優先）
+            const $name = document.getElementById('campaignDetailNameInline');
+            const $srcName = document.getElementById('campaign-banner-title');
+            if ($name) {
+                const n = ($srcName?.textContent || '').trim();
+                $name.textContent = n || 'キャンペーン';
+            }
 
-            const passInput = document.getElementById('acct-password');
-            if (passInput){ passInput.value = ''; }
-
-            const saveBtn = document.getElementById('acct-save-btn');
-            if (saveBtn) saveBtn.disabled = true;
+            // 対象タグ（とりあえずバナーのタイトルを1個タグとして入れる運用）
+            const n = (document.getElementById('campaign-banner-title')?.textContent || '').trim();
+            if (n && window.setCampaignDetailTags) window.setCampaignDetailTags([n]);
             }
         });
         });

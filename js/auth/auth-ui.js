@@ -301,3 +301,230 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 })();
+// ========================================================
+// Campaign Detail Modal (page24依存を廃止して共通化)
+// - campaignDetailModal を動的生成
+// - setCampaignDetailRules / setCampaignDetailTags を提供
+// ========================================================
+(function(){
+  'use strict';
+
+  // これが質問の DEFAULT_DRAW_TEXT の置き場所（auth-ui.js）
+  const DEFAULT_DRAW_TEXT =
+`【抽選枠】
+応募口数（最大3口）をもとに抽選します。
+・同一ユーザーは最大3口まで（投稿数が多いほど当選確率アップ）
+
+【選考枠（2枠）】
+運営が内容を見て選ぶ枠です（抽選ではありません）。
+
+① 選考枠（全デッキ対象）
+・どんなデッキでも対象
+・デッキ説明が丁寧なものが選ばれやすいです
+・Eパックのカードがあると有利かも？
+
+② 選考枠（レジェンドなしデッキ対象）
+・レジェンドを使わない構築が対象
+・制約の中での工夫や完成度を重視します
+※レジェンドなしデッキにはキャンペーンタグとは別で自動で専用タグが付きます
+`;
+
+  // あなたの運用だと抽選文は固定でOKとのことなので固定用も残す
+  const DEFAULT_DRAW_TEXT_FIXED = DEFAULT_DRAW_TEXT;
+
+  function parseRules_(camp){
+    const raw = camp?.rulesJSON;
+    if (!raw) return null;
+    if (typeof raw === 'object') return raw;
+    try { return JSON.parse(String(raw)); } catch(_) { return null; }
+  }
+
+  function ensureCampaignDetailModal_(){
+    if (document.getElementById('campaignDetailModal')) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'account-modal';
+    wrap.id = 'campaignDetailModal';
+    wrap.style.display = 'none';
+
+    wrap.innerHTML = `
+      <div class="modal-content campaign-modal" role="dialog" aria-modal="true" aria-labelledby="campaignDetailTitle">
+        <div class="account-modal-head campaign-modal-head">
+          <div class="campaign-head-left">
+            <h3 id="campaignDetailTitle">🎉 キャンペーン詳細</h3>
+            <div id="campaignDetailNameInline" class="campaign-head-sub" aria-label="キャンペーン名">（キャンペーン）</div>
+          </div>
+        </div>
+
+        <div class="account-modal-body campaign-modal-body">
+          <div class="campaign-card">
+            <div class="campaign-card-title">📅 開催期間</div>
+            <div class="campaign-card-text">
+              <span id="campaignDetailRange" class="campaign-range">（日程はバナー表示に合わせて運用）</span>
+            </div>
+          </div>
+
+          <div class="campaign-card">
+            <div class="campaign-card-title">🎁 報酬</div>
+            <div class="campaign-card-text" id="campaignDetailPrizesText">（報酬：準備中）</div>
+          </div>
+
+          <div class="campaign-card">
+            <div class="campaign-card-title">📝 参加方法（投稿の仕方）</div>
+            <ol class="campaign-steps">
+              <li><b>アカウント新規登録 or ログイン</b></li>
+              <li>
+                <b>投稿内のXアカウント欄を記入</b>
+                <div class="campaign-warn">未入力だと、当選しても届けられません（重要）</div>
+              </li>
+              <li>
+                <b>デッキ投稿にキャンペーン対象のタグが付いていれば応募完了</b>
+                <div class="campaign-tagbox tag-chips post-tags-main" data-campaign-tagbox>
+                  <span class="chip active">（対象タグ：準備中）</span>
+                </div>
+              </li>
+            </ol>
+          </div>
+
+          <div class="campaign-card">
+            <div class="campaign-card-title">🎟 応募口数</div>
+            <div class="campaign-card-text">
+              <b>1ユーザーにつき最大3口まで応募OK</b><br>
+              <span class="campaign-boost">たくさん投稿すると当選確率アップ！</span>
+            </div>
+          </div>
+
+          <div class="campaign-card">
+            <div class="campaign-card-title">🎲 抽選方法</div>
+            <div class="campaign-card-text" id="campaignDetailDrawText"></div>
+          </div>
+
+          <div class="campaign-modal-footer">
+            <button type="button" class="btn primary" data-close="campaignDetailModal">閉じる</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(wrap);
+  }
+
+  // （任意）後から対象タグを差し込む用
+  function setCampaignDetailTags_(tags){
+    const modal = document.getElementById('campaignDetailModal');
+    const box = modal?.querySelector('[data-campaign-tagbox]');
+    if (!box) return;
+
+    const list = Array.isArray(tags) ? tags.filter(Boolean) : [];
+    box.replaceChildren();
+
+    if (!list.length){
+      const s = document.createElement('span');
+      s.className = 'chip active';
+      s.textContent = '（対象タグ：準備中）';
+      box.appendChild(s);
+      return;
+    }
+    list.forEach(t=>{
+      const s = document.createElement('span');
+      s.className = 'campaign-tag chip active';
+      s.textContent = t;
+      box.appendChild(s);
+    });
+  }
+
+  function setCampaignDetailRules_(camp){
+    const rules = parseRules_(camp) || {};
+    const drawEl   = document.getElementById('campaignDetailDrawText');
+    const prizesEl = document.getElementById('campaignDetailPrizesText');
+
+    // 抽選方法：固定文
+    if (drawEl){
+      drawEl.innerHTML = window.escapeHtml_(DEFAULT_DRAW_TEXT_FIXED).replaceAll('\n','<br>');
+    }
+    if (!prizesEl) return;
+
+    // ---- 報酬：新旧どっちでも表示できるようにする ----
+    // 旧: rules.prizes = ["...","..."]
+    // 新: rules.prize = { lottery:[{label,amount,winners}], selection:[...] }
+    const legacy = Array.isArray(rules.prizes) ? rules.prizes.filter(Boolean) : [];
+
+    const prizeObj  = rules.prize || {};
+    const lottery   = Array.isArray(prizeObj.lottery)   ? prizeObj.lottery   : [];
+    const selection = Array.isArray(prizeObj.selection) ? prizeObj.selection : [];
+
+    const fmt = (p) => {
+      const label   = String(p?.label ?? '').trim();
+      const amount  = Number(p?.amount ?? 0);
+      const winners = Number(p?.winners ?? p?.qty ?? 0);
+      const yen = amount ? `${amount.toLocaleString()}円` : '';
+      const win = winners ? `${winners}名` : '';
+      const mid = [yen, win].filter(Boolean).join(' / ');
+      return `${label || '賞'}${mid ? `（${mid}）` : ''}`;
+    };
+
+    const blocks = [];
+
+    if (lottery.length){
+      blocks.push(
+        `<div class="campaign-prize-block"><b>【抽選枠】</b><ul class="campaign-prize-list">${
+          lottery.map(p=>`<li>${window.escapeHtml_(fmt(p))}</li>`).join('')
+        }</ul></div>`
+      );
+    }
+    if (selection.length){
+      blocks.push(
+        `<div class="campaign-prize-block"><b>【選考枠】</b><ul class="campaign-prize-list">${
+          selection.map(p=>`<li>${window.escapeHtml_(fmt(p))}</li>`).join('')
+        }</ul></div>`
+      );
+    }
+
+    if (blocks.length){
+      prizesEl.innerHTML = blocks.join('');
+      return;
+    }
+
+    if (legacy.length){
+      prizesEl.innerHTML =
+        `<ul class="campaign-prize-list">` +
+        legacy.map(p=>`<li>${window.escapeHtml_(p)}</li>`).join('')
+        `</ul>`;
+      return;
+    }
+
+    prizesEl.textContent = '（報酬：準備中）';
+  }
+
+  // グローバル公開（あなたの現行open処理から呼べるように）
+  window.ensureCampaignDetailModal = window.ensureCampaignDetailModal || ensureCampaignDetailModal_;
+  window.setCampaignDetailTags     = window.setCampaignDetailTags     || setCampaignDetailTags_;
+  window.setCampaignDetailRules    = window.setCampaignDetailRules    || setCampaignDetailRules_;
+
+  // data-close を共通で効かせる（page24がなくても閉じられるように）
+  function bindCloseOnce_(){
+    if (window.__campaignModalCloseBound) return;
+    window.__campaignModalCloseBound = true;
+
+    document.addEventListener('click', (e) => {
+      const btn = e.target?.closest?.('[data-close]');
+      if (!btn) return;
+      const id = btn.getAttribute('data-close');
+      if (!id) return;
+      const m = document.getElementById(id);
+      if (m) m.style.display = 'none';
+    });
+  }
+
+  // DOM準備後にモーダル生成だけは確実に
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      ensureCampaignDetailModal_();
+      bindCloseOnce_();
+    }, { once:true });
+  } else {
+    ensureCampaignDetailModal_();
+    bindCloseOnce_();
+  }
+
+})();

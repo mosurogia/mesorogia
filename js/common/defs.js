@@ -21,6 +21,23 @@
     window.escapeHtml_ = window.escapeHtml_ || escapeHtml_;
     window.escapeHtml  = window.escapeHtml  || window.escapeHtml_;
 })();
+// 共通：日付フォーマット関数 (YYYY/MM/DD)
+(() => {
+    'use strict';
+    function formatYmd(d = new Date()) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}/${m}/${day}`;
+    }
+    // 既に定義済みであれば上書きしない
+    window.formatYmd = window.formatYmd || formatYmd;
+})();
+
+// ========================
+// 共通：DOM取得ショートハンド
+// ========================
+window.$id ??= (id) => document.getElementById(id);
 
 
 // ローカル開発なら '', GitHub Pages なら '/mesorogia-cards/' などに調整
@@ -31,7 +48,7 @@ window.BASE_PATH = window.BASE_PATH ?? '';
 // =======================================
 window.GAS_API_BASE =
     window.GAS_API_BASE ||
-    'https://script.google.com/macros/s/AKfycbyrP6JB6TUl-Nj0czIvXRJNZp91K50aGCVdkLhUieA1sftlyVYbhD1PJ-WUmqCLd6Nw/exec';
+    'https://script.google.com/macros/s/AKfycbyDaMWpx0QHQdtxBhVdcWi1KKV5P0Tu57Qg1KSBpR7Of_M5JAHUnUhL8wb_gD0MJWZq/exec';
 
 window.DECKPOST_API_BASE = window.DECKPOST_API_BASE || window.GAS_API_BASE;
 window.AUTH_API_BASE     = window.AUTH_API_BASE     || window.GAS_API_BASE;

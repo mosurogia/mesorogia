@@ -790,7 +790,7 @@ window.getCanvasSpecForPreview        = getCanvasSpec;
         });
 
         const hint = document.createElement('div');
-        const ua = navigator.userAgent.toLowerCase();
+        const ua = String(navigator.userAgent || '').toLowerCase();
         if (/iphone|ipad|ipod/.test(ua))
         hint.textContent = '長押しで「写真に追加」や「共有（画像保存）」ができます';
         else if (/android/.test(ua))
@@ -836,17 +836,30 @@ window.getCanvasSpecForPreview        = getCanvasSpec;
 
         // 共有（対応端末のみ表示）
         const shareBtn = mkBtn('共有（画像保存）');
-        if (navigator.share) {
-            shareBtn.href = 'javascript:void(0)';
-            shareBtn.onclick = async () => {
-            try {
-                const b = await (await fetch(dataUrl)).blob();
-                const f = new File([b], fileName, { type: 'image/png' });
-                await navigator.share({ files: [f], title: fileName, text: 'デッキ画像' });
-            } catch (_) { /* キャンセルは無視 */ }
-            };
+        shareBtn.href = 'javascript:void(0)';
+
+        // ✅ PCでは絶対に出さない（Windows Share Sheet “開くだけ” 問題を根絶）
+        // iPadOSはUAがMacintoshになる事があるので maxTouchPoints も見る
+        const isIOS = /iphone|ipad|ipod/.test(ua) || (ua.includes('macintosh') && (navigator.maxTouchPoints || 0) >= 2);
+        const isAndroid = /android/.test(ua);
+        const allowShare = isIOS || isAndroid;
+
+        if (!allowShare) {
+        shareBtn.style.display = 'none';
         } else {
-            shareBtn.style.display = 'none'; // 未対応環境では非表示（ダウンロードボタンが全幅に）
+        shareBtn.onclick = async () => {
+            try {
+            const b = await (await fetch(dataUrl)).blob();
+            const f = new File([b], fileName, { type: 'image/png' });
+
+            // ✅ files share が出来る環境だけ実行
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [f] })) {
+                await navigator.share({ files: [f] }); // title/textは入れない（iPadで混ざる対策）
+            } else {
+                alert('この端末では共有に対応していません。ダウンロードをご利用ください。');
+            }
+            } catch (_) {}
+        };
         }
 
             btnBar.appendChild(saveBtn);

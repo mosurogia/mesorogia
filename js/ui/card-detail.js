@@ -182,6 +182,9 @@
         wrap.append(label, btnMinus, num, btnPlus, btnToggle);
         titleRow.appendChild(wrap);
 
+        // ✅ 追加：カード名左に拡大ボタン
+        attachZoomBtnToDetail_(detailEl, cd);
+
         const readTotal = () => {
             try {
             const e = window.OwnedStore?.get?.(String(cd)) || { normal:0, shine:0, premium:0 };
@@ -261,10 +264,152 @@
     }
 
 
+    // -------------------------
+    // 詳細：card-title-row 直下に「拡大」ボタンを付ける
+    // 期待DOM：
+    // <div class="card-title-row">
+    //   [zoom-btn]
+    //   [card-name]
+    //   [owned-editor ...]
+    // </div>
+    // -------------------------
+    function attachZoomBtnToDetail_(detailEl, cd){
+    if (!detailEl) return;
+    const cd5 = String(cd || detailEl.getAttribute('data-cd') || '').padStart(5,'0');
+    if (!cd5 || cd5 === '00000') return;
+
+    // すでにあるなら何もしない
+    if (detailEl.querySelector('.detail-zoom-btn')) return;
+
+    const titleRow = detailEl.querySelector('.card-title-row');
+    const nameEl   = detailEl.querySelector('.card-name');
+    if (!titleRow || !nameEl) return;
+
+    // ✅ もし過去の実装で card-title-left が残ってたら解体する（安全化）
+    const left = titleRow.querySelector('.card-title-left');
+    if (left){
+        // left内に name がいたら titleRow に戻す
+        const n = left.querySelector('.card-name');
+        if (n) titleRow.insertBefore(n, left);
+        left.remove();
+    }
+
+    // ✅ nameEl が titleRow 直下じゃない（入れ子になってる）場合は、titleRow直下へ戻す
+    if (nameEl.parentElement !== titleRow){
+        titleRow.insertBefore(nameEl, titleRow.firstChild);
+    }
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'detail-zoom-btn';
+    btn.setAttribute('aria-label', '画像を拡大');
+    btn.title = '画像を拡大';
+    // 絵文字→SVG（フルスクリーン/拡大系）
+    btn.innerHTML = `
+    <svg class="zoom-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M7 3H3v4h2V5h2V3zm14 0h-4v2h2v2h2V3zM5 19v-2H3v4h4v-2H5zm16-2h-2v2h-2v2h4v-4z"/>
+        <path d="M8 8h8v8H8z" opacity=".25"/>
+    </svg>
+    `;
+
+    btn.addEventListener('click', (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        openCardZoom_(cd5);
+    });
+
+    // ✅ titleRow の先頭に入れる（カード名の左）
+    titleRow.insertBefore(btn, nameEl);
+    }
+
+    // 既に存在する .card-detail / これから出てくる .card-detail 両方に対応
+    function observeCardDetailsForZoomBtn_(){
+        // 既存分
+        document.querySelectorAll('.card-detail').forEach(el=>{
+        attachZoomBtnToDetail_(el, el.getAttribute('data-cd'));
+        });
+
+        // 追加分
+        const obs = new MutationObserver((mutations)=>{
+        for (const m of mutations){
+            for (const node of m.addedNodes){
+            if (!(node instanceof HTMLElement)) continue;
+
+            // node 自体が card-detail
+            if (node.classList?.contains('card-detail')){
+                attachZoomBtnToDetail_(node, node.getAttribute('data-cd'));
+            }
+            // 子孫に card-detail がいる
+            const details = node.querySelectorAll?.('.card-detail');
+            if (details && details.length){
+                details.forEach(el=> attachZoomBtnToDetail_(el, el.getAttribute('data-cd')));
+            }
+            }
+        }
+        });
+
+        obs.observe(document.body, { childList: true, subtree: true });
+    }
+
+    // 自動起動
+    function ensureCardZoomModal_(){
+    let modal = document.getElementById('cardZoomModal');
+
+    // 既存があっても「tab内」などに居ると display:flex でも見えないので body へ移動
+    if (modal){
+        if (modal.parentElement !== document.body){
+        document.body.appendChild(modal);
+        }
+    } else {
+        modal = document.createElement('div');
+        modal.id = 'cardZoomModal';
+        modal.className = 'modal'; // 既存CSSの .modal を使う
+        modal.style.display = 'none';
+
+        modal.innerHTML = `
+        <div class="modal-content" style="max-width: 980px; width: 95%; padding: 10px;">
+            <button id="cardZoomClose" class="modal-close-x" type="button" aria-label="閉じる">×</button>
+            <img id="zoomImage" alt="カード画像"
+                style="width:100%; height:auto; display:block; border-radius:10px;">
+        </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    // close バインドも longpress に依存させず、ここで必ず1回だけ行う
+    if (!window.__cardZoomBound){
+        window.__cardZoomBound = true;
+
+        document.addEventListener('click', (e)=>{
+        const m = document.getElementById('cardZoomModal');
+        if (!m || m.style.display !== 'flex') return;
+        if (e.target === m) closeCardZoom_();
+        });
+
+        document.addEventListener('keydown', (e)=>{
+        const m = document.getElementById('cardZoomModal');
+        if (!m || m.style.display !== 'flex') return;
+        if (e.key === 'Escape') closeCardZoom_();
+        });
+
+        // close button は DOM が後から作られる可能性があるので「都度取得」
+        document.addEventListener('click', (e)=>{
+        const btn = e.target?.closest?.('#cardZoomClose');
+        if (!btn) return;
+        const m = document.getElementById('cardZoomModal');
+        if (!m || m.style.display !== 'flex') return;
+        e.preventDefault();
+        e.stopPropagation();
+        closeCardZoom_();
+        }, true);
+    }
+    }
+
   // -------------------------
   // 画像ズーム（長押し）
   // -------------------------
     function openCardZoom_(cd){
+        ensureCardZoomModal_();
         const m = document.getElementById('cardZoomModal'); if (!m) return;
         const img = document.getElementById('zoomImage');   if (!img) return;
 
@@ -339,9 +484,16 @@
     openCardZoom: openCardZoom_,
     closeCardZoom: closeCardZoom_,
     attachOwnedEditor: attachOwnedEditor_,
+    attachZoomBtn: attachZoomBtnToDetail_,
     };
 
     // 既存互換（onclick="handleZoomClick(...)" 対策）
     window.handleZoomClick = handleZoomClick;
+
+    // ✅ 追加：カード詳細が出現したら自動で拡大ボタンを付与
+    if (!window.__detailZoomBtnObserverBound){
+      window.__detailZoomBtnObserverBound = true;
+      observeCardDetailsForZoomBtn_();
+    }
 
 })();

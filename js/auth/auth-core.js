@@ -102,11 +102,8 @@
         const res = await postJSON(`${API}?mode=login`, {
             username,
             password,
-            debug: true,
         });
         if (!res?.ok) throw new Error(res?.error || 'login failed');
-
-        if (res.__debug) console.log('[login debug]', res.__debug);
 
         this.user = res.user;
         this.token = res.token;

@@ -218,8 +218,7 @@
 <!-- カード拡大モーダル（画像のみ） -->
 <div id="cardZoomModal" class="modal" style="display:none;">
     <div class="modal-content card-zoom" style="position:relative">
-        <button id="cardZoomClose" aria-label="閉じる"
-            style="position:absolute;right:.5rem;top:.5rem;font-size:1.25rem;">×</button>
+        <button id="cardZoomClose" aria-label="閉じる" class="modal-close-x">×</button>
         <img id="zoomImage" alt=""
             style="max-width:90vw;max-height:85vh;object-fit:contain;display:block;margin:auto;" />
     </div>
@@ -1241,9 +1240,6 @@
     </div>
 </div>
 
-
-
-
 <!-- スクリプト群 -->
 <!-- 共通処理 -->
 <script src="js/common/defs.js"></script>
@@ -1256,23 +1252,31 @@
 <script src="js/auth/auth-ui.js"></script>
 <script src="js/auth/account.js"></script>
 
+<!--タブ-->
+<script src="js/features/tabs.js"></script>
+
+
 <!--カード生成-->
 <script src="js/features/cardGrid.js"></script>
+<script src="js/ui/card-detail-template.js"></script>
+<script src="js/ui/card-detail.js"></script>
+
+<!--プレビュー-->
+<script src="js/ui/card-preview.js"></script>
 
 <!--フィルター-->
 <script src="js/features/cardFilter.js"></script>
 
 <!-- 画像生成（feature） -->
 <script src="js/features/image-export.js"></script>
-<script src="js/ui/card-detail.js"></script>
+
+<!--スクショ画像生成パネル -->
+<script defer src="js/features/screenshot-panel.js"></script>
 
 <!--デッキメーカーページ専用-->
-<script src="js/pages/deckmaker/deckmaker.js"></script>
-
-<!--変更予定js-->
-<!-- 共通ヘルパー -->
-<script src="js/common-page234.js"></script>
 <script src="js/pages/deckmaker/page2.js"></script>
-</body>
+<!--仮-->
+<script src="js/pages/deckmaker/deckmaker-loader.js"></script>
 
+</body>
 </html>

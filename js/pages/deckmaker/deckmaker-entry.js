@@ -197,7 +197,25 @@
     // 4) ロード＆保存デッキ表示
     try {
       await window.loadCards?.();
-      window.updateSavedDeckList?.();
+
+      // 保存デッキ（共通UI）
+      // - bind(): 一覧描画 + 読込/削除ボタンのイベント委譲を張る
+      // - cardMap 確保後に呼ぶ必要があるので initDeckmakerPage 内でOK
+      if (window.SavedDeckUI?.bind) {
+        window.SavedDeckUI.bind({
+          key: window.SavedDeckStore?.KEY || 'savedDecks',
+          cap: 20,
+          containerId: 'savedDeckList',
+          counterId: 'savedDeckCount',
+          hooks: {
+            // 読み込み後に何か追加でやりたい場合はここ（今は無しでもOK）
+            onLoaded: () => {}
+          }
+        });
+      } else {
+        // フォールバック（互換関数が生えてる場合）
+        window.updateSavedDeckList?.();
+      }
     } catch (e) {
       console.error('起動時の初期ロードに失敗:', e);
     }

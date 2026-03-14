@@ -203,7 +203,7 @@ function buildPackSectionHTML(packEn, packJp, cardsGroupedByRace, packKey, packG
 
 // JSON → パックごとのセクションHTMLを生成して mount に描画
 async function renderAllPacks({
-  jsonUrl = './cards_latest.json',
+  jsonUrl = './public/cards_latest.json',
   mountSelector = '#packs-root',
   isLatestOnly = true,
   where = (c)=>true,

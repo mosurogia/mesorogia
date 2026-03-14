@@ -4,52 +4,8 @@
    - マイ投稿（全画面・ログイン必須）
 ========================= */
 const DeckPostApp = (() => {
-  // 共通定義からベースURLを取得
-  const GAS_BASE = window.DECKPOST_API_BASE || window.GAS_API_BASE;
 
-  // 共通：innerHTML用エスケープ（common.js の escapeHtml_ を優先）
-  function escapeHtml(s){
-    const fn = window.escapeHtml_ || window.escapeHtml;
-    if (typeof fn === 'function') return fn(s);
-
-    // 最終フォールバック
-    return String(s ?? '')
-      .replaceAll('&','&amp;')
-      .replaceAll('<','&lt;')
-      .replaceAll('>','&gt;')
-      .replaceAll('"','&quot;')
-      .replaceAll("'","&#39;");
-  }
-
-  const state = {
-    list: {
-      allItems: [],        // ★ 全投稿（一覧タブ用）
-      filteredItems: [],   // ★ フィルタ・並び替え後の結果
-      items: [],           // ★ 現在ページに表示している10件
-      nextOffset: 0,
-      loading: false,
-      sortKey: 'new',
-      currentPage: 1,
-      totalPages: 1,
-      total: 0,
-      // ページ単位のキャッシュ（キー=ページ番号, 値=items配列）
-      pageCache: {},
-      // ★ 一覧データを全件取得済みかどうか
-      hasAllItems: false,
-    },
-    // ★ マイ投稿用（ページング）
-    mine: {
-      items: [],
-      loading: false,
-      page: 1,
-      totalPages: 1,
-      total: 0,
-    },
-    token: '', // ログイン済みなら共通Authから拾う
-  };
-
-// ★ DeckPost の状態を、投稿フィルター用に外へ公開
-window.__DeckPostState = state;
+let state = null; // deck-post-state.js がロードされるまで空でOK
 
 // ★ DeckPost 一覧の初期描画が完了したかどうか
 let initialized = false;
@@ -78,7 +34,7 @@ function hasValidMineCache_(){
 
 // DOMを触らずに、マイ投稿データだけ取って state に入れる
 async function prefetchMineItems_({ force = false } = {}){
-  const tk = (window.Auth && window.Auth.token) || state.token || resolveToken();
+  const tk = (window.Auth && window.Auth.token) || state.token || window.DeckPostApi.resolveToken();
   if (!tk) return null;
 
   if (!force && hasValidMineCache_()) return state.mine.items;
@@ -91,7 +47,7 @@ async function prefetchMineItems_({ force = false } = {}){
     let total = 0;
 
     while (true){
-      const res = await apiList({ limit, offset, mine: true });
+      const res = await window.DeckPostApi.apiList({ limit, offset, mine: true });
 
       // ✅ auth required：キャッシュを「無効化」して終了（再帰しない）
       if (res && res.error === 'auth required'){
@@ -170,9 +126,9 @@ async function loadMinePage(_page = 1) {
   // ✅ 先読み済み（TTL内）なら、通信せず即描画
   if (hasValidMineCache_() && !state.mine.loading) {
     const allItems = state.mine.items || [];
-    postState.mine.items = allItems;
-    postState.mine.totalCount = Number(state.mine.total || allItems.length);
-    postState.mine.loading = false;
+    state.mine.items = allItems;
+    state.mine.total = Number(state.mine.total || allItems.length);
+    state.mine.loading = false;
 
     renderPostListInto('myPostList', allItems, { mode: 'mine' });
     updateMineCountUI_();
@@ -196,19 +152,19 @@ async function loadMinePage(_page = 1) {
 
   // ローディング表示
   state.mine.loading     = true;
-  postState.mine.loading = true;
+  state.mine.loading = true;
   if (loadingEl) loadingEl.style.display = '';
   if (errorEl)   errorEl.style.display   = 'none';
   if (emptyEl)   emptyEl.style.display   = 'none';
 
   try {
     while (true) {
-      const res = await apiList({ limit, offset, mine: true });
+      const res = await window.DeckPostApi.apiList({ limit, offset, mine: true });
 
       // 認証エラーだけは「ログインしてね」表示にする（元の挙動維持）
       if (res && res.error === 'auth required') {
         state.mine.items      = [];
-        postState.mine.items  = [];
+        state.mine.items  = [];
         state.mine.page       = 1;
         state.mine.totalPages = 1;
         state.mine.total      = 0;
@@ -255,10 +211,10 @@ async function loadMinePage(_page = 1) {
     state.mine.totalPages = 1;
     state.mine.total      = total || allItems.length;
 
-    postState.mine.page       = 1;
-    postState.mine.totalCount = state.mine.total;
-    postState.mine.items      = allItems;
-    postState.mine.loading    = false;
+    state.mine.page       = 1;
+    state.mine.total = state.mine.total;
+    state.mine.items      = allItems;
+    state.mine.loading    = false;
 
     renderPostListInto('myPostList', allItems, { mode: 'mine' });
 
@@ -293,7 +249,7 @@ async function loadMinePage(_page = 1) {
     if (errorEl) errorEl.style.display = '';
   } finally {
     state.mine.loading     = false;
-    postState.mine.loading = false;
+    state.mine.loading = false;
     if (loadingEl) loadingEl.style.display = 'none';
   }
 }
@@ -553,197 +509,6 @@ window.posterKeyFromItem_ ??= function posterKeyFromItem_(item){
     draft.selectedCardMode = String(applied?.selectedCardMode || 'or');
   }
 
-  function isCampaignTag_(t){
-    try{
-      const set = window.__campaignTagSet;
-      if (!(set instanceof Set)) return false;
-      return set.has(String(t||'').trim());
-    }catch(_){
-      return false;
-    }
-  }
-
-  function allowCampaignTag_(t){
-    const running = !!window.__isCampaignRunning;
-    const active  = String(window.__activeCampaignTag || '').trim();
-    if (!running || !active) return false;
-    return String(t||'').trim() === active;
-  }
-
-  function getAllPostTagsFromState_(){
-    const items = (window.__DeckPostState?.list?.allItems) || (window.__DeckPostState?.list?.filteredItems) || [];
-    const set = new Set();
-
-    (items || []).forEach(it => {
-      const all = [it?.tagsAuto, it?.tagsPick].filter(Boolean).join(',');
-      if (!all) return;
-
-      all.split(',').map(s=>s.trim()).filter(Boolean).forEach(t=>{
-        // ★ キャンペーンタグは「開催中の今回タグ」以外は候補に入れない
-        if (isCampaignTag_(t) && !allowCampaignTag_(t)) return;
-        set.add(t);
-      });
-    });
-
-    // よく使う候補は常に出す（ただしキャンペーンは例外）
-    (window.POST_TAG_CANDIDATES || []).forEach(t=>{
-      if (isCampaignTag_(t) && !allowCampaignTag_(t)) return;
-      set.add(t);
-    });
-    (window.RACE_ORDER || []).forEach(t=>set.add(t));
-    (window.CATEGORY_LIST || []).forEach(t=>set.add(t));
-
-    // キャンペーンタグ（開催中の今回分だけ）を候補に含める
-    try{
-      const active = String(window.__activeCampaignTag || '').trim();
-      if (active && allowCampaignTag_(active)) set.add(active);
-    }catch(_){}
-
-    return Array.from(set);
-  }
-
-  function classifyTag_(t){
-    const s = String(t||'').trim();
-    if (!s) return 'other';
-
-    // 種族
-    if ((window.RACE_ORDER || []).includes(s)) return 'race';
-
-    // カテゴリ（テーマ）
-    const isCat = (typeof window.getCategoryOrder === 'function')
-      ? (window.getCategoryOrder(s) < 9999)
-      : ((window.CATEGORY_LIST || []).includes(s));
-    if (isCat) return 'category';
-
-    // それ以外はデッキ情報
-    return 'deckinfo';
-  }
-
-  function sortTags_(tags, kind){
-    const arr = (tags || []).map(s=>String(s||'').trim()).filter(Boolean);
-
-    if (kind === 'race'){
-      const order = window.RACE_ORDER || [];
-      return arr.sort((a,b)=>order.indexOf(a) - order.indexOf(b));
-    }
-    if (kind === 'category'){
-      if (typeof window.getCategoryOrder === 'function'){
-        return arr.sort((a,b)=>window.getCategoryOrder(a)-window.getCategoryOrder(b));
-      }
-      const order = window.CATEGORY_LIST || [];
-      return arr.sort((a,b)=>order.indexOf(a)-order.indexOf(b));
-    }
-
-    // deckinfo: POST_TAG_CANDIDATES 優先 → 残りはあいうえお順
-    const cand = window.POST_TAG_CANDIDATES || [];
-    const candSet = new Set(cand);
-    const head = cand.filter(t=>arr.includes(t));
-    const tail = arr.filter(t=>!candSet.has(t)).sort((a,b)=>a.localeCompare(b,'ja'));
-
-    // キャンペーンタグは最後へ寄せる
-    const isCamp = (t)=>{
-      const set = window.__campaignTagSet;
-      return (set instanceof Set) && set.size && set.has(t);
-    };
-    const tailNormal = tail.filter(t=>!isCamp(t));
-    const tailCamp   = tail.filter(t=> isCamp(t));
-
-    // 重複除去しつつ結合
-    const out = [];
-    for (const t of [...head, ...tailNormal, ...tailCamp]){
-      if (!out.includes(t)) out.push(t);
-    }
-    return out;
-  }
-
-
-
-  // ▼ モーダル内ボタン描画（draft を見る）
-  function renderTagButtons_(rootEl, tags){
-    if (!rootEl) return;
-    rootEl.replaceChildren();
-
-    const sel = window.PostFilterDraft?.selectedTags;
-    (tags || []).forEach(tag => {
-      const t = String(tag||'').trim();
-      if (!t) return;
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'filter-btn post-filter-tag-btn';
-      btn.dataset.tag = t;
-
-      // ✅ 追加：枠線リング（種族 / カテゴリ）
-      const kind = classifyTag_(t);
-      if (kind === 'race') {
-        btn.classList.add('is-ring');
-        btn.dataset.race = t; // -> data-race="ドラゴン" など
-      } else if (kind === 'category') {
-        btn.classList.add('is-ring');
-        const r = (typeof window.getCategoryRace === 'function')
-          ? window.getCategoryRace(t)
-          : null;
-        btn.dataset.catRace = r || 'none'; // -> data-cat-race="ドラゴン" 等
-      }
-
-      // キャンペーンタグは専用クラスを付与
-      const ccls = campaignTagClass_(t);
-      if (ccls) btn.classList.add(...ccls.split(/\s+/).filter(Boolean));
-
-      // カテゴリ改行（（ の前で改行）
-      if (classifyTag_(t) === 'category' && t.includes('（')) {
-        btn.innerHTML = t.replace('（', '<br>（');
-      } else {
-        btn.textContent = t;
-      }
-
-      // 選択状態（CSSは .selected）
-      if (sel?.has(t)) btn.classList.add('selected');
-
-      btn.addEventListener('click', ()=>{
-        const draft = window.PostFilterDraft;
-        draft.selectedTags ??= new Set();
-
-        if (draft.selectedTags.has(t)){
-          draft.selectedTags.delete(t);
-          btn.classList.remove('selected');
-        }else{
-          draft.selectedTags.add(t);
-          btn.classList.add('selected');
-        }
-      });
-
-      rootEl.appendChild(btn);
-    });
-  }
-
-
-  function buildPostFilterTagUI_(){
-    const all = getAllPostTagsFromState_();
-    const deckinfo = [];
-    const race = [];
-    const category = [];
-
-    all.forEach(t => {
-      // ★ キャンペーンタグ表示制御をフィルター候補にも適用
-      if (!shouldShowTag_(t)) return;
-
-      const k = classifyTag_(t);
-      if (k === 'race') race.push(t);
-      else if (k === 'category') category.push(t);
-      else if (k === 'deckinfo') deckinfo.push(t);
-    });
-
-    // v2 期待：3エリア
-    const deckEl = document.getElementById('postFilterDeckInfoArea');
-    const raceEl = document.getElementById('postFilterRaceArea');
-    const catEl  = document.getElementById('postFilterCategoryArea');
-
-    renderTagButtons_(deckEl, sortTags_(deckinfo, 'deckinfo'));
-    renderTagButtons_(raceEl, sortTags_(race, 'race'));
-    renderTagButtons_(catEl,  sortTags_(category, 'category'));
-  }
-
   // ▼ チップバー（適用済み state を見る）
   function updateActiveChipsBar_(){
   const bar = document.getElementById('active-chips-bar');
@@ -984,21 +749,6 @@ window.posterKeyFromItem_ ??= function posterKeyFromItem_(item){
       const selEmpty = document.querySelector('#userTagSelectedArea [data-user-tag-selected-empty]');
       if (!qEl || !suggest || !selWrap) return;
 
-      // 全投稿からユーザータグ一覧（頻度つき）を作る
-      function buildUserTagIndex_(){
-        const items = window.__DeckPostState?.list?.allItems || [];
-        const freq = new Map();
-        for (const it of items){
-          const raw = String(it?.tagsUser || '').trim();
-          if (!raw) continue;
-          const arr = raw.split(',').map(s=>s.trim()).filter(Boolean);
-          for (const t of arr){
-            freq.set(t, (freq.get(t) || 0) + 1);
-          }
-        }
-        return freq; // Map<tag, count>
-      }
-
       function getDraftSet_(){
         window.PostFilterDraft ??= { selectedTags:new Set(), selectedUserTags:new Set() };
         if (!(window.PostFilterDraft.selectedUserTags instanceof Set)){
@@ -1040,7 +790,9 @@ window.posterKeyFromItem_ ??= function posterKeyFromItem_(item){
       }
 
       function renderSuggest_(queryRaw){
-        const freq = buildUserTagIndex_();
+        const freq = (typeof window.buildUserTagIndex_ === 'function')
+          ? window.buildUserTagIndex_()
+          : new Map();
         const query = String(queryRaw || '').trim().toLowerCase();
         const selected = getDraftSet_();
 
@@ -1216,7 +968,7 @@ window.posterKeyFromItem_ ??= function posterKeyFromItem_(item){
         // ★ フィルターを開く前に campaignTagSet を必ず初期化（遅延読み込み対策）
         if (!(window.__campaignTagSet instanceof Set)) {
           try {
-            const res = await apiCampaignTags();
+            const res = await window.DeckPostApi.apiCampaignTags();
             const tags = (res && res.ok && Array.isArray(res.tags)) ? res.tags : [];
             window.__campaignTagSet = new Set(tags.map(t => String(t).trim()).filter(Boolean));
           } catch (e) {
@@ -1246,37 +998,6 @@ window.posterKeyFromItem_ ??= function posterKeyFromItem_(item){
   // ★ 一覧データをまとめて取得するときの1リクエスト上限
   const FETCH_LIMIT = 100;
 
-  // ===== 認証トークン関連 =====
-  function resolveToken(){
-    // DeckPostAuth（正式）優先
-    try{
-      const raw = localStorage.getItem('DeckPostAuth');
-      if (raw){
-        const obj = JSON.parse(raw);
-        if (obj.token) return obj.token;
-      }
-    }catch(_){}
-
-    // 古い名前
-    try{
-      const raw = localStorage.getItem('AuthDeckPost');
-      if (raw){
-        const obj = JSON.parse(raw);
-        if (obj.token) return obj.token;
-      }
-    }catch(_){}
-
-    // 共通Auth も一応チェック
-    try{
-      const A = window.Auth;
-      if (A?.token) return String(A.token);
-    }catch(_){}
-
-    return '';
-  }
-
-
-
   // 現在のログインID（ユーザー名）を取得
   function getLoginUsername(){
     try{
@@ -1305,7 +1026,7 @@ window.posterKeyFromItem_ ??= function posterKeyFromItem_(item){
     updateMineLoginStatus();
 
     // ★ トークンを取り直す
-    state.token = resolveToken();
+    state.token = window.DeckPostApi.resolveToken();
 
     // ✅ 追加：トークンが変わったらマイ投稿キャッシュを無効化
     __mineFetchedAt = 0;
@@ -1348,109 +1069,10 @@ window.posterKeyFromItem_ ??= function posterKeyFromItem_(item){
   window.onDeckPostAuthChanged = handleAuthChangedForDeckPost;
 
 
-// =========================
-// JSONP で GAS(doGet) を叩く小さなヘルパー
-// =========================
-function jsonpRequest(url) {
-  return new Promise((resolve, reject) => {
-    const cbName =
-      '__deckpost_jsonp_' +
-      Date.now().toString(36) +
-      Math.random().toString(36).slice(2);
-
-    const sep = url.includes('?') ? '&' : '?';
-    const script = document.createElement('script');
-    script.src = url + sep + 'callback=' + cbName;
-    script.async = true;
-
-    let cleaned = false;
-    const cleanup = () => {
-      if (cleaned) return;
-      cleaned = true;
-      delete window[cbName];
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
-      if (timer) clearTimeout(timer);
-    };
-
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error('JSONP timeout'));
-    }, 10000);
-
-    window[cbName] = (data) => {
-      cleanup();
-      resolve(data);
-    };
-
-    script.onerror = () => {
-      cleanup();
-      reject(new Error('JSONP script error'));
-    };
-
-    document.body.appendChild(script);
-  });
-}
-
-
-// ===== APIラッパ =====
-async function apiList({ limit = PAGE_LIMIT, offset = 0, mine = false }) {
-  const qs = new URLSearchParams();
-  qs.set('mode', 'list');
-  qs.set('limit', String(limit));
-  qs.set('offset', String(offset));
-
-  // マイ投稿フラグだけ付ける
-  if (mine) {
-    qs.set('mine', '1');
-  }
-
-  // ★ ログインしていれば常に token を付ける（一覧/マイ投稿 共通）
-  const tk =
-    (window.Auth && window.Auth.token) ||
-    state.token ||
-    resolveToken();
-
-  if (tk) {
-    qs.set('token', tk);
-  }
-
-  const url = `${GAS_BASE}?${qs.toString()}`;
-
-  // 1) まずは通常の fetch(JSON) を試す
-  try {
-    const res = await fetch(url, {
-      method: 'GET',
-      mode: 'cors',
-      credentials: 'omit',
-      cache: 'no-store',
-    });
-
-    // ステータスコードだけおかしい場合もログに出してフォールバック
-    if (!res.ok) {
-      console.warn('apiList: fetch status not ok:', res.status, res.statusText);
-    } else {
-      const data = await res.json();
-
-      // 期待している形式かざっくりチェック
-      if (data && (Array.isArray(data.items) || data.ok !== undefined || data.error)) {
-        return data;
-      } else {
-        console.warn('apiList: unexpected JSON format, fallback to JSONP', data);
-      }
-    }
-  } catch (err) {
-    console.warn('apiList: fetch failed, fallback to JSONP', err);
-  }
-
-  // 2) fetch が使えない / JSON で返っていないなどの場合は従来どおり JSONP で呼ぶ
-  const resJsonp = await jsonpRequest(url);
-  return resJsonp;
-}
 
 // ===== キャンペーンタグ一覧取得 =====
-async function apiCampaignTags(){
+/*
+async function window.DeckPostApi.apiCampaignTags(){
   const qs = new URLSearchParams();
   qs.set('mode', 'campaignTags');
 
@@ -1471,13 +1093,13 @@ async function apiCampaignTags(){
       }
     }
   } catch (err) {
-    console.warn('apiCampaignTags: fetch failed, fallback to JSONP', err);
+    console.warn('window.DeckPostApi.apiCampaignTags: fetch failed, fallback to JSONP', err);
   }
 
   // 2) フォールバック（JSONP）
   return await jsonpRequest(url);
 }
-
+*/
 
 
     // ===== 一覧全件をまとめて取得（list用） =====
@@ -1488,7 +1110,7 @@ async function apiCampaignTags(){
     let total   = 0;
 
     while (true){
-      const res = await apiList({ limit, offset, mine: false });
+      const res = await window.DeckPostApi.apiList({ limit, offset, mine: false });
       if (!res?.ok) break;
 
       const items = res.items || [];
@@ -1545,30 +1167,6 @@ async function apiCampaignTags(){
   window.updateActiveChipsBar_?.();
 }
 
-
-  // ===== 投稿デッキメモ更新API =====
-async function gasPost_(payload){
-  const base = window.DECKPOST_API_BASE || window.GAS_API_BASE || '';
-  if (!base) return { ok:false, error:'api base not set' };
-
-  const mode = String(payload?.mode || 'post');   // ★ここ追加
-  const url  = base + '?mode=' + encodeURIComponent(mode);
-
-  try{
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload || {})
-    });
-    const json = await res.json().catch(()=>null);
-    return json || { ok:false, error:'invalid response' };
-  }catch(err){
-    return { ok:false, error:'network' };
-  }
-}
-// gasPost_ を window から参照できるようにする（クリック委任側が window.gasPost_ を見てるため）
-window.gasPost_ = gasPost_;
-window.gasPostDeckPost_ = gasPost_; // 同一実体でOKなら
 
 // ===== 投稿デッキメモ更新API =====
 async function updateDeckNote_(postId, deckNote){
@@ -1629,7 +1227,7 @@ async function updateDeckCode_(postId, shareCode){
     // ★ いいね送信中フラグ（postIdごと）
   const likePending = {};
   async function apiToggleLike(postId){
-    const token = (window.Auth && window.Auth.token) || state.token || resolveToken();
+    const token = (window.Auth && window.Auth.token) || state.token || window.DeckPostApi.resolveToken();
 
     if (!token){
       return { ok:false, error:'auth required' };
@@ -1789,12 +1387,6 @@ async function updateDeckCode_(postId, shareCode){
     const main = getMainRace(races);
     return RACE_BG_MAP[main] || '';
   }
-
-  // ===== キャンペーンタグ表示制御 =====
-function shouldShowTag_(tag){
-  const t = String(tag || '').trim();
-  return !!t; // 空だけ弾く（キャンペーンでも非表示にしない）
-}
 
 // キャンペーンタグの表示/非表示を一括更新
 function refreshCampaignTagChips_(){
@@ -2166,6 +1758,7 @@ if (manaEffEl) {
     'ブロッカー':   'rgba(214, 212, 204, 0.7)',
   };
 
+  // スタックカウントの構築（グラフ用）
   function buildStackCounts(cards, key, labels) {
     const table = {};
     TYPES.forEach(t => { table[t] = Object.fromEntries(labels.map(l => [l, 0])); });
@@ -2886,11 +2479,18 @@ document.addEventListener('click', (e) => {
 // =============================
 // pack_name 例: "BASIC SET「基本セット」" → "BASIC SET"
 function packNameEn_(packName){
+  // 統一：common/card-core.js の getPackEnName を使う
+  if (typeof window.getPackEnName === 'function') {
+    return window.getPackEnName(packName, ''); // ここは空なら空でOK（UNKNOWN集計に回す）
+  }
+
+  // フォールバック（万一 card-core が未読込のケース）
   const s = String(packName || '').trim();
   if (!s) return '';
-  // 「」があれば手前をEN名として使う
   const idx = s.indexOf('「');
   if (idx > 0) return s.slice(0, idx).trim();
+  const slash = s.indexOf('／');
+  if (slash > 0) return s.slice(0, slash).trim();
   return s;
 }
 
@@ -5313,18 +4913,6 @@ document.addEventListener('click', (e)=>{
   function open_(){ modal.style.display='flex'; qEl.focus(); }
   function close_(){ modal.style.display='none'; }
 
-  function buildUserTagIndex_(){
-    const items = window.__DeckPostState?.list?.allItems || [];
-    const freq = new Map();
-    for (const it of items){
-      const raw = String(it?.tagsUser || '').trim();
-      if (!raw) continue;
-      raw.split(',').map(s=>s.trim()).filter(Boolean).forEach(t=>{
-        freq.set(t, (freq.get(t) || 0) + 1);
-      });
-    }
-    return freq;
-  }
   function getAllSelected_(){ return new Set([...st.locked, ...st.added]); }
 
   function renderSelected_(){
@@ -5352,43 +4940,6 @@ document.addEventListener('click', (e)=>{
       selWrap.appendChild(chip);
     }
     if (selEmpty) selEmpty.style.display = all.length ? 'none' : '';
-  }
-
-  function renderSuggest_(queryRaw){
-    const freq = buildUserTagIndex_();
-    const query = String(queryRaw||'').trim().toLowerCase();
-    const selected = getAllSelected_();
-
-    sugWrap.replaceChildren();
-
-    const rows = [...freq.entries()]
-      .filter(([t]) => !selected.has(t))
-      .filter(([t]) => !query || t.toLowerCase().includes(query))
-      .sort((a,b)=> (b[1]-a[1]) || a[0].localeCompare(b[0],'ja'))
-      .slice(0, 40);
-
-    if (sugEmpty){
-      sugEmpty.textContent = rows.length ? '' : (query ? '候補がありません' : 'ここに候補が出ます');
-      sugEmpty.style.display = rows.length ? 'none' : '';
-    }
-
-    for (const [tag, count] of rows){
-      const btn = document.createElement('button');
-      btn.type='button';
-      btn.className='suggest-item';
-      btn.innerHTML = `${esc(tag)} <span class="c">${count}</span>`;
-      btn.addEventListener('click',(e)=>{
-        e.preventDefault(); e.stopPropagation();
-
-        if (rejectIfFull_()) return;
-
-        st.added.add(tag);
-        qEl.value='';
-        renderSelected_();
-        renderSuggest_('');
-      });
-      sugWrap.appendChild(btn);
-    }
   }
 
   function normalizeNewTag_(raw){
@@ -6279,10 +5830,18 @@ async function renderCampaignBanner(){
   box.style.display = '';
 }
 
-
-
   // ===== 初期化 =====
   async function init(){
+
+  // state は deck-post-state.js で管理する（後ロード対応）
+  state = window.DeckPostState?.getState?.() || window.__DeckPostState || null;
+  if (!state) {
+    console.error('DeckPostState is not ready');
+    showListStatusMessage?.('error', '初期化に失敗しました（state未ロード）');
+    return;
+  }
+
+
     // ① カードマスタ読み込み（デッキリスト・カード解説で使う）
     try {
       showListStatusMessage('loading', '投稿一覧を読み込み中です…(5秒ほどかかります)');
@@ -6300,7 +5859,7 @@ async function renderCampaignBanner(){
     // ここでは何もしない。window.__campaignTagSet などは後続タスクで初期化される。
 
     // ② トークン
-    state.token = resolveToken();
+    state.token = window.DeckPostApi.resolveToken();
 
     // ログイン状態初期反映（ID表示だけ & マイ投稿表示中なら読み込み）
     handleAuthChangedForDeckPost();
@@ -6415,7 +5974,7 @@ async function renderCampaignBanner(){
     // requestIdleCallback が使える場合はアイドル時に、なければ少し遅延させて実行する
     const loadCampaignInfo = async () => {
       try {
-        const res = await apiCampaignTags();
+        const res = await window.DeckPostApi.apiCampaignTags();
         const tags = (res && res.ok && Array.isArray(res.tags)) ? res.tags : [];
         window.__campaignTagSet = new Set((tags || []).map(t => String(t).trim()).filter(Boolean));
       } catch (e) {
@@ -6436,11 +5995,13 @@ async function renderCampaignBanner(){
     }
   }
 
-  // DOMReady
-  if (document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', init);
+  // loader の ready を起点に初期化（後ロードJSでも確実）
+  if (typeof window.onDeckPostReady === 'function') {
+    window.onDeckPostReady(init);
   } else {
-    init();
+    // 保険：イベントでも拾う
+    window.addEventListener('deck-post-page:ready', init, { once: true });
+    window.addEventListener('deckpost:ready', init, { once: true });
   }
 
   return {

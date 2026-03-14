@@ -49,11 +49,49 @@
   let representativeCd = null; // 今は保存に載せるだけ（表示/変更は別ファイル想定）
 
   // =========================
+  // デッキ名管理
+  // info/post/titleの3箇所に同じ値を反映する
+  // =========================
+
+  // ---- 内部：3箇所（info/post/title）へ同じ値を反映 ----
+  function __dmSetDeckNameAll_(val) {
+    const v = String(val ?? '');
+
+    const info = document.getElementById('info-deck-name');
+    const post = document.getElementById('post-deck-name');
+    const title = document.getElementById('note-side-title');
+
+    if (info && info.value !== v) info.value = v;
+    if (post && post.value !== v) post.value = v;
+    if (title) title.textContent = v; // 空なら空文字（CSS :empty::before で “デッキリスト”）
+  }
+
+  // 未定義なら定義（他ファイルで実装している場合に上書きしない）
+  window.readDeckNameInput ??= function () {
+    const info = document.getElementById('info-deck-name')?.value?.trim() || '';
+    const post = document.getElementById('post-deck-name')?.value?.trim() || '';
+    return post || info || '';
+  };
+
+  window.writeDeckNameInput ??= function (name) {
+    __dmSetDeckNameAll_(String(name ?? ''));
+  };
+
+  // 外部からの同期（復元ボタン、保存デッキ読み込み後などで呼ぶ）
+  window.syncDeckNameFields ??= function () {
+    const info = document.getElementById('info-deck-name')?.value?.trim() || '';
+    const post = document.getElementById('post-deck-name')?.value?.trim() || '';
+    const name = post || info || '';
+    __dmSetDeckNameAll_(name);
+  };
+
+  // =========================
   // ユーティリティ
   // =========================
   function normCd5(cd) {
     return String(cd ?? '').padStart(5, '0').slice(0, 5);
   }
+  window.normCd5 ??= normCd5;
 
   function imgSrcOf(cd) {
     return IMG_DIR + normCd5(cd) + '.webp';
@@ -96,10 +134,122 @@
     }
   }
 
-  document.getElementById('shortage-toggle-btn')
-    ?.addEventListener('click', () => window.CardPreview?.hide?.());
+  // =========================
+  // 起動時：ページ専用の小物初期化
+  // - loader後読み込みでも確実に動くよう onDeckmakerReady を使う
+  // =========================
+  function initPageExtras_() {
+    // --- スクショ最小パネル ---
+    window.initScreenshotPanel?.({ keyPrefix: 'deckmaker' });
 
-  document.addEventListener('deckTabSwitched', () => window.CardPreview?.hide?.());
+    // --- デッキバー右クリック抑制 ---
+    if (!document.__dmDeckbarContextmenuBound) {
+      document.__dmDeckbarContextmenuBound = true;
+      document.addEventListener('contextmenu', (e) => {
+        const deckBarTop = document.getElementById('deckBarTop');
+        if (deckBarTop && deckBarTop.contains(e.target)) e.preventDefault();
+      });
+    }
+
+    // --- カードプレビュー関連（不足カード表示で消す） ---
+    const shortageBtn = document.getElementById('shortage-toggle-btn');
+    if (shortageBtn && !shortageBtn.dataset.previewHideBound) {
+      shortageBtn.dataset.previewHideBound = '1';
+      shortageBtn.addEventListener('click', () => {
+        window.CardPreview?.hide?.();
+        window.hideCardPreview?.();
+      });
+    }
+
+    // deckTabSwitched は document に対して 1回だけバインド（多重登録防止）
+    if (!document.__dmDeckTabPreviewHideBound) {
+      document.__dmDeckTabPreviewHideBound = true;
+      document.addEventListener('deckTabSwitched', () => {
+        window.CardPreview?.hide?.();
+        window.hideCardPreview?.();
+      });
+    }
+
+    // --- デッキ名 同期 & note-side-title その場編集 ---
+    (function initDeckNameSyncAndInlineEdit_() {
+      const infoNameEl = document.getElementById('info-deck-name');
+      const postNameEl = document.getElementById('post-deck-name');
+      const titleEl    = document.getElementById('note-side-title');
+      if (!infoNameEl && !postNameEl && !titleEl) return;
+
+      // 多重バインド防止
+      if (document.__dmDeckNameSyncBound) return;
+      document.__dmDeckNameSyncBound = true;
+
+      // 入力欄→相互反映（trimして同期）
+      const onInfoInput = () => {
+        const v = (infoNameEl?.value || '').trim();
+        window.writeDeckNameInput?.(v);
+        window.scheduleAutosave?.();
+      };
+      const onPostInput = () => {
+        const v = (postNameEl?.value || '').trim();
+        window.writeDeckNameInput?.(v);
+        window.scheduleAutosave?.();
+      };
+
+      infoNameEl?.addEventListener('input', onInfoInput);
+      postNameEl?.addEventListener('input', onPostInput);
+
+      // ===== タイトルをその場編集 =====
+      function selectAll_(el){
+        const r = document.createRange();
+        r.selectNodeContents(el);
+        const s = window.getSelection();
+        s.removeAllRanges();
+        s.addRange(r);
+      }
+
+      function beginEdit_(){
+        if (!titleEl || titleEl.isContentEditable) return;
+        titleEl.dataset.prev = (titleEl.textContent || '').trim();
+        titleEl.contentEditable = 'true';
+        titleEl.focus();
+        selectAll_(titleEl);
+      }
+
+      function commitEdit_(ok=true){
+        if (!titleEl || !titleEl.isContentEditable) return;
+        titleEl.contentEditable = 'false';
+        const next = ok ? (titleEl.textContent || '').trim() : (titleEl.dataset.prev || '');
+        window.writeDeckNameInput?.(next);  // info/post/title 全部更新（空なら“デッキリスト”）
+        window.scheduleAutosave?.();
+      }
+
+      titleEl?.addEventListener('click', () => {
+        if (titleEl.isContentEditable) return;
+        beginEdit_();
+      });
+
+      titleEl?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); commitEdit_(true); }
+        else if (e.key === 'Escape') { e.preventDefault(); commitEdit_(false); }
+      });
+
+      titleEl?.addEventListener('blur', () => commitEdit_(true));
+
+      // 初期同期（空なら空＝“デッキリスト”）
+      window.syncDeckNameFields?.();
+    })();
+  }
+
+  // loader起点で初期化（DOMContentLoaded取り逃がし対策）
+  if (typeof window.onDeckmakerReady === 'function') {
+    window.onDeckmakerReady(initPageExtras_);
+  } else {
+    // フォールバック：万一loaderより先に読まれた場合
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', initPageExtras_, { once: true });
+    } else {
+      initPageExtras_();
+    }
+  }
+
 
   // =========================
   // 種族ユーティリティ（公開）
@@ -165,7 +315,6 @@
 
     return true;
   }
-
   function addCard(cd) {
     const cd5 = normCd5(cd);
     if (!canAddCard_(cd5)) return;
@@ -176,13 +325,12 @@
     window.applyGrayscaleFilter?.();
     scheduleAutosave();
   }
-
   function removeCard(cd, { soft = false } = {}) {
     const cd5 = normCd5(cd);
     const cur = Number(deck[cd5] || 0);
     const next = Math.max(0, cur - 1);
 
-    if (!soft && next === 0) delete deck[cd5];
+    if (next === 0) delete deck[cd5];
     else deck[cd5] = next;
 
     withDeckBarScrollKept(updateDeck);
@@ -203,14 +351,75 @@
     return deckCards;
   }
 
+  // =========================
+  // デッキ情報（分析＆投稿タブ側のサマリー）更新
+  // =========================
+  function updateDeckSummary(deckCards) {
+    const cards = Array.isArray(deckCards) ? deckCards : [];
+
+    // 枚数
+    const deckCountEl = document.getElementById('deck-count');
+    if (deckCountEl) deckCountEl.textContent = String(cards.length);
+
+    // メイン種族（イノセント・旧神を除外）
+    const races = [...new Set(cards.map(c => c?.種族))].filter(
+      r => r && r !== 'イノセント' && r !== '旧神'
+    );
+    const deckRacesEl = document.getElementById('deck-races');
+    if (deckRacesEl) deckRacesEl.textContent = races[0] || '未選択';
+
+    // 旧神の表示（採用されている旧神1種類のみ表示）
+    const elderEl = document.getElementById('deck-eldergod');
+    if (elderEl) {
+      const hasOldGod = cards.some(c => c?.種族 === '旧神');
+      if (!hasOldGod) {
+        elderEl.textContent = '未採用';
+      } else {
+        // deck.js 側の getCard を使って旧神の名前を引く
+        const oldCd = Object.keys(deck).find(cd => getCard(cd)?.race === '旧神');
+        const name = oldCd ? (getCard(oldCd)?.name || '旧神') : '旧神';
+        elderEl.textContent = name;
+      }
+    }
+
+    // タイプごとのカウント
+    const countByType = (type) => cards.filter(c => c?.タイプ === type).length;
+    const nChg = countByType('チャージャー');
+    const nAtk = countByType('アタッカー');
+    const nBlk = countByType('ブロッカー');
+
+    // 既存の数字だけ表示するスパン（互換のため残す）
+    const chgEl = document.getElementById('count-charger');
+    const atkEl = document.getElementById('count-attacker');
+    const blkEl = document.getElementById('count-blocker');
+    if (chgEl) chgEl.textContent = String(nChg);
+    if (atkEl) atkEl.textContent = String(nAtk);
+    if (blkEl) blkEl.textContent = String(nBlk);
+
+    // チップUI（type-summary があればそちらに描画）
+    const typeWrap = document.getElementById('type-summary');
+    if (typeWrap) {
+      typeWrap.innerHTML = `
+        <span class="type-chip" data-type="チャージャー">チャージャー ${nChg}枚</span>
+        <span class="type-chip" data-type="アタッカー">アタッカー ${nAtk}枚</span>
+        <span class="type-chip" data-type="ブロッカー">ブロッカー ${nBlk}枚</span>
+      `;
+    }
+
+    // 自動タグ更新（存在すれば）
+    window.updateAutoTags?.();
+  }
+
   function syncAfterDeckUpdate_(deckCards) {
 
     updateCardDisabling();
-    window.updateDeckSummary?.(deckCards);
+
+    // deck.js 内に移植した updateDeckSummary を呼ぶ
+    updateDeckSummary(deckCards);
+
     window.updateDeckAnalysis?.();
     window.updateExchangeSummary?.();
     window.updateDeckCardListBackground?.();
-    window.updateAutoTags?.();
 
     if (document.getElementById('select-tags')) window.renderPostSelectTags?.();
   }
@@ -247,7 +456,7 @@
 
     // 既存の他UIも空で同期
     window.updateCardDisabling?.();
-    window.updateDeckSummary?.([]);
+    updateDeckSummary?.([]);
     window.updateExchangeSummary?.();
 
     if (typeof window.autoscaleAllBadges === 'function') {
@@ -255,6 +464,22 @@
     } else if (typeof autoscaleAllBadges === 'function') {
       requestAnimationFrame(autoscaleAllBadges);
     }
+  }
+
+  function showPreview_(x, y, cd) {
+    // 新モジュールがあるなら優先
+    if (window.CardPreview?.showAt) return window.CardPreview.showAt(x, y, cd);
+
+    // 旧互換
+    const fn = window.showCardPreviewAt;
+    if (typeof fn === 'function') return fn(x, y, cd);
+  }
+
+  function hidePreview_() {
+    if (window.CardPreview?.hide) return window.CardPreview.hide();
+
+    const fn = window.hideCardPreview;
+    if (typeof fn === 'function') return fn();
   }
 
   function attachHoverPreview_(el, cd) {
@@ -265,19 +490,19 @@
     const onMove = (e) => {
       lastX = e.clientX;
       lastY = e.clientY;
-      showCardPreviewAt(lastX, lastY, cd);
+      showPreview_(lastX, lastY, cd);
     };
 
     el.addEventListener('mouseenter', (e) => {
       lastX = e.clientX;
       lastY = e.clientY;
-      showCardPreviewAt(lastX, lastY, cd);
+      showPreview_(lastX, lastY, cd);
       el.addEventListener('mousemove', onMove);
     });
 
     el.addEventListener('mouseleave', () => {
       el.removeEventListener('mousemove', onMove);
-      hideCardPreview();
+      hidePreview_();
     });
   }
 
@@ -308,7 +533,7 @@
       cancelLongPress();
       lpTimer = setTimeout(() => {
         lpFired = true;
-        showCardPreviewAt(startX, startY, cd);
+        showPreview_(startX, startY, cd);
       }, LP_MS);
     }, { passive: true });
 
@@ -333,7 +558,7 @@
 
       if (lpFired) {
         lpFired = false;
-        hideCardPreview();
+        hidePreview_();
         cleanUp();
         return;
       }
@@ -362,7 +587,7 @@
     el.addEventListener('touchcancel', () => {
       cancelLongPress();
       lpFired = false;
-      hideCardPreview();
+      hidePreview_();
       cleanUp();
     }, { passive: true });
   }
@@ -514,74 +739,6 @@
   }
 
   // =========================
-  // オートセーブ
-  // =========================
-  let autosaveDirty = false;
-
-  function scheduleAutosave() {
-    autosaveDirty = true;
-    clearTimeout(scheduleAutosave.timer);
-
-    scheduleAutosave.timer = setTimeout(() => {
-      if (!autosaveDirty) return;
-
-      const payload = {
-        cardCounts: { ...deck },
-
-        // 互換のため両方持つ（page2.js は m を使っていた）
-        representativeCd,
-        m: representativeCd || null,
-
-        name: window.readDeckNameInput?.() || '',
-        note: window.readPostNote?.() || '',
-        poster: document.getElementById('poster-name')?.value?.trim() || '',
-        shareCode: document.getElementById('post-share-code')?.value?.trim() || '',
-        date: window.formatYmd?.(),
-      };
-
-      // userTags も保存（readUserTags が居るなら）
-      try {
-        if (typeof window.readUserTags === 'function') {
-          const tags = window.readUserTags();
-          if (Array.isArray(tags)) payload.userTags = tags;
-        }
-      } catch (_) {}
-
-      try {
-        localStorage.setItem('deck_autosave_v1', JSON.stringify(payload));
-        autosaveDirty = false;
-      } catch (e) {
-        console.error('デッキのオートセーブに失敗:', e);
-      }
-    }, 1000);
-  }
-
-  // タグ/解説の変更を監視して保存（1回だけ）
-  (function bindAutosaveForTagsAndNotes() {
-    if (window.__autosaveBound) return;
-    window.__autosaveBound = true;
-
-    document.addEventListener('DOMContentLoaded', () => {
-      // 選択タグ：クリック/変更で保存
-      const sel = document.getElementById('select-tags');
-      if (sel) {
-        sel.addEventListener('click', scheduleAutosave);
-        sel.addEventListener('change', scheduleAutosave);
-      }
-
-      // ユーザタグ：クリック/入力で保存
-      const userTagsBox = document.getElementById('user-tags');
-      const userTagInput = document.getElementById('user-tag-input');
-      const userTagAdd = document.getElementById('user-tag-add');
-
-      userTagsBox?.addEventListener('click', scheduleAutosave);
-      userTagInput?.addEventListener('input', scheduleAutosave);
-      userTagInput?.addEventListener('change', scheduleAutosave);
-      userTagAdd?.addEventListener('click', scheduleAutosave);
-    });
-  })();
-
-  // =========================
   // 復元トーストUI（移植前互換）
   // =========================
   function showRestoreToast_(message, opts = {}) {
@@ -622,9 +779,16 @@
   function loadAutosave_(data) {
     if (!data || !data.cardCounts) return;
 
-    // deck 入れ替え
+    // deck 入れ替え（参照維持 + cd5正規化）
     Object.keys(deck).forEach(k => delete deck[k]);
-    Object.assign(deck, data.cardCounts || {});
+
+    const src = (data.cardCounts && typeof data.cardCounts === 'object') ? data.cardCounts : {};
+    for (const [cdRaw, nRaw] of Object.entries(src)) {
+      const n = Number(nRaw) || 0;
+      if (n <= 0) continue;
+      const cd5 = normCd5(cdRaw);
+      deck[cd5] = n;
+    }
 
     // 代表カード
     const rep = data.m ? normCd5(data.m) : (data.representativeCd ? normCd5(data.representativeCd) : null);
@@ -654,8 +818,13 @@
     // selectTags / userTags / cardNotes は「存在するAPIがあれば」復元
     try {
       if (Array.isArray(data.selectTags)) {
-        // 正規ストレージに反映するAPIがあるなら使う
-        if (typeof window.writeSelectedTags === 'function') window.writeSelectedTags(data.selectTags);
+        // ✅ post.js の正規API（Set/ArrayどっちでもOK）
+        if (typeof window.__dmWriteSelectedTags === 'function') {
+          window.__dmWriteSelectedTags(data.selectTags);
+        } else if (typeof window.writeSelectedTags === 'function') {
+          // 旧互換が残ってる環境用
+          window.writeSelectedTags(data.selectTags);
+        }
         // UI再描画（存在すれば）
         window.renderPostSelectTags?.();
         window.applySelectTagWrap?.();
@@ -689,6 +858,257 @@
     window.updateExchangeSummary?.();
     window.updateRepresentativeHighlight?.();
   }
+
+    // =========================
+  // 外部からの「デッキ差し替え」用API（保存デッキ読み込み等）
+  // - window.deck を「差し替えず」、deck参照の中身だけを入れ替える
+  // =========================
+  function setDeckState(nextCardCounts, opts = {}) {
+    const src = (nextCardCounts && typeof nextCardCounts === 'object') ? nextCardCounts : {};
+
+    // deck 入れ替え（参照維持）
+    Object.keys(deck).forEach(k => delete deck[k]);
+
+    // cdを5桁に正規化して入れる（0以下は捨てる）
+    for (const [cdRaw, nRaw] of Object.entries(src)) {
+      const n = Number(nRaw) || 0;
+      if (n <= 0) continue;
+      const cd5 = normCd5(cdRaw);
+      deck[cd5] = n;
+    }
+
+    // 代表カード
+    const repIn = (opts.representativeCd != null) ? String(opts.representativeCd) : null;
+    const rep = repIn ? normCd5(repIn) : null;
+    representativeCd = (rep && deck[rep]) ? rep : null;
+    window.representativeCd = representativeCd;
+
+    // UI同期（復元と同じ流れ）
+    withDeckBarScrollKept(updateDeck);
+    window.applyGrayscaleFilter?.();
+    window.renderDeckList?.();
+    window.updateDeckAnalysis?.();
+    window.updateExchangeSummary?.();
+    window.updateRepresentativeHighlight?.();
+
+    // 読み込み後もオートセーブ対象にする（不要なら消してOK）
+    try { scheduleAutosave(); } catch (_) {}
+  }
+
+    // =========================
+  // オートセーブ（page2互換・上位互換）
+  // - localStorage: deck_autosave_v1
+  // - 「空 payload で既存データを潰さない」
+  // - selectTags / userTags / cardNotes も保存
+  // - saveAutosaveNow / clearAutosave を提供
+  // =========================
+  const AUTOSAVE_KEY = 'deck_autosave_v1';
+
+  let __autosaveDirty = false;       // 変更が起きたときだけ true
+  let __autosaveJustLoaded = true;   // 初期描画直後のガード
+  let __autosaveTimer = 0;
+
+  // 初期描画やオートフィルが落ち着くまで保存抑止（page2互換）
+  window.addEventListener('load', () => {
+    setTimeout(() => { __autosaveJustLoaded = false; }, 3000);
+  });
+
+  function isTrulyEmpty_(payload) {
+    if (!payload || typeof payload !== 'object') return true;
+
+    const cc = payload.cardCounts || {};
+    const deckEmpty = !cc || Object.keys(cc).length === 0;
+
+    function _isBlankLike(v) {
+      const s = String(v ?? '').trim();
+      if (!s) return true;
+      if (s === '[]' || s === '{}') return true;
+      return false;
+    }
+
+    const noName   = _isBlankLike(payload.name);
+    const noNote   = _isBlankLike(payload.note);
+    const noPoster = _isBlankLike(payload.poster);
+    const noM      = !payload.m;
+
+    let noCardNotes = true;
+    if (Array.isArray(payload.cardNotes)) {
+      noCardNotes = payload.cardNotes.length === 0;
+    } else {
+      noCardNotes = _isBlankLike(payload.cardNotes);
+    }
+
+    const noSelTags  = !(Array.isArray(payload.selectTags) && payload.selectTags.length);
+    const noUserTags = !(Array.isArray(payload.userTags)  && payload.userTags.length);
+
+    return deckEmpty && noName && noNote && noPoster && noM && noCardNotes && noSelTags && noUserTags;
+  }
+
+  // select-tags のフォールバック読み取り（readSelectedTags が無い時用）
+  function fallbackReadSelectTags_() {
+    const box = document.getElementById('select-tags');
+    if (!box) return [];
+    const chips = Array.from(box.querySelectorAll('.chip'));
+    const onChips = chips.filter(ch =>
+      ch.getAttribute('aria-pressed') === 'true' ||
+      ch.classList.contains('selected') ||
+      ch.classList.contains('active') ||
+      ch.classList.contains('on')
+    );
+    return onChips
+      .map(ch => ch.dataset.key?.trim() || ch.textContent.trim())
+      .filter(Boolean);
+  }
+
+  function buildAutosavePayload_() {
+    const payload = {
+      cardCounts: { ...deck },
+
+      representativeCd,
+      m: representativeCd || null,
+
+      name: window.readDeckNameInput?.() || '',
+      note: window.readPostNote?.() || '',
+      poster: document.getElementById('poster-name')?.value?.trim() || '',
+      shareCode: document.getElementById('post-share-code')?.value?.trim() || '',
+      date: window.formatYmd?.(),
+    };
+
+    // userTags
+    try {
+      if (typeof window.readUserTags === 'function') {
+        const tags = window.readUserTags();
+        if (Array.isArray(tags)) payload.userTags = tags;
+      }
+    } catch (_) {}
+
+    // selectTags
+    try {
+      if (typeof window.readSelectedTags === 'function') {
+        const v = window.readSelectedTags(); // Set想定
+        payload.selectTags = Array.from(v || []);
+      } else {
+        payload.selectTags = fallbackReadSelectTags_();
+      }
+    } catch (_) {}
+
+    // cardNotes
+    try {
+      let notes = null;
+      if (typeof window.readCardNotes === 'function') notes = window.readCardNotes();
+
+      if (Array.isArray(notes)) {
+        payload.cardNotes = notes;
+      } else if (typeof notes === 'string') {
+        const s = notes.trim();
+        if (!s || s === '[]') payload.cardNotes = [];
+        else {
+          try {
+            const parsed = JSON.parse(s);
+            payload.cardNotes = Array.isArray(parsed) ? parsed : [];
+          } catch {
+            payload.cardNotes = [];
+          }
+        }
+      } else {
+        payload.cardNotes = [];
+      }
+    } catch (_) {
+      payload.cardNotes = [];
+    }
+
+    return payload;
+  }
+
+  function saveAutosaveNow() {
+    try {
+      if (__autosaveJustLoaded) {
+        if (__autosaveTimer) clearTimeout(__autosaveTimer);
+        __autosaveTimer = setTimeout(saveAutosaveNow, 1200);
+        return;
+      }
+      if (!__autosaveDirty) return;
+
+      const next = buildAutosavePayload_();
+
+      const prevRaw = localStorage.getItem(AUTOSAVE_KEY);
+      let prev = null;
+      if (prevRaw) {
+        try { prev = JSON.parse(prevRaw); } catch (_) {}
+      }
+
+      // 空 → 非空を潰さない
+      if (isTrulyEmpty_(next) && prev && !isTrulyEmpty_(prev)) return;
+
+      // 完全一致なら保存不要
+      if (prev && JSON.stringify(prev) === JSON.stringify(next)) return;
+
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(next));
+      __autosaveDirty = false;
+    } catch (e) {
+      console.warn('autosave failed', e);
+    }
+  }
+
+  function scheduleAutosave() {
+    __autosaveDirty = true;
+    if (__autosaveTimer) clearTimeout(__autosaveTimer);
+    __autosaveTimer = setTimeout(saveAutosaveNow, 900);
+  }
+
+  // タグ/解説の変更を監視して保存（1回だけ）
+  (function bindAutosaveForTagsAndNotes() {
+    if (window.__autosaveBound) return;
+    window.__autosaveBound = true;
+
+    const bind = () => {
+      // 選択タグ：クリック/変更で保存
+      const sel = document.getElementById('select-tags');
+      if (sel && !sel.__autosaveBound) {
+        sel.__autosaveBound = true;
+        sel.addEventListener('click', scheduleAutosave);
+        sel.addEventListener('change', scheduleAutosave);
+      }
+
+      // ユーザタグ
+      const userTagsBox = document.getElementById('user-tags');
+      const userTagInput = document.getElementById('user-tag-input');
+      const userTagAdd = document.getElementById('user-tag-add');
+
+      if (userTagsBox && !userTagsBox.__autosaveBound) {
+        userTagsBox.__autosaveBound = true;
+        userTagsBox.addEventListener('click', scheduleAutosave);
+      }
+      if (userTagInput && !userTagInput.__autosaveBound) {
+        userTagInput.__autosaveBound = true;
+        userTagInput.addEventListener('input', scheduleAutosave);
+        userTagInput.addEventListener('change', scheduleAutosave);
+      }
+      if (userTagAdd && !userTagAdd.__autosaveBound) {
+        userTagAdd.__autosaveBound = true;
+        userTagAdd.addEventListener('click', scheduleAutosave);
+      }
+
+      // 解説
+      const note = document.getElementById('post-note');
+      if (note && !note.__autosaveBound) {
+        note.__autosaveBound = true;
+        note.addEventListener('input', scheduleAutosave);
+        note.addEventListener('change', scheduleAutosave);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bind, { once: true });
+    } else {
+      bind();
+    }
+  })();
+
+  // 旧互換API用に公開できるようにしておく（末尾の公開APIで使う）
+  window.saveAutosaveNow = window.saveAutosaveNow || saveAutosaveNow;
+  window.clearAutosave   = window.clearAutosave   || (() => { try { localStorage.removeItem(AUTOSAVE_KEY); } catch (_) {} });
+
 
   function maybeRestoreFromStorage() {
     // URLで fresh=1 のときは復元導線を出さない（移植前互換）
@@ -734,16 +1154,32 @@
     btn.textContent = isOpen ? '▶' : '◀';
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const deckSummary = document.getElementById('deck-summary');
-    const toggleBtn = document.querySelector('.deck-summary-toggle');
-    if (!deckSummary || !toggleBtn) return;
+  (function bindDeckSummaryToggle_(){
+    const bind = () => {
+      const deckSummary = document.getElementById('deck-summary');
+      const toggleBtn = document.querySelector('.deck-summary-toggle');
+      if (!deckSummary || !toggleBtn) return;
 
-    deckSummary.classList.add('open');
-    toggleBtn.textContent = '▶';
-    toggleBtn.removeAttribute('onclick'); // inline重複防止
-    toggleBtn.addEventListener('click', toggleDeckSummary);
-  });
+      deckSummary.classList.add('open');
+      toggleBtn.textContent = '▶';
+      toggleBtn.removeAttribute('onclick'); // inline重複防止
+
+      if (!toggleBtn.__bound) {
+        toggleBtn.__bound = true;
+        toggleBtn.addEventListener('click', toggleDeckSummary);
+      }
+    };
+
+    if (typeof window.onDeckmakerReady === 'function') {
+      window.onDeckmakerReady(bind);
+      return;
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bind, { once: true });
+    } else {
+      bind();
+    }
+  })();
 
   // =========================
   // 代表カード（投稿連携）
@@ -849,6 +1285,7 @@
   window.addCard = addCard;
   window.removeCard = removeCard;
   window.updateDeck = updateDeck;
+  window.updateDeckSummary = window.updateDeckSummary || updateDeckSummary;
   window.updateCardDisabling = updateCardDisabling;
 
   // representative (post integration)
@@ -860,6 +1297,8 @@
   window.withDeckBarScrollKept = withDeckBarScrollKept;
   window.scheduleAutosave = scheduleAutosave;
   window.maybeRestoreFromStorage = maybeRestoreFromStorage;
+
+  window.setDeckState = window.setDeckState || setDeckState;
 
   // UI toggles
   window.toggleDeckSummary = toggleDeckSummary;

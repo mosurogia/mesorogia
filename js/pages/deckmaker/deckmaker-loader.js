@@ -19,7 +19,10 @@
     'deck.js',
     'filter.js',
     'deck-ui.js',
+    'deck-shortage-ui.js',
+    'mulligan.js',
     'post.js',
+    'campaign.js',
     'deckmaker-tabs.js',
   ];
 

@@ -49,7 +49,7 @@
     // 5) ページ側に通知
     document.dispatchEvent(new CustomEvent('tab:switched', { detail: { targetId, el: el || null, tabBar } }));
 
-    // ✅ 互換：旧 page234 / page2.js が afterTabSwitched 前提でも動くように
+    // 6) ページ側の後処理呼び出し（あれば）
     try { window.afterTabSwitched?.(targetId); } catch (e) { console.error(e); }
   }
 

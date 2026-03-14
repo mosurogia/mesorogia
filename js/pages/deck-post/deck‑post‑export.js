@@ -1,0 +1,1 @@
+//デッキ画像生成ボタンや共有リンクコピーを処理する。exportDeckImage に適した形式にデッキ情報を整形し、navigator.clipboard.writeText で共有 URL をコピーする。エラー時のフォールバックやトースト表示も含める。詳細ペインからのイベントハンドリングは deck-post-detail.js からこちらを呼び出す。

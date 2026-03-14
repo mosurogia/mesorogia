@@ -6,8 +6,7 @@
 (function () {
   'use strict';
 
-  // ✅ 互換：tabs.js が afterTabSwitched を呼ぶ場合でも受けられるようにしておく
-  // （page2.js が定義しているなら上書きしない）
+  // タブ切替後の共通処理（タブ固有処理は tab:switched 内で分岐）
   window.afterTabSwitched ??= function (targetId) {};
 
   document.addEventListener('tab:switched', (e) => {
@@ -17,7 +16,7 @@
     // 1) タブ固有処理（returnしない）
     // ----------------------------
     if (id === 'edit') {
-      // page2.js 側で window.updateDeckAnalysis / updateExchangeSummary を公開している想定
+      // 分析タブのグラフ更新（分析タブ内のサブタブ切替はこれに含まない）
       if (typeof window.updateDeckAnalysis === 'function') window.updateDeckAnalysis();
       if (typeof window.updateExchangeSummary === 'function') window.updateExchangeSummary();
 
@@ -64,4 +63,31 @@
     // 既存互換：他コードがこのイベントでプレビューを閉じる等
     document.dispatchEvent(new Event('deckTabSwitched'));
   });
+    // =====================================================
+  // 互換API：分析＆投稿タブ → デッキ投稿まで一気に移動
+  // - HTML: onclick="goToAnalyzeTab()" の互換 :contentReference[oaicite:8]{index=8}
+  // =====================================================
+  window.goToAnalyzeTab ??= function goToAnalyzeTab() {
+    // 1) 上段タブを edit に
+    const tab2 = document.querySelector('#tab2');
+    if (tab2 && typeof window.switchTab === 'function') {
+      window.switchTab('edit', tab2);
+    }
+
+    // 2) edit内サブタブを post-tab に
+    const postTabBtn =
+      document.querySelector('#deck-info .post-tab-bar') ||
+      document.querySelector('#deck-info [onclick*="post-tab"]');
+
+    if (postTabBtn && typeof window.switchTab === 'function') {
+      window.switchTab('post-tab', postTabBtn);
+    }
+
+    // 3) 念のため同期（tab:switched側でも共通同期されるが、旧page2互換で保険）
+    requestAnimationFrame(() => {
+      if (typeof window.renderDeckList === 'function') window.renderDeckList();
+      if (typeof window.updateDeckAnalysis === 'function') window.updateDeckAnalysis();
+      if (typeof window.updateExchangeSummary === 'function') window.updateExchangeSummary();
+    });
+  };
 })();

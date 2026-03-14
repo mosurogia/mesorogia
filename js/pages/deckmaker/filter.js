@@ -98,7 +98,7 @@
   // ✅ deckmaker ではこれを「正式API」にする（cardFilter.js が呼ぶため）
   // - grayscale が付いているカードを、hideInvalidRace ON の時だけ hidden-by-grayscale にする
   window.applyGrayscaleFilter ??= applyHideInvalidRaceView;
-  
+
   // =====================================================
   // 2) フィルター（keyword + type quick）
   // =====================================================
@@ -174,12 +174,10 @@
   window.DeckmakerFilter.toggleInvalidRace = toggleInvalidRace_;
   window.DeckmakerFilter.applyHideInvalidRaceView = applyHideInvalidRaceView;
 
-  // ✅ 互換：他コードが window.applyFilters を呼んでも動くように
-  // （deckmaker-entry.js の loadCards() など）
+  // ✅ 互換：旧 page2.js が applyFilters 前提でも動くように --- IGNORE ---
   window.applyFilters ??= applyFilters;
 
-  // ✅ 互換：page2.js が参照する所持Map取得関数
-  // OwnedStore（あれば最優先）→ localStorage('ownedCards') の順で読む
+  // ✅ 互換：旧 page2.js が toggleInvalidRace 前提でも動くように --- IGNORE ---
   window.readOwnedMapForDeckmaker ??= function readOwnedMapForDeckmakerCompat() {
     // 1) OwnedStore があるなら最優先
     try {

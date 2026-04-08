@@ -22,20 +22,20 @@
    * - 追加する時はコメントを外し、依存順に並べてください
    *
    * 推奨順（現在構成ベース）：
-   * loader → state → api → list → filter → cardpick → detail → editor → export → modals → utils
+   * loader → state → api → list → filter → detail → editor → utils → campaign → export → modals
    */
   const BASE_FILES = [
     'deck-post-state.js',
     'deck-post-api.js',
     'deck-post-list.js',
-    // 'deck-post-filter.js',
-    // 'deck-post-cardpick.js',
-    // 'deck-post-detail.js',
-    // 'deck-post-editor.js',
-    // 'deck-post-export.js',
-    // 'deck-post-modals.js',
-    // 'deck-post-utils.js',
-    // 'campaign.js', // （将来追加枠：ページ専用にするなら deck-post-campaign.js 推奨）
+    'deck-post-filter.js',
+    'deck-post-detail.js',
+    'deck-post-editor.js',
+    'deck-post-utils.js',
+    'deck-post-campaign.js',
+    'deck-post-export.js',
+    'deck-post-modals.js',
+    'deck-post-entry.js',
   ];
 
   // =========================

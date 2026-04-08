@@ -41,6 +41,15 @@
 
   // メイン種族（統一版）
   const MAIN_RACES = ['ドラゴン', 'アンドロイド', 'エレメンタル', 'ルミナス', 'シェイド'];
+  const RACE_KEY_MAP = {
+    'ドラゴン': 'DRAGON',
+    'アンドロイド': 'ANDROID',
+    'エレメンタル': 'ELEMENTAL',
+    'ルミナス': 'LUMINOUS',
+    'シェイド': 'SHADE',
+    'イノセント': 'INN',
+    '旧神': 'OLD',
+  };
 
   // =========================
   // 状態
@@ -121,6 +130,20 @@
 
       return String(cdA).localeCompare(String(cdB));
     });
+  }
+
+  function exportDeckCode() {
+    try {
+      return btoa(unescape(encodeURIComponent(JSON.stringify(deck || {}))));
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function syncGeneratedDeckCode_() {
+    const deckCodeEl = document.getElementById('post-deck-code');
+    if (!deckCodeEl) return;
+    deckCodeEl.value = exportDeckCode();
   }
 
   // デッキ更新時にスクロール位置を保つ補助
@@ -272,6 +295,38 @@
     return getMainRacesInDeck()[0] || null;
   }
 
+  function getAllRacesInDeck() {
+    const races = Object.keys(deck)
+      .map(cd => getCard(cd)?.race)
+      .filter(Boolean);
+    return [...new Set(races)];
+  }
+
+  function getRaceCode() {
+    const raceCodeMap = {
+      'ドラゴン': 1,
+      'アンドロイド': 2,
+      'エレメンタル': 3,
+      'ルミナス': 4,
+      'シェイド': 5,
+    };
+    return raceCodeMap[getMainRace()] || 1;
+  }
+
+  function buildRaceKey() {
+    const races = getAllRacesInDeck();
+    return races
+      .map(r => RACE_KEY_MAP[String(r).trim()] || '')
+      .filter(Boolean)
+      .join('+');
+  }
+
+  function syncPostRaceFields_() {
+    const races = getMainRacesInDeck();
+    const racesEl = document.getElementById('post-races-hidden');
+    if (racesEl) racesEl.value = races.join(',');
+  }
+
   function getRaceType(race) {
     if (!race) return '';
     if (race === '旧神') return 'old';
@@ -413,6 +468,8 @@
   function syncAfterDeckUpdate_(deckCards) {
 
     updateCardDisabling();
+    syncGeneratedDeckCode_();
+    syncPostRaceFields_();
 
     // deck.js 内に移植した updateDeckSummary を呼ぶ
     updateDeckSummary(deckCards);
@@ -809,10 +866,10 @@
     // 貼り付けコード
     try {
       const v = String(data.shareCode || '');
-      const el = document.getElementById('post-share-code');
-      if (el) el.value = v;
-      // もし専用 writer が居ればそっちも
       window.writePastedDeckCode?.(v);
+
+      const shareEl = document.getElementById('post-share-code');
+      if (shareEl) shareEl.value = v;
     } catch(_) {}
 
     // selectTags / userTags / cardNotes は「存在するAPIがあれば」復元
@@ -1279,6 +1336,8 @@
   window.getMainRacesInDeck = getMainRacesInDeck;
   window.computeMainRace = computeMainRace;
   window.getMainRace = getMainRace;
+  window.getRaceCode = window.getRaceCode || getRaceCode;
+  window.buildRaceKey = window.buildRaceKey || buildRaceKey;
   window.getRaceType = getRaceType;
 
   // deck operations
@@ -1291,6 +1350,7 @@
   // representative (post integration)
   window.setRepresentativeCard = window.setRepresentativeCard || setRepresentativeCard;
   window.buildCardsForPost_ = window.buildCardsForPost_ || buildCardsForPost_;
+  window.exportDeckCode = window.exportDeckCode || exportDeckCode;
   window.representativeCd = window.representativeCd ?? representativeCd;
 
   // autosave / restore

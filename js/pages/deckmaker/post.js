@@ -457,7 +457,6 @@
 
     function removeRow(i) {
       cardNotes.splice(i, 1);
-      if (!cardNotes.length) cardNotes = [{ cd: '', text: '' }];
       renderRows();
     }
 
@@ -494,14 +493,13 @@
             <div class="actions">
               <button type="button" class="note-move" data-dir="-1" title="上へ">↑</button>
               <button type="button" class="note-move" data-dir="1"  title="下へ">↓</button>
-              <button type="button" class="note-remove" title="削除">✕</button>
+              <button type="button" class="note-remove" title="削除">削除</button>
             </div>
           </div>
 
           <div class="right">
             <div class="title-row">
               <button type="button" class="pick-btn">${cardName}</button>
-              ${cd ? `<span class="cd">(${cd})</span>` : ''}
             </div>
             <textarea class="note" rows="2" placeholder="このカードの採用理由・使い方など"></textarea>
           </div>
@@ -1059,9 +1057,11 @@
     const pastedPreview = document.getElementById('pasted-code-preview');
     const clearBtn      = document.getElementById('btn-clear-code');
     const shareHidden   = document.getElementById('post-share-code');
+    const deckCodeHidden = document.getElementById('post-deck-code');
     if (pastedPreview) pastedPreview.textContent = '（未設定）';
     if (clearBtn)      clearBtn.disabled = true;
     if (shareHidden)   shareHidden.value = '';
+    if (deckCodeHidden) deckCodeHidden.value = window.exportDeckCode?.() || '';
 
     const agree = document.getElementById('post-agree');
     if (agree) agree.checked = false;
@@ -1368,12 +1368,35 @@
   // 10) 投稿ペイロード（フォーム値）構築
   // =====================================================
   function buildDeckPostPayload() {
-    const title   = document.getElementById('post-deck-name')?.value.trim() || '';
+    const infoNameEl = document.getElementById('info-deck-name');
+    const postNameEl = document.getElementById('post-deck-name');
+
+    const title =
+      postNameEl?.value?.trim() ||
+      infoNameEl?.value?.trim() ||
+      '';
     const comment = document.getElementById('post-note')?.value.trim() || '';
-    const code    = document.getElementById('post-deck-code')?.value || '';
-    const races   = document.getElementById('post-races-hidden')?.value || '';
+    const code =
+      document.getElementById('post-deck-code')?.value?.trim() ||
+      window.exportDeckCode?.() ||
+      '';
+    const races   =
+      document.getElementById('post-races-hidden')?.value ||
+      (typeof window.getMainRacesInDeck === 'function' ? window.getMainRacesInDeck().join(',') : '');
+    const mainRace = typeof window.getMainRace === 'function' ? window.getMainRace() : '';
+    const raceKey = typeof window.buildRaceKey === 'function' ? window.buildRaceKey() : '';
+    const g = typeof window.getRaceCode === 'function' ? window.getRaceCode() : 1;
     const repImg  = document.getElementById('post-rep-img')?.value || '';
     const shareCode = document.getElementById('post-share-code')?.value.trim() || '';
+
+    console.log('[post payload check]', {
+      title,
+      code,
+      races,
+      raceKey,
+      g,
+      shareCode
+    });
 
     // 投稿者名
     let posterInp = '';
@@ -1445,7 +1468,7 @@
     })();
 
     return {
-      title, comment, code, count, races, repImg,
+      title, comment, code, count, races, raceKey, mainRace, g, repImg,
       cardNotes,
       shareCode,
       ua: navigator.userAgent,
@@ -1534,15 +1557,21 @@
     const cardnoteValidator = document.getElementById('post-cardnote-validator');
     if (cardnoteValidator){
       cardnoteValidator.setCustomValidity('');
-      let hasIncomplete = false;
-      const root = document.getElementById('post-card-notes');
-      const rows = root ? root.querySelectorAll('.post-card-note') : [];
-      rows.forEach(row => {
-        const cd = (row.dataset.cd || '').trim();
-        if (!cd) return;
-        const ta = row.querySelector('textarea');
-        if (ta && !ta.value.trim()) hasIncomplete = true;
+      const list = window.CardNotes?.getList?.() || [];
+
+      const hasIncomplete = list.some(r => {
+        const cd = String(r.cd || '').trim();
+        const text = String(r.text || '').trim();
+
+        // 完全空行は無視
+        if (!cd && !text) return false;
+
+        // cdあるのにtext無い → NG
+        if (cd && !text) return true;
+
+        return false;
       });
+
       if (hasIncomplete){
         cardnoteValidator.setCustomValidity('カード解説が未入力の行があります');
         cardnoteValidator.reportValidity();
@@ -1601,11 +1630,11 @@
     const joinCampaign = !!opts.joinCampaign;
     const camp = opts.campaign || null;
     const isActive = !!(camp && (camp.isActive === true || String(camp.isActive) === 'true') && String(camp.campaignId || ''));
-    const repCd5 = String(payload.repCd ?? '').trim().padStart(5,'0').slice(0,5);
     payload.joinCampaign = joinCampaign;
     payload.campaignId = (joinCampaign && isActive) ? String(camp.campaignId || '') : '';
 
-    payload.repCd  = window.representativeCd || '';
+    payload.repCd = window.representativeCd || '';
+    const repCd5 = String(payload.repCd || '').trim().padStart(5, '0').slice(0, 5);
     payload.repImg = repCd5 ? `img/${repCd5}.webp` : '';
 
     try{
@@ -1725,14 +1754,18 @@
     const pasteBtn  = document.getElementById('btn-paste-code');
     const clearBtn  = document.getElementById('btn-clear-code');
     const previewEl = document.getElementById('pasted-code-preview');
-    const hiddenEl  = document.getElementById('post-share-code'); // hidden
-    if (!pasteBtn || !clearBtn || !previewEl || !hiddenEl) return;
+    const shareEl   = document.getElementById('post-share-code');
+    if (!pasteBtn || !clearBtn || !previewEl || !shareEl) return;
+
+    function setCodeBoth(v){
+      const s = String(v || '').trim();
+      shareEl.value = s;
+    }
 
     function reflectUI(s){
       const vr = validateDeckCodeLight_(s || '');
       const ok = !!vr.ok;
 
-      //    未設定 or OK or NG（形式はデッキコードっぽいが何らかの理由でNG）
       previewEl.textContent = (ok && s) ? s : '（未設定）';
       previewEl.title = !s ? '' : (ok ? '判定: デッキコード（OK）' : `判定: 不明（${vr.reason || '形式不一致'}）`);
 
@@ -1750,17 +1783,16 @@
 
         const vr = validateDeckCodeLight_(s);
         if (!vr.ok){
-          hiddenEl.value = '';
+          setCodeBoth('');
           reflectUI('');
           window.scheduleAutosave?.();
           alert(`貼り付けた文字列はデッキコードではなさそうです。\n理由: ${vr.reason || '形式不一致'}`);
           return;
         }
 
-        hiddenEl.value = s;
+        setCodeBoth(s);
         reflectUI(s);
         window.scheduleAutosave?.();
-
       }catch(err){
         console.error(err);
         alert('デッキコードの貼り付けに失敗しました（権限やブラウザ設定をご確認ください）');
@@ -1768,7 +1800,7 @@
     }
 
     function doClear(){
-      hiddenEl.value = '';
+      setCodeBoth('');
       reflectUI('');
       window.scheduleAutosave?.();
     }
@@ -1776,15 +1808,14 @@
     pasteBtn.addEventListener('click', doPaste);
     clearBtn.addEventListener('click', doClear);
 
-    // 外部から復元したい時用
     window.writePastedDeckCode = function(s){
       try{
-        hiddenEl.value = String(s || '');
-        reflectUI(hiddenEl.value);
+        setCodeBoth(s);
+        reflectUI(String(s || '').trim());
       }catch(_){}
     };
 
-    reflectUI(hiddenEl.value || '');
+    reflectUI(shareEl.value || '');
   }
 
 

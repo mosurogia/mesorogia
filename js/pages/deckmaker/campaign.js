@@ -95,7 +95,12 @@
 
     const camp = await fetchActiveCampaignSafe({ ttlMs: 60000 });
 
-    const title = String(camp.title || '').trim();
+    if (!isCampaignActive(camp)) {
+      box.style.display = 'none';
+      return;
+    }
+
+    const title = String(camp?.title || '').trim();
     const msg = title
       ? `${escapeHtml(title)}開催中！<wbr>デッキ投稿募集中！`
       : `キャンペーン開催中！<wbr>デッキ投稿募集中！`;
@@ -116,9 +121,16 @@
 
     const camp = await fetchActiveCampaignSafe({ ttlMs: 60000 });
 
-    const rawTitle = String(camp.title || 'キャンペーン');
-    const start = camp.startAt ? new Date(camp.startAt) : null;
-    const end   = camp.endAt   ? new Date(camp.endAt)   : null;
+    if (!isCampaignActive(camp)) {
+      box.style.display = 'none';
+      window.__activeCampaign = null;
+      window.__activeCampaignTag = '';
+      return;
+    }
+
+    const rawTitle = String(camp?.title || 'キャンペーン');
+    const start = camp?.startAt ? new Date(camp.startAt) : null;
+    const end   = camp?.endAt   ? new Date(camp.endAt)   : null;
 
     const computedRange = (start || end) ? `${fmtYmd(start)}〜${fmtYmd(end)}` : '';
 
@@ -417,5 +429,4 @@
   // 互換export（page2互換で呼ばれても落ちないように）
   window.renderDeckmakerCampaignMiniNotice ??= renderDeckmakerCampaignMiniNotice;
   window.renderDeckmakerCampaignBanner     ??= renderDeckmakerCampaignBanner;
-
 })();

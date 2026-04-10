@@ -1215,20 +1215,38 @@
 }
 
 .detail-zoom-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
     padding: 0;
-    margin-right: 8px;
     width: 28px;
     height: 28px;
     border-radius: 999px;
     border: 1px solid rgba(0, 0, 0, .18);
-    background: #fff;
+    background: rgba(255, 255, 255, .92);
     color: #1f3f5f;
     cursor: pointer;
     flex: 0 0 auto;
+
+    transition: transform .08s ease, box-shadow .15s ease, background-color .15s ease;
+}
+
+.detail-zoom-btn:hover {
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .16);
 }
 
 .detail-zoom-btn:active {
     transform: scale(0.97);
+}
+
+.detail-zoom-btn .zoom-ic {
+    display: block;
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    pointer-events: none;
 }
 
 .card-name {

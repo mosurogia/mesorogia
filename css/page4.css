@@ -2049,10 +2049,8 @@ body {
 #cardDetailDrawer {
     position: fixed;
     inset: 0;
-    z-index: 9999;
+    z-index: 1900;
     background: rgba(0, 0, 0, .15);
-    /* display:flex; align-items:flex-end; は削除 */
-    /* padding-bottom も削除 */
 }
 
 #cardDetailDrawer .carddetail-drawer-inner {
@@ -3206,6 +3204,11 @@ body {
     margin: 3px 0;
 }
 
+.card-pick-modal {
+    margin: 48px auto 0;
+    min-height: min(420px, calc(100vh - 72px));
+}
+
 @media (max-width: 900px) {
     #cardPickResult {
         grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -3213,6 +3216,11 @@ body {
 }
 
 @media (max-width: 600px) {
+    .card-pick-modal {
+        margin-top: 20px;
+        min-height: min(360px, calc(100vh - 32px));
+    }
+
     #cardPickResult {
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }

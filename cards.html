@@ -138,6 +138,11 @@
                 <div id="active-chips-bar" style="display:none;">
                     <div class="chips-scroll"></div>
                 </div>
+                <!-- グループ一括操作 -->
+                <div id="group-bulk-actions" style="display:none;">
+                    <button id="group-select-all-btn">表示中のカードをすべて選択</button>
+                    <button id="group-reset-btn">選択カードをリセット</button>
+                </div>
             </div>
 
             <!-- フィルターモーダル（カード一覧用） -->
@@ -330,10 +335,8 @@
 
 <!-- カード共通 -->
 <script src="js/common/card/cardGrid.js"></script>
-<script src="js/common/card/card-detail-template.js"></script>
-<script src="js/common/card/card-zoom-modal.js"></script>
 <script src="js/common/card/card-detail.js"></script>
-<script src="js/common/card/card-preview.js"></script>
+<script src="js/common/card/card-image-viewer.js"></script>
 
 <script src="js/common/filter/keyword-filter.js"></script>
 <script src="js/common/filter/chip-bar.js"></script>
@@ -347,7 +350,7 @@
 <script src="js/common/card/group-image-export.js"></script>
 
 <!-- 図鑑ページ専用 -->
-<script src="js/pages/card/card-page-loader.js"></script>
+<script src="js/pages/cards/cards-page-loader.js"></script>
 
 </body>
 </html>

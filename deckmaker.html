@@ -165,8 +165,7 @@
                         <div>
                             【スマホ】<br>
                             ・タップ,上フリック：追加<br>
-                            ・下フリック：削除<br>
-                            ・長押し：拡大表示
+                            ・下フリック：削除
                         </div>
                     </div>
                 </div>
@@ -301,6 +300,9 @@
     <div id="deck-layout">
         <!--デッキリストゾーン-->
         <div id="deck-card-list" class="deck-section">
+            <div class="tab-bar subtab-bar">
+                デッキリスト
+            </div>
             <div id="deckcard-empty-message">デッキがここに表示されます</div>
             <!-- カード一覧（5列グリッド） -->
         </div>
@@ -1244,6 +1246,11 @@
             <li>（総チャージャー量＋初期マナ4）÷ 総コスト で計算しています。</li>
             <li>数値が高いほど、マナに余裕があります。</li>
             <li>数値が低いほど、事故しやすい構成です。</li>
+            <li>
+                ・1.5以上：マナ多め<br>
+                ・1.0前後：適正<br>
+                ・1.0未満：マナ少なめ
+            </li>
         </ol>
 
         <p class="flow-note">
@@ -1273,10 +1280,8 @@
 
 <!-- カード共通 -->
 <script src="js/common/card/cardGrid.js"></script>
-<script src="js/common/card/card-detail-template.js"></script>
-<script src="js/common/card/card-zoom-modal.js"></script>
 <script src="js/common/card/card-detail.js"></script>
-<script src="js/common/card/card-preview.js"></script>
+<script src="js/common/card/card-image-viewer.js"></script>
 
 <script src="js/common/filter/keyword-filter.js"></script>
 <script src="js/common/filter/chip-bar.js"></script>
@@ -1288,7 +1293,9 @@
 <script src="js/common/ui/deck-saved-ui.js"></script>
 
 <!-- 画像生成 -->
+<script src="js/common/deck/deck-peek.js"></script>
 <script src="js/common/deck/image-export.js"></script>
+<script src="js/common/deck/deck-analysis.js"></script>
 <script defer src="js/common/deck/screenshot-panel.js"></script>
 
 <!-- デッキメーカーページ専用 -->

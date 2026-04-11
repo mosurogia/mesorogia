@@ -495,6 +495,11 @@
     --pack-accent-rgb: var(--pack-f-rgb);
 }
 
+#pack-summary-list .pack-summary[data-pack-group="g"] {
+    --pack-border-rgb: var(--pack-g-accent-rgb);
+    --pack-accent-rgb: var(--pack-g-rgb);
+}
+
 #pack-summary-list .pack-summary[data-pack-group="special"] {
     --pack-border-rgb: var(--pack-special-accent-rgb);
     --pack-accent-rgb: var(--pack-special-rgb);
@@ -936,6 +941,11 @@
 .pack-section[data-packgroup="f"] {
     --pack-rgb: var(--pack-f-rgb);
     --pack-accent-rgb: var(--pack-f-accent-rgb);
+}
+
+.pack-section[data-packgroup="g"] {
+    --pack-rgb: var(--pack-g-rgb);
+    --pack-accent-rgb: var(--pack-g-accent-rgb);
 }
 
 .pack-section[data-packgroup="collab"] {

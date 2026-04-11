@@ -669,7 +669,7 @@
 
 
 <!-- ===== マナ効率 ヘルプモーダル ===== -->
-<div id="manaEfficiencyHelpModal" class="modal" style="display:none;">
+<div id="manaHelpModal" class="modal" style="display:none;">
     <div class="modal-content flow-modal">
         <button id="mana-help-close" class="modal-close-x" type="button" aria-label="閉じる">
             ×
@@ -680,10 +680,15 @@
         </h3>
 
         <ol class="flow-steps">
-            <li>マナ効率は「デッキが重いか・軽いか」を見る指標です。</li>
-            <li>（総チャージャー量＋初期マナ4）÷ 総コスト で計算しています。</li>
-            <li>数値が高いほど、マナに余裕があります。</li>
-            <li>数値が低いほど、事故しやすい構成です。</li>
+        <li>マナ効率は「デッキが重いか・軽いか」を見る指標です。</li>
+        <li>（総チャージャー量＋初期マナ4）÷ 総コスト で計算しています。</li>
+        <li>数値が高いほど、マナに余裕があります。</li>
+        <li>数値が低いほど、事故しやすい構成です。</li>
+        <li>
+            ・1.5以上：マナ多め<br>
+            ・1.0前後：適正<br>
+            ・1.0未満：マナ少なめ
+        </li>
         </ol>
 
         <p class="flow-note">
@@ -753,8 +758,19 @@
 <script src="js/common/account/account.js"></script>
 
 <!-- 画像生成 -->
+<script src="js/common/deck/deck-peek.js"></script>
 <script src="js/common/deck/image-export.js"></script>
-<script src="js/common/card/card-zoom-modal.js"></script>
+<script src="js/common/deck/deck-analysis.js"></script>
+<script src="js/common/card/card-image-viewer.js"></script>
+
+<!-- ▼ デッキ全体表示：オーバーレイ -->
+<button id="deckpeek-button" type="button">
+    デッキ表示
+</button>
+<!-- デッキ全体表示オーバーレイ -->
+<div id="deckpeek-overlay">
+    <div class="deckpeek-grid" id="deckpeek-grid"></div>
+</div>
 
 <!-- ページ固有 -->
 <script src="js/pages/deck-post/deck-post-page-loader.js"></script>

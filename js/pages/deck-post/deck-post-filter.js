@@ -405,164 +405,159 @@
 
   /** 適用中フィルターチップ更新 */
   function updateActiveChipsBar_() {
-    const bar = document.getElementById('active-chips-bar');
-    const sc = bar?.querySelector('.chips-scroll');
-    if (!bar || !sc) return;
+      const FilterChipBar = window.FilterChipBar;
+      if (!FilterChipBar?.render) return;
 
-    const st = window.PostFilterState || {};
-    const tags = Array.from(st.selectedTags || []);
-    const user = Array.from(st.selectedUserTags || []);
-    const posterLabel = String(st.selectedPosterLabel || '').trim();
-    const postLabel = String(st.selectedPostLabel || '').trim();
-    const postId = String(st.selectedPostId || '').trim();
-    const cards = Array.from(st.selectedCardCds || []);
-    const total = tags.length + user.length + (posterLabel ? 1 : 0) + cards.length + (postId ? 1 : 0);
+      const st = window.PostFilterState || {};
+      const tags = Array.from(st.selectedTags || []);
+      const user = Array.from(st.selectedUserTags || []);
+      const posterLabel = String(st.selectedPosterLabel || '').trim();
+      const postLabel = String(st.selectedPostLabel || '').trim();
+      const postId = String(st.selectedPostId || '').trim();
+      const cards = Array.from(st.selectedCardCds || []);
+      const cardMode = String(st.selectedCardMode || 'or');
 
-    sc.replaceChildren();
+      const chips = [];
 
-    if (!total) {
-      bar.style.display = 'none';
-      return;
-    }
-    bar.style.display = '';
+      tags.forEach((t) => {
+          chips.push({
+              label: `🏷️${t}`,
+              className: 'chip-tag',
+              onRemove: () => {
+                  window.PostFilterState.selectedTags?.delete?.(t);
+                  window.PostFilterDraft?.selectedTags?.delete?.(t);
 
-    function addChip(label, onRemove, extraClass = '') {
-      const chip = document.createElement('span');
-      chip.className = `chip-mini ${extraClass}`.trim();
-      chip.textContent = label;
+                  try {
+                      document
+                          .querySelectorAll(`.post-filter-tag-btn[data-tag="${CSS.escape(t)}"]`)
+                          .forEach((btn) => btn.classList.remove('selected'));
+                  } catch (_) {}
 
-      const x = document.createElement('button');
-      x.type = 'button';
-      x.className = 'x';
-      x.textContent = '×';
-      x.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onRemove?.();
+                  window.DeckPostFilter?.updateActiveChipsBar?.();
+                  window.DeckPostList?.applySortAndRerenderList?.(false);
+              }
+          });
       });
 
-      chip.appendChild(x);
-      sc.appendChild(chip);
-    }
+      user.forEach((t) => {
+          chips.push({
+              label: `✍️${t}`,
+              className: 'chip-user',
+              onRemove: () => {
+                  window.PostFilterState.selectedUserTags?.delete?.(t);
+                  window.PostFilterDraft?.selectedUserTags?.delete?.(t);
 
-    tags.forEach((t) => {
-      addChip(`🏷️${t}`, () => {
-        window.PostFilterState.selectedTags?.delete?.(t);
-        window.PostFilterDraft?.selectedTags?.delete?.(t);
+                  try {
+                      window.__renderSelectedUserTags_?.();
+                  } catch (_) {}
 
-        try {
-          document
-            .querySelectorAll(`.post-filter-tag-btn[data-tag="${CSS.escape(t)}"]`)
-            .forEach((btn) => btn.classList.remove('selected'));
-        } catch (_) {}
-
-        window.DeckPostFilter?.updateActiveChipsBar?.();
-        window.DeckPostList?.applySortAndRerenderList?.(false);
-      }, 'chip-tag');
-    });
-
-    user.forEach((t) => {
-      addChip(`✍️${t}`, () => {
-        window.PostFilterState.selectedUserTags?.delete?.(t);
-        window.PostFilterDraft?.selectedUserTags?.delete?.(t);
-
-        try {
-          window.__renderSelectedUserTags_?.();
-        } catch (_) {}
-
-        window.DeckPostFilter?.updateActiveChipsBar?.();
-        window.DeckPostList?.applySortAndRerenderList?.(false);
-      }, 'chip-user');
-    });
-
-    if (posterLabel) {
-      addChip(`投稿者:${posterLabel}`, () => {
-        window.PostFilterState.selectedPosterKey = '';
-        window.PostFilterState.selectedPosterLabel = '';
-        window.PostFilterDraft.selectedPosterKey = '';
-        window.PostFilterDraft.selectedPosterLabel = '';
-
-        window.DeckPostFilter?.updateActiveChipsBar?.();
-        window.DeckPostList?.applySortAndRerenderList?.(false);
-      }, 'is-poster');
-    }
-
-    const cardMode = String(st.selectedCardMode || 'or');
-    if (cards.length) {
-      const labelHead = cardMode === 'and' ? 'AND' : 'OR';
-
-      cards.forEach((cd) => {
-        const name = (window.cardMap || window.allCardsMap || {})?.[cd]?.name || cd;
-
-        addChip(`🃏${labelHead}:${name}`, () => {
-          window.PostFilterState.selectedCardCds?.delete?.(cd);
-          window.PostFilterDraft?.selectedCardCds?.delete?.(cd);
-
-          try {
-            window.__renderSelectedCards_?.();
-          } catch (_) {}
-
-          window.DeckPostFilter?.updateActiveChipsBar?.();
-          window.DeckPostList?.applySortAndRerenderList?.(false);
-        }, 'chip-card');
+                  window.DeckPostFilter?.updateActiveChipsBar?.();
+                  window.DeckPostList?.applySortAndRerenderList?.(false);
+              }
+          });
       });
-    }
 
-    if (postId) {
-      addChip(`🔗投稿:${postLabel || postId}`, () => {
-        window.PostFilterState.selectedPostId = '';
-        window.PostFilterState.selectedPostLabel = '';
-        window.PostFilterDraft.selectedPostId = '';
-        window.PostFilterDraft.selectedPostLabel = '';
+      if (posterLabel) {
+          chips.push({
+              label: `投稿者:${posterLabel}`,
+              className: 'is-poster',
+              onRemove: () => {
+                  window.PostFilterState.selectedPosterKey = '';
+                  window.PostFilterState.selectedPosterLabel = '';
+                  window.PostFilterDraft.selectedPosterKey = '';
+                  window.PostFilterDraft.selectedPosterLabel = '';
 
-        window.DeckPostFilter?.updateActiveChipsBar?.();
-        window.DeckPostList?.applySortAndRerenderList?.(false);
-      }, 'is-post');
-    }
+                  window.DeckPostFilter?.updateActiveChipsBar?.();
+                  window.DeckPostList?.applySortAndRerenderList?.(false);
+              }
+          });
+      }
 
-    const clr = document.createElement('span');
-    clr.className = 'chip-mini chip-clear';
-    clr.textContent = 'すべて解除';
-    clr.addEventListener('click', () => {
-      window.PostFilterState.selectedTags?.clear?.();
-      window.PostFilterState.selectedUserTags?.clear?.();
-      window.PostFilterDraft.selectedTags?.clear?.();
-      window.PostFilterDraft.selectedUserTags?.clear?.();
+      if (cards.length) {
+          const labelHead = cardMode === 'and' ? 'AND' : 'OR';
 
-      window.PostFilterState.selectedPosterKey = '';
-      window.PostFilterState.selectedPosterLabel = '';
-      window.PostFilterDraft.selectedPosterKey = '';
-      window.PostFilterDraft.selectedPosterLabel = '';
+          cards.forEach((cd) => {
+              const name = (window.cardMap || window.allCardsMap || {})?.[cd]?.name || cd;
 
-      window.PostFilterState.selectedCardCds?.clear?.();
-      window.PostFilterDraft.selectedCardCds?.clear?.();
-      window.PostFilterState.selectedCardMode = 'or';
-      window.PostFilterDraft.selectedCardMode = 'or';
+              chips.push({
+                  label: `🃏${labelHead}:${name}`,
+                  className: 'chip-card',
+                  onRemove: () => {
+                      window.PostFilterState.selectedCardCds?.delete?.(cd);
+                      window.PostFilterDraft?.selectedCardCds?.delete?.(cd);
 
-      window.PostFilterState.selectedPostId = '';
-      window.PostFilterState.selectedPostLabel = '';
-      window.PostFilterDraft.selectedPostId = '';
-      window.PostFilterDraft.selectedPostLabel = '';
+                      try {
+                          window.__renderSelectedCards_?.();
+                      } catch (_) {}
 
-      try {
-        window.__renderSelectedCards_?.();
-      } catch (_) {}
+                      window.DeckPostFilter?.updateActiveChipsBar?.();
+                      window.DeckPostList?.applySortAndRerenderList?.(false);
+                  }
+              });
+          });
+      }
 
-      try {
-        document.querySelectorAll('.post-filter-tag-btn.selected').forEach((b) => b.classList.remove('selected'));
-      } catch (_) {}
+      if (postId) {
+          chips.push({
+              label: `🔗投稿:${postLabel || postId}`,
+              className: 'is-post',
+              onRemove: () => {
+                  window.PostFilterState.selectedPostId = '';
+                  window.PostFilterState.selectedPostLabel = '';
+                  window.PostFilterDraft.selectedPostId = '';
+                  window.PostFilterDraft.selectedPostLabel = '';
 
-      try {
-        window.__renderSelectedUserTags_?.();
-      } catch (_) {}
+                  window.DeckPostFilter?.updateActiveChipsBar?.();
+                  window.DeckPostList?.applySortAndRerenderList?.(false);
+              }
+          });
+      }
 
-      window.DeckPostFilter?.updateActiveChipsBar?.();
-      window.DeckPostList?.applySortAndRerenderList?.(false);
-    });
-    sc.appendChild(clr);
+      FilterChipBar.render({
+          rootId: 'active-chips-bar',
+          countText: '',
+          show: chips.length > 0,
+          showLeft: false,
+          chips,
+          clearLabel: 'すべて解除',
+          onClearAll: () => {
+              window.PostFilterState.selectedTags?.clear?.();
+              window.PostFilterState.selectedUserTags?.clear?.();
+              window.PostFilterDraft.selectedTags?.clear?.();
+              window.PostFilterDraft.selectedUserTags?.clear?.();
+
+              window.PostFilterState.selectedPosterKey = '';
+              window.PostFilterState.selectedPosterLabel = '';
+              window.PostFilterDraft.selectedPosterKey = '';
+              window.PostFilterDraft.selectedPosterLabel = '';
+
+              window.PostFilterState.selectedCardCds?.clear?.();
+              window.PostFilterDraft.selectedCardCds?.clear?.();
+              window.PostFilterState.selectedCardMode = 'or';
+              window.PostFilterDraft.selectedCardMode = 'or';
+
+              window.PostFilterState.selectedPostId = '';
+              window.PostFilterState.selectedPostLabel = '';
+              window.PostFilterDraft.selectedPostId = '';
+              window.PostFilterDraft.selectedPostLabel = '';
+
+              try {
+                  window.__renderSelectedCards_?.();
+              } catch (_) {}
+
+              try {
+                  document.querySelectorAll('.post-filter-tag-btn.selected').forEach((b) => b.classList.remove('selected'));
+              } catch (_) {}
+
+              try {
+                  window.__renderSelectedUserTags_?.();
+              } catch (_) {}
+
+              window.DeckPostFilter?.updateActiveChipsBar?.();
+              window.DeckPostList?.applySortAndRerenderList?.(false);
+          }
+      });
   }
-
-  //window.updateActiveChipsBar_ = updateActiveChipsBar_;
 
   // =========================
   // 7) 一覧フィルター再構築
@@ -901,7 +896,7 @@ function rebuildFilteredItems(){
     if (!Array.isArray(window.__cardNameIndex)) {
       const map = window.cardMap || {};
       window.__cardNameIndex = Object.values(map).map((card) => ({
-        cd5: String(card.cd || '').padStart(5, '0'),
+        cd5: window.normCd5 ? window.normCd5(card.cd) : String(card.cd || '').padStart(5, '0'),
         name: String(card.name || ''),
       }));
     }
@@ -921,7 +916,15 @@ function rebuildFilteredItems(){
 
         return filtered
           .slice()
-          .sort((a, b) => String(a.cd5).localeCompare(String(b.cd5)))
+          .sort((a, b) => {
+            const cdA = window.normCd5 ? window.normCd5(a.cd5 || a.cd) : String(a.cd5 || a.cd || '').padStart(5, '0');
+            const cdB = window.normCd5 ? window.normCd5(b.cd5 || b.cd) : String(b.cd5 || b.cd || '').padStart(5, '0');
+
+            const cardA = window.cardMap?.[cdA] || { cd: cdA, type: '', cost: 0, power: 0 };
+            const cardB = window.cardMap?.[cdB] || { cd: cdB, type: '', cost: 0, power: 0 };
+
+            return window.compareCards?.(cardA, cardB) || cdA.localeCompare(cdB, 'ja');
+          })
           .slice(0, limit);
       };
     }
@@ -941,7 +944,7 @@ function rebuildFilteredItems(){
     }
 
     resultEl.innerHTML = rows.map((row) => {
-      const cd5 = String(row.cd5 || row.cd || '').padStart(5, '0');
+      const cd5 = window.normCd5 ? window.normCd5(row.cd5 || row.cd) : String(row.cd5 || row.cd || '').padStart(5, '0');
 
       return `
         <button type="button" class="card-pick-item" data-cd="${cd5}">

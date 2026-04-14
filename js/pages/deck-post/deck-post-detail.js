@@ -17,15 +17,13 @@
    * - 共通があればそれを優先
    */
   function escHtml_(s) {
-    const fn = window.escapeHtml_ || window.escapeHtml;
-    if (typeof fn === 'function') return fn(s);
+    return window.escapeHtml_(s);
+  }
 
-    return String(s ?? '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
+  function normCd5_(cd) {
+    if (typeof window.normCd5 === 'function') return window.normCd5(cd);
+    const s = String(cd ?? '').trim();
+    return s ? s.padStart(5, '0').slice(0, 5) : '';
   }
 
   /**
@@ -207,7 +205,7 @@
     if (deck && typeof deck === 'object') {
       const norm = {};
       for (const [cd, n] of Object.entries(deck)) {
-        const cd5 = String(cd || '').trim().padStart(5, '0');
+        const cd5 = normCd5_(cd);
         const cnt = Number(n || 0) || 0;
         if (!cd5 || cnt <= 0) continue;
         norm[cd5] = (norm[cd5] || 0) + cnt;
@@ -227,7 +225,7 @@
 
     const cardMap = window.cardMap || {};
     for (const cd of Object.keys(deck)) {
-      const cd5 = String(cd).padStart(5, '0');
+      const cd5 = normCd5_(cd);
       if (cd5[0] === '9') {
         const card = cardMap[cd5] || {};
         return card.name || '';
@@ -246,207 +244,48 @@
    * 投稿詳細のコスト / パワー分布グラフ
    */
   function renderPostDistCharts_(item, paneUid) {
-    // Chart.js が無いなら何もしない
     if (!window.Chart) return false;
-
-    // plugin（無ければ握りつぶし）
-    try { Chart.register(window.ChartDataLabels); } catch (_) {}
 
     const deck = extractDeckMap(item);
     const cardMap = window.cardMap || {};
+    const buildDeckAnalysisCards = window.buildDeckAnalysisCards;
+    const analyzeDeckCards = window.analyzeDeckCards;
+    const formatManaEfficiencyText = window.formatManaEfficiencyText;
+    const renderDeckTypePowerSummary = window.renderDeckTypePowerSummary;
+
     if (!deck || !Object.keys(deck).length) return false;
-
-    // deckCards（最大40枚なので展開でOK）
-    const deckCards = [];
-
-    // ロスリスcost66アタッカーは「支払わない想定」でコスト計算から除外
-    const isCostFreeLosslis66 = (cardLike) => {
-      return cardLike?.type === 'アタッカー'
-        && String(cardLike?.category || '') === 'ロスリス'
-        && Number(cardLike?.cost) === 66;
-    };
-
-    let excludedLosslis66Atk = 0;
-
-    for (const [cd, n] of Object.entries(deck)) {
-      const cd5 = String(cd).padStart(5, '0');
-      const c = cardMap[cd5] || {};
-
-      const type = String(c.type || '');
-      const category = String(c.category || '');
-      const rawCost = Number(c.cost);
-      const power = Number(c.power);
-      const cnt = Number(n || 0) || 0;
-
-      const costFree = isCostFreeLosslis66({ type, category, cost: rawCost });
-      if (costFree) excludedLosslis66Atk += cnt;
-
-      // costFree のとき cost を NaN にして「総コスト/コスト分布/マナ効率分母」から自然に除外
-      const effCost = costFree ? NaN : (Number.isFinite(rawCost) ? rawCost : NaN);
-
-      for (let i = 0; i < cnt; i++) {
-        deckCards.push({
-          cd: cd5,
-          type,
-          category,
-          cost: effCost,
-          power: Number.isFinite(power) ? power : NaN,
-        });
-      }
+    if (typeof buildDeckAnalysisCards !== 'function' || typeof analyzeDeckCards !== 'function') {
+      return false;
     }
 
-    // 目盛り（固定表示）
-    const alwaysShowCosts = [0, 2, 4, 6, 8, 10, 12];
-    const alwaysShowPowers = [4, 5, 6, 7, 8, 10, 14, 16];
-
-    const costCount = {};
-    const powerCount = {};
-
-    deckCards.forEach((c) => {
-      if (!Number.isNaN(c.cost)) costCount[c.cost] = (costCount[c.cost] || 0) + 1;
-      if (!Number.isNaN(c.power)) powerCount[c.power] = (powerCount[c.power] || 0) + 1;
+    const deckCards = buildDeckAnalysisCards(deck, cardMap, {
+      normalizeCd: normCd5_,
     });
+    const analysis = analyzeDeckCards(deckCards);
 
-    const costLabels = [...new Set([...alwaysShowCosts, ...Object.keys(costCount).map(Number)])].sort((a, b) => a - b);
-    const powerLabels = [...new Set([...alwaysShowPowers, ...Object.keys(powerCount).map(Number)])].sort((a, b) => a - b);
-
-    const sumCost = deckCards.reduce((s, c) => s + (Number.isFinite(c.cost) ? c.cost : 0), 0);
     const costSumEl = document.getElementById(`cost-summary-${paneUid}`);
     if (costSumEl) {
-      costSumEl.innerHTML = `<span class="stat-chip">総コスト ${sumCost}</span>`;
+      costSumEl.innerHTML = `<span class="stat-chip">総コスト ${analysis.sumCost}</span>`;
     }
-
-    // マナ効率（分母）から除外したいカード（cd5で入ってる想定）
-    const EXCLUDE_MANA_COST_CDS = new Set(['30109']);
-    const sumCostForMana = deckCards.reduce((s, c) => {
-      if (!Number.isFinite(c.cost)) return s;
-      if (EXCLUDE_MANA_COST_CDS.has(String(c.cd))) return s;
-      return s + c.cost;
-    }, 0);
-
-    let chargerChargeSum = 0;
-    let chargerChargeCnt = 0;
-
-    deckCards.forEach((c) => {
-      if (c.type !== 'チャージャー') return;
-
-      const p = Number.isFinite(c.power) ? c.power : 0;
-      const k = Number.isFinite(c.cost) ? c.cost : 0;
-      const charge = p - k;
-
-      if (charge > 0) {
-        chargerChargeSum += charge;
-        chargerChargeCnt += 1;
-      }
-    });
 
     const avgChargeEl = document.getElementById(`avg-charge-${paneUid}`);
     if (avgChargeEl) {
-      const avg = chargerChargeCnt > 0 ? (chargerChargeSum / chargerChargeCnt) : null;
-      avgChargeEl.textContent = (avg !== null) ? avg.toFixed(2) : '-';
+      avgChargeEl.textContent = analysis.avgCharge !== null ? analysis.avgCharge.toFixed(2) : '-';
     }
 
     const manaEffEl = document.getElementById(`mana-efficiency-${paneUid}`);
     if (manaEffEl) {
-      const BASE_MANA = 4;
-      const totalMana = chargerChargeSum + BASE_MANA;
-      const supply = (sumCostForMana > 0) ? (totalMana / sumCostForMana) : null;
-
-      let label = '';
-      if (supply === null) label = '';
-      else if (supply > 1.5) label = 'マナ多め';
-      else if (supply > 1) label = '適正';
-      else label = 'マナ少なめ';
-
-      manaEffEl.textContent = (supply !== null)
-        ? `${supply.toFixed(2)}${label ? `（${label}）` : ''}`
-        : '-';
-
-      manaEffEl.className = 'mana-eff';
-      if (supply !== null) {
-        if (supply > 1.11) manaEffEl.classList.add('mana-good');
-        else if (supply > 0.91) manaEffEl.classList.add('mana-ok');
-        else manaEffEl.classList.add('mana-bad');
-      }
+      const manaState = typeof formatManaEfficiencyText === 'function'
+        ? formatManaEfficiencyText(analysis.manaEfficiency)
+        : { text: '-', className: 'mana-eff' };
+      manaEffEl.textContent = manaState.text;
+      manaEffEl.className = manaState.className;
     }
-
-    const powerSums = { 'チャージャー': 0, 'アタッカー': 0 };
-    deckCards.forEach((c) => {
-      const p = Number.isFinite(c.power) ? c.power : 0;
-      if (c.type in powerSums) powerSums[c.type] += p;
-    });
 
     const powerSumEl = document.getElementById(`power-summary-${paneUid}`);
-    if (powerSumEl) {
-      powerSumEl.innerHTML = `
-        <span class="type-chip" data-type="チャージャー">チャージャー ${powerSums['チャージャー']}</span>
-        <span class="type-chip" data-type="アタッカー">アタッカー ${powerSums['アタッカー']}</span>
-      `;
+    if (typeof renderDeckTypePowerSummary === 'function') {
+      renderDeckTypePowerSummary(powerSumEl, analysis);
     }
-
-    const TYPES = ['チャージャー', 'アタッカー', 'ブロッカー'];
-    const COLORS = {
-      'チャージャー': 'rgba(119, 170, 212, 0.7)',
-      'アタッカー': 'rgba(125, 91, 155, 0.7)',
-      'ブロッカー': 'rgba(214, 212, 204, 0.7)',
-    };
-
-    function buildStackCounts(cards, key, labels) {
-      const table = {};
-      TYPES.forEach((t) => {
-        table[t] = Object.fromEntries(labels.map((l) => [l, 0]));
-      });
-
-      cards.forEach((c) => {
-        const v = Number(c[key]);
-        const t = c.type;
-        if (!Number.isNaN(v) && table[t] && (v in table[t])) {
-          table[t][v]++;
-        }
-      });
-
-      return TYPES.map((t) => ({
-        label: t,
-        data: labels.map((l) => table[t][l] || 0),
-        backgroundColor: COLORS[t],
-        borderWidth: 0,
-        barPercentage: 0.9,
-        categoryPercentage: 0.9,
-      }));
-    }
-
-    const costDatasets = buildStackCounts(deckCards, 'cost', costLabels);
-    const powerDatasets = buildStackCounts(deckCards, 'power', powerLabels);
-
-    const commonOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: {
-          stacked: true,
-          grid: { display: false, drawBorder: false },
-          ticks: { autoSkip: false },
-        },
-        y: {
-          stacked: true,
-          beginAtZero: true,
-          grid: { display: false, drawBorder: false },
-          ticks: { display: false },
-        },
-      },
-      plugins: {
-        legend: { display: false },
-        datalabels: {
-          display: true,
-          anchor: 'center',
-          align: 'center',
-          formatter: (v) => (v > 0 ? v : ''),
-          font: { weight: 600 },
-          clamp: true,
-        },
-        tooltip: { enabled: true },
-      },
-    };
 
     const prev = window.__postDistCharts[paneUid];
     if (prev) {
@@ -459,36 +298,26 @@
     const powerCanvas = document.getElementById(`powerChart-${paneUid}`);
     if (!costCanvas || !powerCanvas) return false;
 
-    const parent = costCanvas.parentElement;
-    let noteEl = parent?.querySelector?.('.chart-note');
-    if (!noteEl) {
-      noteEl = document.createElement('div');
-      noteEl.className = 'chart-note';
-      parent?.appendChild(noteEl);
-    }
-    noteEl.textContent = excludedLosslis66Atk > 0
-      ? `※66ロスリスアタッカー（${excludedLosslis66Atk}枚）は除く`
-      : '';
-
-    const costChart = new Chart(costCanvas.getContext('2d'), {
-      type: 'bar',
-      data: { labels: costLabels, datasets: costDatasets },
-      options: commonOptions,
+    const renderedCharts = window.renderDeckDistributionCharts?.({
+      chartCtor: Chart,
+      costCanvas,
+      powerCanvas,
+      costLabels: analysis.costLabels,
+      powerLabels: analysis.powerLabels,
+      costCards: analysis.costCards,
+      powerCards: analysis.analysisCards,
+      noteText: analysis.excludedLosslis66Count > 0
+        ? `※66コスロスリスカード ${analysis.excludedLosslis66Count}枚は除く`
+        : '',
     });
+    if (!renderedCharts) return false;
 
-    const powerChart = new Chart(powerCanvas.getContext('2d'), {
-      type: 'bar',
-      data: { labels: powerLabels, datasets: powerDatasets },
-      options: commonOptions,
-    });
-
-    window.__postDistCharts[paneUid] = { cost: costChart, power: powerChart };
+    window.__postDistCharts[paneUid] = {
+      cost: renderedCharts.costChart,
+      power: renderedCharts.powerChart,
+    };
     return true;
   }
-
-  // =========================
-  // 4) デッキリスト
-  // =========================
   function packNameEn_(packName) {
     if (typeof window.getPackEnName === 'function') {
       return window.getPackEnName(packName, '');
@@ -553,31 +382,11 @@
       return `<div class="post-decklist post-decklist-empty">デッキリスト未登録</div>`;
     }
 
-    const entries = Object.entries(deck);
     const cardMap = window.cardMap || {};
-    const TYPE_ORDER = { 'チャージャー': 0, 'アタッカー': 1, 'ブロッカー': 2 };
-
-    entries.sort((a, b) => {
-      const A = cardMap[a[0]] || {};
-      const B = cardMap[b[0]] || {};
-
-      const tA = TYPE_ORDER[A.type] ?? 99;
-      const tB = TYPE_ORDER[B.type] ?? 99;
-      if (tA !== tB) return tA - tB;
-
-      const cA = parseInt(A.cost, 10) || 0;
-      const cB = parseInt(B.cost, 10) || 0;
-      if (cA !== cB) return cA - cB;
-
-      const pA = parseInt(A.power, 10) || 0;
-      const pB = parseInt(B.power, 10) || 0;
-      if (pA !== pB) return pA - pB;
-
-      return String(a[0]).localeCompare(String(b[0]));
-    });
+    const entries = window.sortCardEntries?.(Object.entries(deck), cardMap) || Object.entries(deck);
 
     const tiles = entries.map(([cd, n]) => {
-      const cd5 = String(cd).padStart(5, '0');
+      const cd5 = normCd5_(cd);
       const card = cardMap[cd5] || {};
       const name = card.name || cd5;
       const src = `img/${cd5}.webp`;
@@ -702,12 +511,12 @@
 
     if (Array.isArray(raw)) {
       for (const c of raw) {
-        const cd5 = String(c.cd || '').padStart(5, '0');
+        const cd5 = normCd5_(c.cd);
         if (cd5) map[cd5] = c;
       }
     } else if (raw && typeof raw === 'object') {
       for (const [cd, c] of Object.entries(raw)) {
-        const cd5 = String(cd).padStart(5, '0');
+        const cd5 = normCd5_(cd);
         map[cd5] = c;
       }
     }
@@ -810,7 +619,7 @@
    */
   function buildCardDetailHtml_(cd5) {
     const cardMap = window.cardMap || {};
-    const c = cardMap[String(cd5 || '').padStart(5, '0')] || {};
+    const c = cardMap[normCd5_(cd5)] || {};
     const mainRace = getMainRace(c.races ?? (c.race ? [c.race] : []));
 
     const name = c.name || cd5;
@@ -830,7 +639,7 @@
     }
 
     const cat = c.category || '';
-    const img = `img/${String(cd5).padStart(5, '0')}.webp`;
+    const img = `img/${normCd5_(cd5)}.webp`;
 
     const rarityLabel = rarityLabelForPage4_(c.rarity);
     const rarityCls = rarityPillClassForPage4_(c.rarity);
@@ -861,13 +670,33 @@
     return `
       <div class="carddetail-head">
         <div class="carddetail-thumb">
-          <img src="${img}" alt="${escHtml_(name)}" loading="lazy"
+          <img src="${img}"
+               alt="${escHtml_(name)}"
+               loading="lazy"
+               class="carddetail-thumb-img"
+               data-cd="${escHtml_(normCd5_(cd5))}"
                onerror="this.onerror=null;this.src='img/00000.webp';">
         </div>
 
         <div class="carddetail-meta">
-          <div class="carddetail-name">${escHtml_(name)}</div>
-
+          <div class="card-title-row"style="justify-content: normal;">
+            <button
+              type="button"
+              class="detail-zoom-btn"
+              data-cd="${escHtml_(normCd5_(cd5))}"
+              aria-label="画像を拡大"
+              title="画像を拡大"
+            >
+              <img
+                class="zoom-ic"
+                src="./img/zoom_in_24.svg"
+                alt=""
+                aria-hidden="true"
+                decoding="async"
+              >
+            </button>
+            <div class="carddetail-name">${escHtml_(name)}</div>
+          </div>
           <div class="carddetail-sub">
             ${pack ? `
               <div class="carddetail-pack"${packKey ? ` data-pack="${packKey}"` : ''}>
@@ -979,7 +808,7 @@
    * デッキ内カードクリック時に詳細を開く
    */
   async function openCardDetailFromDeck_(cd5, clickedEl) {
-    const cd = String(cd5 || '').padStart(5, '0');
+    const cd = normCd5_(cd5);
     if (!cd) return;
 
     const root = clickedEl?.closest?.('.post-detail-inner')
@@ -1039,7 +868,7 @@
       const n = Number(nRaw || 0) || 0;
       if (!n) continue;
 
-      const cd5 = String(cd).padStart(5, '0');
+      const cd5 = normCd5_(cd);
       const t = (cardMap[cd5] || {}).type;
       if (t === 'チャージャー') chg += n;
       else if (t === 'アタッカー') atk += n;
@@ -1080,7 +909,7 @@
       const n = Number(nRaw || 0) || 0;
       if (!n) continue;
 
-      const cd5 = String(cd).padStart(5, '0');
+      const cd5 = normCd5_(cd);
       const r = String((cardMap[cd5] || {}).rarity || '').trim();
 
       if (r === 'レジェンド') legend += n;
@@ -1115,7 +944,7 @@
       const n = Number(nRaw || 0) || 0;
       if (!n) continue;
 
-      const cd5 = String(cd).padStart(5, '0');
+      const cd5 = normCd5_(cd);
       const r = String((cardMap[cd5] || {}).rarity || '').trim();
 
       if (r === 'レジェンド') legend += n;
@@ -1157,7 +986,7 @@
       const n = Number(nRaw || 0) || 0;
       if (!n) continue;
 
-      const cd5 = String(cd).padStart(5, '0');
+      const cd5 = normCd5_(cd);
       const packName = (cardMap[cd5] || {}).pack_name || (cardMap[cd5] || {}).packName || '';
       const en = packNameEn_(packName);
 
@@ -1267,7 +1096,7 @@
 
     const rows = list.map((r) => {
       const cdRaw = String(r.cd || '').trim();
-      const cd5 = cdRaw.padStart(5, '0');
+      const cd5 = normCd5_(cdRaw);
       const card = cardMap[cd5] || {};
       const name = card.name || 'カード名未登録';
       const img = `img/${cd5}.webp`;
@@ -1631,6 +1460,8 @@ function renderDetailPaneForItem(item, basePaneId) {
   } catch (e) {
     console.warn('renderPostDistCharts_ failed:', e);
   }
+
+  refreshDeckPeekOnSp_();
 }
 
   // 指定した記事要素に対して詳細ペインを表示する
@@ -1659,6 +1490,207 @@ function renderDetailPaneForItem(item, basePaneId) {
     return findItemById_(postId);
   }
 
+  function getVisibleSpDetailContext_() {
+    const roots = Array.from(
+      document.querySelectorAll('.post-card--sp .post-detail:not([hidden]) .post-detail-inner')
+    );
+    if (!roots.length) return null;
+
+    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+    const visible = roots
+      .map((root) => {
+        const article = root.closest('.post-card--sp');
+        const rect = article?.getBoundingClientRect?.();
+        if (!article || !rect) return null;
+        const intersects = rect.bottom > 0 && rect.top < vh;
+        if (!intersects) return null;
+        const distance = Math.abs(rect.top);
+        return { root, article, rect, distance };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.distance - b.distance);
+
+    return visible[0] || null;
+  }
+
+  function getActiveDetailRoot_() {
+    const sp = getVisibleSpDetailContext_();
+    if (sp?.root) return sp.root;
+
+    const minePage = document.getElementById('pageMine');
+    if (minePage && !minePage.hidden) {
+      return document.querySelector('#postDetailPaneMine .post-detail-inner');
+    }
+    return document.querySelector('#postDetailPane .post-detail-inner');
+  }
+
+  function buildDeckPeekEntries_(item) {
+    const deck = extractDeckMap(item);
+    if (!deck || !Object.keys(deck).length) return [];
+
+    const cardMap = window.cardMap || {};
+    const entries = window.sortCardEntries?.(Object.entries(deck), cardMap) || Object.entries(deck);
+    return entries.map(([cd, n]) => ({
+      code: normCd5_(cd),
+      count: n,
+    }));
+  }
+
+  function refreshDeckPeekOnSp_() {
+    window.__deckPostPeekController?.refresh?.();
+  }
+
+  /**
+   * SPカード内の詳細表示を開閉する
+   */
+  function ensurePostDeckPeekOverlay_() {
+    let overlay = document.getElementById('post-deckpeek-overlay');
+    if (overlay) return overlay;
+
+    overlay = document.createElement('div');
+    overlay.id = 'post-deckpeek-overlay';
+    overlay.innerHTML = `
+      <div class="post-deckpeek-inner">
+        <div class="post-deckpeek-body"></div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+
+  function hidePostDeckPeek_() {
+    const overlay = document.getElementById('post-deckpeek-overlay');
+    if (!overlay) return;
+    overlay.style.display = 'none';
+    delete overlay.dataset.postid;
+    overlay.style.left = '';
+    overlay.style.top = '';
+    overlay.style.right = '';
+    overlay.style.bottom = '';
+    overlay.style.width = '';
+  }
+
+  function showPostDeckPeekForArticle_(art, thumbEl) {
+    if (!window.matchMedia('(max-width: 1023px)').matches) return;
+
+    const postId = String(art?.dataset?.postid || '').trim();
+    if (!postId) return;
+
+    const item = findItemById_(postId);
+    if (!item) return;
+
+    const overlay = ensurePostDeckPeekOverlay_();
+    const body = overlay.querySelector('.post-deckpeek-body');
+    if (!body) return;
+
+    overlay.dataset.postid = postId;
+    body.innerHTML = buildDeckListHtml(item);
+    overlay.style.display = 'block';
+    overlay.style.left = '';
+    overlay.style.top = '';
+    overlay.style.right = '8px';
+    overlay.style.bottom = '20px';
+    overlay.style.width = '';
+
+    if (!thumbEl) return;
+
+    const rect = thumbEl.getBoundingClientRect();
+    const margin = 8;
+    const availableRight = Math.max(160, window.innerWidth - rect.right - margin - 8);
+    const maxWidth = Math.min(availableRight, 360);
+
+    overlay.style.width = `${maxWidth}px`;
+
+    const overlayWidth = overlay.offsetWidth || maxWidth;
+    const overlayHeight = overlay.offsetHeight || 0;
+
+    let left = rect.right + margin;
+    let top = rect.top;
+
+    if (left + overlayWidth > window.innerWidth - margin) {
+      left = Math.max(margin, rect.left - overlayWidth - margin);
+    }
+    if (left < margin) left = margin;
+
+    if (top + overlayHeight > window.innerHeight - margin) {
+      top = window.innerHeight - margin - overlayHeight;
+    }
+    if (top < margin) top = margin;
+
+    overlay.style.left = `${left}px`;
+    overlay.style.top = `${top}px`;
+    overlay.style.right = 'auto';
+    overlay.style.bottom = 'auto';
+  }
+
+  function toggleSpDetail_(art) {
+    const d = art?.querySelector('.post-detail');
+    if (!art || !d) return;
+
+    const willOpen = !!d.hidden;
+    d.hidden = !d.hidden;
+
+    // 開いた直後だけ、分布グラフを描画する
+    if (willOpen && !d.dataset.chartsRendered) {
+      const postId = String(art.dataset.postid || '').trim();
+      const item = findPostItemById(postId);
+      const charts = art.querySelector('.post-detail-charts');
+      const paneUid = String(charts?.dataset?.paneid || '').trim();
+
+      if (item && paneUid) {
+        requestAnimationFrame(() => {
+          try {
+            const ok = renderPostDistCharts_(item, paneUid);
+            if (ok) d.dataset.chartsRendered = '1';
+          } catch (err) {
+            console.warn('SP renderPostDistCharts_ failed:', err);
+          }
+        });
+      } else {
+        console.warn('SP charts skipped: item or paneUid missing', {
+          postId,
+          hasItem: !!item,
+          paneUid,
+        });
+      }
+    }
+  }
+
+  function isElementInViewport_(element) {
+    if (!element || typeof element.getBoundingClientRect !== 'function') return false;
+    const rect = element.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+    return rect.bottom > 0 && rect.top < vh;
+  }
+
+
+  function getDeckPeekContext_() {
+    const sp = getVisibleSpDetailContext_();
+    if (sp?.root) {
+      const decklist = sp.root.querySelector('.post-decklist');
+      return {
+        root: sp.root,
+        postId: String(sp.root.dataset?.postid || '').trim(),
+        decklist,
+      };
+    }
+
+    const root = getActiveDetailRoot_();
+    const decklist = root?.querySelector('.post-decklist') || null;
+    return {
+      root,
+      postId: String(root?.dataset?.postid || '').trim(),
+      decklist,
+    };
+  }
+
+  function isDeckPeekTargetVisible_(element) {
+    if (!element || typeof element.getBoundingClientRect !== 'function') return false;
+    const rect = element.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+    return rect.bottom > 0 && rect.top < vh;
+  }
+
   // =========================
   // 10) SPデッキpeek
   // =========================
@@ -1666,100 +1698,49 @@ function renderDetailPaneForItem(item, basePaneId) {
     if (window.__deckPostPeekBound) return;
     window.__deckPostPeekBound = true;
 
-    const isSp = () => window.matchMedia('(max-width: 1023px)').matches;
+    if (window.DeckPeekCommon?.createController) {
+      window.__deckPostPeekController = window.DeckPeekCommon.createController({
+        buttonId: 'deckpeek-button',
+        overlayId: 'deckpeek-overlay',
+        gridId: 'deckpeek-grid',
+        buttonText: 'デッキ表示',
+        mediaQuery: '(max-width: 1023px)',
 
-    function ensureOverlay() {
-      let pane = document.getElementById('post-deckpeek-overlay');
-      if (!pane) {
-        pane = document.createElement('div');
-        pane.id = 'post-deckpeek-overlay';
-        pane.innerHTML = `
-          <div class="post-deckpeek-inner">
-            <div class="post-deckpeek-body"></div>
-          </div>
-        `;
-        document.body.appendChild(pane);
-      }
-      return pane;
+        // 「見えているか」を判定したい対象はデッキリスト本体
+        resolveTarget: () => getDeckPeekContext_().decklist,
+
+        // ボタンを出していい前提条件は「今その投稿詳細を見ているか」
+        isEnabled: () => {
+          const ctx = getDeckPeekContext_();
+          return !!ctx.root && isElementInViewport_(ctx.root);
+        },
+
+        // 監視対象がなくても root が見えていれば出せるようにする
+        canShowButton: () => {
+          const ctx = getDeckPeekContext_();
+          return !!ctx.root && isElementInViewport_(ctx.root);
+        },
+
+        // デッキリスト本体が画面内に見えていたらボタンを消す
+        getIntersectingState: (target) => isDeckPeekTargetVisible_(target),
+
+        render: ({ grid }) => {
+          const postId = getDeckPeekContext_().postId;
+          const item = postId ? findItemById_(postId) : null;
+          const items = item ? buildDeckPeekEntries_(item) : [];
+          window.DeckPeekCommon.renderGrid(grid, items, {
+            emptyText: 'デッキリスト未登録',
+          });
+        },
+      });
+
+      document.addEventListener('click', () => {
+        window.setTimeout(refreshDeckPeekOnSp_, 0);
+      }, true);
+
+      refreshDeckPeekOnSp_();
+      return;
     }
-
-    function hideOverlay() {
-      const pane = document.getElementById('post-deckpeek-overlay');
-      if (pane) {
-        pane.style.display = 'none';
-      }
-    }
-
-    function showForArticle(art, thumbEl) {
-      if (!isSp()) return;
-      if (!art) return;
-
-      const postId = art.dataset.postid;
-      if (!postId) return;
-
-      const item = findItemById_(postId);
-      if (!item) return;
-
-      const html = buildDeckListHtml(item);
-
-      const pane = ensureOverlay();
-      const body = pane.querySelector('.post-deckpeek-body');
-      if (!body) return;
-
-      body.innerHTML = html;
-      pane.style.display = 'block';
-      pane.style.width = '';
-      pane.style.right = 'auto';
-      pane.style.bottom = 'auto';
-
-      const maxW = Math.min(window.innerWidth * 0.7, 460);
-      pane.style.width = maxW + 'px';
-
-      if (thumbEl) {
-        const r = thumbEl.getBoundingClientRect();
-        const margin = 8;
-
-        const paneW = pane.offsetWidth;
-        const paneH = pane.offsetHeight;
-
-        let left = r.right + margin;
-        let top = r.top;
-
-        if (left + paneW > window.innerWidth - margin) {
-          left = window.innerWidth - margin - paneW;
-          if (left < margin) left = margin;
-        }
-
-        if (top + paneH > window.innerHeight - margin) {
-          top = window.innerHeight - margin - paneH;
-          if (top < margin) top = margin;
-        }
-
-        pane.style.left = left + 'px';
-        pane.style.top = top + 'px';
-      }
-    }
-
-    document.addEventListener('click', (e) => {
-      const thumb = e.target.closest('.post-card .thumb-box, .post-card .sp-head .thumb-box, .post-card .pc-head-left .thumb-box');
-      if (thumb) {
-        const art = thumb.closest('.post-card');
-        if (art && isSp()) {
-          e.preventDefault();
-          e.stopPropagation();
-          showForArticle(art, thumb);
-          return;
-        }
-      }
-
-      const pane = document.getElementById('post-deckpeek-overlay');
-      if (!pane) return;
-      if (e.target === pane) hideOverlay();
-    });
-
-    window.addEventListener('resize', () => {
-      if (!isSp()) hideOverlay();
-    });
   }
 
 
@@ -1769,6 +1750,27 @@ function renderDetailPaneForItem(item, basePaneId) {
    */
   function init() {
     setupDeckPeekOnSp();
+
+    if (!window.__postDeckPeekOverlayBound) {
+      window.__postDeckPeekOverlayBound = true;
+
+      document.addEventListener('click', (e) => {
+        const overlay = document.getElementById('post-deckpeek-overlay');
+        if (!overlay) return;
+        if (e.target === overlay) hidePostDeckPeek_();
+      });
+
+      document.addEventListener('click', (e) => {
+        const overlay = document.getElementById('post-deckpeek-overlay');
+        if (!overlay || overlay.style.display === 'none') return;
+        if (e.target.closest('#post-deckpeek-overlay')) return;
+        if (e.target.closest('.post-card--sp .thumb-box')) return;
+        hidePostDeckPeek_();
+      }, true);
+
+      window.addEventListener('scroll', hidePostDeckPeek_, { passive: true });
+      window.addEventListener('resize', hidePostDeckPeek_);
+    }
   }
 
   // =========================
@@ -1815,6 +1817,21 @@ function renderDetailPaneForItem(item, basePaneId) {
     // -------------------------
     // 3) SP：詳細を開く
     // -------------------------
+    const thumbBox = e.target.closest('.post-card--sp .thumb-box');
+    if (thumbBox) {
+      const art = thumbBox.closest('.post-card');
+      const overlay = document.getElementById('post-deckpeek-overlay');
+      const postId = String(art?.dataset?.postid || '').trim();
+      e.preventDefault();
+      e.stopPropagation();
+      if (overlay && overlay.style.display !== 'none' && String(overlay.dataset.postid || '') === postId) {
+        hidePostDeckPeek_();
+        return;
+      }
+      showPostDeckPeekForArticle_(art, thumbBox);
+      return;
+    }
+
     const detailBtn = e.target.closest('.btn-detail');
     if (detailBtn) {
       const art = detailBtn.closest('.post-card');
@@ -1866,11 +1883,9 @@ function renderDetailPaneForItem(item, basePaneId) {
     // -------------------------
     // 5) デッキ内カード → カード詳細
     // -------------------------
-    const deckEntry = e.target.closest(
-      '.post-detail-inner .deck-entry, #post-deckpeek-overlay .deck-entry'
-    );
+    const deckEntry = e.target.closest('.post-detail-inner .deck-entry');
     if (deckEntry) {
-      const cd = String(deckEntry.dataset.cd || '').trim().padStart(5, '0');
+      const cd = normCd5_(deckEntry.dataset.cd);
       if (cd) {
         e.preventDefault();
         e.stopPropagation();
@@ -1887,6 +1902,28 @@ function renderDetailPaneForItem(item, basePaneId) {
       e.preventDefault();
       e.stopPropagation();
       closeCardDetail_();
+      return;
+    }
+
+    const zoomBtn = e.target.closest('.carddetail-meta .detail-zoom-btn');
+    if (zoomBtn) {
+      const cd = normCd5_(zoomBtn.dataset.cd);
+      if (cd) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.CardZoomModal?.open?.(cd);
+      }
+      return;
+    }
+
+    const thumbImg = e.target.closest('.carddetail-thumb-img');
+    if (thumbImg) {
+      const cd = normCd5_(thumbImg.dataset.cd);
+      if (cd) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.CardZoomModal?.open?.(cd);
+      }
       return;
     }
 
@@ -1938,7 +1975,8 @@ function renderDetailPaneForItem(item, basePaneId) {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeCardDetail_();
-      const peek = document.getElementById('post-deckpeek-overlay');
+      hidePostDeckPeek_();
+      const peek = document.getElementById('deckpeek-overlay');
       if (peek) peek.style.display = 'none';
       return;
     }
@@ -1946,7 +1984,7 @@ function renderDetailPaneForItem(item, basePaneId) {
     const entry = e.target.closest?.('.post-detail-inner .deck-entry');
     if (entry && (e.key === 'Enter' || e.key === ' ')) {
       e.preventDefault();
-      const cd = String(entry.dataset.cd || '').trim().padStart(5, '0');
+      const cd = normCd5_(entry.dataset.cd);
       if (cd) openCardDetailFromDeck_(cd, entry);
     }
 

@@ -10,6 +10,19 @@ const DeckPostApp = (() => {
   let state = null;
   let initialized = false;
 
+  // ローディング表示を重い初期化より先に描画させる
+  function waitForPaint_() {
+    return new Promise((resolve) => {
+      if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(() => {
+          window.setTimeout(resolve, 0);
+        });
+        return;
+      }
+      window.setTimeout(resolve, 0);
+    });
+  }
+
   // ===== 初期化 =====
   async function init() {
     if (initialized) return;
@@ -26,6 +39,8 @@ const DeckPostApp = (() => {
     try {
       window.DeckPostList?.showListStatusMessage?.('loading', '投稿一覧を読み込み中です…(5秒ほどかかります)');
     } catch (e) {}
+
+    await waitForPaint_();
 
     try {
       await window.ensureCardMapLoaded();

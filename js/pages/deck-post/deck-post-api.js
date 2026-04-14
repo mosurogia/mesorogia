@@ -278,7 +278,7 @@
     const payloadNotes = list
       .map((row) => {
         const cdRaw = String(row?.cd || '').trim();
-        const cd = cdRaw ? cdRaw.padStart(5, '0') : '';
+        const cd = window.normCd5 ? window.normCd5(cdRaw) : (cdRaw ? cdRaw.padStart(5, '0') : '');
         const text = String(row?.text || '');
         return { cd, text };
       })

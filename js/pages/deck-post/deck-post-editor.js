@@ -37,6 +37,12 @@
   const updateDeckCode_ =
     (...args) => window.DeckPostApi?.updateDeckCode_?.(...args);
 
+  function normCd5_(cd) {
+    if (typeof window.normCd5 === 'function') return window.normCd5(cd);
+    const s = String(cd ?? '').trim();
+    return s ? s.padStart(5, '0').slice(0, 5) : '';
+  }
+
   // =========================
   // 1) デッキ解説プリセット
   // =========================
@@ -274,15 +280,13 @@
     grid.replaceChildren();
 
     const used = new Set();
-    const currentCd = String(
-      __cardNotesPickContext?.rowEl?.dataset?.cd || ''
-    ).trim().padStart(5, '0');
+    const currentCd = normCd5_(__cardNotesPickContext?.rowEl?.dataset?.cd);
 
     try {
       const rootEl = __cardNotesPickContext?.rootEl;
       if (rootEl) {
         rootEl.querySelectorAll('.post-card-note').forEach((row) => {
-          const cd = String(row.dataset.cd || '').trim().padStart(5, '0');
+          const cd = normCd5_(row.dataset.cd);
           if (cd) used.add(cd);
         });
       }
@@ -291,7 +295,7 @@
     if (currentCd) used.delete(currentCd);
 
     (candidates || []).forEach((c) => {
-      const cd5 = String(c?.cd5 || '').trim().padStart(5, '0');
+      const cd5 = normCd5_(c?.cd5);
       if (!cd5) return;
 
       const cell = document.createElement('div');
@@ -369,7 +373,7 @@
    */
   function makeCardNoteRow_(rowData) {
     const cdRaw = String(rowData?.cd || '').trim();
-    const cd5 = cdRaw ? cdRaw.padStart(5, '0') : '';
+    const cd5 = normCd5_(cdRaw);
     const cardMap = window.cardMap || {};
     const name = cd5
       ? ((cardMap[cd5] || {}).name || 'カード名未登録')
@@ -459,7 +463,7 @@
 
     const uniq = Array.from(
       new Set(
-        cds.map((x) => String(x || '').trim().padStart(5, '0')).filter(Boolean)
+        cds.map(normCd5_).filter(Boolean)
       )
     );
 
@@ -675,7 +679,7 @@
 
     const listRaw = readCardNotesFromEditor_(editor)
       .map((rowData) => ({
-        cd: String(rowData.cd || '').trim().padStart(5, '0'),
+        cd: normCd5_(rowData.cd),
         text: String(rowData.text || '').replace(/\r\n/g, '\n').trim(),
       }))
       .filter((rowData) => !!rowData.cd);
@@ -684,7 +688,7 @@
       const list = Array.isArray(arr) ? arr : [];
       return list
         .map((x) => ({
-          cd: String(x?.cd || '').trim().padStart(5, '0'),
+          cd: normCd5_(x?.cd),
           text: String(x?.text || '').replace(/\r\n/g, '\n').trim(),
         }))
         .filter((x) => !!x.cd);
@@ -1071,7 +1075,7 @@
       if (!cell || !__cardNotesPickContext) return;
       if (cell.classList.contains('disabled')) return;
 
-      const cd5 = String(cell.dataset.cd || '').trim().padStart(5, '0');
+      const cd5 = normCd5_(cell.dataset.cd);
       const cardMap = window.cardMap || {};
       const name = (cardMap[cd5] || {}).name || 'カード名未登録';
 

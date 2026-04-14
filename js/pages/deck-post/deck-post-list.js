@@ -70,7 +70,7 @@
       const n = Number(nRaw || 0) || 0;
       if (!n) continue;
 
-      const cd5 = String(cd).padStart(5, '0');
+      const cd5 = window.normCd5 ? window.normCd5(cd) : String(cd).padStart(5, '0');
       const packName =
         (cardMap[cd5] || {}).pack_name ||
         (cardMap[cd5] || {}).packName ||
@@ -773,6 +773,15 @@
       );
       state.list.total = (state.list.allItems || []).length;
     }
+
+    if (state?.mine) {
+      state.mine.items = (state.mine.items || []).filter(
+        (it) => String(it.postId || '') !== pid
+      );
+      state.mine.total = (state.mine.items || []).length;
+      state.mine.page = 1;
+      state.mine.totalPages = 1;
+    }
   }
 
   /**
@@ -1412,7 +1421,7 @@
         clearTimeout(tid);
         tid = setTimeout(() => {
           // SP簡易オーバーレイが出っぱなしなら閉じる
-          const pane = document.getElementById('post-deckpeek-overlay');
+          const pane = document.getElementById('deckpeek-overlay');
           if (pane) pane.style.display = 'none';
 
           // 1023/1024 を跨いだら一覧を再描画

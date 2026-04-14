@@ -92,7 +92,7 @@
       }
       if (!st.sys.meta.deleted) {
         const cardsObj = {};
-        OFFICIAL_META.cards.forEach(cd => { cardsObj[String(cd).padStart(5,'0')] = 1; });
+        OFFICIAL_META.cards.forEach(cd => { cardsObj[window.normCd5 ? window.normCd5(cd) : String(cd).padStart(5,'0')] = 1; });
         st.groups.meta = { id:'meta', name:'メタカード', fixed:true, cards:cardsObj };
         st.order.push('meta');
         st.sys.meta.ver = OFFICIAL_META.ver;
@@ -132,7 +132,7 @@
       // ★ “未編集ユーザー”にだけ公式メタを反映
       if (!st.sys.meta.touched && st.sys.meta.ver !== OFFICIAL_META.ver) {
         const cardsObj = {};
-        OFFICIAL_META.cards.forEach(cd => { cardsObj[String(cd).padStart(5,'0')] = 1; });
+        OFFICIAL_META.cards.forEach(cd => { cardsObj[window.normCd5 ? window.normCd5(cd) : String(cd).padStart(5,'0')] = 1; });
         st.groups.meta.cards = cardsObj;
         st.sys.meta.ver = OFFICIAL_META.ver;
       }
@@ -293,7 +293,7 @@ function uniqueName_(base, st, exceptId = '') {
   }
 
   function hashCardsObj_(cardsObj){
-    const keys = Object.keys(cardsObj || {}).map(s=>String(s).padStart(5,'0')).sort();
+    const keys = Object.keys(cardsObj || {}).map(s => window.normCd5 ? window.normCd5(s) : String(s).padStart(5,'0')).sort();
     return keys.join(',');
   }
 
@@ -373,7 +373,7 @@ function uniqueName_(base, st, exceptId = '') {
     const st = getState();
     const g = st.groups[groupId];
     if (!g) return { ok: false };
-    cd = String(cd || '').padStart(5, '0');
+    cd = window.normCd5 ? window.normCd5(cd) : String(cd || '').padStart(5, '0');
 
     g.cards = g.cards || {};
     if (g.cards[cd]) delete g.cards[cd];
@@ -383,11 +383,37 @@ function uniqueName_(base, st, exceptId = '') {
     return { ok: true };
   }
 
+  function addCardToGroup(groupId, cd) {
+    const st = getState();
+    const g = st.groups[groupId];
+    if (!g) return { ok: false };
+
+    cd = window.normCd5 ? window.normCd5(cd) : String(cd || '').padStart(5, '0');
+    g.cards = g.cards || {};
+
+    if (!g.cards[cd]) {
+      g.cards[cd] = 1;
+      setState_(st);
+    }
+
+    return { ok: true };
+  }
+
+  function clearGroupCards(groupId) {
+    const st = getState();
+    const g = st.groups[groupId];
+    if (!g) return { ok: false };
+
+    g.cards = {};
+    setState_(st);
+    return { ok: true };
+  }
+
   function hasCard(groupId, cd) {
     const st = getState();
     const g = st.groups[groupId];
     if (!g) return false;
-    cd = String(cd || '').padStart(5, '0');
+    cd = window.normCd5 ? window.normCd5(cd) : String(cd || '').padStart(5, '0');
     return !!(g.cards && g.cards[cd]);
   }
 
@@ -437,6 +463,8 @@ function uniqueName_(base, st, exceptId = '') {
     createGroupAndEdit,
     stopEditing,
     toggleCardInGroup,
+    addCardToGroup,
+    clearGroupCards,
     hasCard,
     getActiveFilterSet,
     getEditingId,

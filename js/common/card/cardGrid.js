@@ -27,6 +27,7 @@
     function buildKeywords_(card){
         return [
         card.name, card.race, card.category, card.type,
+        card.CV, card.cv_kana,
         card.field, card.special_ability,
         card.destroy_target, card.life_effect, card.power_effect, card.mana_effect,
         card.effect_name1, card.effect_text1,
@@ -64,6 +65,8 @@
         setData_(cardDiv, 'data-cost', card.cost ?? '');
         setData_(cardDiv, 'data-power', card.power ?? '');
         setData_(cardDiv, 'data-pack', (card.packName ?? card.pack_name ?? ''));
+        setData_(cardDiv, 'data-cv', (card.CV ?? ''));
+        setData_(cardDiv, 'data-cv-kana', (card.cv_kana ?? ''));
 
         // 効果まとめ（検索用）
         const effectJoined = [card.effect_name1, card.effect_text1, card.effect_name2, card.effect_text2]
@@ -235,5 +238,3 @@
     window.CardUI.createCardElement = window.CardUI.createCardElement || createCardElement;
     window.generateCardListElement = window.generateCardListElement || generateCardListElement;
 })();
-
-

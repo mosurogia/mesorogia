@@ -135,7 +135,7 @@
 
     for (const card of cards) {
       const cdRaw = card.cd ?? card.id ?? '';
-      const cd5 = String(cdRaw || '').trim().padStart(5, '0');
+      const cd5 = window.normCd5 ? window.normCd5(cdRaw) : String(cdRaw || '').trim().padStart(5, '0').slice(0, 5);
       if (!cd5) continue;
 
       window.cardMap[cd5] = {
@@ -149,6 +149,8 @@
         packName: card.packName ?? card.pack_name ?? '',
         pack_name: card.pack_name ?? '', // 互換（古い側が見ることがある）
         category: card.category || '',
+        CV: card.CV ?? '',
+        cv_kana: card.cv_kana ?? '',
         effect_name1: card.effect_name1 || '',
         effect_text1: card.effect_text1 || '',
         effect_name2: card.effect_name2 || '',

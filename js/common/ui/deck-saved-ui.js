@@ -10,6 +10,8 @@
 (function () {
   'use strict';
 
+  const escapeHtml_ = window.escapeHtml_;
+
   // ------------------------------
   // 表示（1件のHTML）
   // ------------------------------
@@ -52,7 +54,8 @@
       } catch {}
 
       if (deckData.m) {
-        cardImg = 'img/' + String(deckData.m).padStart(5, '0') + '.webp';
+        const cd5 = window.normCd5 ? window.normCd5(deckData.m) : String(deckData.m).padStart(5, '0');
+        cardImg = 'img/' + (cd5 || '00000') + '.webp';
       }
 
       savedDate = deckData.date ? deckData.date : '';
@@ -82,15 +85,6 @@
         </div>
       </div>
     `;
-  }
-
-  function escapeHtml_(s) {
-    return String(s ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
   }
 
   // ------------------------------
@@ -194,7 +188,7 @@
       for (const [cd, n] of Object.entries(savedDeck.cardCounts || {})) {
         const nn = Number(n) || 0;
         if (nn <= 0) continue;
-        tgt[String(cd).padStart(5, '0').slice(0, 5)] = nn;
+        tgt[window.normCd5 ? window.normCd5(cd) : String(cd).padStart(5, '0').slice(0, 5)] = nn;
       }
       window.representativeCd = savedDeck.m || window.representativeCd || null;
     }

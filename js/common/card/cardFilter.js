@@ -167,7 +167,8 @@
         try { return window.getCardImageUrl(cd); } catch (e) {}
     }
     // フォールバック（環境に合わせてパスを調整OK）
-    return `img/${String(cd).padStart(5,'0')}.webp`;
+    const cd5 = window.normCd5 ? window.normCd5(cd) : String(cd).padStart(5,'0');
+    return `img/${cd5 || '00000'}.webp`;
     }
 
     // ============================
@@ -180,7 +181,7 @@
 
         const cardMap = window.cardMap || {};
         const sorted = window.sortCardCodes?.(keys, cardMap) || keys
-            .map(cd => String(cd).padStart(5, '0'))
+            .map(cd => window.normCd5 ? window.normCd5(cd) : String(cd).padStart(5, '0'))
             .sort((a, b) => a.localeCompare(b, 'ja'));
 
         return sorted.slice(0, limit);
@@ -435,6 +436,12 @@
             <li>複数選択も可能</li>
         </ul>
     `,
+    'CV': `
+        <ul>
+            <li>声優名でカードを絞り込むための項目です</li>
+            <li><b>一覧</b> を押すと、CV候補一覧を開けます</li>
+        </ul>
+    `,
     'コスト': `
         <ul>
             <li>数値の範囲で絞り込み</li>
@@ -592,6 +599,296 @@
     return wrapper;
     }
 
+    function normalizeText_(value) {
+        if (typeof window.normalizeJapaneseKeyword === 'function') {
+        return window.normalizeJapaneseKeyword(value);
+        }
+        return String(value || '').normalize('NFKC').toLowerCase().trim();
+    }
+
+    function getCvFilterValue_() {
+        return String(document.getElementById('cv-filter')?.value || '').trim();
+    }
+
+    function getCvFilterTokens_() {
+        const input = document.getElementById('cv-filter');
+        if (typeof window.getKeywordTokens === 'function') return window.getKeywordTokens(input);
+        return normalizeText_(input?.value || '').split(/\s+/).filter(Boolean);
+    }
+
+    function buildCvHaystack_(cardEl) {
+        const ds = cardEl?.dataset || {};
+        return normalizeText_([ds.cv, ds.cvKana].filter(Boolean).join(' '));
+    }
+
+    function getCvLine_(kana) {
+        const head = normalizeText_(kana || '').charAt(0);
+        if ('アイウエオ'.includes(head)) return 'あ行';
+        if ('カキクケコガギグゲゴ'.includes(head)) return 'か行';
+        if ('サシスセソザジズゼゾ'.includes(head)) return 'さ行';
+        if ('タチツテトダヂヅデド'.includes(head)) return 'た行';
+        if ('ナニヌネノ'.includes(head)) return 'な行';
+        if ('ハヒフヘホバビブベボパピプペポ'.includes(head)) return 'は行';
+        if ('マミムメモ'.includes(head)) return 'ま行';
+        if ('ヤユヨ'.includes(head)) return 'や行';
+        if ('ラリルレロ'.includes(head)) return 'ら行';
+        if ('ワヲン'.includes(head)) return 'わ行';
+        return 'その他';
+    }
+
+    function buildCvOptions_(cards) {
+        const map = new Map();
+        (Array.isArray(cards) ? cards : []).forEach(card => {
+        const name = String(card?.CV ?? '').trim();
+        if (!name) return;
+        const kana = String(card?.cv_kana ?? name).trim();
+        const key = normalizeText_(`${name} ${kana}`);
+        const current = map.get(key) || { name, kana, count: 0, line: getCvLine_(kana) };
+        current.count += 1;
+        map.set(key, current);
+        });
+
+        return Array.from(map.values()).sort((a, b) =>
+        String(a.kana || a.name).localeCompare(String(b.kana || b.name), 'ja')
+        );
+    }
+
+    function renderCvList_(body, input, options, line = '') {
+        if (!body) return;
+
+        const filtered = line ? options.filter(item => item.line === line) : options;
+        body.replaceChildren();
+
+        if (!filtered.length) {
+        const empty = document.createElement('div');
+        empty.className = 'cv-list-placeholder';
+        empty.textContent = '該当するCVがありません。';
+        body.appendChild(empty);
+        return;
+        }
+
+        filtered.forEach(item => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cv-list-item';
+        btn.dataset.cv = item.name;
+        btn.innerHTML = `
+            <span class="cv-list-name"></span>
+            <span class="cv-list-kana"></span>
+            <span class="cv-list-count"></span>
+        `;
+        btn.querySelector('.cv-list-name').textContent = item.name;
+        btn.querySelector('.cv-list-kana').textContent = item.kana;
+        btn.querySelector('.cv-list-count').textContent = `${item.count}枚`;
+        btn.addEventListener('click', () => {
+            if (input) input.value = item.name;
+            applyFilters();
+        });
+        body.appendChild(btn);
+        });
+    }
+
+    function closeCvSuggest_(suggest) {
+        if (!suggest) return;
+        suggest.replaceChildren();
+        suggest.hidden = true;
+    }
+
+    function closeAllCvSuggest_() {
+        document.querySelectorAll('.cv-suggest').forEach(closeCvSuggest_);
+    }
+
+    function setCvSuggestActive_(suggest, index) {
+        const items = Array.from(suggest?.querySelectorAll?.('.cv-suggest-item') || []);
+        if (!items.length) return;
+
+        const next = ((index % items.length) + items.length) % items.length;
+        items.forEach((item, i) => {
+        item.classList.toggle('is-active', i === next);
+        item.setAttribute('aria-selected', i === next ? 'true' : 'false');
+        });
+        suggest.dataset.activeIndex = String(next);
+    }
+
+    function renderCvSuggest_(suggest, input, options, panel = null) {
+        if (!suggest || !input) return;
+
+        const tokens = getCvFilterTokens_();
+        const value = getCvFilterValue_();
+        if (!value || !tokens.length || document.activeElement !== input || panel?.classList?.contains('is-open')) {
+        closeCvSuggest_(suggest);
+        return;
+        }
+
+        const matches = options
+        .filter(item => {
+            const haystack = normalizeText_([item.name, item.kana].filter(Boolean).join(' '));
+            return window.matchesKeywordTokens?.(haystack, tokens) ?? true;
+        })
+        .slice(0, 5);
+
+        suggest.replaceChildren();
+
+        if (!matches.length) {
+        closeCvSuggest_(suggest);
+        return;
+        }
+
+        matches.forEach(item => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cv-suggest-item';
+        btn.setAttribute('role', 'option');
+        btn.innerHTML = `
+            <span class="cv-suggest-text"></span>
+            <span class="cv-suggest-count"></span>
+        `;
+        btn.querySelector('.cv-suggest-text').textContent = `${item.name}（${item.kana}）`;
+        btn.querySelector('.cv-suggest-count').textContent = `${item.count}枚`;
+        btn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+        });
+        btn.addEventListener('click', () => {
+            input.value = item.name;
+            closeCvSuggest_(suggest);
+            applyFilters();
+        });
+        suggest.appendChild(btn);
+        });
+
+        suggest.hidden = false;
+        setCvSuggestActive_(suggest, 0);
+    }
+
+        // ==============================
+    // CVフィルター UI生成
+    // - B案：入力欄 + 一覧ボタン + 下部展開
+    // ==============================
+    function createCvFilterBlock_(cards = []) {
+    const { wrapper } = createFilterBlock_('CV');
+    const cvOptions = buildCvOptions_(cards);
+
+    const row = document.createElement('div');
+    row.className = 'cv-filter-row';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'cv-filter';
+    input.className = 'cv-filter-input';
+    input.placeholder = '声優名で絞り込み';
+    input.autocomplete = 'off';
+
+    const listBtn = document.createElement('button');
+    listBtn.type = 'button';
+    listBtn.className = 'filter-btn cv-list-toggle';
+    listBtn.id = 'cv-list-toggle';
+    listBtn.setAttribute('aria-expanded', 'false');
+    listBtn.textContent = '一覧';
+
+    row.appendChild(input);
+    row.appendChild(listBtn);
+    wrapper.appendChild(row);
+
+    const suggest = document.createElement('div');
+    suggest.className = 'cv-suggest';
+    suggest.hidden = true;
+    wrapper.appendChild(suggest);
+
+    const panel = document.createElement('div');
+    panel.id = 'cv-list-panel';
+    panel.className = 'cv-list-panel';
+    panel.innerHTML = `
+        <div class="cv-list-head">
+        <div class="cv-list-title">CV一覧</div>
+        <button type="button" class="cv-list-close" id="cv-list-close">閉じる</button>
+        </div>
+
+        <div class="cv-index-row">
+        <button type="button" class="cv-index-btn is-active" data-cv-line="">すべて</button>
+        <button type="button" class="cv-index-btn" data-cv-line="あ行">あ行</button>
+        <button type="button" class="cv-index-btn" data-cv-line="か行">か行</button>
+        <button type="button" class="cv-index-btn" data-cv-line="さ行">さ行</button>
+        <button type="button" class="cv-index-btn" data-cv-line="た行">た行</button>
+        <button type="button" class="cv-index-btn" data-cv-line="な行">な行</button>
+        <button type="button" class="cv-index-btn" data-cv-line="は行">は行</button>
+        <button type="button" class="cv-index-btn" data-cv-line="ま行">ま行</button>
+        <button type="button" class="cv-index-btn" data-cv-line="や行">や行</button>
+        <button type="button" class="cv-index-btn" data-cv-line="ら行">ら行</button>
+        <button type="button" class="cv-index-btn" data-cv-line="わ行">わ行</button>
+        </div>
+
+        <div class="cv-list-body">
+        <div class="cv-list-placeholder">
+            CV候補を読み込み中です。
+        </div>
+        </div>
+    `;
+    wrapper.appendChild(panel);
+    const body = panel.querySelector('.cv-list-body');
+    renderCvList_(body, input, cvOptions);
+
+    listBtn.addEventListener('click', () => {
+        const isOpen = panel.classList.contains('is-open');
+        closeCvSuggest_(suggest);
+        panel.classList.toggle('is-open', !isOpen);
+        listBtn.classList.toggle('is-active', !isOpen);
+        listBtn.setAttribute('aria-expanded', !isOpen ? 'true' : 'false');
+    });
+
+    panel.querySelector('#cv-list-close')?.addEventListener('click', () => {
+        panel.classList.remove('is-open');
+        listBtn.classList.remove('is-active');
+        listBtn.setAttribute('aria-expanded', 'false');
+    });
+
+    panel.querySelectorAll('.cv-index-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+        panel.querySelectorAll('.cv-index-btn').forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        renderCvList_(body, input, cvOptions, btn.dataset.cvLine || '');
+        });
+    });
+
+    input.addEventListener('input', debounce(() => {
+        renderCvSuggest_(suggest, input, cvOptions, panel);
+        applyFilters();
+    }, 250));
+    input.addEventListener('focus', () => renderCvSuggest_(suggest, input, cvOptions, panel));
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+        closeCvSuggest_(suggest);
+        return;
+        }
+
+        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Enter') return;
+
+        if (suggest.hidden && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        renderCvSuggest_(suggest, input, cvOptions, panel);
+        }
+
+        const items = Array.from(suggest.querySelectorAll('.cv-suggest-item'));
+        if (!items.length) return;
+
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const current = parseInt(suggest.dataset.activeIndex || '0', 10);
+        setCvSuggestActive_(suggest, current + (e.key === 'ArrowDown' ? 1 : -1));
+        return;
+        }
+
+        if (e.key === 'Enter' && !suggest.hidden) {
+        e.preventDefault();
+        const active = suggest.querySelector('.cv-suggest-item.is-active') || items[0];
+        active?.click();
+        }
+    });
+    input.addEventListener('blur', () => {
+        window.setTimeout(() => closeCvSuggest_(suggest), 120);
+    });
+
+    return wrapper;
+    }
+
     // 範囲セレクタ（コスト/パワー）
     function createRangeSelector_(title, filterKey, list, onChange) {
     const { wrapper } = createFilterBlock_(title);
@@ -644,6 +941,43 @@
     // ==============================
     // モーダル制御
     // ==============================
+    function ensureFilterModal_() {
+    if (document.getElementById('filterModal')) {
+        const title = document.querySelector('#filterModal .filter-maintitle');
+        if (title) title.textContent = 'カード検索';
+        return;
+    }
+
+    const grid = document.getElementById('grid');
+    if (!grid) return;
+
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'filterModal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3 class="filter-maintitle">カード検索</h3>
+
+            <section class="filter-modal-pane is-active" data-pane="filters" role="tabpanel">
+                <div id="main-filters">
+                    <!-- フィルターボタン内容（JS生成） -->
+                </div>
+
+                <h4 class="filter-subtitle">さらに詳しい条件フィルター</h4>
+                <div id="detail-filters"></div>
+            </section>
+
+            <div class="modal-footer">
+                <button class="modal-buttun" id="applyFilterBtn" type="button">この条件で絞り込む</button>
+                <button class="modal-buttun" onclick="resetFilters()" type="button">リセット</button>
+                <button class="modal-buttun" onclick="closeFilterModal()" type="button">閉じる</button>
+            </div>
+        </div>
+    `;
+
+    grid.parentNode.insertBefore(modal, grid);
+    }
+
     function openFilterModal(tab = null) {
     const m = document.getElementById('filterModal');
     if (!m) return;
@@ -845,6 +1179,7 @@
         mainFilters.appendChild(packWrapper);
         mainFilters.appendChild(createButtonGroup_('種族', races, 'race'));
         mainFilters.appendChild(createButtonGroup_('カテゴリ', categories, 'category'));
+        mainFilters.appendChild(createCvFilterBlock_(cards));
         mainFilters.appendChild(createRangeSelector_('コスト', 'cost', costs, () => applyFilters()));
         mainFilters.appendChild(createRangeSelector_('パワー', 'power', powers, () => applyFilters()));
 
@@ -951,6 +1286,23 @@
             });
 
             if (chip) chips.push(chip);
+        }
+
+        // CV検索
+        {
+            const cv = getCvFilterValue_();
+            if (cv) {
+                chips.push({
+                    label: `CV:${cv}`,
+                    className: 'chip-cv',
+                    onRemove: () => {
+                        const input = document.getElementById('cv-filter');
+                        if (input) input.value = '';
+                        closeAllCvSuggest_();
+                        applyFilters();
+                    },
+                });
+            }
         }
 
         // 範囲
@@ -1191,6 +1543,7 @@
         if (opened) opened.remove();
 
         const tokens = window.getKeywordTokens?.('keyword') || [];
+        const cvTokens = getCvFilterTokens_();
 
         const selectedFilters = {
         race: getSelectedFilterValues('race'),
@@ -1268,12 +1621,15 @@
             // getActiveFilterSet が空のとき null を返す場合に備えて自前で Set を作る
             const g = stG?.groups?.[activeId];
             const cds = g ? Object.keys(g.cards || {}) : [];
-            groupSet = new Set(cds.map(cd => String(cd).padStart(5, '0')));
+            groupSet = new Set(cds.map(cd => window.normCd5 ? window.normCd5(cd) : String(cd).padStart(5, '0')));
         }
         } catch {}
 
+        const visibleCardCds = [];
+
         gridRoot.querySelectorAll('.card').forEach(card => {
         const haystack = window.buildKeywordHaystack?.(card) || '';
+        const cvHaystack = buildCvHaystack_(card);
 
         const cardData = {
         race: card.dataset.race,
@@ -1298,6 +1654,7 @@
         };
 
         const matchesKeyword = window.matchesKeywordTokens?.(haystack, tokens) ?? true;
+        const matchesCv = window.matchesKeywordTokens?.(cvHaystack, cvTokens) ?? true;
 
         const matchesFilters = Object.entries(selectedFilters).every(([key, selectedValues]) => {
         if (!selectedValues || selectedValues.length === 0) return true;
@@ -1342,11 +1699,11 @@
         const matchesCost = cardData.cost >= costMin && cardData.cost <= costMax;
         const matchesPower = cardData.power >= powerMin && cardData.power <= powerMax;
 
-        let visible = matchesKeyword && matchesFilters && matchesCost && matchesPower;
+        let visible = matchesKeyword && matchesCv && matchesFilters && matchesCost && matchesPower;
 
         // ✅ グループフィルター（activeId があるなら空でも適用）
         if (visible && groupFilterActive) {
-        const cd = String(card.dataset.cd || '').padStart(5, '0');
+        const cd = window.normCd5 ? window.normCd5(card.dataset.cd) : String(card.dataset.cd || '').padStart(5, '0');
         if (!groupSet || !groupSet.has(cd)) visible = false;
         }
 
@@ -1391,7 +1748,14 @@
         } else {
         card.style.display = visible ? '' : 'none';
         }
+
+        if (visible) {
+            const cd = window.normCd5 ? window.normCd5(card.dataset.cd) : String(card.dataset.cd || '').padStart(5, '0');
+            if (cd) visibleCardCds.push(cd);
+        }
         });
+
+        window.__visibleCardCds = visibleCardCds;
 
         try { window.applyGrayscaleFilter?.(); } catch {}
         try { closeCgPreviewRow_(); } catch {} //フィルターが変わったらプレビューは閉じる
@@ -1423,6 +1787,8 @@
             const kw = document.getElementById('keyword');
             if (kw) kw.value = '';
         }
+        const cvInput = document.getElementById('cv-filter');
+        if (cvInput) cvInput.value = '';
 
         document.querySelectorAll('.filter-btn.selected').forEach(btn => {
         btn.classList.remove('selected');
@@ -1457,6 +1823,34 @@
 
         applyFilters();
         setQuickTypeUI_('all');
+    }
+
+    // ==============================
+    // 詳細内CV検索
+    // ==============================
+    async function setCvFilter(cvName) {
+        const value = String(cvName || '').trim();
+        if (!value) return;
+
+        ensureFilterModal_();
+        if (!document.getElementById('cv-filter')) {
+            try { await generateFilterUI(); } catch {}
+        }
+
+        const cvInput = document.getElementById('cv-filter');
+        if (cvInput) {
+            cvInput.value = value;
+            closeAllCvSuggest_();
+            applyFilters();
+            closeFilterModal();
+        } else {
+            const keyword = document.getElementById('keyword');
+            if (keyword) keyword.value = value;
+            applyFilters();
+        }
+
+        const grid = document.getElementById('grid');
+        try { grid?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }); } catch {}
     }
 
     // ==============================
@@ -1528,6 +1922,8 @@
     // 初期化
     // ==============================
     function init() {
+        ensureFilterModal_();
+
         // cardFilter UIが無いページでは何もしない
         const hasCardFilterUI =
         document.getElementById('filterModal') &&
@@ -1762,6 +2158,7 @@
         init,
         applyFilters,
         resetFilters,
+        setCvFilter,
         openFilterModal,
         closeFilterModal,
         toggleDetailFilters,

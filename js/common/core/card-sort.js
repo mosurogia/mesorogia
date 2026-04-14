@@ -27,7 +27,9 @@
    * cd を 5桁文字列に正規化
    */
   function normCd5_(cd) {
-    return String(cd ?? '').trim().padStart(5, '0').slice(0, 5);
+    if (typeof window.normCd5 === 'function') return window.normCd5(cd);
+    const s = String(cd ?? '').trim();
+    return s ? s.padStart(5, '0').slice(0, 5) : '';
   }
 
   /**

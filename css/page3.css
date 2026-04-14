@@ -1150,6 +1150,24 @@
     transform: translateY(-1px);
 }
 
+#packs-root .card .checker-detail-zoom-btn {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, .55);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, .62);
+    font-size: 12px;
+    line-height: 1;
+}
+
+#packs-root .card .checker-detail-zoom-btn:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, .9);
+    outline-offset: 2px;
+}
+
 @media (hover: none) {
     .card-list .card:hover {
         box-shadow: none;
@@ -1419,7 +1437,7 @@
 
 /* アイテム */
 .summary-breakdown-item {
-    padding: 8px 8px 10px;
+    padding: 8px 8px 4px;
     border-radius: 12px;
     border: 1px solid var(--race-summary-item-border);
     background: linear-gradient(135deg, var(--race-summary-item-bg1), var(--race-summary-item-bg2));
@@ -1537,6 +1555,90 @@
         linear-gradient(90deg, rgba(167, 139, 250, .75), rgba(167, 139, 250, .95)),
         var(--old-god);
     background-blend-mode: multiply;
+}
+
+
+/* =====================================================
+   14.1 種族内カテゴリ展開
+===================================================== */
+
+.summary-breakdown-subtoggle-row {
+    margin-top: 8px;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.summary-breakdown-subtoggle {
+    appearance: none;
+    border: 1px solid rgba(0, 0, 0, .10);
+    background: rgba(255, 255, 255, .92);
+    color: #334155;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.1;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+    transition: background .15s ease, transform .12s ease, opacity .12s ease;
+}
+
+.summary-breakdown-subtoggle:hover {
+    background: rgba(248, 250, 252, 1);
+    transform: translateY(-1px);
+}
+
+.summary-breakdown-subtoggle:active {
+    transform: translateY(0);
+    opacity: .92;
+}
+
+.summary-breakdown-subtoggle[aria-expanded="true"] {
+    background: color-mix(in srgb, var(--accent), white 88%);
+    border-color: color-mix(in srgb, var(--accent), black 8%);
+    color: color-mix(in srgb, var(--accent), black 32%);
+}
+
+.summary-breakdown-sublist {
+    margin-top: 8px;
+    display: grid;
+    gap: 6px;
+}
+
+.summary-breakdown-sublist[hidden] {
+    display: none;
+}
+
+.summary-breakdown-item-sub {
+    margin-left: 14px;
+    padding: 8px 8px 10px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, .92), rgba(248, 250, 252, .92));
+    border: 1px solid color-mix(in srgb, var(--accent), white 70%);
+}
+
+.summary-breakdown-item-sub .summary-breakdown-dot {
+    background: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent), transparent 82%);
+}
+
+.summary-breakdown-item-sub .summary-breakdown-name {
+    font-size: 12px;
+}
+
+.summary-breakdown-item-sub .summary-breakdown-val {
+    font-size: 11px;
+}
+
+.summary-breakdown-item-sub .meter-label,
+.summary-breakdown-item-sub .meter-val {
+    font-size: 11px;
+}
+
+@media (max-width: 700px) {
+    .summary-breakdown-item-sub {
+        margin-left: 10px;
+    }
 }
 
 /* =====================================================

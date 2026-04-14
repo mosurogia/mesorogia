@@ -127,27 +127,6 @@
             <div class="chips-scroll"></div>
         </div>
 
-        <!--フィルターモーダル-->
-        <div class="modal" id="filterModal">
-            <div class="modal-content">
-                <h3 class="filter-maintitle">フィルター内容</h3>
-                <div id="main-filters">
-                    <!--フィルターボタン内容-->
-                </div>
-                <!-- 詳細フィルター -->
-                <h4 class="filter-subtitle">さらに詳しい条件フィルター</h4>
-                <div id="detail-filters"></div>
-
-                <!--下部ボタン-->
-                <div class="modal-footer">
-                    <button class="modal-buttun" id="applyFilterBtn">この条件で絞り込む</button>
-                    <button class="modal-buttun" onclick="resetFilters()">リセット</button>
-                    <button class="modal-buttun" onclick="closeFilterModal()" type="button">閉じる</button>
-                </div>
-            </div>
-        </div>
-
-
 <!--デッキバー-->
 <!-- 🔽 デッキバー全体のラッパーを追加 -->
 <div class="deck-bar-wrapper">
@@ -299,12 +278,18 @@
 <div class="tab-content" id="edit">
     <div id="deck-layout">
         <!--デッキリストゾーン-->
-        <div id="deck-card-list" class="deck-section">
-            <div class="tab-bar subtab-bar">
-                デッキリスト
+        <div class="deck-section deck-list-section">
+            <div class="tab-bar subtab-bar deck-list-header">
+                <span>🃏 デッキリスト</span>
+                <div class="deck-list-actions">
+                    <button type="button" class="deck-representative-open" aria-label="メインカードを選択">メインカード</button>
+                    <button type="button" class="deck-count-adjust-toggle">＋－ ボタン：ON</button>
+                </div>
             </div>
-            <div id="deckcard-empty-message">デッキがここに表示されます</div>
-            <!-- カード一覧（5列グリッド） -->
+            <div id="deck-card-list" >
+                <div id="deckcard-empty-message">デッキがここに表示されます</div>
+                <!-- カード一覧（5列グリッド） -->
+            </div>
         </div>
 
 
@@ -1085,46 +1070,6 @@
         </div>
 
         </div>
-
-    <!-- ▼ カード操作モーダル -->
-    <div id="cardOpModal" class="modal">
-        <div class="modal-content cardop-modal" id="cardOpModalContent" role="dialog" aria-modal="true"
-            aria-labelledby="cardOpTitle">
-            <div class="cardop-header" id="cardOpHeader">
-                <div class="cardop-topline">
-                    <span class="cardop-move-hint">
-                        ドラッグでミニウィンドウ移動可
-                        <br>
-                        ×で閉じる
-                    </span>
-                    <button type="button" class="cardop-close" id="cardOpCloseBtn" aria-label="閉じる">×</button>
-                </div>
-                <h3 id="cardOpTitle" class="cardop-title"></h3>
-            </div>
-
-            <div class="cardop-body">
-                <!-- 上：カード画像（枚数バッジ付き） -->
-                <div class="cardop-figure">
-                    <img id="cardOpImg" alt="">
-                    <div class="count-badge" id="cardOpCountBadge">x1</div>
-                </div>
-
-                <!-- 操作：1行目（- / +） -->
-                <div class="cardop-row">
-                    <button type="button" class="cardop-btn grow" id="cardOpDec">－</button>
-                    <button type="button" class="cardop-btn grow" id="cardOpInc">＋</button>
-                </div>
-
-                <!-- 操作：2行目（メインカードにする） -->
-                <div class="cardop-row">
-                    <button type="button" class="cardop-btn primary full" id="cardOpSetRep">このカードをメインカードにする</button>
-                </div>
-
-                <!-- 効果一覧 -->
-                <div class="cardop-effects" id="cardOpEffects"></div>
-            </div>
-        </div>
-    </div>
 
     <!-- ▼ メインカード：選択モーダル -->
     <div class="modal" id="repSelectModal" style="display:none;">

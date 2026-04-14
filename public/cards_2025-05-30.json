@@ -7,6 +7,8 @@
     "cd":10001,
     "link":false,
     "link_cd":10001,
+    "CV":"砂田 佑樹",
+    "cv_kana":"すなだ ゆうき",
     "rarity":"レジェンド",
     "race":"ドラゴン",
     "category":"聖焔龍（フォルティア）",
@@ -31,7 +33,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -41,6 +44,8 @@
     "cd":10002,
     "link":false,
     "link_cd":10002,
+    "CV":"一寺 美穂",
+    "cv_kana":"いちでら みほ",
     "rarity":"レジェンド",
     "race":"ドラゴン",
     "category":"聖焔龍（フォルティア）",
@@ -65,7 +70,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -75,6 +81,8 @@
     "cd":10003,
     "link":false,
     "link_cd":10003,
+    "CV":"北原 知奈",
+    "cv_kana":"きたはら ちな",
     "rarity":"ゴールド",
     "race":"ドラゴン",
     "category":"聖焔龍（フォルティア）",
@@ -99,7 +107,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -109,6 +118,8 @@
     "cd":10004,
     "link":false,
     "link_cd":10004,
+    "CV":"石川 栄一",
+    "cv_kana":"いしかわ えいいち",
     "rarity":"ブロンズ",
     "race":"ドラゴン",
     "category":"聖焔龍（フォルティア）",
@@ -133,7 +144,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -143,6 +155,8 @@
     "cd":10005,
     "link":false,
     "link_cd":10005,
+    "CV":"乾 真由璃",
+    "cv_kana":"いぬい まゆり",
     "rarity":"レジェンド",
     "race":"ドラゴン",
     "category":"聖焔龍（フォルティア）",
@@ -167,7 +181,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -177,6 +192,8 @@
     "cd":10006,
     "link":false,
     "link_cd":10006,
+    "CV":"堀内 祐花",
+    "cv_kana":"ほりうち ゆうか",
     "rarity":"シルバー",
     "race":"ドラゴン",
     "category":"聖焔龍（フォルティア）",
@@ -201,7 +218,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -211,6 +229,8 @@
     "cd":10007,
     "link":false,
     "link_cd":10007,
+    "CV":"一 潤",
+    "cv_kana":"いち じゅん",
     "rarity":"ブロンズ",
     "race":"ドラゴン",
     "category":"聖焔龍（フォルティア）",
@@ -235,7 +255,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -245,6 +266,8 @@
     "cd":10008,
     "link":false,
     "link_cd":10008,
+    "CV":"生井沢 優太",
+    "cv_kana":"なまいざわ ゆうた",
     "rarity":"シルバー",
     "race":"ドラゴン",
     "category":"聖焔龍（フォルティア）",
@@ -269,7 +292,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -279,6 +303,8 @@
     "cd":10009,
     "link":false,
     "link_cd":10009,
+    "CV":"紀ノ 貴紀",
+    "cv_kana":"きの たかのり",
     "rarity":"ゴールド",
     "race":"ドラゴン",
     "category":"ドラゴライダー",
@@ -303,7 +329,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -313,6 +340,8 @@
     "cd":10010,
     "link":false,
     "link_cd":10010,
+    "CV":"梶原 信也",
+    "cv_kana":"かじわら しんや",
     "rarity":"ブロンズ",
     "race":"ドラゴン",
     "category":"ドラゴライダー",
@@ -337,7 +366,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -347,6 +377,8 @@
     "cd":10011,
     "link":false,
     "link_cd":10011,
+    "CV":"宮元 悠里",
+    "cv_kana":"みやもと ゆうり",
     "rarity":"レジェンド",
     "race":"ドラゴン",
     "category":"ドラゴライダー",
@@ -371,7 +403,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -381,6 +414,8 @@
     "cd":10012,
     "link":false,
     "link_cd":10012,
+    "CV":"園枝 大輝",
+    "cv_kana":"そのえだ だいき",
     "rarity":"シルバー",
     "race":"ドラゴン",
     "category":"ドラゴライダー",
@@ -405,7 +440,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -415,6 +451,8 @@
     "cd":10013,
     "link":false,
     "link_cd":10013,
+    "CV":"堂坂 有希",
+    "cv_kana":"どうさか ゆうき",
     "rarity":"シルバー",
     "race":"ドラゴン",
     "category":"ドラゴライダー",
@@ -439,7 +477,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -449,6 +488,8 @@
     "cd":10014,
     "link":false,
     "link_cd":10014,
+    "CV":"漢那 仁史",
+    "cv_kana":"かんな ひとし",
     "rarity":"ブロンズ",
     "race":"ドラゴン",
     "category":"ドラゴライダー",
@@ -473,7 +514,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -483,6 +525,8 @@
     "cd":10015,
     "link":false,
     "link_cd":10015,
+    "CV":"池辺 久美子",
+    "cv_kana":"いけべ くみこ",
     "rarity":"ゴールド",
     "race":"ドラゴン",
     "category":"ドラゴライダー",
@@ -507,7 +551,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -517,6 +562,8 @@
     "cd":10016,
     "link":false,
     "link_cd":10016,
+    "CV":"伊藤 舞音",
+    "cv_kana":"いとう まおと",
     "rarity":"レジェンド",
     "race":"ドラゴン",
     "category":"ドラゴライダー",
@@ -541,7 +588,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -551,6 +599,8 @@
     "cd":10017,
     "link":false,
     "link_cd":10017,
+    "CV":"園枝 大輝",
+    "cv_kana":"そのえだ だいき",
     "rarity":"レジェンド",
     "race":"ドラゴン",
     "category":"ノーカテゴリ",
@@ -575,7 +625,8 @@
     "life_effect":"",
     "power_effect":"DOWN",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -585,6 +636,8 @@
     "cd":10019,
     "link":false,
     "link_cd":10019,
+    "CV":"さかえ りょう",
+    "cv_kana":"さかえ りょう",
     "rarity":"レジェンド",
     "race":"ドラゴン",
     "category":"ノーカテゴリ",
@@ -609,7 +662,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -619,6 +673,8 @@
     "cd":10020,
     "link":false,
     "link_cd":10020,
+    "CV":"乾 真由璃",
+    "cv_kana":"いぬい まゆり",
     "rarity":"ブロンズ",
     "race":"ドラゴン",
     "category":"ノーカテゴリ",
@@ -643,7 +699,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -653,6 +710,8 @@
     "cd":10021,
     "link":false,
     "link_cd":10021,
+    "CV":"嶺本 翔馬",
+    "cv_kana":"みねもと しょうま",
     "rarity":"ゴールド",
     "race":"ドラゴン",
     "category":"ノーカテゴリ",
@@ -677,7 +736,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -687,6 +747,8 @@
     "cd":10022,
     "link":false,
     "link_cd":10022,
+    "CV":"新田 純輝",
+    "cv_kana":"にった じゅんき",
     "rarity":"ブロンズ",
     "race":"ドラゴン",
     "category":"ノーカテゴリ",
@@ -711,7 +773,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -721,6 +784,8 @@
     "cd":10023,
     "link":false,
     "link_cd":10023,
+    "CV":"加藤 慎也",
+    "cv_kana":"かとう しんや",
     "rarity":"シルバー",
     "race":"ドラゴン",
     "category":"ノーカテゴリ",
@@ -745,7 +810,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -755,6 +821,8 @@
     "cd":10024,
     "link":false,
     "link_cd":10024,
+    "CV":"リア・アマリア",
+    "cv_kana":"りあ あまりあ",
     "rarity":"ブロンズ",
     "race":"ドラゴン",
     "category":"ノーカテゴリ",
@@ -779,7 +847,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -789,6 +858,8 @@
     "cd":10025,
     "link":false,
     "link_cd":10025,
+    "CV":"星乃 真衣",
+    "cv_kana":"ほしの まい",
     "rarity":"シルバー",
     "race":"ドラゴン",
     "category":"ノーカテゴリ",
@@ -813,7 +884,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -823,6 +895,8 @@
     "cd":10026,
     "link":false,
     "link_cd":10026,
+    "CV":"宮崎 綸",
+    "cv_kana":"みやざき りん",
     "rarity":"シルバー",
     "race":"ドラゴン",
     "category":"ノーカテゴリ",
@@ -847,7 +921,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -857,6 +932,8 @@
     "cd":10027,
     "link":true,
     "link_cd":10027,
+    "CV":"彩月 ちさと",
+    "cv_kana":"あやつき ちさと",
     "rarity":"ゴールド",
     "race":"ドラゴン",
     "category":"ノーカテゴリ",
@@ -881,7 +958,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -891,6 +969,8 @@
     "cd":10028,
     "link":false,
     "link_cd":10028,
+    "CV":"槙野 旦",
+    "cv_kana":"まきの だん",
     "rarity":"シルバー",
     "race":"ドラゴン",
     "category":"ノーカテゴリ",
@@ -915,7 +995,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -925,6 +1006,8 @@
     "cd":10029,
     "link":false,
     "link_cd":10029,
+    "CV":"齋藤 響",
+    "cv_kana":"さいとう ひびき",
     "rarity":"ブロンズ",
     "race":"ドラゴン",
     "category":"ノーカテゴリ",
@@ -949,7 +1032,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -959,6 +1043,8 @@
     "cd":10030,
     "link":false,
     "link_cd":10030,
+    "CV":"土居 通聡",
+    "cv_kana":"どい みちあき",
     "rarity":"ブロンズ",
     "race":"ドラゴン",
     "category":"ノーカテゴリ",
@@ -983,7 +1069,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -993,6 +1080,8 @@
     "cd":10031,
     "link":false,
     "link_cd":10031,
+    "CV":"小堀 真生",
+    "cv_kana":"こぼり まお",
     "rarity":"ゴールド",
     "race":"ドラゴン",
     "category":"ノーカテゴリ",
@@ -1017,7 +1106,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1027,6 +1117,8 @@
     "cd":20001,
     "link":false,
     "link_cd":20001,
+    "CV":"茶熊 にじ",
+    "cv_kana":"ちゃぐま にじ",
     "rarity":"ゴールド",
     "race":"アンドロイド",
     "category":"メイドロボ",
@@ -1051,7 +1143,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1061,6 +1154,8 @@
     "cd":20002,
     "link":false,
     "link_cd":20002,
+    "CV":"乙幡 美成",
+    "cv_kana":"おとはた みなり",
     "rarity":"ゴールド",
     "race":"アンドロイド",
     "category":"メイドロボ",
@@ -1085,7 +1180,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1095,6 +1191,8 @@
     "cd":20003,
     "link":false,
     "link_cd":20003,
+    "CV":"鷲尾 侑南",
+    "cv_kana":"わしお ゆうな",
     "rarity":"レジェンド",
     "race":"アンドロイド",
     "category":"メイドロボ",
@@ -1119,7 +1217,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1129,6 +1228,8 @@
     "cd":20004,
     "link":false,
     "link_cd":20004,
+    "CV":"橋本 千明",
+    "cv_kana":"はしもと ちあき",
     "rarity":"シルバー",
     "race":"アンドロイド",
     "category":"メイドロボ",
@@ -1153,7 +1254,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1163,6 +1265,8 @@
     "cd":20005,
     "link":false,
     "link_cd":20005,
+    "CV":"宮元 悠里",
+    "cv_kana":"みやもと ゆうり",
     "rarity":"ブロンズ",
     "race":"アンドロイド",
     "category":"メイドロボ",
@@ -1187,7 +1291,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1197,6 +1302,8 @@
     "cd":20006,
     "link":false,
     "link_cd":20006,
+    "CV":"五十嵐 鳴",
+    "cv_kana":"いがらし めい",
     "rarity":"ブロンズ",
     "race":"アンドロイド",
     "category":"メイドロボ",
@@ -1221,7 +1328,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1231,6 +1339,8 @@
     "cd":20007,
     "link":false,
     "link_cd":20007,
+    "CV":"音羽 れの",
+    "cv_kana":"おとわ れの",
     "rarity":"シルバー",
     "race":"アンドロイド",
     "category":"メイドロボ",
@@ -1255,7 +1365,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1265,6 +1376,8 @@
     "cd":20008,
     "link":false,
     "link_cd":20008,
+    "CV":"二階堂 結",
+    "cv_kana":"にかいどう ゆい",
     "rarity":"レジェンド",
     "race":"アンドロイド",
     "category":"メイドロボ",
@@ -1289,7 +1402,8 @@
     "life_effect":"OPPO_DAMAGE",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1299,6 +1413,8 @@
     "cd":20009,
     "link":false,
     "link_cd":20009,
+    "CV":"CVなし",
+    "cv_kana":"CVなし",
     "rarity":"レジェンド",
     "race":"アンドロイド",
     "category":"アドミラルシップ",
@@ -1323,7 +1439,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1333,6 +1450,8 @@
     "cd":20010,
     "link":false,
     "link_cd":20010,
+    "CV":"柏木 智仁",
+    "cv_kana":"かしわぎ ともひと",
     "rarity":"ブロンズ",
     "race":"アンドロイド",
     "category":"アドミラルシップ",
@@ -1357,7 +1476,8 @@
     "life_effect":"OPPO_DAMAGE",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1367,6 +1487,8 @@
     "cd":20011,
     "link":false,
     "link_cd":20011,
+    "CV":"都帆 衿朱",
+    "cv_kana":"とほ えりす",
     "rarity":"シルバー",
     "race":"アンドロイド",
     "category":"アドミラルシップ",
@@ -1391,7 +1513,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1401,6 +1524,8 @@
     "cd":20012,
     "link":false,
     "link_cd":20012,
+    "CV":"橘高 けい",
+    "cv_kana":"きだか けい",
     "rarity":"ゴールド",
     "race":"アンドロイド",
     "category":"アドミラルシップ",
@@ -1425,7 +1550,8 @@
     "life_effect":"OPPO_DAMAGE",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1435,6 +1561,8 @@
     "cd":20013,
     "link":false,
     "link_cd":20013,
+    "CV":"朝香 心",
+    "cv_kana":"あさか こころ",
     "rarity":"レジェンド",
     "race":"アンドロイド",
     "category":"アドミラルシップ",
@@ -1459,7 +1587,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1469,6 +1598,8 @@
     "cd":20014,
     "link":false,
     "link_cd":20014,
+    "CV":"乙幡 美成",
+    "cv_kana":"おとはた みなり",
     "rarity":"ゴールド",
     "race":"アンドロイド",
     "category":"アドミラルシップ",
@@ -1493,7 +1624,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1503,6 +1635,8 @@
     "cd":20015,
     "link":false,
     "link_cd":20015,
+    "CV":"前内 孝文",
+    "cv_kana":"まえうち たかふみ",
     "rarity":"シルバー",
     "race":"アンドロイド",
     "category":"アドミラルシップ",
@@ -1527,7 +1661,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1537,6 +1672,8 @@
     "cd":20016,
     "link":false,
     "link_cd":20016,
+    "CV":"宮崎 綸",
+    "cv_kana":"みやざき りん",
     "rarity":"ブロンズ",
     "race":"アンドロイド",
     "category":"アドミラルシップ",
@@ -1561,7 +1698,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1571,6 +1709,8 @@
     "cd":20017,
     "link":true,
     "link_cd":20017,
+    "CV":"あまの あきこ",
+    "cv_kana":"あまの あきこ",
     "rarity":"ゴールド",
     "race":"アンドロイド",
     "category":"ノーカテゴリ",
@@ -1595,7 +1735,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1605,6 +1746,8 @@
     "cd":20018,
     "link":false,
     "link_cd":20018,
+    "CV":"村上 紀生",
+    "cv_kana":"むらかみ のりお",
     "rarity":"ゴールド",
     "race":"アンドロイド",
     "category":"ノーカテゴリ",
@@ -1629,7 +1772,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1639,6 +1783,8 @@
     "cd":20019,
     "link":false,
     "link_cd":20019,
+    "CV":"池辺 久美子",
+    "cv_kana":"いけべ くみこ",
     "rarity":"レジェンド",
     "race":"アンドロイド",
     "category":"ノーカテゴリ",
@@ -1663,7 +1809,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1673,6 +1820,8 @@
     "cd":20020,
     "link":false,
     "link_cd":20020,
+    "CV":"池 ちさ子",
+    "cv_kana":"いけ ちさこ",
     "rarity":"シルバー",
     "race":"アンドロイド",
     "category":"ノーカテゴリ",
@@ -1697,7 +1846,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1707,6 +1857,8 @@
     "cd":20021,
     "link":false,
     "link_cd":20021,
+    "CV":"CVなし",
+    "cv_kana":"CVなし",
     "rarity":"ブロンズ",
     "race":"アンドロイド",
     "category":"ノーカテゴリ",
@@ -1731,7 +1883,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1741,6 +1894,8 @@
     "cd":20022,
     "link":false,
     "link_cd":20022,
+    "CV":"朝香 心",
+    "cv_kana":"あさか こころ",
     "rarity":"ブロンズ",
     "race":"アンドロイド",
     "category":"ノーカテゴリ",
@@ -1765,7 +1920,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1775,6 +1931,8 @@
     "cd":20023,
     "link":false,
     "link_cd":20023,
+    "CV":"闇 子丹",
+    "cv_kana":"えん したん",
     "rarity":"ブロンズ",
     "race":"アンドロイド",
     "category":"ノーカテゴリ",
@@ -1799,7 +1957,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1809,6 +1968,8 @@
     "cd":20024,
     "link":false,
     "link_cd":20024,
+    "CV":"福田 聖月",
+    "cv_kana":"ふくだ みつき",
     "rarity":"ブロンズ",
     "race":"アンドロイド",
     "category":"ノーカテゴリ",
@@ -1833,7 +1994,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1843,6 +2005,8 @@
     "cd":20025,
     "link":false,
     "link_cd":20025,
+    "CV":"加藤 慎也",
+    "cv_kana":"かとう しんや",
     "rarity":"レジェンド",
     "race":"アンドロイド",
     "category":"ノーカテゴリ",
@@ -1867,7 +2031,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1877,6 +2042,8 @@
     "cd":20026,
     "link":false,
     "link_cd":20026,
+    "CV":"彩月 ちさと",
+    "cv_kana":"あやつき ちさと",
     "rarity":"ゴールド",
     "race":"アンドロイド",
     "category":"ノーカテゴリ",
@@ -1901,7 +2068,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1911,6 +2079,8 @@
     "cd":20027,
     "link":false,
     "link_cd":20027,
+    "CV":"土居 通聡",
+    "cv_kana":"どい みちあき",
     "rarity":"シルバー",
     "race":"アンドロイド",
     "category":"ノーカテゴリ",
@@ -1935,7 +2105,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1945,6 +2116,8 @@
     "cd":20028,
     "link":false,
     "link_cd":20028,
+    "CV":"堂坂 有希",
+    "cv_kana":"どうさか ゆうき",
     "rarity":"シルバー",
     "race":"アンドロイド",
     "category":"ノーカテゴリ",
@@ -1969,7 +2142,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -1979,6 +2153,8 @@
     "cd":20029,
     "link":false,
     "link_cd":20029,
+    "CV":"さかえ りょう",
+    "cv_kana":"さかえ りょう",
     "rarity":"ブロンズ",
     "race":"アンドロイド",
     "category":"ノーカテゴリ",
@@ -2003,7 +2179,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2013,6 +2190,8 @@
     "cd":20030,
     "link":false,
     "link_cd":20030,
+    "CV":"伊咲 いおり",
+    "cv_kana":"いさき いおり",
     "rarity":"シルバー",
     "race":"アンドロイド",
     "category":"ノーカテゴリ",
@@ -2037,7 +2216,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2047,6 +2227,8 @@
     "cd":30001,
     "link":false,
     "link_cd":30001,
+    "CV":"宮内 倖羽",
+    "cv_kana":"みやうち こはね",
     "rarity":"ゴールド",
     "race":"エレメンタル",
     "category":"ナチュリア",
@@ -2071,7 +2253,8 @@
     "life_effect":"",
     "power_effect":"DOWN",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2081,6 +2264,8 @@
     "cd":30002,
     "link":false,
     "link_cd":30002,
+    "CV":"橘 立夏",
+    "cv_kana":"たちばな りっか",
     "rarity":"ブロンズ",
     "race":"エレメンタル",
     "category":"ナチュリア",
@@ -2105,7 +2290,8 @@
     "life_effect":"",
     "power_effect":"DOWN",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2115,6 +2301,8 @@
     "cd":30003,
     "link":false,
     "link_cd":30003,
+    "CV":"成宮 杏",
+    "cv_kana":"なるみや あん",
     "rarity":"シルバー",
     "race":"エレメンタル",
     "category":"ナチュリア",
@@ -2139,7 +2327,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2149,6 +2338,8 @@
     "cd":30004,
     "link":false,
     "link_cd":30004,
+    "CV":"都帆 衿朱",
+    "cv_kana":"とほ えりす",
     "rarity":"レジェンド",
     "race":"エレメンタル",
     "category":"ナチュリア",
@@ -2173,7 +2364,8 @@
     "life_effect":"",
     "power_effect":"DOWN",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2183,6 +2375,8 @@
     "cd":30005,
     "link":false,
     "link_cd":30005,
+    "CV":"都帆 衿朱",
+    "cv_kana":"とほ えりす",
     "rarity":"レジェンド",
     "race":"エレメンタル",
     "category":"ナチュリア",
@@ -2207,7 +2401,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2217,6 +2412,8 @@
     "cd":30006,
     "link":false,
     "link_cd":30006,
+    "CV":"一寺 美穂",
+    "cv_kana":"いちでら みほ",
     "rarity":"ブロンズ",
     "race":"エレメンタル",
     "category":"ナチュリア",
@@ -2241,7 +2438,8 @@
     "life_effect":"",
     "power_effect":"DOWN",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2251,6 +2449,8 @@
     "cd":30007,
     "link":false,
     "link_cd":30007,
+    "CV":"二階堂 結",
+    "cv_kana":"にかいどう ゆい",
     "rarity":"ゴールド",
     "race":"エレメンタル",
     "category":"ナチュリア",
@@ -2275,7 +2475,8 @@
     "life_effect":"",
     "power_effect":"DOWN",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2285,6 +2486,8 @@
     "cd":30008,
     "link":false,
     "link_cd":30008,
+    "CV":"彩月 ちさと",
+    "cv_kana":"あやつき ちさと",
     "rarity":"シルバー",
     "race":"エレメンタル",
     "category":"ナチュリア",
@@ -2309,7 +2512,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2319,6 +2523,8 @@
     "cd":30009,
     "link":false,
     "link_cd":30009,
+    "CV":"一寺 美穂",
+    "cv_kana":"いちでら みほ",
     "rarity":"レジェンド",
     "race":"エレメンタル",
     "category":"鬼刹（きせつ）",
@@ -2343,7 +2549,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2353,6 +2560,8 @@
     "cd":30010,
     "link":false,
     "link_cd":30010,
+    "CV":"前内 孝文",
+    "cv_kana":"まえうち たかふみ",
     "rarity":"シルバー",
     "race":"エレメンタル",
     "category":"鬼刹（きせつ）",
@@ -2377,7 +2586,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2387,6 +2597,8 @@
     "cd":30011,
     "link":false,
     "link_cd":30011,
+    "CV":"福田 聖月",
+    "cv_kana":"ふくだ みつき",
     "rarity":"ブロンズ",
     "race":"エレメンタル",
     "category":"鬼刹（きせつ）",
@@ -2411,7 +2623,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2421,6 +2634,8 @@
     "cd":30012,
     "link":false,
     "link_cd":30012,
+    "CV":"池 ちさ子",
+    "cv_kana":"いけ ちさこ",
     "rarity":"シルバー",
     "race":"エレメンタル",
     "category":"鬼刹（きせつ）",
@@ -2445,7 +2660,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2455,6 +2671,8 @@
     "cd":30013,
     "link":false,
     "link_cd":30013,
+    "CV":"福田 聖月",
+    "cv_kana":"ふくだ みつき",
     "rarity":"ゴールド",
     "race":"エレメンタル",
     "category":"鬼刹（きせつ）",
@@ -2479,7 +2697,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2489,6 +2708,8 @@
     "cd":30014,
     "link":false,
     "link_cd":30014,
+    "CV":"一 潤",
+    "cv_kana":"いち じゅん",
     "rarity":"ブロンズ",
     "race":"エレメンタル",
     "category":"鬼刹（きせつ）",
@@ -2513,7 +2734,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2523,6 +2745,8 @@
     "cd":30015,
     "link":false,
     "link_cd":30015,
+    "CV":"柏木 智仁",
+    "cv_kana":"かしわぎ ともひと",
     "rarity":"レジェンド",
     "race":"エレメンタル",
     "category":"鬼刹（きせつ）",
@@ -2547,7 +2771,8 @@
     "life_effect":"OPPO_DAMAGE",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2557,6 +2782,8 @@
     "cd":30016,
     "link":false,
     "link_cd":30016,
+    "CV":"園枝 大輝",
+    "cv_kana":"そのえだ だいき",
     "rarity":"ゴールド",
     "race":"エレメンタル",
     "category":"鬼刹（きせつ）",
@@ -2581,7 +2808,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2591,6 +2819,8 @@
     "cd":30017,
     "link":false,
     "link_cd":30017,
+    "CV":"小堀 真生",
+    "cv_kana":"こぼり まお",
     "rarity":"レジェンド",
     "race":"エレメンタル",
     "category":"ノーカテゴリ",
@@ -2615,7 +2845,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"UP",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2625,6 +2856,8 @@
     "cd":30018,
     "link":false,
     "link_cd":30018,
+    "CV":"漢那 仁史",
+    "cv_kana":"かんな ひとし",
     "rarity":"シルバー",
     "race":"エレメンタル",
     "category":"ノーカテゴリ",
@@ -2649,7 +2882,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2659,6 +2893,8 @@
     "cd":30019,
     "link":false,
     "link_cd":30019,
+    "CV":"津々良 篤",
+    "cv_kana":"つづら あつし",
     "rarity":"レジェンド",
     "race":"エレメンタル",
     "category":"ノーカテゴリ",
@@ -2683,7 +2919,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2693,6 +2930,8 @@
     "cd":30020,
     "link":false,
     "link_cd":30020,
+    "CV":"槙野 旦",
+    "cv_kana":"まきの だん",
     "rarity":"ブロンズ",
     "race":"エレメンタル",
     "category":"ノーカテゴリ",
@@ -2717,7 +2956,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2727,6 +2967,8 @@
     "cd":30021,
     "link":false,
     "link_cd":30021,
+    "CV":"音羽 れの",
+    "cv_kana":"おとわ れの",
     "rarity":"ブロンズ",
     "race":"エレメンタル",
     "category":"ノーカテゴリ",
@@ -2751,7 +2993,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2761,6 +3004,8 @@
     "cd":30022,
     "link":false,
     "link_cd":30022,
+    "CV":"土居 通聡",
+    "cv_kana":"どい みちあき",
     "rarity":"ブロンズ",
     "race":"エレメンタル",
     "category":"ノーカテゴリ",
@@ -2785,7 +3030,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"UP",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2795,6 +3041,8 @@
     "cd":30023,
     "link":false,
     "link_cd":30023,
+    "CV":"乾 真由璃",
+    "cv_kana":"いぬい まゆり",
     "rarity":"ブロンズ",
     "race":"エレメンタル",
     "category":"ノーカテゴリ",
@@ -2819,7 +3067,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2829,6 +3078,8 @@
     "cd":30024,
     "link":true,
     "link_cd":30024,
+    "CV":"梶原 信也",
+    "cv_kana":"かじわら しんや",
     "rarity":"ゴールド",
     "race":"エレメンタル",
     "category":"ノーカテゴリ",
@@ -2853,7 +3104,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2863,6 +3115,8 @@
     "cd":30025,
     "link":false,
     "link_cd":30025,
+    "CV":"積木 瑞希",
+    "cv_kana":"つみき みずき",
     "rarity":"シルバー",
     "race":"エレメンタル",
     "category":"ノーカテゴリ",
@@ -2887,7 +3141,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"UP",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2897,6 +3152,8 @@
     "cd":30026,
     "link":false,
     "link_cd":30026,
+    "CV":"成宮 杏",
+    "cv_kana":"なるみや あん",
     "rarity":"ゴールド",
     "race":"エレメンタル",
     "category":"ノーカテゴリ",
@@ -2921,7 +3178,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2931,6 +3189,8 @@
     "cd":30027,
     "link":false,
     "link_cd":30027,
+    "CV":"朝香 心",
+    "cv_kana":"あさか こころ",
     "rarity":"ゴールド",
     "race":"エレメンタル",
     "category":"ノーカテゴリ",
@@ -2955,7 +3215,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2965,6 +3226,8 @@
     "cd":30028,
     "link":false,
     "link_cd":30028,
+    "CV":"飯嶋 涼夏",
+    "cv_kana":"いいじま すずか",
     "rarity":"シルバー",
     "race":"エレメンタル",
     "category":"ノーカテゴリ",
@@ -2989,7 +3252,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -2999,6 +3263,8 @@
     "cd":30029,
     "link":false,
     "link_cd":30029,
+    "CV":"林 祐人",
+    "cv_kana":"はやし ゆうと",
     "rarity":"シルバー",
     "race":"エレメンタル",
     "category":"ノーカテゴリ",
@@ -3023,7 +3289,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3033,6 +3300,8 @@
     "cd":30030,
     "link":false,
     "link_cd":30030,
+    "CV":"槙野 旦",
+    "cv_kana":"まきの だん",
     "rarity":"ブロンズ",
     "race":"エレメンタル",
     "category":"ノーカテゴリ",
@@ -3057,7 +3326,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"UP",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3067,6 +3337,8 @@
     "cd":40001,
     "link":false,
     "link_cd":40001,
+    "CV":"槙野 旦",
+    "cv_kana":"まきの だん",
     "rarity":"レジェンド",
     "race":"ルミナス",
     "category":"ロスリス",
@@ -3091,7 +3363,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3101,6 +3374,8 @@
     "cd":40002,
     "link":false,
     "link_cd":40002,
+    "CV":"北原 知奈",
+    "cv_kana":"きたはら ちな",
     "rarity":"ゴールド",
     "race":"ルミナス",
     "category":"ロスリス",
@@ -3125,7 +3400,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3135,6 +3411,8 @@
     "cd":40003,
     "link":false,
     "link_cd":40003,
+    "CV":"日々 優理香",
+    "cv_kana":"ひび ゆりこ",
     "rarity":"レジェンド",
     "race":"ルミナス",
     "category":"ロスリス",
@@ -3159,7 +3437,8 @@
     "life_effect":"OPPO_DAMAGE",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3169,6 +3448,8 @@
     "cd":40004,
     "link":false,
     "link_cd":40004,
+    "CV":"砂田 佑樹",
+    "cv_kana":"すなだ ゆうき",
     "rarity":"シルバー",
     "race":"ルミナス",
     "category":"ロスリス",
@@ -3193,7 +3474,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3203,6 +3485,8 @@
     "cd":40005,
     "link":false,
     "link_cd":40005,
+    "CV":"生井沢 優太",
+    "cv_kana":"なまいざわ ゆうた",
     "rarity":"ブロンズ",
     "race":"ルミナス",
     "category":"ロスリス",
@@ -3227,7 +3511,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3237,6 +3522,8 @@
     "cd":40006,
     "link":false,
     "link_cd":40006,
+    "CV":"鳴島 萌華",
+    "cv_kana":"なるしま もえか",
     "rarity":"レジェンド",
     "race":"ルミナス",
     "category":"ロスリス",
@@ -3261,7 +3548,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3271,6 +3559,8 @@
     "cd":40007,
     "link":false,
     "link_cd":40007,
+    "CV":"紀ノ 貴紀",
+    "cv_kana":"きの たかのり",
     "rarity":"シルバー",
     "race":"ルミナス",
     "category":"ロスリス",
@@ -3295,7 +3585,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3305,6 +3596,8 @@
     "cd":40008,
     "link":false,
     "link_cd":40008,
+    "CV":"石川 栄一",
+    "cv_kana":"いしかわ えいいち",
     "rarity":"ブロンズ",
     "race":"ルミナス",
     "category":"ロスリス",
@@ -3329,7 +3622,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3339,6 +3633,8 @@
     "cd":40009,
     "link":false,
     "link_cd":40009,
+    "CV":"あまの あきこ",
+    "cv_kana":"あまの あきこ",
     "rarity":"レジェンド",
     "race":"ルミナス",
     "category":"白騎士",
@@ -3363,7 +3659,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3373,6 +3670,8 @@
     "cd":40010,
     "link":false,
     "link_cd":40010,
+    "CV":"土居 通聡",
+    "cv_kana":"どい みちあき",
     "rarity":"レジェンド",
     "race":"ルミナス",
     "category":"白騎士",
@@ -3397,7 +3696,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3407,6 +3707,8 @@
     "cd":40011,
     "link":false,
     "link_cd":40011,
+    "CV":"宮元 悠里",
+    "cv_kana":"みやもと ゆうり",
     "rarity":"ゴールド",
     "race":"ルミナス",
     "category":"白騎士",
@@ -3431,7 +3733,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3441,6 +3744,8 @@
     "cd":40012,
     "link":false,
     "link_cd":40012,
+    "CV":"堂坂 有希",
+    "cv_kana":"どうさか ゆうき",
     "rarity":"シルバー",
     "race":"ルミナス",
     "category":"白騎士",
@@ -3465,7 +3770,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3475,6 +3781,8 @@
     "cd":40013,
     "link":false,
     "link_cd":40013,
+    "CV":"小堀 真生",
+    "cv_kana":"こぼり まお",
     "rarity":"ゴールド",
     "race":"ルミナス",
     "category":"白騎士",
@@ -3499,7 +3807,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3509,6 +3818,8 @@
     "cd":40014,
     "link":false,
     "link_cd":40014,
+    "CV":"さかえ りょう",
+    "cv_kana":"さかえ りょう",
     "rarity":"ブロンズ",
     "race":"ルミナス",
     "category":"白騎士",
@@ -3533,7 +3844,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3543,6 +3855,8 @@
     "cd":40015,
     "link":false,
     "link_cd":40015,
+    "CV":"茶熊 にじ",
+    "cv_kana":"ちゃぐま にじ",
     "rarity":"シルバー",
     "race":"ルミナス",
     "category":"白騎士",
@@ -3567,7 +3881,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3577,6 +3892,8 @@
     "cd":40016,
     "link":false,
     "link_cd":40016,
+    "CV":"嶺本 翔馬",
+    "cv_kana":"みねもと しょうま",
     "rarity":"ブロンズ",
     "race":"ルミナス",
     "category":"白騎士",
@@ -3601,7 +3918,8 @@
     "life_effect":"HEAL",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3611,6 +3929,8 @@
     "cd":40017,
     "link":false,
     "link_cd":40017,
+    "CV":"梶原 信也",
+    "cv_kana":"かじわら しんや",
     "rarity":"レジェンド",
     "race":"ルミナス",
     "category":"ノーカテゴリ",
@@ -3635,7 +3955,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3645,6 +3966,8 @@
     "cd":40018,
     "link":false,
     "link_cd":40018,
+    "CV":"橘 立夏",
+    "cv_kana":"たちばな りっか",
     "rarity":"レジェンド",
     "race":"ルミナス",
     "category":"ノーカテゴリ",
@@ -3669,7 +3992,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3679,6 +4003,8 @@
     "cd":40019,
     "link":false,
     "link_cd":40019,
+    "CV":"漢那 仁史",
+    "cv_kana":"かんな ひとし",
     "rarity":"ゴールド",
     "race":"ルミナス",
     "category":"ノーカテゴリ",
@@ -3703,7 +4029,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3713,6 +4040,8 @@
     "cd":40020,
     "link":true,
     "link_cd":40020,
+    "CV":"八木 大貴",
+    "cv_kana":"やぎ ひろき",
     "rarity":"ゴールド",
     "race":"ルミナス",
     "category":"ノーカテゴリ",
@@ -3737,7 +4066,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3747,6 +4077,8 @@
     "cd":40021,
     "link":false,
     "link_cd":40021,
+    "CV":"新田 純輝",
+    "cv_kana":"にった じゅんき",
     "rarity":"ブロンズ",
     "race":"ルミナス",
     "category":"ノーカテゴリ",
@@ -3771,7 +4103,8 @@
     "life_effect":"HEAL",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3781,6 +4114,8 @@
     "cd":40022,
     "link":false,
     "link_cd":40022,
+    "CV":"二階堂 結",
+    "cv_kana":"にかいどう ゆい",
     "rarity":"ブロンズ",
     "race":"ルミナス",
     "category":"ノーカテゴリ",
@@ -3805,7 +4140,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3815,6 +4151,8 @@
     "cd":40023,
     "link":false,
     "link_cd":40023,
+    "CV":"堀内 祐花",
+    "cv_kana":"ほりうち ゆうか",
     "rarity":"ブロンズ",
     "race":"ルミナス",
     "category":"ノーカテゴリ",
@@ -3839,7 +4177,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3849,6 +4188,8 @@
     "cd":40024,
     "link":false,
     "link_cd":40024,
+    "CV":"池辺 久美子",
+    "cv_kana":"いけべ くみこ",
     "rarity":"シルバー",
     "race":"ルミナス",
     "category":"ノーカテゴリ",
@@ -3873,7 +4214,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3883,6 +4225,8 @@
     "cd":40025,
     "link":false,
     "link_cd":40025,
+    "CV":"さかえ りょう",
+    "cv_kana":"さかえ りょう",
     "rarity":"シルバー",
     "race":"ルミナス",
     "category":"ノーカテゴリ",
@@ -3907,7 +4251,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3917,6 +4262,8 @@
     "cd":40026,
     "link":false,
     "link_cd":40026,
+    "CV":"前内 孝文",
+    "cv_kana":"まえうち たかふみ",
     "rarity":"ブロンズ",
     "race":"ルミナス",
     "category":"ノーカテゴリ",
@@ -3941,7 +4288,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3951,6 +4299,8 @@
     "cd":40027,
     "link":false,
     "link_cd":40027,
+    "CV":"CVなし",
+    "cv_kana":"CVなし",
     "rarity":"ゴールド",
     "race":"ルミナス",
     "category":"ノーカテゴリ",
@@ -3975,7 +4325,8 @@
     "life_effect":"HEAL",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -3985,6 +4336,8 @@
     "cd":40028,
     "link":false,
     "link_cd":40028,
+    "CV":"こりす",
+    "cv_kana":"こりす",
     "rarity":"シルバー",
     "race":"ルミナス",
     "category":"ノーカテゴリ",
@@ -4009,7 +4362,8 @@
     "life_effect":"HEAL",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4019,6 +4373,8 @@
     "cd":40029,
     "link":false,
     "link_cd":40029,
+    "CV":"津々良 篤",
+    "cv_kana":"つづら あつし",
     "rarity":"シルバー",
     "race":"ルミナス",
     "category":"ノーカテゴリ",
@@ -4043,7 +4399,8 @@
     "life_effect":"HEAL",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4053,6 +4410,8 @@
     "cd":40030,
     "link":false,
     "link_cd":40030,
+    "CV":"齋藤 響",
+    "cv_kana":"さいとう ひびき",
     "rarity":"ブロンズ",
     "race":"ルミナス",
     "category":"ノーカテゴリ",
@@ -4077,7 +4436,8 @@
     "life_effect":"HEAL",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4087,6 +4447,8 @@
     "cd":50001,
     "link":false,
     "link_cd":50001,
+    "CV":"砂田 佑樹",
+    "cv_kana":"すなだ ゆうき",
     "rarity":"ゴールド",
     "race":"シェイド",
     "category":"昏き霊園（スレイヴヤード）",
@@ -4111,7 +4473,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4121,6 +4484,8 @@
     "cd":50002,
     "link":false,
     "link_cd":50002,
+    "CV":"堀内 祐花",
+    "cv_kana":"ほりうち ゆうか",
     "rarity":"シルバー",
     "race":"シェイド",
     "category":"昏き霊園（スレイヴヤード）",
@@ -4145,7 +4510,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"DOWN",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4155,6 +4521,8 @@
     "cd":50003,
     "link":false,
     "link_cd":50003,
+    "CV":"生井沢 優太",
+    "cv_kana":"なまいざわ ゆうた",
     "rarity":"ゴールド",
     "race":"シェイド",
     "category":"昏き霊園（スレイヴヤード）",
@@ -4179,7 +4547,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"DOWN",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4189,6 +4558,8 @@
     "cd":50004,
     "link":false,
     "link_cd":50004,
+    "CV":"林 祐人",
+    "cv_kana":"はやし ゆうと",
     "rarity":"ブロンズ",
     "race":"シェイド",
     "category":"昏き霊園（スレイヴヤード）",
@@ -4213,7 +4584,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"DOWN",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4223,6 +4595,8 @@
     "cd":50005,
     "link":false,
     "link_cd":50005,
+    "CV":"石川 栄一",
+    "cv_kana":"いしかわ えいいち",
     "rarity":"ブロンズ",
     "race":"シェイド",
     "category":"昏き霊園（スレイヴヤード）",
@@ -4247,7 +4621,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"DOWN",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4257,6 +4632,8 @@
     "cd":50006,
     "link":false,
     "link_cd":50006,
+    "CV":"音羽 れの",
+    "cv_kana":"おとわ れの",
     "rarity":"シルバー",
     "race":"シェイド",
     "category":"昏き霊園（スレイヴヤード）",
@@ -4281,7 +4658,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4291,6 +4669,8 @@
     "cd":50007,
     "link":false,
     "link_cd":50007,
+    "CV":"飯嶋 涼夏",
+    "cv_kana":"いいじま すずか",
     "rarity":"レジェンド",
     "race":"シェイド",
     "category":"昏き霊園（スレイヴヤード）",
@@ -4315,7 +4695,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"DOWN",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4325,6 +4706,8 @@
     "cd":50008,
     "link":false,
     "link_cd":50008,
+    "CV":"鳴島 萌華",
+    "cv_kana":"なるしま もえか",
     "rarity":"レジェンド",
     "race":"シェイド",
     "category":"昏き霊園（スレイヴヤード）",
@@ -4349,7 +4732,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4359,6 +4743,8 @@
     "cd":50009,
     "link":false,
     "link_cd":50009,
+    "CV":"橘高 けい",
+    "cv_kana":"きだか けい",
     "rarity":"ゴールド",
     "race":"シェイド",
     "category":"マディスキア",
@@ -4383,7 +4769,8 @@
     "life_effect":"",
     "power_effect":"DOWN",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4393,6 +4780,8 @@
     "cd":50010,
     "link":false,
     "link_cd":50010,
+    "CV":"都帆 衿朱",
+    "cv_kana":"とほ えりす",
     "rarity":"シルバー",
     "race":"シェイド",
     "category":"マディスキア",
@@ -4417,7 +4806,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4427,6 +4817,8 @@
     "cd":50011,
     "link":false,
     "link_cd":50011,
+    "CV":"積木 瑞希",
+    "cv_kana":"つみき みずき",
     "rarity":"ブロンズ",
     "race":"シェイド",
     "category":"マディスキア",
@@ -4451,7 +4843,8 @@
     "life_effect":"",
     "power_effect":"DOWN",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4461,6 +4854,8 @@
     "cd":50012,
     "link":false,
     "link_cd":50012,
+    "CV":"星乃 真衣",
+    "cv_kana":"ほしの まい",
     "rarity":"ゴールド",
     "race":"シェイド",
     "category":"マディスキア",
@@ -4485,7 +4880,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4495,6 +4891,8 @@
     "cd":50013,
     "link":false,
     "link_cd":50013,
+    "CV":"橋本 千明",
+    "cv_kana":"はしもと ちあき",
     "rarity":"レジェンド",
     "race":"シェイド",
     "category":"マディスキア",
@@ -4519,7 +4917,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4529,6 +4928,8 @@
     "cd":50014,
     "link":false,
     "link_cd":50014,
+    "CV":"こりす",
+    "cv_kana":"こりす",
     "rarity":"シルバー",
     "race":"シェイド",
     "category":"マディスキア",
@@ -4553,7 +4954,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4563,6 +4965,8 @@
     "cd":50015,
     "link":false,
     "link_cd":50015,
+    "CV":"鷲尾 侑南",
+    "cv_kana":"わしお ゆうな",
     "rarity":"ゴールド",
     "race":"シェイド",
     "category":"マディスキア",
@@ -4587,7 +4991,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4597,6 +5002,8 @@
     "cd":50016,
     "link":false,
     "link_cd":50016,
+    "CV":"乾 真由璃",
+    "cv_kana":"いぬい まゆり",
     "rarity":"ブロンズ",
     "race":"シェイド",
     "category":"マディスキア",
@@ -4621,7 +5028,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4631,6 +5039,8 @@
     "cd":50017,
     "link":false,
     "link_cd":50017,
+    "CV":"北原 知奈",
+    "cv_kana":"きたはら ちな",
     "rarity":"レジェンド",
     "race":"シェイド",
     "category":"マディスキア",
@@ -4655,7 +5065,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4665,6 +5076,8 @@
     "cd":50018,
     "link":true,
     "link_cd":50018,
+    "CV":"津々良 篤",
+    "cv_kana":"つづら あつし",
     "rarity":"ゴールド",
     "race":"シェイド",
     "category":"ノーカテゴリ",
@@ -4689,7 +5102,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4699,6 +5113,8 @@
     "cd":50019,
     "link":false,
     "link_cd":50019,
+    "CV":"村上 紀生",
+    "cv_kana":"むらかみ のりお",
     "rarity":"レジェンド",
     "race":"シェイド",
     "category":"ノーカテゴリ",
@@ -4723,7 +5139,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4733,6 +5150,8 @@
     "cd":50020,
     "link":false,
     "link_cd":50020,
+    "CV":"闇 子丹",
+    "cv_kana":"えん したん",
     "rarity":"レジェンド",
     "race":"シェイド",
     "category":"ノーカテゴリ",
@@ -4757,7 +5176,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"DOWN",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4767,6 +5187,8 @@
     "cd":50021,
     "link":false,
     "link_cd":50021,
+    "CV":"加藤 慎也",
+    "cv_kana":"かとう しんや",
     "rarity":"ブロンズ",
     "race":"シェイド",
     "category":"ノーカテゴリ",
@@ -4791,7 +5213,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4801,6 +5224,8 @@
     "cd":50022,
     "link":false,
     "link_cd":50022,
+    "CV":"八木 大貴",
+    "cv_kana":"やぎ ひろき",
     "rarity":"ブロンズ",
     "race":"シェイド",
     "category":"ノーカテゴリ",
@@ -4825,7 +5250,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"DOWN",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4835,6 +5261,8 @@
     "cd":50023,
     "link":false,
     "link_cd":50023,
+    "CV":"八木 大貴",
+    "cv_kana":"やぎ ひろき",
     "rarity":"シルバー",
     "race":"シェイド",
     "category":"ノーカテゴリ",
@@ -4859,7 +5287,8 @@
     "life_effect":"OPPO_DAMAGE",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4869,6 +5298,8 @@
     "cd":50024,
     "link":false,
     "link_cd":50024,
+    "CV":"北原 知奈",
+    "cv_kana":"きたはら ちな",
     "rarity":"ブロンズ",
     "race":"シェイド",
     "category":"ノーカテゴリ",
@@ -4893,7 +5324,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4903,6 +5335,8 @@
     "cd":50025,
     "link":false,
     "link_cd":50025,
+    "CV":"前内 孝文",
+    "cv_kana":"まえうち たかふみ",
     "rarity":"ブロンズ",
     "race":"シェイド",
     "category":"ノーカテゴリ",
@@ -4927,7 +5361,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4937,6 +5372,8 @@
     "cd":50026,
     "link":false,
     "link_cd":50026,
+    "CV":"鷲尾 侑南",
+    "cv_kana":"わしお ゆうな",
     "rarity":"シルバー",
     "race":"シェイド",
     "category":"ノーカテゴリ",
@@ -4961,7 +5398,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -4971,6 +5409,8 @@
     "cd":50027,
     "link":false,
     "link_cd":50027,
+    "CV":"伊咲 いおり",
+    "cv_kana":"いさき いおり",
     "rarity":"ゴールド",
     "race":"シェイド",
     "category":"ノーカテゴリ",
@@ -4995,7 +5435,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"DOWN",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5005,6 +5446,8 @@
     "cd":50028,
     "link":false,
     "link_cd":50028,
+    "CV":"宮崎 綸",
+    "cv_kana":"みやざき りん",
     "rarity":"レジェンド",
     "race":"シェイド",
     "category":"ノーカテゴリ",
@@ -5029,7 +5472,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5039,6 +5483,8 @@
     "cd":50029,
     "link":false,
     "link_cd":50029,
+    "CV":"あまの あきこ",
+    "cv_kana":"あまの あきこ",
     "rarity":"シルバー",
     "race":"シェイド",
     "category":"ノーカテゴリ",
@@ -5063,7 +5509,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5073,6 +5520,8 @@
     "cd":50030,
     "link":false,
     "link_cd":50030,
+    "CV":"新田 純輝",
+    "cv_kana":"にった じゅんき",
     "rarity":"シルバー",
     "race":"シェイド",
     "category":"ノーカテゴリ",
@@ -5097,7 +5546,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5107,6 +5557,8 @@
     "cd":50031,
     "link":false,
     "link_cd":50031,
+    "CV":"小堀 真生",
+    "cv_kana":"こぼり まお",
     "rarity":"ブロンズ",
     "race":"シェイド",
     "category":"ノーカテゴリ",
@@ -5131,7 +5583,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"DOWN",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5141,6 +5594,8 @@
     "cd":80001,
     "link":false,
     "link_cd":80001,
+    "CV":"齋藤 響",
+    "cv_kana":"さいとう ひびき",
     "rarity":"ゴールド",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5165,7 +5620,8 @@
     "life_effect":"OPPO_DAMAGE",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5175,6 +5631,8 @@
     "cd":80002,
     "link":false,
     "link_cd":80002,
+    "CV":"柏木 智仁",
+    "cv_kana":"かしわぎ ともひと",
     "rarity":"レジェンド",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5199,7 +5657,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5209,6 +5668,8 @@
     "cd":80003,
     "link":false,
     "link_cd":80003,
+    "CV":"村上 紀生",
+    "cv_kana":"むらかみ のりお",
     "rarity":"シルバー",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5233,7 +5694,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5243,6 +5705,8 @@
     "cd":80005,
     "link":false,
     "link_cd":80005,
+    "CV":"五十嵐 鳴",
+    "cv_kana":"いがらし めい",
     "rarity":"レジェンド",
     "race":"旧神",
     "category":"ノーカテゴリ",
@@ -5267,7 +5731,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5277,6 +5742,8 @@
     "cd":80006,
     "link":false,
     "link_cd":80006,
+    "CV":"宮内 倖羽",
+    "cv_kana":"みやうち こはね",
     "rarity":"ブロンズ",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5301,7 +5768,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"BOTH",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5311,6 +5779,8 @@
     "cd":80007,
     "link":false,
     "link_cd":80007,
+    "CV":"飯嶋 涼夏",
+    "cv_kana":"いいじま すずか",
     "rarity":"ブロンズ",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5335,7 +5805,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"DOWN",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5345,6 +5816,8 @@
     "cd":80008,
     "link":false,
     "link_cd":80008,
+    "CV":"石川 栄一",
+    "cv_kana":"いしかわ えいいち",
     "rarity":"ブロンズ",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5369,7 +5842,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5379,6 +5853,8 @@
     "cd":80009,
     "link":false,
     "link_cd":80009,
+    "CV":"鳴島 萌華",
+    "cv_kana":"なるしま もえか",
     "rarity":"シルバー",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5403,7 +5879,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5413,6 +5890,8 @@
     "cd":80010,
     "link":false,
     "link_cd":80010,
+    "CV":"加藤 慎也",
+    "cv_kana":"かとう しんや",
     "rarity":"ブロンズ",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5437,7 +5916,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5447,6 +5927,8 @@
     "cd":80011,
     "link":false,
     "link_cd":80011,
+    "CV":"砂田 佑樹",
+    "cv_kana":"すなだ ゆうき",
     "rarity":"ブロンズ",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5471,7 +5953,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5481,6 +5964,8 @@
     "cd":80012,
     "link":false,
     "link_cd":80012,
+    "CV":"リア・アマリア",
+    "cv_kana":"りあ あまりあ",
     "rarity":"シルバー",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5505,7 +5990,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5515,6 +6001,8 @@
     "cd":80013,
     "link":false,
     "link_cd":80013,
+    "CV":"北原 知奈",
+    "cv_kana":"きたはら ちな",
     "rarity":"シルバー",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5539,7 +6027,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5549,6 +6038,8 @@
     "cd":80015,
     "link":false,
     "link_cd":80015,
+    "CV":"成宮 杏",
+    "cv_kana":"なるみや あん",
     "rarity":"レジェンド",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5573,7 +6064,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5583,6 +6075,8 @@
     "cd":80016,
     "link":false,
     "link_cd":80016,
+    "CV":"嶺本 翔馬",
+    "cv_kana":"みねもと しょうま",
     "rarity":"ゴールド",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5607,7 +6101,8 @@
     "life_effect":"OPPO_DAMAGE",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5617,6 +6112,8 @@
     "cd":80017,
     "link":false,
     "link_cd":80017,
+    "CV":"積木 瑞希",
+    "cv_kana":"つみき みずき",
     "rarity":"ブロンズ",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5641,7 +6138,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5651,6 +6149,8 @@
     "cd":80018,
     "link":false,
     "link_cd":80018,
+    "CV":"朝香 心",
+    "cv_kana":"あさか こころ",
     "rarity":"ゴールド",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5675,7 +6175,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5685,6 +6186,8 @@
     "cd":80019,
     "link":false,
     "link_cd":80019,
+    "CV":"乙幡 美成",
+    "cv_kana":"おとはた みなり",
     "rarity":"ブロンズ",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5709,7 +6212,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5719,6 +6223,8 @@
     "cd":80021,
     "link":false,
     "link_cd":80021,
+    "CV":"橘 立夏",
+    "cv_kana":"たちばな りっか",
     "rarity":"シルバー",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5743,7 +6249,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5753,6 +6260,8 @@
     "cd":80023,
     "link":false,
     "link_cd":80023,
+    "CV":"橋本 千明",
+    "cv_kana":"はしもと ちあき",
     "rarity":"ゴールド",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5777,7 +6286,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5787,6 +6297,8 @@
     "cd":80024,
     "link":false,
     "link_cd":80024,
+    "CV":"宮内 倖羽",
+    "cv_kana":"みやうち こはね",
     "rarity":"ブロンズ",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5811,7 +6323,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5821,6 +6334,8 @@
     "cd":80025,
     "link":false,
     "link_cd":80025,
+    "CV":"CVなし",
+    "cv_kana":"CVなし",
     "rarity":"ブロンズ",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5845,7 +6360,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5855,6 +6371,8 @@
     "cd":80026,
     "link":false,
     "link_cd":80026,
+    "CV":"紫原 恒星",
+    "cv_kana":"しはら こうせい",
     "rarity":"ブロンズ",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5879,7 +6397,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5889,6 +6408,8 @@
     "cd":80027,
     "link":false,
     "link_cd":80027,
+    "CV":"犬丸 義貴",
+    "cv_kana":"いぬまる よしき",
     "rarity":"ブロンズ",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5913,7 +6434,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5923,6 +6445,8 @@
     "cd":80028,
     "link":false,
     "link_cd":80028,
+    "CV":"漢那 仁史",
+    "cv_kana":"かんな ひとし",
     "rarity":"シルバー",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5947,7 +6471,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5957,6 +6482,8 @@
     "cd":80029,
     "link":false,
     "link_cd":80029,
+    "CV":"闇 子丹",
+    "cv_kana":"えん したん",
     "rarity":"ブロンズ",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -5981,7 +6508,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -5991,6 +6519,8 @@
     "cd":80030,
     "link":false,
     "link_cd":80030,
+    "CV":"CVなし",
+    "cv_kana":"CVなし",
     "rarity":"ブロンズ",
     "race":"イノセント",
     "category":"ノーカテゴリ",
@@ -6015,7 +6545,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -6025,6 +6556,8 @@
     "cd":90001,
     "link":false,
     "link_cd":90001,
+    "CV":"齋藤 響",
+    "cv_kana":"さいとう ひびき",
     "rarity":"レジェンド",
     "race":"旧神",
     "category":"ノーカテゴリ",
@@ -6049,7 +6582,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -6059,6 +6593,8 @@
     "cd":90002,
     "link":false,
     "link_cd":90002,
+    "CV":"石川 栄一",
+    "cv_kana":"いしかわ えいいち",
     "rarity":"レジェンド",
     "race":"旧神",
     "category":"ノーカテゴリ",
@@ -6083,7 +6619,8 @@
     "life_effect":"",
     "power_effect":"UP",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -6093,6 +6630,8 @@
     "cd":90003,
     "link":false,
     "link_cd":90003,
+    "CV":"星乃 真衣",
+    "cv_kana":"ほしの まい",
     "rarity":"レジェンド",
     "race":"旧神",
     "category":"ノーカテゴリ",
@@ -6117,7 +6656,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -6127,6 +6667,8 @@
     "cd":90004,
     "link":false,
     "link_cd":90004,
+    "CV":"林 祐人",
+    "cv_kana":"はやし ゆうと",
     "rarity":"レジェンド",
     "race":"旧神",
     "category":"ノーカテゴリ",
@@ -6151,7 +6693,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -6161,6 +6704,8 @@
     "cd":90005,
     "link":false,
     "link_cd":90005,
+    "CV":"堀内 祐花",
+    "cv_kana":"ほりうち ゆうか",
     "rarity":"レジェンド",
     "race":"旧神",
     "category":"ノーカテゴリ",
@@ -6185,7 +6730,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -6195,6 +6741,8 @@
     "cd":90006,
     "link":false,
     "link_cd":90006,
+    "CV":"こりす",
+    "cv_kana":"こりす",
     "rarity":"レジェンド",
     "race":"旧神",
     "category":"ノーカテゴリ",
@@ -6219,7 +6767,8 @@
     "life_effect":"SELF_DAMAGE",
     "power_effect":"",
     "mana_effect":"UP",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -6229,6 +6778,8 @@
     "cd":90007,
     "link":false,
     "link_cd":90007,
+    "CV":"茶熊 にじ",
+    "cv_kana":"ちゃぐま にじ",
     "rarity":"レジェンド",
     "race":"旧神",
     "category":"ノーカテゴリ",
@@ -6253,7 +6804,8 @@
     "life_effect":"HEAL",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -6263,6 +6815,8 @@
     "cd":90008,
     "link":false,
     "link_cd":90008,
+    "CV":"生井沢 優太",
+    "cv_kana":"なまいざわ ゆうた",
     "rarity":"レジェンド",
     "race":"旧神",
     "category":"ノーカテゴリ",
@@ -6287,7 +6841,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -6297,6 +6852,8 @@
     "cd":90009,
     "link":false,
     "link_cd":90009,
+    "CV":"橘高 けい",
+    "cv_kana":"きだか けい",
     "rarity":"レジェンド",
     "race":"旧神",
     "category":"ノーカテゴリ",
@@ -6321,7 +6878,8 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   },
   {
     "version":1,
@@ -6331,6 +6889,8 @@
     "cd":90011,
     "link":false,
     "link_cd":90011,
+    "CV":"新田 純輝",
+    "cv_kana":"にった じゅんき",
     "rarity":"レジェンド",
     "race":"旧神",
     "category":"ノーカテゴリ",
@@ -6355,6 +6915,7 @@
     "life_effect":"",
     "power_effect":"",
     "mana_effect":"",
-    "CHECK":false
+    "CHECK":false,
+    "cv_id":0
   }
 ]

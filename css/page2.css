@@ -150,6 +150,12 @@
         padding: 4px 0px 0px 0px;
     }
 }
+@media (max-width: 410px) {
+    .deck-bar-top {
+        min-height: 95px;
+        gap: 2px;
+    }
+}
 /*デッキバーカードレイアウト*/
 .deck-card {
     width: 110px;
@@ -163,7 +169,7 @@
 }
 @media (max-width: 768px) {
     .deck-card {
-        width: 80px;
+        width: 85px;
         /* スマホではこのサイズに */
         height: auto;
         /* 縦幅は画像サイズに任せる or 調整 */
@@ -806,26 +812,93 @@
 }
 
 /*=======デッキリストゾーン=======*/
+/*デッキリスト枠*/
+.deck-list-section {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/*デッキリスト見出し*/
+#deck-layout .deck-list-header {
+    flex: 0 0 auto;
+    --subtab-active: #d65a5a;
+    background: linear-gradient(180deg, #fff8f8 0%, #ffecec 100%);
+    padding: 10px 14px;
+    gap: 8px;
+}
+
+#deck-layout .deck-list-header span {
+    display: inline-block;
+    padding: 2px 4px;
+    font-size: clamp(12px, 2.6vw, 15px);
+    position: relative;
+}
+
+#deck-layout .deck-list-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#deck-layout .deck-representative-open,
+#deck-layout .deck-count-adjust-toggle {
+    height: 26px;
+    padding: 0 8px;
+    border: 1px solid rgba(0, 0, 0, .18);
+    border-radius: 8px;
+    background: linear-gradient(180deg, #e9f5fb 0%, #d4ecfa 100%);
+    color: #1f3f5f;
+    cursor: pointer;
+}
+
+#deck-layout .deck-representative-open:focus-visible,
+#deck-layout .deck-count-adjust-toggle:focus-visible {
+    outline: 2px solid #1f6feb;
+    outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+    #deck-layout .deck-list-header {
+        padding: 6px 8px;
+        gap: 6px;
+    }
+
+    #deck-layout .deck-list-actions {
+        gap: 4px;
+    }
+
+    #deck-layout .deck-representative-open,
+    #deck-layout .deck-count-adjust-toggle {
+        height: 24px;
+        padding: 0 6px;
+        font-size: 12px;
+        line-height: 1;
+        white-space: nowrap;
+    }
+}
+
+
 /*カードリスト画面*/
 #deck-card-list {
     position: relative;
-    background-image: url(../img/cardlist.webp);
-    background-repeat: no-repeat;
-    background-size: cover;
-    background-position: center;
+    background: linear-gradient(180deg, #fff8f8 0%, #ffecec 100%);
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     /* 横5列 */
-    gap: 4px;
+    gap: 2px;
     padding: 8px;
-    min-height: 140px;
+    min-height: 85px;
     align-content: start;
     justify-content: start;
     overflow-y: auto;
     max-height: none;
 }
 
-@media (min-width: 700px) {
+@media (min-width: 768px) {
 #deck-card-list {
         flex: 1;
         min-width: 0;
@@ -833,23 +906,28 @@
 }
 
 /*種族別背景*/
-.race-bg-ドラゴン {
+.race-bg-ドラゴン,
+#deck-card-list.race-bg-ドラゴン {
     background: var(--race-dragon-bg);
 }
 
-.race-bg-アンドロイド {
+.race-bg-アンドロイド,
+#deck-card-list.race-bg-アンドロイド {
     background: var(--race-android-bg);
 }
 
-.race-bg-エレメンタル {
+.race-bg-エレメンタル,
+#deck-card-list.race-bg-エレメンタル {
     background: var(--race-elemental-bg);
 }
 
-.race-bg-ルミナス {
+.race-bg-ルミナス,
+#deck-card-list.race-bg-ルミナス {
     background: var(--race-luminous-bg);
 }
 
-.race-bg-シェイド {
+.race-bg-シェイド,
+#deck-card-list.race-bg-シェイド {
     background: var(--race-shade-bg);
 }
 
@@ -859,9 +937,11 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: white;
-    opacity: 0.8;
-    text-shadow: 1px 1px 2px #000;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #7f1d1d;
+    opacity: 0.9;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, .8);
     text-align: center;
     pointer-events: none;
     z-index: 1;
@@ -870,208 +950,89 @@
 /*各カード*/
 .deck-entry {
     position: relative;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     box-sizing: border-box;
+    padding: 0px 2px;
+    border: 1px solid rgba(0, 0, 0, .14);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .76);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
     cursor: pointer;
-    aspect-ratio: 424 / 532;
 }
 
 .deck-entry img {
     width: 100%;
+    aspect-ratio: 424 / 532;
     height: auto;
     display: block;
     border-radius: 6px;
 }
+
+.deck-entry-count-controls {
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    padding-top: 2px;
+}
+@media (max-width: 768px) {
+    .deck-entry-count-controls {
+        gap: 2px;
+    }
+}
+
+#deck-card-list.is-count-controls-visible .deck-entry-count-controls {
+    display: grid;
+}
+
+.deck-entry-count-btn {
+    min-width: 0;
+    padding: .15rem .2rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    color: #1f2937;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: clamp(.72rem, 1.5vw, 1rem);
+    line-height: 1.1;
+}
+@media (max-width: 768px) {
+    .deck-entry-count-btn {
+        font-size: clamp(.5rem, 2vw, 1rem);
+        padding: .1rem .15rem;
+    }
+}
+
+.deck-entry-count-btn:hover {
+    background: #f8fafc;
+}
+
+.deck-entry-count-btn:active {
+    transform: scale(0.985);
+}
+
+.deck-entry-count-btn:focus-visible {
+    outline: 2px solid #1f6feb;
+    outline-offset: 2px;
+}
+
+.deck-entry-count-btn:disabled {
+    background: #e5e7eb;
+    color: #8a8f98;
+    border-color: #cfd4dc;
+    cursor: not-allowed;
+    filter: grayscale(.35);
+    opacity: .75;
+}
+
 /*メインカード*/
 .deck-entry.representative {
     outline: 3px solid crimson;
     outline-offset: -2px;
     border-radius: 6px;
     box-shadow: 0 0 10px limegreen;
-}
-
-/* ==== カード操作モーダル ==== */
-.cardop-modal {
-    width: min(30vw, 250px);
-    max-height: 90vh;
-    overflow: auto;
-    border-radius: 12px;
-    padding: 4px;
-}
-
-@media (max-width: 768px) {
-    .cardop-modal {
-        width: min(30vw, 200px);
-        padding: 3px;
-    }
-}
-
-.cardop-header {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: .25rem;
-}
-
-/* ここだけがドラッグゾーン */
-.cardop-topline {
-    user-select: none;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: move;
-    padding: 2px 6px;
-    border-radius: 8px;
-    background: linear-gradient(90deg, #f3f4ff, #ffffff);
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .04);
-}
-
-/* 「ここをドラッグ」感を少し強める */
-.cardop-move-hint {
-    font-size: clamp(.325rem, 1vw, .625rem);
-    color: #666;
-    margin-top: 2px;
-}
-
-
-/* 右上の×を少し小ぶりに */
-.cardop-close {
-    background: #eee;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: .15rem .35rem;
-    cursor: pointer;
-    font-size: .75rem;
-    line-height: 1;
-}
-
-.cardop-title {
-    font-size: .85rem;
-    font-size: clamp(.6rem, 1.5vw, .9rem);
-    margin: 0;
-}
-
-.cardop-body {
-    display: grid;
-    gap: 5px;
-}
-@media (max-width: 768px) {
-    .cardop-body {
-            gap: 2px;
-        }
-}
-/* 画像＋バッジ */
-.cardop-figure {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 424 / 532;
-    border-radius: 10px;
-    overflow: hidden;
-    background: #f6f6f6;
-}
-
-.cardop-figure img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.cardop-figure .count-badge {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    border-radius: 999px;
-    min-width: 24px;
-    height: 24px;
-    line-height: 24px;
-    font-size: 12px;
-    /* ← やや控えめ */
-    padding: 0 6px;
-}
-
-/* 操作行 */
-.cardop-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: .5rem;
-}
-
-.cardop-row .full {
-    grid-column: 1 / -1;
-}
-
-.cardop-btn {
-    padding: .3rem .4rem;
-    border-radius: 10px;
-    border: 1px solid #d1d5db;
-    background: #fff;
-    cursor: pointer;
-    font-weight: 700;
-    font-size: clamp(.4rem, 1.5vw, .8rem);
-    transition: filter .15s ease, transform .06s ease;
-}
-
-.cardop-btn:active {
-    transform: scale(0.985);
-}
-
-.cardop-btn.primary {
-    background: linear-gradient(90deg, #6a5acd, #9aa0ff);
-    color: #fff;
-    border: none;
-}
-
-
-/* 効果一覧 */
-.cardop-effects {
-    display: grid;
-    gap: .35rem;
-}
-
-
-.cardop-effects .eff {
-    border: 1px dashed #e5e7eb;
-    border-radius: 10px;
-    background: #fafafa;
-    padding: 5px;
-    font-size: clamp(.4rem, 1.5vw, .9rem);
-}
-@media (max-width: 768px) {
-    .cardop-effects .eff {
-    padding: 2.5px;
-    }
-}
-.cardop-effects .eff-name {
-    font-weight: 700;
-    margin-bottom: .2rem;
-}
-
-.cardop-effects .eff-text {
-    line-height: 1.5;
-    white-space: pre-wrap;
-}
-
-
-/* ドラッグ時の位置調整（親.modal を固定） */
-#cardOpModal {
-    position: fixed;
-    inset: 0;
-    display: none;
-    pointer-events: none;
-    z-index: 4000;
-    background: transparent;
-}
-
-#cardOpModal.show {
-    display: block;
-}
-
-#cardOpModal .modal-content {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    pointer-events: auto;
 }
 
 /* ===== Deck Peek（モバイル用：押してる間だけデッキリストを覗く） ===== */
@@ -1202,7 +1163,7 @@
     align-items: center; /* タブと？ボタンを縦中央に */
 }
 
-.subtab-bar .tab {
+.subtab-bar .tab{
     padding: 8px 12px;
 }
 
@@ -3524,7 +3485,6 @@ font-size: .8rem;
 /* ===== キーボードフォーカスの可視化 ===== */
 .analyze-button:focus-visible,
 .filter-toggle-button:focus-visible,
-.cardop-btn:focus-visible,
 .note-preset-btn:focus-visible,
 .note-showall-btn:focus-visible,
 .deck-code-controls button:focus-visible,
@@ -3547,7 +3507,6 @@ font-size: .8rem;
   .tag-chips .chip,
   .deck-code-controls button,
   .post-actions button,
-  .cardop-btn,
   .analyze-button,
   .paste-code-controls button,
   .btn,
@@ -3556,4 +3515,3 @@ font-size: .8rem;
     animation: none !important;
   }
 }
-

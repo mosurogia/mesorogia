@@ -20,24 +20,24 @@
 
 /* デッキメーカーのカード一覧はPCで多めに並べる */
 #grid .card {
-    width: calc(100% / 10 - 5px);
+    width: calc((100% - 45px) / 10);
 }
 
 @media (max-width: 1440px) {
     #grid .card {
-        width: calc(100% / 8 - 5px);
+        width: calc((100% - 35px) / 8);
     }
 }
 
 @media (max-width: 1024px) {
     #grid .card {
-        width: calc(100% / 6 - 4px);
+        width: calc((100% - 25px) / 6);
     }
 }
 
 @media (max-width: 768px) {
     #grid .card {
-        width: calc(100% / 4 - 4px);
+        width: calc((100% - 15px) / 4);
     }
 }
 

@@ -1,1 +1,0 @@
-//escapeHtml、buildPostShareUrl、デッキマップ作成 (extractDeckMap)、表示名正規化 (normPosterName_)、Xアカウント正規化 (normX_)、ポスターキー生成 (posterKeyFromItem_)、代表種族取得 (getMainRace)、デッキコード正規化 (normalizeDeckCode_) など他モジュールから再利用される純粋関数をまとめる。API や DOM には依存しない。

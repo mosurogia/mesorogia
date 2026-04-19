@@ -1,1 +1,0 @@
-//ヘルプモーダル (openMineHelp)、カード解説用候補選択モーダル (openCardNoteSelectModal)、削除確認モーダル (openDeleteModal)、ユーザータグ候補サジェスト等、汎用的なモーダル表示やトースト (showMiniToast_) をまとめる。

@@ -1,1 +1,0 @@
-//投稿のタグ／ユーザータグ／種族／カテゴリ／カード名による絞り込みを行うモジュール。PostFilterState と PostFilterDraft を保持し、モーダルの開閉 (openPostFilter / closePostFilter)、ドラフトの同期 (syncDraftFromApplied)、タグ候補 UI の生成、適用処理 (applyFilterAndRerenderList) を実装する。カード名選択は deck-post-cardpick.js に委譲する。

@@ -241,21 +241,37 @@
 /* === 投稿者UI === */
 /* === 投稿フォーム内ミニログインUI ================== */
 
-/* 未ログイン：1ボタン（ログイン/新規登録） */
+/* 未ログイン：ログイン / 新規登録ボタン */
 .auth-mini-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     font-size: .8rem;
-    background: #6c63ff;
-    color: #fff;
+    background: #fff;
+    color: #4f46e5;
     padding: .35rem .8rem;
     border-radius: 8px;
-    border: none;
+    border: 1px solid #6c63ff;
     cursor: pointer;
     font-weight: 700;
     white-space: nowrap;
 }
 
+.auth-mini-btn.primary {
+    background: #6c63ff;
+    color: #fff;
+}
+
 .auth-mini-btn:hover {
+    border-color: #5b54e6;
+    background: #5b54e6;
+    color: #fff;
     opacity: .9;
+}
+
+.auth-mini-btn:focus-visible {
+    outline: 2px solid #4b3f8a;
+    outline-offset: 2px;
 }
 
 /* ログイン中UIのボタン */
@@ -314,12 +330,21 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
 .auth-mini-title {
     font-size: 1rem;
     font-weight: 700;
     color: #4b3f8a;
+}
+
+.auth-mini-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
 }
 
 .auth-buttons {
@@ -346,6 +371,23 @@
     border-radius: 8px;
     padding: .3rem .7rem;
     font-weight: 700;
+}
+
+.auth-buttons .auth-mode-switch {
+    font-size: .8rem;
+    padding: .3rem .7rem;
+    border: 1px solid #6c63ff;
+    border-radius: 8px;
+    background: #fff;
+    color: #4f46e5;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.auth-buttons .auth-mode-switch:hover {
+    border-color: #5b54e6;
+    background: #f5f4ff;
 }
 
 
@@ -867,6 +909,89 @@
 /* 未達成時は少し薄く */
 .criteria-item.is-ng {
     opacity: .6;
+}
+
+.campaign-game-user-id-wrap {
+    display: grid;
+    gap: 5px;
+    margin: 8px 0;
+    padding: 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .18);
+    border: 1px solid rgba(255, 255, 255, .28);
+}
+
+.campaign-game-user-id-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    color: #fff;
+    font-size: .84rem;
+    font-weight: 800;
+}
+
+.campaign-game-user-id-input {
+    width: min(100%, 260px);
+    min-height: 38px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, .65);
+    background: rgba(255, 255, 255, .94);
+    color: #0f172a;
+    padding: 8px 10px;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.campaign-game-user-id-input:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, .9);
+    outline-offset: 2px;
+}
+
+.campaign-game-user-id-note {
+    color: rgba(255, 255, 255, .9);
+    font-size: .76rem;
+    line-height: 1.45;
+}
+
+.campaign-game-user-id-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .9);
+    color: #475569;
+    font-size: .72rem;
+    line-height: 1;
+    font-weight: 900;
+}
+
+.campaign-game-user-id-status.is-ok {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.campaign-game-user-id-status.is-ng {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.campaign-game-user-id-status.is-empty {
+    background: rgba(255, 255, 255, .9);
+    color: #475569;
+}
+
+.campaign-tag-help {
+    margin: 6px 0 0;
+    color: rgba(255, 255, 255, .9);
+    font-size: .78rem;
+    line-height: 1.45;
+    font-weight: 700;
+}
+
+.campaign-tag-help.is-disabled {
+    opacity: .85;
 }
 
 /* =========================

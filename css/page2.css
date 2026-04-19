@@ -18,6 +18,29 @@
     text-shadow: 1px 1px 2px black;
 }
 
+/* デッキメーカーのカード一覧はPCで多めに並べる */
+#grid .card {
+    width: calc(100% / 10 - 5px);
+}
+
+@media (max-width: 1440px) {
+    #grid .card {
+        width: calc(100% / 8 - 5px);
+    }
+}
+
+@media (max-width: 1024px) {
+    #grid .card {
+        width: calc(100% / 6 - 4px);
+    }
+}
+
+@media (max-width: 768px) {
+    #grid .card {
+        width: calc(100% / 4 - 4px);
+    }
+}
+
 /*=========================
         3.サーチバー
 ==========================*/
@@ -72,6 +95,14 @@
         padding: 1vw 5px;
         white-space: nowrap;
         grid-area: filter;
+    }
+
+    /* 並び順切り替えボタンは絞り込みボタン扱いにしない */
+    .search-bar .sort-order-toggle {
+        min-width: 3.4rem;
+        height: 36px;
+        padding: 0 8px;
+        grid-area: auto;
     }
 }
 
@@ -842,10 +873,12 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    position: relative;
 }
 
 #deck-layout .deck-representative-open,
-#deck-layout .deck-count-adjust-toggle {
+#deck-layout .deck-count-adjust-toggle,
+#deck-layout .deck-list-menu-toggle {
     height: 26px;
     padding: 0 8px;
     border: 1px solid rgba(0, 0, 0, .18);
@@ -856,9 +889,57 @@
 }
 
 #deck-layout .deck-representative-open:focus-visible,
-#deck-layout .deck-count-adjust-toggle:focus-visible {
+#deck-layout .deck-count-adjust-toggle:focus-visible,
+#deck-layout .deck-list-menu-toggle:focus-visible,
+#deck-layout .deck-list-menu-panel button:focus-visible {
     outline: 2px solid #1f6feb;
     outline-offset: 2px;
+}
+
+#deck-layout .deck-list-menu {
+    position: relative;
+}
+
+#deck-layout .deck-list-menu-toggle {
+    min-width: 32px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+#deck-layout .deck-list-menu-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 30;
+    width: 132px;
+    padding: 6px;
+    display: grid;
+    gap: 4px;
+    border: 1px solid rgba(0, 0, 0, .16);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .16);
+}
+
+#deck-layout .deck-list-menu-panel[hidden] {
+    display: none;
+}
+
+#deck-layout .deck-list-menu-panel button {
+    width: 100%;
+    min-height: 32px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 6px;
+    background: #f6f8fb;
+    color: #1f2937;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+#deck-layout .deck-list-menu-panel button:hover {
+    background: #e9f5fb;
 }
 
 @media (max-width: 768px) {
@@ -872,12 +953,17 @@
     }
 
     #deck-layout .deck-representative-open,
-    #deck-layout .deck-count-adjust-toggle {
+    #deck-layout .deck-count-adjust-toggle,
+    #deck-layout .deck-list-menu-toggle {
         height: 24px;
         padding: 0 6px;
         font-size: 12px;
         line-height: 1;
         white-space: nowrap;
+    }
+
+    #deck-layout .deck-list-menu-toggle {
+        min-width: 28px;
     }
 }
 
@@ -2139,108 +2225,221 @@
 }
 
 /* ---- デッキ解説ツールバー---- */
+.note-preset-wrap {
+    position: relative;
+    margin-bottom: 3px;
+}
+
 .note-toolbar {
     display: grid;
-    grid-template-columns: 3fr 3fr auto;
-    /* 左:プリセット / 中:プリセット / 右:全表示 */
-    grid-template-rows: 26px 26px;
-    gap: 3px;
-    margin-bottom: 3px;
-    align-items: center;
+    grid-template-columns: minmax(0, 1fr) auto;
+    /* 左:プリセット分類 / 右:全表示 */
+    gap: 6px;
+    align-items: stretch;
 }
 @media (max-width: 768px) {
     .note-toolbar {
-    grid-template-rows: 32px 32px;
-    gap: 6px;
+        grid-template-columns: 1fr;
     }
-}
-/* 左2/3はプリセット 2×2 を敷き詰める */
-.note-presets-grid {
-    grid-column: 1 / span 2;
-    /* 左と中を占有 */
-    grid-row: 1 / span 2;
-    /* 2段ぶん占有 */
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(2, 26px);
-    gap: 3px;
-    min-width: 0;
 
-}
-@media (max-width: 768px) {
-    .note-presets-grid {
-        grid-template-rows: 32px 32px;
+    .note-toolbar-right {
+        display: block;
     }
 }
-/* 右1/3は“全表示”を縦2段分の高さで正方形気味に */
+
+/* プリセット分類ボタンを左右に並べる */
+.note-presets-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    min-width: 0;
+}
+
 .note-toolbar-right {
-    grid-column: 3;
-    grid-row: 1 / span 2;
-    /* 2段ぶんの高さ */
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-/* プリセットは“存在感控えめ＆横長” */
-/* プリセットボタンの色ごとデザイン */
-.note-preset-btn {
+/* プリセット分類ボタン */
+.note-preset-menu-btn,
+.note-card-ref-btn {
     border: none;
     border-radius: 8px;
-    padding: 0.35rem 0.5rem;
-    font-size: .75rem;
+    padding: 0.55rem 0.75rem;
+    min-height: 38px;
+    font-size: .82rem;
     font-weight: 600;
-    line-height: 1;
+    line-height: 1.2;
     cursor: pointer;
     color: #fff;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    transition: transform 0.06s ease, box-shadow 0.2s ease;
+    transition: transform 0.06s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 
-
-/* 個別カラー */
-.note-preset-btn[data-preset="deck-overview"] {
+.note-preset-menu-btn[data-preset-menu="templates"] {
     background: linear-gradient(90deg, #68a6ff, #a4d0ff);
     box-shadow: 0 2px 6px rgba(104, 166, 255, 0.25);
 }
 
-.note-preset-btn[data-preset="play-guide"] {
+.note-preset-menu-btn[data-preset-menu="sections"] {
     background: linear-gradient(90deg, #fbbf24, #fde68a);
     box-shadow: 0 2px 6px rgba(245, 158, 11, 0.25);
 }
 
-.note-preset-btn[data-preset="matchup"] {
-    background: linear-gradient(90deg, #f87171, #fca5a5);
-    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25);
-}
-
-.note-preset-btn[data-preset="results"] {
+.note-card-ref-btn {
     background: linear-gradient(90deg, #34d399, #a7f3d0);
     box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
 }
 
-.note-preset-btn:hover {
+.note-preset-menu-btn[aria-pressed="true"] {
+    filter: brightness(.95) saturate(1.1);
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, .18);
+}
+
+.note-preset-menu-btn:hover,
+.note-card-ref-btn:hover,
+.note-preset-choice:hover,
+.note-preset-help-btn:hover,
+.note-preset-more-btn:hover {
     filter: brightness(1.03);
     transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(0, 0, 0, .15);
 }
 
-.note-preset-btn:active {
-    transform: scale(.97);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, .1);
+.note-preset-menu-btn:active,
+.note-card-ref-btn:active,
+.note-preset-choice:active,
+.note-preset-help-btn:active,
+.note-preset-more-btn:active {
+    transform: scale(.98);
 }
 
+.note-preset-menu-btn:focus-visible,
+.note-card-ref-btn:focus-visible,
+.note-preset-choice:focus-visible,
+.note-preset-help-btn:focus-visible,
+.note-preset-more-btn:focus-visible,
+.note-showall-btn:focus-visible {
+    outline: 3px solid rgba(47, 128, 237, .35);
+    outline-offset: 2px;
+}
 
-/* “全表示”は2段ぶんの高さで正方形に近づける */
+/* 候補パネル */
+.note-preset-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 40;
+    width: min(100%, 520px);
+    max-height: min(58vh, 420px);
+    overflow: auto;
+    margin: 0;
+    padding: 8px;
+    border: 1px solid rgba(49, 116, 164, .18);
+    border-radius: 8px;
+    background: #f8fbff;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .16);
+}
+
+.note-preset-panel[hidden] {
+    display: none;
+}
+
+.note-preset-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.note-preset-choice-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 32px;
+    gap: 4px;
+    min-width: 0;
+}
+
+.note-preset-more-row {
+    grid-column: 1 / -1;
+}
+
+.note-preset-choice,
+.note-preset-help-btn,
+.note-preset-more-btn {
+    border: 1px solid rgba(49, 116, 164, .22);
+    border-radius: 8px;
+    background: #fff;
+    color: #223;
+    cursor: pointer;
+    min-height: 32px;
+    transition: transform 0.06s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.note-preset-choice {
+    padding: 0.35rem 0.5rem;
+    font-size: .78rem;
+    font-weight: 600;
+    text-align: left;
+}
+
+.note-preset-more-btn {
+    width: 100%;
+    padding: 0.45rem 0.5rem;
+    font-size: .78rem;
+    font-weight: 700;
+    color: #2f80ed;
+    background: #eef6ff;
+}
+
+.note-preset-help-btn {
+    padding: 0;
+    font-weight: 700;
+    color: #2f80ed;
+}
+
+.note-preset-help {
+    margin-top: 6px;
+    color: #555;
+    font-size: .78rem;
+    line-height: 1.5;
+    white-space: pre-line;
+}
+
+@media (max-width: 768px) {
+    .note-preset-list {
+        grid-template-columns: 1fr;
+    }
+
+    .note-preset-panel {
+        width: 100%;
+        max-height: min(62vh, 420px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .note-preset-menu-btn,
+    .note-card-ref-btn,
+    .note-preset-choice,
+    .note-preset-help-btn,
+    .note-preset-more-btn,
+    .note-showall-btn {
+        transition: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .note-presets-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* 全表示ボタン */
 .note-showall-btn {
-    height: calc(26px * 2 + 8px);
-    aspect-ratio: 1 / 1;
-    /* ほぼ正方形 */
-    width: auto;
+    min-height: 38px;
+    width: 64px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 10px;
+    border-radius: 8px;
     font-weight: 700;
     font-size: .75rem;
     cursor: pointer;
@@ -2252,7 +2451,30 @@
 }
 @media (max-width: 768px) {
     .note-showall-btn {
-    height: calc(32px * 2 + 6px);
+        width: 100%;
+    }
+
+    .note-toolbar {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .note-presets-grid {
+        display: contents;
+    }
+
+    .note-preset-menu-btn,
+    .note-card-ref-btn,
+    .note-showall-btn {
+        min-height: 40px;
+        padding: 0.45rem 0.5rem;
+        font-size: .78rem;
+    }
+
+    .text-side .note-presets-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
@@ -2264,6 +2486,71 @@
 
 .note-showall-btn:active {
     transform: scale(.985);
+}
+
+/* カード選択モーダル */
+#cardPickResult {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 4px;
+    align-items: start;
+    margin: 3px 0;
+}
+
+.card-pick-modal {
+    margin: 48px auto 0;
+    min-height: min(420px, calc(100vh - 72px));
+}
+
+.card-pick-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.card-pick-item {
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+}
+
+.card-pick-item:focus-visible {
+    outline: 3px solid rgba(47, 128, 237, .45);
+    outline-offset: 2px;
+}
+
+.card-pick-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .12);
+}
+
+.card-pick-empty {
+    grid-column: 1 / -1;
+    padding: 12px;
+    color: #666;
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    #cardPickResult {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    .card-pick-modal {
+        margin-top: 20px;
+        min-height: min(360px, calc(100vh - 32px));
+    }
+
+    #cardPickResult {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
 }
 
 
@@ -2363,8 +2650,8 @@
 }
 
 
-.text-side .note-presets-grid{
-    grid-template-rows: repeat(2, 30px);
+.text-side .note-presets-grid {
+    grid-auto-rows: minmax(38px, auto);
 }
 #note-full-text {
     width: 100%;

@@ -1682,13 +1682,11 @@ body {
 
 /* ===== キャンペーンタグ（開催中/終了） ===== */
 .chip.is-campaign-ended {
-    opacity: .7;
     border-style: dashed;
     filter: grayscale(.2);
 }
 
 .post-filter-tag-btn.is-campaign-ended {
-    opacity: .65;
     border-style: dashed;
 }
 
@@ -2253,7 +2251,7 @@ body {
 .btn-decknote-cancel {
     border: 1px solid #ddd;
     background: #f8f8f8;
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 6px 10px;
     cursor: pointer;
     font-size: .85rem;
@@ -2264,52 +2262,168 @@ body {
     border-color: #cfe6ff;
 }
 
-/* deckmakerのプリセットUIをpage4にも持ってくる（無い場合） */
+/* デッキ解説プリセット */
+.note-preset-wrap {
+    position: relative;
+    margin-bottom: 6px;
+}
+
 .note-toolbar {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 6px;
     margin-bottom: 6px;
 }
 
 .note-presets-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(2, 32px);
+    grid-template-columns: repeat(3, 1fr);
     gap: 6px;
+    min-width: 0;
 }
 
-.note-preset-btn {
-    border: 1px solid #ddd;
-    background: #fff;
-    border-radius: 10px;
+.note-preset-menu-btn,
+.note-card-ref-btn,
+.note-preset-choice,
+.note-preset-help-btn,
+.note-preset-more-btn {
+    border: 1px solid rgba(49, 116, 164, .22);
+    border-radius: 8px;
     cursor: pointer;
-    font-size: .85rem;
 }
 
-/* 個別カラー */
-.note-preset-btn[data-preset="deck-overview"] {
+.note-preset-menu-btn,
+.note-card-ref-btn {
+    border: none;
+    min-height: 36px;
+    padding: .5rem .7rem;
+    color: #fff;
+    font-size: .85rem;
+    font-weight: 700;
+    line-height: 1.2;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .16);
+    transition: transform .06s ease, box-shadow .2s ease, filter .2s ease;
+}
+
+.note-preset-menu-btn[data-preset-menu="templates"] {
     background: linear-gradient(90deg, #68a6ff, #a4d0ff);
     box-shadow: 0 2px 6px rgba(104, 166, 255, 0.25);
 }
 
-.note-preset-btn[data-preset="play-guide"] {
+.note-preset-menu-btn[data-preset-menu="sections"] {
     background: linear-gradient(90deg, #fbbf24, #fde68a);
     box-shadow: 0 2px 6px rgba(245, 158, 11, 0.25);
 }
 
-.note-preset-btn[data-preset="matchup"] {
-    background: linear-gradient(90deg, #f87171, #fca5a5);
-    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25);
-}
-
-.note-preset-btn[data-preset="results"] {
+.note-card-ref-btn {
     background: linear-gradient(90deg, #34d399, #a7f3d0);
     box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
 }
 
-.note-preset-btn:hover {
-    background: #f6f6ff;
+.note-preset-menu-btn[aria-pressed="true"] {
+    filter: brightness(.95) saturate(1.1);
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, .18);
+}
+
+.note-preset-menu-btn:hover,
+.note-card-ref-btn:hover,
+.note-preset-choice:hover,
+.note-preset-help-btn:hover,
+.note-preset-more-btn:hover {
+    filter: brightness(1.03);
+    transform: translateY(-1px);
+}
+
+.note-preset-menu-btn:active,
+.note-card-ref-btn:active,
+.note-preset-choice:active,
+.note-preset-help-btn:active,
+.note-preset-more-btn:active {
+    transform: scale(.98);
+}
+
+.note-preset-menu-btn:focus-visible,
+.note-card-ref-btn:focus-visible,
+.note-preset-choice:focus-visible,
+.note-preset-help-btn:focus-visible,
+.note-preset-more-btn:focus-visible {
+    outline: 3px solid rgba(47, 128, 237, .35);
+    outline-offset: 2px;
+}
+
+.note-preset-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 40;
+    width: min(100%, 520px);
+    max-height: min(58vh, 420px);
+    overflow: auto;
+    padding: 8px;
+    border: 1px solid rgba(49, 116, 164, .18);
+    border-radius: 8px;
+    background: #f8fbff;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .16);
+}
+
+.note-preset-panel[hidden] {
+    display: none;
+}
+
+.note-preset-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.note-preset-choice-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 32px;
+    gap: 4px;
+    min-width: 0;
+}
+
+.note-preset-more-row {
+    grid-column: 1 / -1;
+}
+
+.note-preset-choice,
+.note-preset-help-btn,
+.note-preset-more-btn {
+    min-height: 32px;
+    background: #fff;
+    color: #223;
+    transition: transform .06s ease, box-shadow .2s ease, filter .2s ease;
+}
+
+.note-preset-choice {
+    padding: .35rem .5rem;
+    font-size: .78rem;
+    font-weight: 600;
+    text-align: left;
+}
+
+.note-preset-more-btn {
+    width: 100%;
+    padding: .45rem .5rem;
+    color: #2f80ed;
+    background: #eef6ff;
+    font-size: .78rem;
+    font-weight: 700;
+}
+
+.note-preset-help-btn {
+    padding: 0;
+    color: #2f80ed;
+    font-weight: 700;
+}
+
+.note-preset-help {
+    margin-top: 6px;
+    color: #555;
+    font-size: .78rem;
+    line-height: 1.5;
+    white-space: pre-line;
 }
 
 .decknote-editor-hint {
@@ -2322,7 +2436,7 @@ body {
     width: 100%;
     box-sizing: border-box;
     border: 1px solid #ccc;
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 10px;
     resize: vertical;
     line-height: 1.6;
@@ -2334,6 +2448,31 @@ body {
     display: flex;
     gap: 8px;
     margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+    .note-presets-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .note-preset-list {
+        grid-template-columns: 1fr;
+    }
+
+    .note-preset-panel {
+        width: 100%;
+        max-height: min(62vh, 420px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .note-preset-menu-btn,
+    .note-card-ref-btn,
+    .note-preset-choice,
+    .note-preset-help-btn,
+    .note-preset-more-btn {
+        transition: none;
+    }
 }
 
 
@@ -2496,6 +2635,33 @@ body {
     line-height: 1.6;
 }
 
+.decknote-card-ref {
+    display: inline;
+    padding: 0 1px 1px;
+    border: 0;
+    border-bottom: 1px dotted currentColor;
+    border-radius: 3px;
+    background: transparent;
+    color: #2563eb;
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    text-underline-offset: 3px;
+}
+
+.decknote-card-ref:hover {
+    border-bottom-style: solid;
+    background: rgba(37, 99, 235, .08);
+    color: #1d4ed8;
+}
+
+.decknote-card-ref:focus-visible {
+    outline: 2px solid rgba(37, 99, 235, .35);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
 /* スマホでちょっとコンパクトに */
 @media (max-width: 600px) {
     .decknote-block {
@@ -2654,11 +2820,12 @@ body {
         width: 100%;
     }
 
-    /* ▼ 未ログイン：新規登録 / ログイン → 全幅ボタン */
-    #pageMine #auth-mini-loggedout .auth-mini-btn {
-        display: block;
+    /* ▼ 未ログイン：ログイン / 新規登録 → 2ボタンで全幅 */
+    #pageMine #auth-mini-loggedout .auth-mini-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
         width: 100%;
-        text-align: center;
     }
 
     /* ▼ ログイン中：2ボタンを 50% + 50% */
@@ -2777,13 +2944,45 @@ body {
 ========================*/
 
 /* マイ投稿：未ログイン時ボタン（新規登録 / ログイン） */
+#pageMine .auth-mini-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
 #pageMine .auth-mini-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: .35rem .7rem;
+    border: 1px solid #6c63ff;
+    border-radius: 8px;
+    background: #fff;
+    color: #4f46e5;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
     transition: box-shadow .15s ease, transform .05s ease, opacity .15s ease;
 }
 
+#pageMine .auth-mini-btn.primary {
+    background: #6c63ff;
+    color: #fff;
+}
+
 #pageMine .auth-mini-btn:hover {
+    border-color: #5b54e6;
+    background: #5b54e6;
+    color: #fff;
     box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
     transform: translateY(-1px);
+}
+
+#pageMine .auth-mini-btn:focus-visible {
+    outline: 2px solid rgba(108, 99, 255, .45);
+    outline-offset: 2px;
 }
 
 /* マイ投稿：ログイン中のボタン群 */
@@ -2823,10 +3022,20 @@ body {
 ===============================*/
 @media (max-width: 768px) {
 
-    /* 未ログイン：ボタンを横幅100%に */
+    /* 未ログイン：2ボタンを横幅内に収める */
+    #pageMine #auth-mini-loggedout .auth-mini-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+        gap: 8px;
+    }
+
     #pageMine #auth-mini-loggedout .auth-mini-btn {
+        display: inline-flex;
         width: 100%;
         text-align: center;
+        padding-right: .45rem;
+        padding-left: .45rem;
     }
 
     /* ログイン中：2つのボタンを半分ずつ */

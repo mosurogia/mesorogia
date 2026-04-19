@@ -15,7 +15,7 @@
 
 /* 検索バー（PC基本：flex） */
 .search-bar {
-    padding: 0 4px;
+    padding: 0 2px;
     position: sticky;
     top: 0;
     z-index: 2000;
@@ -57,24 +57,71 @@
 }
 
 /* sort */
-.search-bar-right #sort-select {
+.sort-controls {
     order: 3;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex: 0 1 13rem;
+    min-width: 0;
+    margin-right: auto;
+}
+
+.search-bar-right #sort-select {
     white-space: nowrap;
-    width: auto;
+    width: 100%;
     height: 36px;
-    flex: 0 0 auto;
-    min-width: 4rem;
+    flex: 1 1 auto;
+    min-width: 0;
     font-size: clamp(13px, 3vw, 18px);
     padding: 0 8px;
-    margin-right: auto;
+    color: #1f3f5f;
+    background: linear-gradient(180deg, #e9f5fb 0%, #d4ecfa 100%);
+    border: 1px solid #b5d9f3;
+    border-radius: 4px 0 0 4px;
+    font-weight: 700;
+}
+
+.sort-order-toggle {
+    flex: 0 0 auto;
+    min-width: 3.8rem;
+    height: 36px;
+    padding: 0 10px;
+    font-size: 14px;
+    font-weight: 900;
+    color: #1f3f5f;
+    background: linear-gradient(180deg, #e9f5fb 0%, #d4ecfa 100%);
+    border: 1px solid #b5d9f3;
+    border-left: 0;
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+    transition: filter .15s ease, transform .06s ease, box-shadow .15s ease;
+}
+
+.search-bar-right #sort-select:hover,
+.sort-order-toggle:hover {
+    filter: brightness(.98);
+    box-shadow: 0 1px 4px rgba(90, 150, 200, .25);
+}
+
+.sort-order-toggle:active {
+    transform: translateY(1px);
+}
+
+.search-bar-right #sort-select:focus-visible,
+.sort-order-toggle:focus-visible {
+    outline: 2px solid #2f80ed;
+    outline-offset: 2px;
 }
 
 /* フィルター/グループ（openFilterModal系 共通） */
 .search-bar button[onclick*="openFilterModal"] {
     order: 4;
     min-width: 4rem;
-    padding: 0 10px;
-    font-size: 1.05rem;
+    padding: 0 17.5px;
+    font-size: 1.1rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     height: 36px;
 
     background: linear-gradient(180deg, #e9f5fb 0%, #d4ecfa 100%);
@@ -178,6 +225,302 @@
     --_filter-fill: var(--type-blocker-bg);
 }
 
+/* カード選択モーダル内フィルター */
+.card-pick-filters {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(132px, auto) minmax(0, 1fr);
+    align-items: start;
+    column-gap: 4px;
+    row-gap: 8px;
+    margin: 8px 0 10px;
+}
+
+.card-pick-type-filter {
+    order: 0;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 3px;
+    align-self: start;
+}
+
+.card-pick-type-filter .type-icon-btn {
+    width: 34px;
+    height: 34px;
+    padding: 3px;
+}
+
+.card-pick-folder-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+    gap: 4px;
+}
+
+.card-pick-folder {
+    position: static;
+    min-width: 0;
+}
+
+.card-pick-folder summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    min-width: 0;
+    height: 34px;
+    padding: 0 7px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background:
+        linear-gradient(#fff, #fff) padding-box,
+        linear-gradient(90deg, rgba(180, 180, 180, .5), rgba(180, 180, 180, .5)) border-box;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 900;
+    list-style: none;
+    white-space: nowrap;
+    transition: transform .08s ease, box-shadow .15s ease, opacity .15s ease;
+}
+
+.card-pick-folder:not(.is-active) summary {
+    opacity: .55;
+}
+
+.card-pick-folder summary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
+}
+
+.card-pick-folder[open] summary,
+.card-pick-folder.is-active summary {
+    background:
+        linear-gradient(#e9f5fb, #e9f5fb) padding-box,
+        linear-gradient(90deg, rgba(47, 128, 237, .6), rgba(47, 128, 237, .6)) border-box;
+    box-shadow:
+        0 0 0 2px rgba(0, 0, 0, .15),
+        inset 0 0 0 2px rgba(255, 255, 255, .6);
+    opacity: 1;
+}
+
+.card-pick-folder summary::-webkit-details-marker {
+    display: none;
+}
+
+.card-pick-folder summary::after {
+    content: "▾";
+    font-size: 11px;
+    opacity: .65;
+}
+
+.card-pick-folder[open] summary::after {
+    content: "▴";
+}
+
+.card-pick-folder summary:focus-visible,
+.card-pick-option:focus-visible,
+.card-pick-chips .chip-mini:focus-visible {
+    outline: 3px solid rgba(47, 128, 237, .45);
+    outline-offset: 2px;
+}
+
+.card-pick-option-list {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    width: min(84vw, 520px);
+    max-height: min(58vh, 420px);
+    margin: 0;
+    padding: 8px;
+    overflow-y: auto;
+    border: 1px solid rgba(49, 116, 164, .18);
+    border-radius: 8px;
+    background: #f8fbff;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .16);
+}
+
+#cardPickPackOptions {
+    right: 0;
+    left: auto;
+}
+
+.card-pick-option {
+    --ring: rgba(0, 0, 0, .18);
+    --ring-accent: color-mix(in srgb, var(--ring) 85%, white);
+    width: 100%;
+    min-height: 32px;
+    border: 1px solid rgba(49, 116, 164, .22);
+    border-left: 5px solid var(--ring);
+    border-radius: 8px;
+    background: #fff;
+    color: #223;
+    padding: .35rem .5rem;
+    font-size: .78rem;
+    font-weight: 600;
+    line-height: 1.25;
+    text-align: left;
+    cursor: pointer;
+    transition: transform .06s ease, box-shadow .2s ease, filter .2s ease;
+}
+
+.card-pick-option:hover,
+.card-pick-option.is-active {
+    background: #eef6ff;
+    border-color: rgba(49, 116, 164, .22);
+    border-left-color: var(--ring-accent);
+    box-shadow: 0 2px 8px rgba(47, 128, 237, .13);
+}
+
+.card-pick-option.is-active {
+    box-shadow: inset 0 0 0 2px var(--ring), 0 2px 8px rgba(47, 128, 237, .16);
+}
+
+.card-pick-option[data-cat-race="ドラゴン"] {
+    --ring: var(--race-dragon);
+}
+
+.card-pick-option[data-cat-race="アンドロイド"] {
+    --ring: var(--race-android);
+}
+
+.card-pick-option[data-cat-race="エレメンタル"] {
+    --ring: var(--race-elemental);
+}
+
+.card-pick-option[data-cat-race="ルミナス"] {
+    --ring: var(--race-luminous);
+}
+
+.card-pick-option[data-cat-race="シェイド"] {
+    --ring: var(--race-shade);
+}
+
+.card-pick-option[data-cat-race="イノセント"] {
+    --ring: var(--race-innocent);
+}
+
+.card-pick-option[data-cat-race="旧神"] {
+    border-left-color: transparent;
+    border-image: var(--old-god) 1;
+}
+
+.card-pick-option.is-active[data-cat-race="旧神"] {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .55), inset 0 0 0 2px rgba(255, 255, 255, .4);
+}
+
+.card-pick-option[data-pack="Awaking The Oracle"] {
+    --ring: rgb(var(--pack-a-rgb));
+    --ring-accent: rgb(var(--pack-a-accent-rgb));
+}
+
+.card-pick-option[data-pack="Beyond the Sanctuary"] {
+    --ring: rgb(var(--pack-b-rgb));
+    --ring-accent: rgb(var(--pack-b-accent-rgb));
+}
+
+.card-pick-option[data-pack="Creeping Souls"] {
+    --ring: rgb(var(--pack-c-rgb));
+    --ring-accent: rgb(var(--pack-c-accent-rgb));
+}
+
+.card-pick-option[data-pack="Drawn Sword"] {
+    --ring: rgb(var(--pack-d-rgb));
+    --ring-accent: rgb(var(--pack-d-accent-rgb));
+}
+
+.card-pick-option[data-pack="Ensemble of Slience"] {
+    --ring: rgb(var(--pack-e-rgb));
+    --ring-accent: rgb(var(--pack-e-accent-rgb));
+}
+
+.card-pick-option[data-pack="Fallen Fate"] {
+    --ring: rgb(var(--pack-f-rgb));
+    --ring-accent: rgb(var(--pack-f-accent-rgb));
+}
+
+.card-pick-option[data-pack="Glory of the Gods"] {
+    --ring: rgb(var(--pack-g-rgb));
+    --ring-accent: rgb(var(--pack-g-accent-rgb));
+}
+
+.card-pick-option[data-pack="その他特殊カード"] {
+    --ring: rgb(var(--pack-special-rgb));
+    --ring-accent: rgb(var(--pack-special-accent-rgb));
+}
+
+.card-pick-option[data-pack="コラボカード"] {
+    --ring: rgb(var(--pack-collab-rgb));
+    --ring-accent: rgb(var(--pack-collab-accent-rgb));
+}
+
+.card-pick-option-empty {
+    color: #666;
+    font-size: 13px;
+}
+
+.card-pick-chips {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+}
+
+.card-pick-chips .chip-mini {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 6px;
+    padding: 3px 8px;
+    font-size: clamp(.6rem, 2.6vw, .75rem);
+    border-radius: 999px;
+    border: 1px solid #ffb7c9;
+    background: #fff6f9;
+    color: #9b355e;
+    line-height: normal;
+    cursor: pointer;
+    user-select: none;
+}
+
+.card-pick-chips .chip-mini .x {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: .75rem;
+    font-weight: 900;
+    line-height: 1;
+    padding: 0;
+}
+
+@media (max-width: 600px) {
+    .card-pick-filters {
+        grid-template-columns: minmax(126px, auto) minmax(0, 1fr);
+        column-gap: 4px;
+        row-gap: 7px;
+    }
+
+    .card-pick-type-filter .type-icon-btn {
+        width: 32px;
+        height: 32px;
+        padding: 2px;
+    }
+
+    .card-pick-folder summary {
+        height: 32px;
+        padding: 0 6px;
+        font-size: 12px;
+    }
+
+    .card-pick-option-list {
+        grid-template-columns: 1fr;
+        width: min(82vw, 360px);
+    }
+}
+
 /* 0.3) search-bar：アイコンボタン（共通見た目用） */
 .search-icon-btn {
     display: inline-flex;
@@ -257,10 +600,19 @@
     }
 
     /* 2段目：sort + filter/group ボタン（左寄せ） */
+    .sort-controls {
+        flex: 1 1 11.5rem;
+        min-width: 11.5rem;
+    }
+
     .search-bar-right #sort-select {
-        flex: 1 1 7.5rem;
-        min-width: 7.5rem;
         padding: 0 6px;
+        font-size: 13px;
+    }
+
+    .sort-order-toggle {
+        min-width: 3.4rem;
+        padding: 0 8px;
         font-size: 13px;
     }
 

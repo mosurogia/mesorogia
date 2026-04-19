@@ -7,6 +7,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="5NzYWNH5_YUg0dUV2iCzg_bSo7M1lLJi6IzOeF2dGXM" />
     <link rel="icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="img/app-icon.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#111827">
 
     <!-- ===== タイトル ===== -->
     <title>神託のメソロギア デッキメーカー｜カード検索・構築ツール｜モスロギア</title>
@@ -55,6 +58,7 @@
         <a class="active-page" href="deckmaker.html">🃏 デッキメーカー</a>
         <a href="deck-post.html">📤 デッキ投稿</a>
     </nav>
+    <div class="header-account" data-header-auth></div>
 </header>
 
 <!--タブ切り替え-->
@@ -110,15 +114,16 @@
                 </div>
             </div>
             <div class="search-bar-right">
-                <select id="sort-select" onchange="sortCards()">
-                    <option value="default">通常順</option>
-                    <option value="cost-asc">コスト昇順</option>
-                    <option value="cost-desc">コスト降順</option>
-                    <option value="power-asc">パワー昇順</option>
-                    <option value="power-desc">パワー降順</option>
-                    <option value="category-order">カテゴリ順</option>
-                    <option value="rarity-order">レアリティ順</option>
-                </select>
+                <div class="sort-controls">
+                    <select id="sort-select" onchange="sortCards()" aria-label="並び順">
+                        <option value="default">通常順</option>
+                        <option value="cost">コスト順</option>
+                        <option value="power">パワー順</option>
+                        <option value="category">カテゴリ順</option>
+                        <option value="rarity">レアリティ順</option>
+                    </select>
+                    <button id="sort-order-toggle" class="sort-order-toggle" type="button" data-order="asc" aria-label="昇順と降順を切り替え" aria-pressed="false">昇順</button>
+                </div>
                 <button class="search-icon-btn" onclick="openFilterModal()">📊 フィルター</button>
             </div>
         </div>
@@ -282,8 +287,16 @@
             <div class="tab-bar subtab-bar deck-list-header">
                 <span>🃏 デッキリスト</span>
                 <div class="deck-list-actions">
-                    <button type="button" class="deck-representative-open" aria-label="メインカードを選択">メインカード</button>
                     <button type="button" class="deck-count-adjust-toggle">＋－ ボタン：ON</button>
+                    <div class="deck-list-menu">
+                        <button type="button" class="deck-list-menu-toggle" aria-label="デッキ操作メニューを開く" aria-expanded="false">☰</button>
+                        <div class="deck-list-menu-panel" hidden>
+                            <button type="button" data-deck-action="representative">メインカード</button>
+                            <button type="button" data-deck-action="image">画像生成</button>
+                            <button type="button" data-deck-action="reset">デッキリセット</button>
+                            <button type="button" data-deck-action="save">デッキ保存</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div id="deck-card-list" >
@@ -547,24 +560,26 @@
                 <div class="info-row">
                     <label class="info-label">デッキ解説</label>
                     <div class="info-value">
-                    <div class="note-toolbar">
-                        <!-- 左:プリセットボタン -->
-                        <div class="note-presets-grid">
-                            <button type="button" class="note-preset-btn" data-preset="deck-overview">デッキ概要</button>
-                            <button type="button" class="note-preset-btn" data-preset="play-guide">プレイ方針</button>
-                            <button type="button" class="note-preset-btn" data-preset="matchup">対面考察</button>
-                            <button type="button" class="note-preset-btn" data-preset="results">実績レポート</button>
-                        </div>
+                    <div class="note-preset-wrap">
+                        <div class="note-toolbar">
+                            <!-- 左:プリセット分類ボタン -->
+                            <div class="note-presets-grid">
+                                <button type="button" class="note-preset-menu-btn" data-preset-menu="templates">記事構成を追加</button>
+                                <button type="button" class="note-preset-menu-btn" data-preset-menu="sections">解説項目</button>
+                                <button type="button" class="note-card-ref-btn">文中にカードを追加</button>
+                            </div>
 
-                        <!-- 右：全表示ボタン -->
-                        <div class="note-toolbar-right">
-                            <button id="note-fullscreen-btn" class="note-showall-btn" type="button">全表示</button>
+                            <!-- 右：全表示ボタン -->
+                            <div class="note-toolbar-right">
+                                <button id="note-fullscreen-btn" class="note-showall-btn" type="button">全表示</button>
+                            </div>
                         </div>
+                        <div class="note-preset-panel" hidden></div>
                     </div>
                     <div class="post-hint">
-                        ※上のプリセットボタンを押すと定型文が挿入されます。
+                        ※迷ったら「記事構成を追加」から選ぶと、必要な見出しをまとめて追加できます。
                     </div>
-                    <textarea id="post-note" name="note" rows="10" placeholder="デッキの動きやプレイ方針などを自由に書いてください。プリセットで雛形を挿入できます"required></textarea>
+                    <textarea id="post-note" name="note" rows="10" placeholder="デッキの動きやプレイ方針を書いてください。記事構成や解説項目で見出しを追加でき、文中にカード名を入れたい時は「文中にカードを追加」から選べます。"required></textarea>
                     </div>
                 </div>
 
@@ -667,9 +682,16 @@
                         <div id="auth-mini-loggedout" style="display:none;">
                             <div class="auth-mini-header">
                                 <span class="auth-mini-title">未ログイン</span>
-                                <button type="button" id="open-login-modal" class="auth-mini-btn" data-open="authLoginModal">
-                                    ログイン / 新規登録
-                                </button>
+                                <div class="auth-mini-actions">
+                                    <button type="button" class="auth-mini-btn primary" data-open="authLoginModal"
+                                        data-auth-entry="login">
+                                        ログイン
+                                    </button>
+                                    <button type="button" class="auth-mini-btn" data-open="authLoginModal"
+                                        data-auth-entry="signup">
+                                        新規登録
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="post-hint">
@@ -797,12 +819,41 @@
                             <span class="criteria-text">Xアカウント記入</span>
                         </div>
 
+                        <div class="criteria-item" data-criteria="game-user-id" style="display:none;">
+                            <span class="criteria-check"></span>
+                            <span class="criteria-text">ゲーム内ユーザーID（16桁）</span>
+                        </div>
+
+                        <div id="campaign-game-user-id-wrap" class="campaign-game-user-id-wrap" style="display:none;">
+                            <label class="campaign-game-user-id-label" for="campaign-game-user-id">
+                                <span>ゲーム内ユーザーID</span>
+                                <span id="campaign-game-user-id-status" class="campaign-game-user-id-status is-empty">未入力</span>
+                            </label>
+                            <input
+                                type="text"
+                                id="campaign-game-user-id"
+                                class="campaign-game-user-id-input"
+                                inputmode="numeric"
+                                autocomplete="off"
+                                maxlength="16"
+                                placeholder="16桁のユーザーID"
+                                aria-describedby="campaign-game-user-id-note">
+                            <small id="campaign-game-user-id-note" class="campaign-game-user-id-note">
+                                ゲームアプリのホーム画面の左上から確認できるIDを入力してください。<br>
+                                キャンペーン対象時のみ抽選・連絡確認に使用します。
+                            </small>
+                        </div>
+
                         <div class="criteria-item" data-criteria="tag">
                             <span class="criteria-check"></span>
                             <span class="criteria-text">下にあるタグをタップ！</span>
                         </div>
                     </div>
+
                 <!-- ④ 対象タグ（キャンペーン参加トグル：見た目は選択タグchipと同じ） -->
+                    <p id="campaign-tag-help" class="campaign-tag-help">
+                        ログイン、Xアカウント、必要なID入力が完了すると、下の対象タグを選択できます。
+                    </p>
                     <div id="campaign-banner-tagrow" class="tag-chips campaign-tagrow" style="display:none;">
                         <button type="button" id="campaign-tag-toggle" class="chip" aria-pressed="false">
                             （対象タグ）
@@ -825,17 +876,19 @@
         </div>
 
         <div class="note-full-body">
-            <!-- 左：テキスト側（プリセット 2×2 ＋ 本文） -->
+            <!-- 左：テキスト側（プリセット分類 ＋ 本文） -->
             <div class="text-side">
                 <div class="note-full-body-title">フォーマット</div>
-                <div class="note-presets-grid">
-                    <button type="button" class="note-preset-btn" data-preset="deck-overview">デッキ概要</button>
-                    <button type="button" class="note-preset-btn" data-preset="play-guide">プレイ方針</button>
-                    <button type="button" class="note-preset-btn" data-preset="matchup">対面考察</button>
-                    <button type="button" class="note-preset-btn" data-preset="results">実績レポート</button>
+                <div class="note-preset-wrap">
+                    <div class="note-presets-grid">
+                        <button type="button" class="note-preset-menu-btn" data-preset-menu="templates">記事構成を追加</button>
+                        <button type="button" class="note-preset-menu-btn" data-preset-menu="sections">解説項目</button>
+                        <button type="button" class="note-card-ref-btn">文中にカードを追加</button>
+                    </div>
+                    <div class="note-preset-panel" hidden></div>
                 </div>
                 <textarea id="note-full-text"
-                placeholder="デッキの特徴・回し方・相性などを自由に。プリセットで雛形を挿入できます"></textarea>
+                placeholder="デッキの特徴・回し方・相性などを書いてください。記事構成や解説項目で見出しを追加でき、文中にカード名を入れたい時は「文中にカードを追加」から選べます。"></textarea>
                 </div>
 
             <!-- 右：デッキリスト -->
@@ -941,6 +994,49 @@
                 <input type="hidden" id="post-share-code" name="shareCode">
         </form>
 
+
+</div>
+
+        </div>
+
+        </div>
+
+    <!-- ▼ メインカード：選択モーダル -->
+    <div class="modal" id="repSelectModal" style="display:none;">
+        <div class="modal-content cardnote-modal">
+            <h3 class="filter-maintitle">メインカードを選択</h3>
+            <div id="repSelectGrid" class="cardnote-grid"><!-- JSで5列グリッド生成 --></div>
+            <div class="modal-footer" style="gap:.5rem;">
+                <button type="button" id="repSelectClose" class="modal-buttun">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ▼ デッキ全体表示：オーバーレイ -->
+    <button id="deckpeek-button" type="button">
+        デッキ表示
+    </button>
+    <!-- デッキ全体表示オーバーレイ -->
+    <div id="deckpeek-overlay">
+        <div class="deckpeek-grid" id="deckpeek-grid"></div>
+    </div>
+
+    </div>
+
+
+    <!-- 保存デッキ一覧表示用 -->
+    <div id="saved-deck">
+        <h3 class="saved-deck-title">保存デッキ一覧</h3>
+        <div id="savedDeckCount"></div>
+    </div>
+    <div id="savedDeckList">
+        <!--保存デッキリスト-->
+    </div>
+
+    <p class="saved-deck-massage">
+        ⚠️ デッキはブラウザに保存されます。キャッシュを削除するとデータが消えるのでご注意ください。
+    </p>
+</div>
 
 <!-- ▼ ログイン / 新規登録 モーダル -->
 <div class="account-modal" id="authLoginModal" style="display:none;">
@@ -1054,8 +1150,6 @@
     </form>
 </div>
 
-
-
 <!-- ▼ パスワード保存用の隠しログインフォーム -->
 <form id="auth-login-save" method="get" action="" target="auth-login-save-frame" autocomplete="on" style="position:absolute; left:-9999px; top:-9999px;
              width:1px; height:1px; overflow:hidden;
@@ -1064,49 +1158,6 @@
     <input type="password" name="password" autocomplete="current-password">
 </form>
 <iframe name="auth-login-save-frame" style="display:none;"></iframe>
-
-</div>
-
-        </div>
-
-        </div>
-
-    <!-- ▼ メインカード：選択モーダル -->
-    <div class="modal" id="repSelectModal" style="display:none;">
-        <div class="modal-content cardnote-modal">
-            <h3 class="filter-maintitle">メインカードを選択</h3>
-            <div id="repSelectGrid" class="cardnote-grid"><!-- JSで5列グリッド生成 --></div>
-            <div class="modal-footer" style="gap:.5rem;">
-                <button type="button" id="repSelectClose" class="modal-buttun">閉じる</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ▼ デッキ全体表示：オーバーレイ -->
-    <button id="deckpeek-button" type="button">
-        デッキ表示
-    </button>
-    <!-- デッキ全体表示オーバーレイ -->
-    <div id="deckpeek-overlay">
-        <div class="deckpeek-grid" id="deckpeek-grid"></div>
-    </div>
-
-    </div>
-
-
-    <!-- 保存デッキ一覧表示用 -->
-    <div id="saved-deck">
-        <h3 class="saved-deck-title">保存デッキ一覧</h3>
-        <div id="savedDeckCount"></div>
-    </div>
-    <div id="savedDeckList">
-        <!--保存デッキリスト-->
-    </div>
-
-    <p class="saved-deck-massage">
-        ⚠️ デッキはブラウザに保存されます。キャッシュを削除するとデータが消えるのでご注意ください。
-    </p>
-</div>
 
 <!--上部に戻るボタン-->
 <button id="scrollTopFixed" onclick="scrollToTop()">▲</button>
@@ -1219,6 +1270,8 @@
 <script src="js/common/account/auth-core.js"></script>
 <script src="js/common/account/auth-ui.js"></script>
 <script src="js/common/account/account.js"></script>
+<script src="js/common/account/account-app-data-sync.js"></script>
+<script src="js/common/account/header-auth.js"></script>
 
 <!-- UI -->
 <script src="js/common/ui/tabs.js"></script>
@@ -1227,6 +1280,7 @@
 <script src="js/common/card/cardGrid.js"></script>
 <script src="js/common/card/card-detail.js"></script>
 <script src="js/common/card/card-image-viewer.js"></script>
+<script src="js/common/card/card-pick-modal.js"></script>
 
 <script src="js/common/filter/keyword-filter.js"></script>
 <script src="js/common/filter/chip-bar.js"></script>
@@ -1241,10 +1295,12 @@
 <script src="js/common/deck/deck-peek.js"></script>
 <script src="js/common/deck/image-export.js"></script>
 <script src="js/common/deck/deck-analysis.js"></script>
+<script src="js/common/deck/deck-note-presets.js"></script>
 <script defer src="js/common/deck/screenshot-panel.js"></script>
 
 <!-- デッキメーカーページ専用 -->
 <script src="js/pages/deckmaker/deckmaker-loader.js"></script>
+<script src="js/common/pwa/register.js"></script>
 
 </body>
 </html>

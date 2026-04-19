@@ -298,6 +298,8 @@ button,
 
 /*ヘッダー関連*/
 .main-header {
+    --header-nav-font-size: clamp(1.2rem, 2.6vw, 1.6rem);
+
     height: 3.5rem;
     background-image: url("../img/header.webp");
     background-repeat: repeat-x;
@@ -307,11 +309,18 @@ button,
     background-position: center center;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start !important;
+    gap: 6px;
+    box-sizing: border-box;
     padding: 0px 5px;
     color: white;
     top: 0;
     z-index: 1000;
+    overflow: visible;
+}
+
+.header-logo {
+    flex: 0 0 auto;
 }
 
 .header-logo img {
@@ -321,41 +330,391 @@ button,
     object-fit: contain;
 }
 
+.main-header > .header-nav {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    max-width: calc(100% - 140px);
+    margin-left: auto !important;
+    margin-right: 0 !important;
+    min-width: 0;
+}
 
-.header-nav a {
+.main-header > .header-nav a {
     margin-left: 1rem;
     color: white;
     text-decoration: none;
     font-weight: bold;
-    font-size: clamp(1.2rem, 2.6vw, 1.6rem);
+    font-size: var(--header-nav-font-size);
     background-color: rgba(0, 0, 0, 0.4);
     padding: 6px 0.2em;
     border-radius: 6px;
     transition: background-color 0.3s;
 }
 @media (max-width: 768px) {
-    .header-nav a {
-        font-size: 1.05rem;
-        font-size: clamp(.6rem, 2.45vw, 1.05rem);
+    .main-header {
+        --header-nav-font-size: clamp(.6rem, 2.45vw, 1.05rem);
+    }
+
+    .main-header > .header-nav a {
+        font-size: var(--header-nav-font-size);
     }
 }
 @media (max-width: 560px) {
-    .header-nav a {
+    .main-header > .header-nav a {
         margin-left: 0.1rem;
     }
 }
 
-.header-nav a:hover {
+.main-header > .header-nav a:hover {
     background-color: rgba(255, 255, 255, 0.2);
     /* 軽いホバー効果 */
     text-decoration: none;
 }
 
-.header-nav a.active-page {
+.main-header > .header-nav a.active-page {
     background-color: rgba(255, 255, 255, 0.5);
     color: #fff;
     box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
     text-shadow: 0 0 3px rgba(0, 0, 0, 0.4);
+}
+
+/* ヘッダーアカウント導線 */
+.main-header > .header-account {
+    position: relative;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-left: 6px;
+    min-width: 0;
+}
+
+.main-header .header-auth-login,
+.main-header .header-auth-user {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    max-width: 180px;
+    padding: .35rem .8rem;
+    border: none;
+    border-radius: 8px;
+    background: #6c63ff;
+    color: #fff;
+    font-size: .8rem;
+    font-weight: 700;
+    line-height: 1.1;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+    text-shadow: none;
+    white-space: nowrap;
+}
+.main-header .header-auth-login,
+.main-header .header-auth-user {
+    font-size: calc(var(--header-nav-font-size) * 0.85);
+}
+
+.main-header .header-auth-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.main-header .header-auth-login:hover,
+.main-header .header-auth-user:hover {
+    background: #5b54e6;
+}
+
+.main-header .header-auth-login:focus-visible,
+.main-header .header-auth-user:focus-visible,
+.main-header .header-auth-menu button:focus-visible,
+.main-header .header-auth-menu a:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.95);
+    outline-offset: 2px;
+}
+
+.main-header .header-auth-dropdown {
+    position: relative;
+}
+
+.main-header .header-auth-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 5000;
+    display: grid;
+    min-width: 170px;
+    padding: 6px;
+    border: 1px solid rgba(17, 24, 39, 0.16);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+}
+
+.main-header .header-auth-menu[hidden] {
+    display: none;
+}
+
+.main-header .header-auth-menu button,
+.main-header .header-auth-menu a {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #111827;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+
+.main-header .header-auth-menu button:hover,
+.main-header .header-auth-menu a:hover {
+    background: #eef2ff;
+    text-decoration: none;
+}
+
+.main-header .header-auth-menu .header-auth-logout {
+    color: #b91c1c;
+}
+
+@media (max-width: 768px) {
+    .main-header {
+        gap: 4px;
+        padding: 4px 5px;
+        height: 3.5rem;
+    }
+
+    .header-logo img {
+        height: 2.2rem;
+        margin-top: 4px;
+    }
+
+    .main-header .header-auth-login,
+    .main-header .header-auth-user {
+        max-width: 94px;
+        padding: 7px;
+    }
+
+
+    .main-header .header-auth-menu {
+        min-width: 150px;
+    }
+
+    .main-header .header-auth-menu button,
+    .main-header .header-auth-menu a {
+        padding: 8px;
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 560px) {
+    .main-header {
+        align-items: center;
+    }
+
+    .main-header > .header-nav {
+        justify-content: flex-end;
+        max-width: calc(100% - 90px);
+    }
+
+    .main-header > .header-nav a {
+        padding: 5px 0.15em;
+    }
+
+    .main-header .header-auth-login,
+    .main-header .header-auth-user {
+        max-width: 100px;
+        padding-right: 5px;
+        padding-left: 5px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .main-header .header-auth-login,
+    .main-header .header-auth-user {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* アカウントモーダル共通（authページ未読込でも使える最小定義） */
+.account-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 5000;
+    justify-content: center;
+    align-items: center;
+}
+
+.account-modal .modal-content {
+    box-sizing: border-box;
+    width: min(720px, 94vw);
+    max-height: 88vh;
+    margin: auto;
+    padding: 12px;
+    overflow: auto;
+    border-radius: 8px;
+    background: #fff;
+    color: #111827;
+}
+
+.account-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.account-modal-head h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.account-close {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #f3f4f6;
+    color: #111827;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.account-modal-body {
+    display: grid;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.account-field,
+.auth-login-form {
+    display: grid;
+    gap: 6px;
+}
+
+.account-field label {
+    color: #374151;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.account-field input[type="text"],
+.account-field input[type="password"],
+.poster-line input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.poster-line,
+.account-pass-row,
+.X-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.poster-line input,
+.account-pass-row input,
+.X-info input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.auth-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+}
+
+.btn.ghost,
+.btn.primary,
+.btn.danger,
+.x-link-btn {
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn.ghost {
+    padding: 0.35rem 0.6rem;
+    border: 1px solid #d1d5db;
+    background: #f3f4f6;
+    color: #333;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.btn.primary {
+    padding: 0.4rem 0.7rem;
+    border: 0;
+    background: #4f46e5;
+    color: #fff;
+}
+
+.auth-buttons .auth-mode-switch {
+    padding: 0.4rem 0.7rem;
+    border: 1px solid #6c63ff;
+    border-radius: 8px;
+    background: #fff;
+    color: #4f46e5;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.auth-buttons .auth-mode-switch:hover {
+    border-color: #5b54e6;
+    background: #f5f4ff;
+}
+
+.btn.danger {
+    padding: 0.45rem 0.7rem;
+    border: 0;
+    background: #dc2626;
+    color: #fff;
+}
+
+.x-link-btn {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    background: #111827;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.account-hint,
+.account-note,
+.auth-inline-status {
+    color: #4b5563;
+    font-size: 0.85rem;
+}
+
+.account-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
 }
 
 
@@ -521,4 +880,3 @@ footer a:hover {
         font-size: 12px;
     }
 }
-

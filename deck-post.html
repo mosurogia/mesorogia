@@ -8,6 +8,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="5NzYWNH5_YUg0dUV2iCzg_bSo7M1lLJi6IzOeF2dGXM" />
     <link rel="icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="img/app-icon.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#111827">
 
     <!-- ===== タイトル ===== -->
     <title>神託のメソロギア デッキ投稿｜共有・ランキング｜モスロギア</title>
@@ -58,6 +61,7 @@
         <a href="deckmaker.html">🃏 デッキメーカー</a>
         <a class="active-page" href="deck-post.html">📤 デッキ投稿</a>
     </nav>
+    <div class="header-account" data-header-auth></div>
 </header>
 
 <!--全体投稿一覧ページ -->
@@ -251,9 +255,16 @@
 
                     <!-- 未ログイン時：新規登録 / ログイン -->
                     <div id="auth-mini-loggedout" style="display:none;">
-                        <button type="button" id="open-login-modal" class="auth-mini-btn" data-open="authLoginModal">
-                            新規登録 / ログイン
-                        </button>
+                        <div class="auth-mini-actions">
+                            <button type="button" class="auth-mini-btn primary" data-open="authLoginModal"
+                                data-auth-entry="login">
+                                ログイン
+                            </button>
+                            <button type="button" class="auth-mini-btn" data-open="authLoginModal"
+                                data-auth-entry="signup">
+                                新規登録
+                            </button>
+                        </div>
                     </div>
 
                     <!-- ログイン時：アカウントデータ ＋ ログアウト -->
@@ -390,6 +401,14 @@
                         <!-- JS で .filter-btn.post-filter-tag-btn を並べる -->
                     </div>
                 </details>
+
+                <!-- ▼ キャンペーン（終了済みのみ表示） -->
+                <div class="filter-section" id="postFilterCampaignSection" style="display:none;">
+                    <div class="filter-section-title">▼ キャンペーン</div>
+                    <div id="postFilterCampaignArea" class="filter-group" data-key="キャンペーン">
+                        <!-- JS で終了済みキャンペーンの .filter-btn.post-filter-tag-btn を並べる -->
+                    </div>
+                </div>
             </div>
             <!-- ユーザータグで絞り込み -->
             <div class="filter-block filter-section">
@@ -756,12 +775,17 @@
 <script src="js/common/account/auth-core.js"></script>
 <script src="js/common/account/auth-ui.js"></script>
 <script src="js/common/account/account.js"></script>
+<script src="js/common/account/account-app-data-sync.js"></script>
+<script src="js/common/account/header-auth.js"></script>
 
 <!-- 画像生成 -->
 <script src="js/common/deck/deck-peek.js"></script>
 <script src="js/common/deck/image-export.js"></script>
 <script src="js/common/deck/deck-analysis.js"></script>
+<script src="js/common/deck/deck-note-presets.js"></script>
+<script src="js/common/card/card-detail.js"></script>
 <script src="js/common/card/card-image-viewer.js"></script>
+<script src="js/common/card/card-pick-modal.js"></script>
 
 <!-- ▼ デッキ全体表示：オーバーレイ -->
 <button id="deckpeek-button" type="button">
@@ -774,6 +798,7 @@
 
 <!-- ページ固有 -->
 <script src="js/pages/deck-post/deck-post-page-loader.js"></script>
+<script src="js/common/pwa/register.js"></script>
 
 
 </body>

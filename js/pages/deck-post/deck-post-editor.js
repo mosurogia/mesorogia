@@ -199,6 +199,7 @@
       view.hidden = false;
 
       showActionToast_('デッキ解説を更新しました');
+      window.MesorogiaPwaInstall?.showNudge?.();
     } finally {
       saveBtn.disabled = false;
       saveBtn.textContent = prevText;
@@ -707,6 +708,7 @@
       view.hidden = false;
 
       showActionToast_('カード解説を更新しました');
+      window.MesorogiaPwaInstall?.showNudge?.();
     } finally {
       saveBtn.disabled = false;
       saveBtn.textContent = prevText;
@@ -790,6 +792,7 @@
 
         modal.style.display = 'none';
         window.showMiniToast_?.('ユーザータグを保存しました');
+        window.MesorogiaPwaInstall?.showNudge?.();
       } finally {
         utSaveBtn.disabled = false;
         utSaveBtn.textContent = keep;
@@ -1016,6 +1019,7 @@
       closeDeckCodeModal_();
 
       window.showMiniToast_('デッキコードを保存しました');
+      window.MesorogiaPwaInstall?.showNudge?.();
       return;
     }
 

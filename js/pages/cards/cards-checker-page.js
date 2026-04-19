@@ -356,7 +356,11 @@ function initPackJumpUi_(){
 }
 
 window.addEventListener('card-page:ready', initPackJumpUi_);
-window.addEventListener('DOMContentLoaded', initPackJumpUi_);
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initPackJumpUi_, { once: true });
+} else {
+  initPackJumpUi_();
+}
 window.addEventListener('cards-checker:rendered', rebuildPackJumpTabsWithRetry_);
 document.addEventListener('tab:switched', (e) => {
   if (e?.detail?.targetId === 'checker') rebuildPackJumpTabsWithRetry_();

@@ -163,6 +163,7 @@
     } catch {}
 
     renderSavedDeckList_({ key, cap, containerId: opts.containerId, counterId: opts.counterId });
+    window.MesorogiaPwaInstall?.showNudge?.();
     return res;
   }
 

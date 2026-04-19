@@ -28,8 +28,8 @@
 
   const CHECKER_FILES = [
     'cards-checker-owned-ops.js',
-    'cards-checker-render.js',
     'cards-checker-page.js',
+    'cards-checker-render.js',
   ];
 
   function loadSeq(files, i, done, fail){

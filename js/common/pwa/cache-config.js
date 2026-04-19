@@ -2,13 +2,14 @@
   'use strict';
 
   var config = {
-    version: '2026-04-18-003',
-    staticCacheName: 'mesorogia-static-2026-04-18-003',
-    runtimeCacheName: 'mesorogia-runtime-2026-04-18-003',
+    version: '2026-04-20-003',
+    staticCacheName: 'mesorogia-static-2026-04-20-003',
+    runtimeCacheName: 'mesorogia-runtime-2026-04-20-003',
     appShell: [
       './cards.html',
       './deckmaker.html',
       './deck-post.html',
+      './settings.html',
       './favicon.ico',
       './manifest.webmanifest',
       './img/app-icon.png',
@@ -55,6 +56,8 @@
       './js/common/deck/deck-analysis.js',
       './js/common/deck/deck-note-presets.js',
       './js/common/deck/screenshot-panel.js',
+      './js/common/pwa/install-ui.js',
+      './js/common/pwa/register.js',
       './js/pages/cards/cards-checker-owned-ops.js',
       './js/pages/cards/cards-checker-page.js',
       './js/pages/cards/cards-checker-render.js',

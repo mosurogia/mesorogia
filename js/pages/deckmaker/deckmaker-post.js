@@ -1639,6 +1639,7 @@
 
         const postId = String(json.postId || '');
         openPostSuccessModal({ deckName, postId, campaign: camp });
+        window.MesorogiaPwaInstall?.showNudge?.();
       }else{
         if (json.error === 'too_many_posts'){
           showPostToast('短時間に連続して投稿することはできません。少し時間をおいて再度お試しください。', 'error');

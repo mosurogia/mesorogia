@@ -69,7 +69,6 @@
 
     <!-- ツールバー -->
     <div class="toolbar" id="toolbar">
-        <div class="spacer"></div>
 
         <button class="btn-ghost pwa-install-toolbar js-pwa-install-toolbar" type="button">
             📱 アプリで見る
@@ -406,11 +405,19 @@
                     </div>
                 </details>
 
-                <!-- ▼ キャンペーン（終了済みのみ表示） -->
+                <!-- ▼ 過去のキャンペーン（終了済みのみ表示） -->
                 <div class="filter-section" id="postFilterCampaignSection" style="display:none;">
-                    <div class="filter-section-title">▼ キャンペーン</div>
+                    <div class="filter-section-title">▼ 過去のキャンペーン</div>
                     <div id="postFilterCampaignArea" class="filter-group" data-key="キャンペーン">
                         <!-- JS で終了済みキャンペーンの .filter-btn.post-filter-tag-btn を並べる -->
+                    </div>
+                </div>
+
+                <!-- ▼ 環境（環境基準シートから生成） -->
+                <div class="filter-section" id="postFilterEnvironmentSection" style="display:none;">
+                    <div class="filter-section-title">▼ 環境</div>
+                    <div id="postFilterEnvironmentArea" class="filter-group" data-key="環境">
+                        <!-- JS で .filter-btn.post-filter-env-btn を並べる -->
                     </div>
                 </div>
             </div>
@@ -514,7 +521,11 @@
                                 <button class="btn primary" type="submit" id="auth-login-btn-submit">ログイン</button>
                             </div>
 
-                            <p id="auth-inline-status" class="auth-inline-status" aria-live="polite" style="margin:.5rem 0 0; font-size:.9rem;">
+                            <button type="button" class="auth-forgot-link" id="auth-forgot-password">
+                                パスワードを忘れた場合
+                            </button>
+
+                            <p id="auth-inline-status" class="auth-inline-status" aria-live="polite" style="margin:0; font-size:.9rem;">
                             </p>
                         </form>
 
@@ -780,6 +791,7 @@
 <script src="js/common/account/auth-ui.js"></script>
 <script src="js/common/account/account.js"></script>
 <script src="js/common/account/account-app-data-sync.js"></script>
+<script src="js/common/account/account-match-results.js"></script>
 <script src="js/common/account/header-auth.js"></script>
 
 <!-- 画像生成 -->

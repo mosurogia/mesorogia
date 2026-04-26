@@ -390,6 +390,28 @@
     background: #f5f4ff;
 }
 
+.auth-forgot-link {
+    justify-self: start;
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    color: #4f46e5;
+    font-size: .8rem;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.auth-forgot-link:hover {
+    color: #3730a3;
+}
+
+.auth-forgot-link:focus-visible {
+    outline: 2px solid #4f46e5;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
 
 /* ===== Auth: ログイン中表示行 ===== */
 

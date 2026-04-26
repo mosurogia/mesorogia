@@ -151,11 +151,30 @@
     justify-content: flex-start;
 }
 
+.cg-head-row-source {
+    justify-content: flex-start;
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: 8px;
+}
+
+.cg-head-row-source .data-source-auth-actions {
+    flex-wrap: wrap;
+}
+
+.cg-head-row-source .data-source-badge {
+    flex: 0 0 auto;
+}
+
 .cg-head-title {
     font-weight: 900;
     font-size: 16px;
     letter-spacing: .02em;
     white-space: nowrap;
+}
+
+.cg-storage-status {
+    font-weight: 900;
 }
 
 .cg-head-row-status {
@@ -337,73 +356,13 @@
     gap: 6px;
 }
 
-.cg-list.is-auth-locked {
+.cg-list.is-sync-locked {
     min-height: 240px;
 }
 
-.cg-list.is-auth-locked .cg-row {
-    opacity: 0.28;
+.cg-list.is-sync-locked .cg-row {
+    opacity: 0.45;
     pointer-events: none;
-}
-
-.cg-auth-lock {
-    position: absolute;
-    inset: 0;
-    z-index: 5;
-    display: flex;
-    min-height: 100%;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 18px 12px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(2px);
-    text-align: center;
-}
-
-.cg-auth-lock-title {
-    max-width: 240px;
-    color: #111827;
-    font-size: 14px;
-    font-weight: 900;
-    line-height: 1.55;
-}
-
-.cg-auth-lock-actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px;
-}
-
-.cg-auth-lock-btn {
-    min-width: 104px;
-    padding: 9px 12px;
-    border: 1px solid #6c63ff;
-    border-radius: 8px;
-    background: #fff;
-    color: #4f46e5;
-    font-weight: 900;
-    cursor: pointer;
-}
-
-.cg-auth-lock-btn.primary {
-    background: #6c63ff;
-    color: #fff;
-}
-
-.cg-auth-lock-btn:hover,
-.cg-auth-lock-btn.primary:hover {
-    border-color: #5b54e6;
-    background: #5b54e6;
-    color: #fff;
-}
-
-.cg-auth-lock-btn:focus-visible {
-    outline: 3px solid rgba(108, 99, 255, 0.35);
-    outline-offset: 2px;
 }
 
 /* =====================================================
@@ -484,8 +443,21 @@
         padding: 10px 12px;
     }
 
-    .sp-group-drawer-body .cg-list.is-auth-locked {
+    .sp-group-drawer-body .cg-list.is-sync-locked {
         min-height: 360px;
+    }
+
+    .cg-head-row-source {
+        gap: 4px;
+    }
+
+    .cg-head-row-source .data-source-badge {
+        flex-basis: 100%;
+        width: fit-content;
+    }
+
+    .cg-storage-status {
+        font-weight: 900;
     }
 
 /* =====================================================

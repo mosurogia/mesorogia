@@ -412,7 +412,7 @@
     box-shadow: 0 0 0 1px rgba(255, 255, 255, .55), inset 0 0 0 2px rgba(255, 255, 255, .4);
 }
 
-.card-pick-option[data-pack="Awaking The Oracle"] {
+.card-pick-option[data-pack="Awakening The Oracle"] {
     --ring: rgb(var(--pack-a-rgb));
     --ring-accent: rgb(var(--pack-a-accent-rgb));
 }
@@ -649,8 +649,27 @@
 #filterModal {
     display: none;
     flex-direction: column;
-    max-height: 120vh;
+    justify-content: flex-start;
+    align-items: center;
+    max-height: 100vh;
+    padding: 56px 0 24px;
+    box-sizing: border-box;
     overflow-y: auto;
+}
+
+#filterModal .modal-content {
+    max-height: calc(100vh - 80px);
+    margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+    #filterModal {
+        padding: 18px 0 14px;
+    }
+
+    #filterModal .modal-content {
+        max-height: calc(100vh - 32px);
+    }
 }
 
 .modal {
@@ -680,16 +699,21 @@
     margin: auto;
 }
 
-/* メインタイトル（sticky） */
-.filter-maintitle {
+/* フィルターモーダル上部固定 */
+.filter-modal-head {
     position: sticky;
     top: 0;
     z-index: 1;
-    margin: 0 -15px 8px;
+    margin: 0 -15px 10px;
+    background: rgba(255, 255, 255, .96);
+    border-bottom: 1px solid #eee;
+}
+
+/* メインタイトル */
+.filter-maintitle {
+    margin: 0;
     padding: 10px 15px;
     font-size: clamp(14px, 3.5vw, 20px);
-    background: linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, .92) 100%);
-    border-bottom: 1px solid #eee;
 }
 
 /* セクションタイトル */
@@ -698,6 +722,82 @@
     margin: 3px 2px;
     font-weight: 700;
     font-size: clamp(12px, 2.8vw, 16px);
+}
+
+/* フィルターモーダル内タブ */
+.filter-modal-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    margin: 0;
+    padding: 0 15px;
+    border-bottom: 1px solid rgba(0, 0, 0, .12);
+}
+
+.filter-modal-tab {
+    position: relative;
+    min-height: 42px;
+    padding: 0 2px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #667085;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: 0;
+    text-align: center;
+    font-size: clamp(12px, 2.8vw, 16px);
+}
+
+.filter-modal-tab::after {
+    content: "";
+    position: absolute;
+    right: 18px;
+    bottom: -1px;
+    left: 18px;
+    height: 3px;
+    border-radius: 999px 999px 0 0;
+    background: transparent;
+}
+
+.filter-modal-tab:hover {
+    color: #1f3f5f;
+}
+
+.filter-modal-tab.is-active {
+    color: #c23b5a;
+}
+
+.filter-modal-tab.is-active::after {
+    background: #c23b5a;
+}
+
+.filter-modal-tab:focus-visible {
+    outline: 2px solid #2b90ff;
+    outline-offset: 2px;
+}
+
+.filter-modal-pane {
+    display: none;
+}
+
+.filter-modal-pane.is-active {
+    display: block;
+}
+
+.filter-auth-lock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 8px;
+    border: 1px solid rgba(43, 144, 255, .24);
+    border-radius: 8px;
+    background: rgba(43, 144, 255, .08);
+    color: #17456f;
+    font-size: clamp(.6rem, 2.5vw, 1rem);
+    font-weight: 700;
+    text-align: center;
 }
 
 /* =========================================
@@ -714,6 +814,7 @@
 
 .card-detail-modal-root.show {
     display: block;
+    pointer-events: auto;
 }
 
 .card-detail-modal-root .modal-content {
@@ -1096,7 +1197,7 @@
     justify-content: center;
     min-height: 36px;
     padding: 8px;
-    border-radius: 10px;
+    border-radius: 8px;
 
     border: 1px solid rgba(0, 0, 0, .12);
     background: #f7f7f9;
@@ -1104,7 +1205,7 @@
 
     font-size: clamp(.6rem, 2.5vw, 1rem);
     line-height: 1.1;
-    letter-spacing: .02em;
+    letter-spacing: 0;
 
     text-overflow: ellipsis;
     overflow: hidden;
@@ -1215,6 +1316,199 @@
     gap: 2px;
     padding: 8px 4px;
     font-size: clamp(.3rem, 2vw, 1rem);
+}
+
+/* データソース表示・認証ボタン共通 */
+.data-source-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.data-source-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    min-height: 20px;
+    padding: .3rem .65rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #f9fafb;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.data-source-badge[data-tooltip] {
+    cursor: help;
+}
+
+.data-source-badge::before {
+    content: "";
+    width: .55rem;
+    height: .55rem;
+    border-radius: 999px;
+    background: #9ca3af;
+}
+
+.data-source-badge.is-account {
+    border-color: #86efac;
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.data-source-badge.is-account::before {
+    background: #22c55e;
+}
+
+.data-source-badge.is-local {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #92400e;
+}
+
+.data-source-badge.is-local::before {
+    background: #f59e0b;
+}
+
+.data-source-badge.is-syncing {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.data-source-badge.is-syncing::before {
+    background: #3b82f6;
+}
+
+.data-source-badge.is-error {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.data-source-badge.is-error::before {
+    background: #ef4444;
+}
+
+.data-source-badge[data-tooltip]::after {
+    content: none;
+}
+
+.data-source-badge[data-tooltip]:hover::after,
+.data-source-badge[data-tooltip]:focus::after {
+    content: none;
+}
+
+#data-source-badge-tooltip {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 4600;
+    width: min(280px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+    padding: 7px 9px;
+    border: 1px solid rgba(31, 41, 55, .18);
+    border-radius: 8px;
+    box-sizing: border-box;
+    background: #111827;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+    white-space: pre-line;
+    text-align: left;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .22);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(4px);
+    transition: opacity .16s ease, transform .16s ease;
+}
+
+#data-source-badge-tooltip.is-show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.data-source-auth-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+.data-source-auth-actions .cards-auth-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 0.3rem 0.52rem;
+    border: 1px solid #6c63ff;
+    border-radius: 8px;
+    background: #fff;
+    color: #4f46e5;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .18);
+}
+
+.data-source-auth-actions .cards-auth-btn.primary {
+    background: #6c63ff;
+    color: #fff;
+}
+
+.data-source-auth-actions .cards-auth-btn:hover,
+.data-source-auth-actions .cards-auth-btn.primary:hover {
+    background: #5b54e6;
+    border-color: #5b54e6;
+    color: #fff;
+}
+
+.data-source-auth-actions .cards-auth-btn:focus-visible {
+    outline: 2px solid rgba(108, 99, 255, .45);
+    outline-offset: 2px;
+}
+
+@media (max-width: 430px) {
+    .data-source-auth-actions {
+        gap: 3px;
+    }
+
+    .data-source-auth-actions .cards-auth-btn,
+    .data-source-badge {
+        min-height: 26px;
+        padding: 0.24rem 0.38rem;
+        font-size: 10px;
+        line-height: 1;
+    }
+
+    .data-source-badge::before {
+        width: .45rem;
+        height: .45rem;
+    }
+}
+
+/* カードグループの保存状態表示 */
+.filter-card-group-status {
+    grid-column: 1 / -1;
+    width: fit-content;
+}
+
+.filter-card-group-source-row {
+    grid-column: 1 / -1;
+    width: 100%;
+}
+
+.filter-card-group-auth-actions {
+    width: fit-content;
 }
 
 /* 左側：グループ名 */
@@ -1451,7 +1745,7 @@
 }
 
 /* パック色注入（--ring / --ring-accent） */
-.filter-group[data-key="パック名"] .filter-btn[data-pack="Awaking The Oracle"] {
+.filter-group[data-key="パック名"] .filter-btn[data-pack="Awakening The Oracle"] {
     --ring: rgb(var(--pack-a-rgb));
     --ring-accent: rgb(var(--pack-a-accent-rgb));
 }
@@ -1839,7 +2133,9 @@
     column-gap: 8px;
 }
 
-.filter-range-wrapper .filter-group {
+/* コスト・パワーの範囲セレクト専用 */
+.filter-range-wrapper .filter-group[data-key="コスト"],
+.filter-range-wrapper .filter-group[data-key="パワー"] {
     grid-template-columns: auto auto auto;
     align-items: center;
     justify-content: start;
@@ -1878,12 +2174,6 @@
     color: #333;
     padding-top: 6px;
     border-top: 2px solid #eee;
-}
-
-#extra-conditions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: .5rem;
 }
 
 /* 特殊効果 */
@@ -1928,6 +2218,8 @@
     min-height: 36px;
     padding: 8px 12px;
     border-radius: 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 
@@ -2416,6 +2708,35 @@
 
 .card-effect {
     line-height: 1.5;
+}
+
+.card-adjustment-switcher {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0 10px;
+}
+
+.card-adjustment-btn {
+    min-height: 30px;
+    padding: 4px 10px;
+    border: 1px solid #b5d9f3;
+    border-radius: 4px;
+    background: #fff;
+    color: #1f3f5f;
+    font-size: .82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.card-adjustment-btn.is-active {
+    background: linear-gradient(180deg, #e9f5fb 0%, #d4ecfa 100%);
+    border-color: #73b9e8;
+}
+
+.card-adjustment-btn:focus-visible {
+    outline: 2px solid #2f80ed;
+    outline-offset: 2px;
 }
 
 /* タイプ別背景色 */

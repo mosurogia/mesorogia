@@ -218,9 +218,10 @@
 .summary-bar {
     display: flex;
     align-items: center;
-    gap: 0;
+    gap: 4px;
     padding: 2px 0;
     font-size: clamp(13px, 1.3vw, 18px);
+    flex-wrap: nowrap;
 }
 
 .summary-bar #cards-auth-actions {
@@ -228,10 +229,32 @@
 }
 
 .summary-bar #owned-data-source {
-    flex: 0 1 auto;
+    flex: 0 0 auto;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.summary-bar #show-missing-all-top {
+    flex: 0 0 auto;
+    min-width: 0;
+    min-height: 32px;
+    padding: .3rem .55rem;
+    padding: .3rem .65rem;
+    margin: 0;
+    border: 1px solid #86efac;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    color: #065f46;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.summary-bar #show-missing-all-top:hover {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
 }
 
 .summary-bar #top-tweet-link {
@@ -242,14 +265,9 @@
 /* 狭いスマホでは各ボタンを小さくして1行に収める */
 @media (max-width: 430px) {
     .summary-bar {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr) auto;
+        display: flex;
         gap: 4px;
         align-items: center;
-    }
-
-    .summary-bar.is-auth-logged-in {
-        grid-template-columns: minmax(0, 1fr) auto;
     }
 
     .summary-bar #cards-auth-actions {
@@ -257,8 +275,7 @@
     }
 
     .summary-bar #top-tweet-link {
-        margin-left: 0;
-        justify-self: end;
+        margin-left: auto;
         padding: 0.28rem 0.38rem;
         border-radius: 8px;
         font-size: 11px;
@@ -266,6 +283,12 @@
 
     .summary-bar #owned-data-source {
         justify-content: center;
+        min-height: 26px;
+        padding: 0.24rem 0.38rem;
+        font-size: 10px;
+    }
+
+    .summary-bar #show-missing-all-top {
         min-height: 26px;
         padding: 0.24rem 0.38rem;
         font-size: 10px;
@@ -405,7 +428,7 @@
     align-items: center;
     justify-content: flex-start;
     gap: .4rem;
-    min-height: 32px;
+    min-height: 20px;
     padding: .3rem .65rem;
     border: 1px solid #d1d5db;
     border-radius: 8px;
@@ -415,7 +438,6 @@
     font-weight: 800;
     font-family: inherit;
     white-space: nowrap;
-    cursor: pointer;
 }
 
 .owned-data-source:focus-visible {
@@ -940,6 +962,10 @@
     min-width: 0;
 }
 
+#packs-root>.top-menu-row1 {
+    margin: 6px 3px 4px;
+}
+
 /* 不足カードボタン（SP上部） */
 .top-menu-row1 #show-missing-all-top {
     /* ✅ 可変で縮められるように */
@@ -1009,32 +1035,6 @@
 
 .menu-btn[data-count="0"]::after {
     display: none;
-}
-
-/* トップの切替トグル：横いっぱい */
-#top-pack-view-toggle.top-pack-view-toggle {
-    flex: 1 1 0;
-    min-width: 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: stretch;
-    padding: 3px;
-}
-
-#top-pack-view-toggle .toggle-pack-view-btn {
-    flex: 1 1 0;
-    min-width: 0;
-
-    text-align: center;
-    white-space: nowrap;
-
-    /* ✅ 端末幅に合わせて自動で詰める */
-    padding: clamp(6px, 1.8vw, 7px) clamp(8px, 2.4vw, 12px);
-    font-size: clamp(10.5px, 2.9vw, 14px);
-    line-height: 1.1;
-
-    text-overflow: ellipsis;
 }
 
 .top-menu-row2 {
@@ -1435,6 +1435,92 @@
     gap: 5px;
 }
 
+/* ゲーム表示 */
+.checker-overall-section {
+    --pack-rgb: var(--pack-g-rgb);
+    --pack-accent-rgb: var(--pack-g-accent-rgb);
+    border: 5px solid rgba(var(--pack-rgb), 0.95);
+    box-shadow: 0 0 0 1px rgba(var(--pack-accent-rgb), 0.25) inset;
+    margin-top: 6px;
+}
+
+.checker-overall-section[hidden],
+.checker-overall-page[hidden] {
+    display: none !important;
+}
+
+.checker-overall-pager {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+}
+
+.checker-overall-note {
+    display: grid;
+    gap: 2px;
+    margin: 0 8px 4px;
+    color: #333;
+    font-weight: 700;
+}
+
+.checker-overall-note small {
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.checker-overall-page-info {
+    min-width: 64px;
+    text-align: center;
+    font-weight: 800;
+    color: #333;
+}
+
+.checker-overall-page-btn {
+    min-height: 38px;
+    border: 1px solid rgba(var(--pack-accent-rgb), .55);
+    border-radius: 8px;
+    background: rgba(var(--pack-accent-rgb), .12);
+    color: #1f2937;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.checker-overall-page-btn:disabled {
+    cursor: default;
+    opacity: .45;
+}
+
+.checker-overall-page-btn:not(:disabled):hover {
+    background: rgba(var(--pack-accent-rgb), .20);
+}
+
+.checker-overall-page-btn:focus-visible {
+    outline: 2px solid rgba(var(--pack-accent-rgb), .75);
+    outline-offset: 2px;
+}
+
+.checker-overall-page.card-list {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, var(--overall-card-width, 128px)));
+    justify-content: center;
+    gap: 5px;
+    padding: 8px;
+}
+
+.checker-overall-section.is-two-page .checker-overall-pages {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.checker-overall-page.card-list .card {
+    width: var(--overall-card-width, 128px);
+    min-width: 0;
+}
+
 /* 種族枠 */
 .race-group {
     margin: 0.3rem 3px;
@@ -1655,7 +1741,8 @@
    12. チェッカーノート
 ===================================================== */
 /* SP：所持率メモ（race-summary-mobile の上） */
-.checker-note {
+.checker-note,
+.checker-overall-note {
     margin: 10px 0 6px;
     padding: 4px 5px;
     border-radius: 12px;

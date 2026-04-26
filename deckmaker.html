@@ -1024,18 +1024,15 @@
     </div>
 
 
-    <!-- 保存デッキ一覧表示用 -->
+    <!-- デッキ保管庫表示用 -->
     <div id="saved-deck">
-        <h3 class="saved-deck-title">保存デッキ一覧</h3>
+        <h3 class="saved-deck-title">デッキ保管庫</h3>
         <div id="savedDeckCount"></div>
     </div>
     <div id="savedDeckList">
         <!--保存デッキリスト-->
     </div>
 
-    <p class="saved-deck-massage">
-        ⚠️ デッキはブラウザに保存されます。キャッシュを削除するとデータが消えるのでご注意ください。
-    </p>
 </div>
 
 <!-- ▼ ログイン / 新規登録 モーダル -->
@@ -1073,6 +1070,10 @@
                         <button class="btn primary" type="button" id="auth-signup-btn">新規登録</button>
                         <button class="btn primary" type="submit" id="auth-login-btn-submit">ログイン</button>
                     </div>
+
+                    <button type="button" class="auth-forgot-link" id="auth-forgot-password">
+                        パスワードを忘れた場合
+                    </button>
 
                     <p id="auth-inline-status" class="auth-inline-status" aria-live="polite" style="margin:.5rem 0 0; font-size:.9rem;">
                     </p>

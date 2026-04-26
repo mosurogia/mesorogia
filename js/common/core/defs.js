@@ -69,16 +69,18 @@ window.BASE_PATH = window.BASE_PATH ?? '';
 // =======================================
 window.GAS_API_BASE =
   window.GAS_API_BASE ||
-  'https://script.google.com/macros/s/AKfycbwzuiRNWgynQIFfH4J08vUfCDFh1u6YbZiP6B88jpg-CY3BfCInIcgsPRcNFO2lwjKi/exec';
+  'https://script.google.com/macros/s/AKfycby5Dygwf9Qi_zB697yXdH8JYtejwF0wyd5iE9-n71IPrpDH6HIqU3cvHOrGxgz6PNuL/exec';
 
-window.DECKPOST_API_BASE = window.DECKPOST_API_BASE || window.GAS_API_BASE;
+window.DECKPOST_API_BASE =
+  window.DECKPOST_API_BASE ||
+  'https://script.google.com/macros/s/AKfycbyDaMWpx0QHQdtxBhVdcWi1KKV5P0Tu57Qg1KSBpR7Of_M5JAHUnUhL8wb_gD0MJWZq/exec';
 window.AUTH_API_BASE     = window.AUTH_API_BASE     || window.GAS_API_BASE;
 
 // ========================
 // 投稿・デッキ共通：タグ定義
 // ========================
 window.POST_TAG_CANDIDATES ??= [
-    "初心者向け",
+"初心者向け",
     "趣味構築",
     "ランク戦用",
     "大会入賞",

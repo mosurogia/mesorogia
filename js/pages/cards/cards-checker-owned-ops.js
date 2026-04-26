@@ -33,7 +33,7 @@
   function totalOf_(cd) {
     ensureStore_();
     const e = window.OwnedStore.get(String(cd));
-    return (e?.normal | 0) + (e?.shine | 0) + (e?.premium | 0);
+    return e?.normal | 0;
   }
 
   function setTotal_(cd, n, raceHint) {
@@ -41,7 +41,7 @@
     ensureStore_();
     const max = window.maxAllowedCount(cd, raceHint);
     const count = Math.max(0, Math.min(max, n | 0));
-    window.OwnedStore.set(String(cd), { normal: count, shine: 0, premium: 0 });
+    window.OwnedStore.set(String(cd), count);
   }
 
   // =====================================================
@@ -108,7 +108,7 @@
       const now = totalOf_(cd);
       const next = (now >= max) ? 0 : (now + 1);
 
-      window.OwnedStore.set(cd, { normal: next, shine: 0, premium: 0 });
+      window.OwnedStore.set(cd, next);
     } catch (err) {
       console.error('toggleOwnership failed:', err);
     }

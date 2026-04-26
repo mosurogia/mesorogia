@@ -15,13 +15,22 @@
     return s ? s.padStart(5, '0').slice(0, 5) : '';
   }
 
-  function buildCardImageSrc(cd) {
-    const cd5 = normalizeCd5(cd);
+  function buildCardImageSrc(cardOrCd) {
+    const explicitCard = (cardOrCd && typeof cardOrCd === 'object') ? cardOrCd : null;
+    const cd5 = normalizeCd5(explicitCard ? (explicitCard.cd || explicitCard.id) : cardOrCd);
+    const card = explicitCard || (window.cardMap || {})[cd5] || (window.allCardsMap || {})[cd5] || null;
+    if (typeof window.getCardImageSrc === 'function') {
+      return window.getCardImageSrc(card || cd5);
+    }
     return cd5 ? `img/${cd5}.webp` : FALLBACK_IMG;
   }
 
-  function applyFallbackOnError(img) {
+  function applyFallbackOnError(img, cardOrCd = null) {
     if (!img) return;
+    if (typeof window.setCardImageSrc === 'function' && cardOrCd) {
+      window.setCardImageSrc(img, cardOrCd);
+      return;
+    }
     delete img.dataset.fallbackApplied;
     img.onerror = function () {
       if (this.dataset.fallbackApplied) return;
@@ -66,8 +75,10 @@
     const img = box.querySelector('img');
     if (!img) return;
 
-    applyFallbackOnError(img);
-    img.src = buildCardImageSrc(cd);
+    const cd5 = normalizeCd5(cd);
+    const card = (window.cardMap || {})[cd5] || (window.allCardsMap || {})[cd5] || cd5;
+    applyFallbackOnError(img, card);
+    if (!img.src) img.src = buildCardImageSrc(cd5);
 
     const vw = window.innerWidth;
     const vh = window.innerHeight;
@@ -141,16 +152,18 @@
     return modal;
   }
 
-  function openCardZoom_(cd) {
-    const cd5 = normalizeCd5(cd);
+  function openCardZoom_(cardOrCd) {
+    const explicitCard = (cardOrCd && typeof cardOrCd === 'object') ? cardOrCd : null;
+    const cd5 = normalizeCd5(explicitCard ? (explicitCard.cd || explicitCard.id) : cardOrCd);
     if (!cd5) return;
 
     const modal = ensureZoomModal_();
     const img = document.getElementById('zoomImage');
     if (!modal || !img) return;
 
-    applyFallbackOnError(img);
-    img.src = buildCardImageSrc(cd5);
+    const card = explicitCard || (window.cardMap || {})[cd5] || (window.allCardsMap || {})[cd5] || cd5;
+    applyFallbackOnError(img, card);
+    if (!img.src) img.src = buildCardImageSrc(card);
 
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';

@@ -144,6 +144,27 @@ function detectPackGroup_(packEn, packJp, packKey, idx){
 }
 
 // パック1つ分のHTMLを組み立てる
+function buildCheckerCardHTML(c, { summarySkip = false } = {}){
+  const rarityCls = rarityClassOf(c.rarity);
+  const skipAttr = summarySkip ? ' data-summary-skip="1"' : '';
+
+  return `<div class="card ${rarityCls}" data-name="${esc(c.name)}" data-cd="${esc(c.cd)}"${skipAttr}
+data-pack="${esc(c.pack_name)}" data-race="${esc(c.race)}" data-category="${esc(c.category)}"
+data-rarity="${esc(c.rarity)}" data-type="${esc(c.type)}" onclick="toggleOwnership(this)">
+<img
+  alt="${esc(c.name)}"
+  loading="lazy"
+  decoding="async"
+  width="424"
+  height="532"
+  src="img/${esc(c.cd)}.webp"
+  onerror="if(!this.dataset.fallback){this.dataset.fallback=1;this.src='img/00000.webp';}"
+/>
+<button type="button" class="zoom-btn checker-detail-zoom-btn" aria-label="カード詳細を開く">🔍</button>
+<div class="owned-mark"></div>
+</div>`;
+}
+
 function buildPackSectionHTML(packEn, packJp, cardsGroupedByRace, packKey, packGroup){
 
   const packSlug = (packKey != null && String(packKey).trim() !== '')
@@ -229,6 +250,42 @@ function buildPackSectionHTML(packEn, packJp, cardsGroupedByRace, packKey, packG
   return html;
 }
 
+function buildOverallGridSectionHTML(cards){
+  const pageSize = 16;
+  const sorted = Array.from(cards || []).sort(typeCostPowerCd);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  let html = '';
+
+  html += `<section id="checker-overall-4x4" class="pack-section checker-overall-section" hidden>`;
+  html += `  <h3 class="pack-title pack-title-row">`;
+  html += `    <span class="pack-title-text">ゲーム表示</span>`;
+  html += `  </h3>`;
+  html += `  <div class="checker-overall-note">`;
+  html += `    <div class="checker-note-sub">● アプリのカード一覧と同じ表示です</div>`;
+  html += `    <div class="checker-note-sub">※アプリ本体のフィルターでシグネチャーを「なし」にしてください</div>`;
+  html += `  </div>`;
+
+  html += `  <div class="checker-overall-pages" data-current-page="0" data-total-pages="${totalPages}">`;
+
+  for (let page = 0; page < totalPages; page++) {
+    const slice = sorted.slice(page * pageSize, page * pageSize + pageSize);
+    html += `    <div class="checker-overall-page card-list" data-page="${page}"${page === 0 ? '' : ' hidden'}>`;
+    slice.forEach(card => {
+      html += buildCheckerCardHTML(card, { summarySkip: true });
+    });
+    html += `    </div>`;
+  }
+
+  html += `  </div>`;
+  html += `  <div class="checker-overall-pager" aria-label="ゲーム表示のページ切り替え">`;
+  html += `    <button type="button" class="checker-overall-page-btn" data-dir="-1" disabled>← 前へ</button>`;
+  html += `    <span class="checker-overall-page-info" aria-live="polite">1 / ${totalPages}</span>`;
+  html += `    <button type="button" class="checker-overall-page-btn" data-dir="1"${totalPages <= 1 ? ' disabled' : ''}>次へ →</button>`;
+  html += `  </div>`;
+  html += `</section>`;
+  return html;
+}
+
 
 // JSON → パックごとのセクションHTMLを生成して mount に描画
 async function renderAllPacks({
@@ -300,12 +357,15 @@ async function renderAllPacks({
     parts.push(buildPackSectionHTML(packEn, jp, byRace, packKey, packGroup));
   }
 
+  parts.push(buildOverallGridSectionHTML(source));
+
   const mount = document.querySelector(mountSelector);
   if (!mount) { console.error('mountSelectorが見つかりません:', mountSelector); return; }
   mount.innerHTML = parts.join('');
 
   // 生成後にイベントを委譲で付与
   attachPackControls(mount);
+  setCheckerSectionMode_(window.__checkerSectionMode === 'overall-4x4' ? 'overall-4x4' : 'packs');
 }
 
 
@@ -455,7 +515,7 @@ function ownedTotal(cd){
   if (!S || typeof S.get !== 'function') return 0;
 
   const e = S.get(String(cd));
-  return (e?.normal|0) + (e?.shine|0) + (e?.premium|0);
+  return e?.normal | 0;
 }
 
 // === パック順インデックス（PACK_ORDER優先→残りは英名の自然順） ===
@@ -622,16 +682,16 @@ if (!window.__wiredMissingPreview){
 function getOwnedEntry_(map, cd){
   const e = map[String(cd)];
   if (e && typeof e === 'object') return {
-    normal: Number(e.normal||0),
-    shine: Number(e.shine||0),
-    premium: Number(e.premium||0),
+    normal: Number(e.normal||0) + Number(e.shine||0) + Number(e.premium||0),
   };
   // 旧形式（数値）も一応吸収
-  return { normal: Number(e||0), shine: 0, premium: 0 };
+  return { normal: Number(e||0) };
 }
 
 function setOwnedTotalToNormal_(map, cd, total){
-  map[String(cd)] = { normal: total|0, shine: 0, premium: 0 };
+  const count = total | 0;
+  if (count > 0) map[String(cd)] = count;
+  else map[String(cd)] = 0;
 }
 
 // ✅ 一括変更：OwnedStore.replaceAll を1回だけ呼ぶ
@@ -714,6 +774,137 @@ function clearCard_(el) {
   for (let i = 0; i < 4; i++) if (typeof window.toggleOwnership === 'function') window.toggleOwnership(el);
 }
 
+function updateOverallGridCardSize_(){
+  const root = document.getElementById('checker-overall-4x4');
+  if (!root || root.hidden) return;
+
+  const title = root.querySelector('.pack-title');
+  const pager = root.querySelector('.checker-overall-pager');
+  const rootTop = root.getBoundingClientRect().top;
+  const stickyOffset = typeof window.__checkerStickyOffset === 'function'
+    ? window.__checkerStickyOffset()
+    : 0;
+  const visibleTop = Math.max(rootTop, stickyOffset + 6);
+  const gap = 5;
+  const pagePadding = 16;
+  const safety = 4;
+  const fixedHeight =
+    (title ? Math.ceil(title.getBoundingClientRect().height) : 0) +
+    (pager ? Math.ceil(pager.getBoundingClientRect().height) : 0) +
+    pagePadding +
+    (gap * 3) +
+    safety;
+
+  const availableHeight = Math.max(160, window.innerHeight - visibleTop - fixedHeight);
+  const widthFromHeight = Math.floor((availableHeight / 4) * (424 / 532));
+  const rootWidth = Math.max(320, root.clientWidth || window.innerWidth);
+  const hasSummaryPanel = Array.from(document.querySelectorAll('.summary-panel')).some(panel => {
+    const style = window.getComputedStyle(panel);
+    return style.display !== 'none' && style.visibility !== 'hidden' && panel.getBoundingClientRect().width > 0;
+  });
+  const spread = hasSummaryPanel ? 2 : 1;
+  const columns = spread * 4;
+  const spreadGap = spread > 1 ? 16 : 0;
+  const widthFromWidth = Math.floor((rootWidth - pagePadding - spreadGap - (gap * (columns - 1))) / columns);
+  const cardWidth = Math.max(64, Math.min(Math.floor(widthFromHeight * 1.06), widthFromWidth, 240));
+
+  root.style.setProperty('--overall-card-width', `${cardWidth}px`);
+  root.classList.toggle('is-two-page', spread === 2);
+  const pagesRoot = root.querySelector('.checker-overall-pages');
+  if (pagesRoot) pagesRoot.dataset.spread = String(spread);
+}
+
+function setOverallGridPage_(nextPage){
+  const root = document.getElementById('checker-overall-4x4');
+  if (!root) return;
+
+  const pagesRoot = root.querySelector('.checker-overall-pages');
+  if (!pagesRoot) return;
+
+  const total = Math.max(1, Number(pagesRoot.dataset.totalPages || 1));
+  updateOverallGridCardSize_();
+  const spread = Math.max(1, Number(pagesRoot.dataset.spread || 1));
+  const maxStart = Math.max(0, total - spread);
+  const requestedPage = Math.max(0, Math.min(maxStart, Number(nextPage || 0)));
+  const page = spread > 1
+    ? Math.min(maxStart, Math.floor(requestedPage / spread) * spread)
+    : requestedPage;
+  const endPage = Math.min(total - 1, page + spread - 1);
+  pagesRoot.dataset.currentPage = String(page);
+
+  root.querySelectorAll('.checker-overall-page').forEach(el => {
+    const pageNo = Number(el.dataset.page || 0);
+    el.hidden = pageNo < page || pageNo > endPage;
+  });
+
+  const info = root.querySelector('.checker-overall-page-info');
+  if (info) {
+    info.textContent = spread > 1 && endPage > page
+      ? `${page + 1}-${endPage + 1} / ${total}`
+      : `${page + 1} / ${total}`;
+  }
+
+  root.querySelectorAll('.checker-overall-page-btn').forEach(btn => {
+    const dir = Number(btn.dataset.dir || 0);
+    btn.disabled = (dir < 0 && page <= 0) || (dir > 0 && page >= maxStart);
+  });
+}
+
+function setCheckerSectionMode_(mode){
+  const isOverall = mode === 'overall-4x4';
+  window.__checkerSectionMode = isOverall ? 'overall-4x4' : 'packs';
+
+  document.querySelectorAll('#packs-root .pack-section').forEach(section => {
+    section.hidden = isOverall;
+  });
+
+  const overall = document.getElementById('checker-overall-4x4');
+  if (overall) {
+    overall.hidden = !isOverall;
+    if (isOverall) {
+      setOverallGridPage_(Number(overall.querySelector('.checker-overall-pages')?.dataset.currentPage || 0));
+      requestAnimationFrame(updateOverallGridCardSize_);
+    }
+  }
+
+  try {
+    window.OwnedUI?.sync?.('#packs-root', {
+      grayscale: true,
+      skipSummary: true,
+      skipOwnedTotal: true,
+    });
+  } catch (_) {}
+}
+
+window.showCheckerOverallGrid = function showCheckerOverallGrid(){
+  setCheckerSectionMode_('overall-4x4');
+  try {
+    localStorage.setItem('mosurogia_summary_include_unobtainable', '1');
+    const cb = document.getElementById('toggle-unobtainable');
+    if (cb) cb.checked = true;
+    window.updateSummary?.();
+  } catch (_) {}
+
+  const root = document.getElementById('checker-overall-4x4');
+  if (root) {
+    const offset = typeof window.__checkerStickyOffset === 'function' ? window.__checkerStickyOffset() : 0;
+    const y = window.scrollY + root.getBoundingClientRect().top - offset - 8;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    setTimeout(updateOverallGridCardSize_, 220);
+    setTimeout(updateOverallGridCardSize_, 520);
+  }
+};
+
+window.showCheckerPackSections = function showCheckerPackSections(){
+  setCheckerSectionMode_('packs');
+};
+
+window.addEventListener('resize', () => {
+  if (window.__checkerSectionMode === 'overall-4x4') {
+    requestAnimationFrame(updateOverallGridCardSize_);
+  }
+});
+
 function attachPackControls(root) {
   if (root.dataset.cardDetailZoomBound !== '1') {
     root.dataset.cardDetailZoomBound = '1';
@@ -749,6 +940,15 @@ function attachPackControls(root) {
   root.addEventListener('click', (e) => {
     const btn = e.target.closest('button');
     if (!btn) return;
+
+    if (btn.classList.contains('checker-overall-page-btn')) {
+      const rootEl = btn.closest('#checker-overall-4x4');
+      const pagesRoot = rootEl?.querySelector?.('.checker-overall-pages');
+      const current = Number(pagesRoot?.dataset.currentPage || 0);
+      const spread = Math.max(1, Number(pagesRoot?.dataset.spread || 1));
+      setOverallGridPage_(current + (Number(btn.dataset.dir || 0) * spread));
+      return;
+    }
 
     // ✅ e.target ではなく btn を起点に closest を取る（これが重要）
     const packSection = btn.closest('.pack-section');
@@ -819,16 +1019,6 @@ schedulePostBulkUIUpdate_(packSection);
     // ------------------------------
     // ✅ 全カード/不足カード（全体：トップバー）
     // ------------------------------
-    if (btn.classList.contains('toggle-pack-view-btn') && !packSection) {
-      const topToggle = btn.closest('#top-pack-view-toggle');
-      if (topToggle) {
-        const mode = btn.dataset.view; // 'all' | 'incomplete'
-        applyTopPackView_(mode, true);
-        setTimeout(() => { try { window.updateSummary?.(); } catch {} }, 0);
-        return;
-      }
-    }
-
     // ------------------------------
     // ✅ 種族：全て選択+1（=1枚増やす、上限で止める）
     // ------------------------------
@@ -841,7 +1031,7 @@ schedulePostBulkUIUpdate_(packSection);
           if (!cd) return;
 
           const cur = getOwnedEntry_(map, cd);
-          const curTotal = (cur.normal|0) + (cur.shine|0) + (cur.premium|0);
+          const curTotal = cur.normal | 0;
           const max = maxOwnedOfCardEl_(el);
           const nextTotal = Math.min(max, curTotal + 1);
 
@@ -963,8 +1153,6 @@ function initPackViews_(){
   document.querySelectorAll('#packs-root .pack-section').forEach(pack => {
     applyPackView_(pack, mode, true);
   });
-  // トップUIも同期
-  syncTopToggleUI_(mode);
 }
 
 let __checkerOwnedRefreshTimer = 0;
@@ -1038,17 +1226,6 @@ function scheduleCheckerOwnedRefresh_(delay = 0, reason = 'unknown'){
 // 5.6) 表示切替：トップ（全パック一括）
 // =====================================================
 
-function syncTopToggleUI_(mode){
-  const root = document.getElementById('top-pack-view-toggle');
-  if (!root) return;
-
-  root.querySelectorAll('.toggle-pack-view-btn').forEach(b => {
-    const on = (b.dataset.view === mode);
-    b.classList.toggle('is-active', on);
-    b.setAttribute('aria-selected', on ? 'true' : 'false');
-  });
-}
-
 // ✅ トップ切替 → 全パックへ適用
 function applyTopPackView_(mode, forceRecalc = true){
   // 記憶（初期化時にも使う）
@@ -1058,25 +1235,6 @@ function applyTopPackView_(mode, forceRecalc = true){
     applyPackView_(pack, mode, forceRecalc);
   });
 
-  syncTopToggleUI_(mode);
-}
-
-// ✅ トップ切替のクリックを拾う（#packs-root の外なので別で必要）
-function wireTopPackViewToggle_(){
-  const root = document.getElementById('top-pack-view-toggle');
-  if (!root || root.dataset.wired) return;
-  root.dataset.wired = '1';
-
-  root.addEventListener('click', (e) => {
-    const btn = e.target.closest('button.toggle-pack-view-btn');
-    if (!btn) return;
-
-    const mode = btn.dataset.view; // 'all' | 'incomplete'
-    applyTopPackView_(mode, true);
-
-    // summary は次タスクに逃がす
-    setTimeout(() => { try { window.updateSummary?.(); } catch {} }, 0);
-  });
 }
 
 
@@ -1105,9 +1263,10 @@ function wireTabBarOwnedRefresh_(){
 
 function queryCardsByPack(pack) {
   const en = (pack?.nameMain || '').trim();
-  return en
+  const cards = en
     ? document.querySelectorAll(`#packs-root .card[data-pack^="${CSS.escape(en)}"]`)
     : document.querySelectorAll('#packs-root .card');
+  return Array.from(cards).filter(card => card.dataset.summarySkip !== '1');
 }
 window.queryCardsByPack = window.queryCardsByPack || queryCardsByPack;
 
@@ -1164,7 +1323,6 @@ async function initPacksThenRender() {
   if (typeof window.updateSummary === 'function') window.updateSummary();
   else if (window.Summary?.updateSummary) window.Summary.updateSummary();
   initPackViews_();
-  wireTopPackViewToggle_();
   wireTabBarOwnedRefresh_();
   wireMissingAllButtons_();
   scheduleCheckerOwnedRefresh_(0, 'init');

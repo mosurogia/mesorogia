@@ -159,7 +159,7 @@ function fireReady_(){
 /* =====================================================
  * hash(#checker / #pack-xxx) に応じてタブを自動切替
  * - cards.html#checker
- * - cards.html#pack-awaking-the-oracle 等
+ * - cards.html#pack-awakening-the-oracle 等
  * ===================================================== */
 (function () {
   'use strict';

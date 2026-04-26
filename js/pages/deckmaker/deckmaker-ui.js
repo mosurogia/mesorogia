@@ -922,6 +922,28 @@
   }
 
   // Deck Peekの表示制御をセットアップ
+  function isInfoSectionVisibleEnough_() {
+    const infoSection =
+      document.querySelector('#deck-info .tab-content.active .info-section') ||
+      document.querySelector('#deck-info .info-section');
+    if (!infoSection || typeof infoSection.getBoundingClientRect !== 'function') return false;
+
+    const rect = infoSection.getBoundingClientRect();
+    const vw = window.innerWidth || document.documentElement.clientWidth || 0;
+    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+    if (!vw || !vh || rect.width <= 0 || rect.height <= 0) return false;
+
+    const visibleWidth = Math.max(0, Math.min(rect.right, vw) - Math.max(rect.left, 0));
+    const visibleHeight = Math.max(0, Math.min(rect.bottom, vh) - Math.max(rect.top, 0));
+    const visibleAreaRatio = (visibleWidth * visibleHeight) / (vw * vh);
+    return visibleAreaRatio >= 0.2;
+  }
+
+  function hasDeckCards_() {
+    const deck = getDeck_();
+    return Object.values(deck).some(count => (count | 0) > 0);
+  }
+
   function installDeckPeekObserver_() {
     const { btn, pane } = getDeckPeekEls_();
     if (!btn || !pane) return;
@@ -932,13 +954,21 @@
     const updateVisibility = (visibleEntry) => {
       const visible = !!visibleEntry?.isIntersecting;
       const modalOpen = modal ? (getComputedStyle(modal).display === 'flex') : false;
+      const infoVisibleEnough = isInfoSectionVisibleEnough_();
+      const hasDeckCards = hasDeckCards_();
 
       // モバイル && editタブ && deck-card-listが見えてない → 表示
-      const show = (isMobile_() && isEditTabOpen_() && !visible) || modalOpen;
+      const show = hasDeckCards && ((isMobile_() && isEditTabOpen_() && !visible && infoVisibleEnough) || modalOpen);
 
       btn.style.display = show ? 'inline-flex' : 'none';
       if (modalOpen) btn.classList.add('onModal'); else btn.classList.remove('onModal');
       if (!show) pane.style.display = 'none';
+    };
+
+    const refreshVisibility = () => {
+      const rect = list.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+      updateVisibility({ isIntersecting: rect.bottom > 0 && rect.top < vh });
     };
 
     if (window.__deckPeekIO) window.__deckPeekIO.disconnect();
@@ -956,7 +986,15 @@
       window.__deckPeekMO.observe(modal, { attributes: true, attributeFilter: ['style', 'class'] });
     }
 
-    updateVisibility({ isIntersecting: false });
+    if (window.__deckPeekScrollHandler) {
+      window.removeEventListener('scroll', window.__deckPeekScrollHandler);
+      window.removeEventListener('resize', window.__deckPeekScrollHandler);
+    }
+    window.__deckPeekScrollHandler = refreshVisibility;
+    window.addEventListener('scroll', window.__deckPeekScrollHandler, { passive: true });
+    window.addEventListener('resize', window.__deckPeekScrollHandler);
+
+    refreshVisibility();
   }
 
   // Deck Peekのボタンに長押しイベントをバインド

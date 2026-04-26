@@ -26,6 +26,7 @@ function readOwnedDataSafe() {
     'use strict';
 
     const LS_KEY = 'ownedCards';
+    const LS_UPDATED_AT_KEY = 'ownedCardsUpdatedAt';
 
     /* =========================
      * 1) OwnedStore 本体
@@ -35,12 +36,21 @@ function readOwnedDataSafe() {
         return Math.max(0, (v | 0));
     }
 
+    function normalizeCount_(e) {
+        if (typeof e === 'number') {
+            return clampInt_(e);
+        }
+
+        return (
+            clampInt_(e?.normal) +
+            clampInt_(e?.nomal) +
+            clampInt_(e?.shine) +
+            clampInt_(e?.premium)
+        );
+    }
+
     function normalizeEntry_(e) {
-        return {
-            normal: clampInt_(e?.normal),
-            shine: clampInt_(e?.shine),
-            premium: clampInt_(e?.premium),
-        };
+        return { normal: normalizeCount_(e) };
     }
 
     function sanitizeOwnedMap_(obj) {
@@ -48,9 +58,14 @@ function readOwnedDataSafe() {
 
         const out = {};
         for (const [cd, v] of Object.entries(obj)) {
-            out[String(cd)] = normalizeEntry_(v);
+            const count = normalizeCount_(v);
+            if (count > 0) out[String(cd)] = count;
         }
         return out;
+    }
+
+    function cloneOwnedMap_(map) {
+        return Object.assign({}, map || {});
     }
 
     function readOwnedMapFromStorage_() {
@@ -62,9 +77,20 @@ function readOwnedDataSafe() {
         }
     }
 
-    function writeOwnedMapToStorage_(map) {
+    function touchOwnedUpdatedAt_() {
+        const updatedAt = new Date().toISOString();
+        try { localStorage.setItem(LS_UPDATED_AT_KEY, updatedAt); } catch {}
+        return updatedAt;
+    }
+
+    function readOwnedUpdatedAt_() {
+        try { return localStorage.getItem(LS_UPDATED_AT_KEY) || ''; } catch { return ''; }
+    }
+
+    function writeOwnedMapToStorage_(map, opts = {}) {
         try {
             localStorage.setItem(LS_KEY, JSON.stringify(map || {}));
+            if (opts.touch) touchOwnedUpdatedAt_();
         } catch (e) {
             console.error('ownedCards の保存に失敗:', e);
         }
@@ -79,6 +105,8 @@ function readOwnedDataSafe() {
 
         const listeners = new Set();
 
+        writeOwnedMapToStorage_(cache);
+
         function emit_() {
             dirty = true;
 
@@ -89,7 +117,7 @@ function readOwnedDataSafe() {
             });
 
             if (autosave) {
-                writeOwnedMapToStorage_(cache);
+                writeOwnedMapToStorage_(cache, { touch: true });
             }
         }
 
@@ -113,31 +141,36 @@ function readOwnedDataSafe() {
 
         window.OwnedStore = {
             getAll() {
-                return JSON.parse(JSON.stringify(cache));
+                return cloneOwnedMap_(cache);
             },
 
             get(cd) {
                 cd = String(cd);
-                return normalizeEntry_(cache[cd] || { normal: 0, shine: 0, premium: 0 });
+                return { normal: normalizeCount_(cache[cd]) };
             },
 
             set(cd, entry) {
-                cache[String(cd)] = normalizeEntry_(entry);
+                const key = String(cd);
+                const count = normalizeCount_(entry);
+                if (count > 0) cache[key] = count;
+                else delete cache[key];
                 emit_();
             },
 
             inc(cd, edition = 'normal', delta = 1) {
                 cd = String(cd);
                 const e = this.get(cd);
-                e[edition] = clampInt_(e[edition] + (delta | 0));
-                cache[cd] = e;
+                const count = clampInt_(e.normal + (delta | 0));
+                if (count > 0) cache[cd] = count;
+                else delete cache[cd];
                 emit_();
             },
 
             replace(all) {
                 cache = {};
                 for (const cd in all) {
-                    cache[String(cd)] = normalizeEntry_(all[cd]);
+                    const count = normalizeCount_(all[cd]);
+                    if (count > 0) cache[String(cd)] = count;
                 }
                 emit_();
             },
@@ -150,7 +183,10 @@ function readOwnedDataSafe() {
                 if (!partial || typeof partial !== 'object') return;
 
                 for (const [cd, v] of Object.entries(partial)) {
-                    cache[String(cd)] = normalizeEntry_(v);
+                    const key = String(cd);
+                    const count = normalizeCount_(v);
+                    if (count > 0) cache[key] = count;
+                    else delete cache[key];
                 }
                 emit_();
             },
@@ -161,13 +197,9 @@ function readOwnedDataSafe() {
                 for (const cd in cache) {
                     const info = byCd.get(String(cd));
                     const limit = info && String(info.race).includes('旧神') ? 1 : 3;
-                    const e = cache[cd] || { normal: 0, shine: 0, premium: 0 };
-
-                    e.normal = Math.min(e.normal || 0, limit);
-                    e.shine = Math.min(e.shine || 0, limit);
-                    e.premium = Math.min(e.premium || 0, limit);
-
-                    cache[cd] = normalizeEntry_(e);
+                    const count = Math.min(normalizeCount_(cache[cd]), limit);
+                    if (count > 0) cache[cd] = count;
+                    else delete cache[cd];
                 }
 
                 emit_();
@@ -178,18 +210,13 @@ function readOwnedDataSafe() {
                 const next = {};
 
                 for (const cd in cache) {
-                    const e = cache[cd] || { normal: 0, shine: 0, premium: 0 };
-                    const sum = (e.normal | 0) + (e.shine | 0) + (e.premium | 0);
+                    const sum = normalizeCount_(cache[cd]);
                     if (sum <= 0) continue;
 
                     const info = byCd.get(String(cd));
                     const limit = info && String(info.race).includes('旧神') ? 1 : 3;
 
-                    next[cd] = {
-                        normal: Math.min(sum, limit),
-                        shine: 0,
-                        premium: 0,
-                    };
+                    next[cd] = Math.min(sum, limit);
                 }
 
                 this.replace(next);
@@ -200,8 +227,12 @@ function readOwnedDataSafe() {
             },
 
             save() {
-                writeOwnedMapToStorage_(cache);
+                writeOwnedMapToStorage_(cache, { touch: true });
                 dirty = false;
+            },
+
+            getUpdatedAt() {
+                return readOwnedUpdatedAt_();
             },
 
             isDirty() {
@@ -332,8 +363,7 @@ function readOwnedDataSafe() {
 
         root.querySelectorAll('.card').forEach((el) => {
             const cd = String(el.dataset.cd || '');
-            const e = owned[cd] || { normal: 0, shine: 0, premium: 0 };
-            const total = (e.normal | 0) + (e.shine | 0) + (e.premium | 0);
+            const total = normalizeCount_(owned[cd]);
             paintCard(el, total, opts);
         });
 
@@ -403,7 +433,7 @@ function readOwnedDataSafe() {
     function totalOf(cd) {
         ensureOwnedStore_();
         const e = window.OwnedStore.get(String(cd));
-        return (e.normal | 0) + (e.shine | 0) + (e.premium | 0);
+        return e.normal | 0;
     }
 
     function setTotal(cd, n, raceHint) {
@@ -411,7 +441,7 @@ function readOwnedDataSafe() {
         ensureOwnedStore_();
         const max = maxAllowedCount(cd, raceHint);
         const count = Math.max(0, Math.min(max, n | 0));
-        window.OwnedStore.set(String(cd), { normal: count, shine: 0, premium: 0 });
+        window.OwnedStore.set(String(cd), count);
     }
 
     function bumpOwnership(el, times = 1) {
@@ -459,7 +489,7 @@ function readOwnedDataSafe() {
             const now = totalOf(cd);
             const next = now >= max ? 0 : now + 1;
 
-            window.OwnedStore.set(cd, { normal: next, shine: 0, premium: 0 });
+            window.OwnedStore.set(cd, next);
         } catch (err) {
             console.error('toggleOwnership failed:', err);
         }

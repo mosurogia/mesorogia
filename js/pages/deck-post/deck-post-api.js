@@ -137,6 +137,19 @@
   }
 
   async function fetchJsonWithJsonpFallback_(url) {
+    let requestUrl = null;
+    try {
+      requestUrl = new URL(url);
+    } catch (_) {}
+
+    if (requestUrl && requestUrl.hostname === 'script.google.com') {
+      try {
+        return await jsonpRequest(url);
+      } catch (_) {
+        return null;
+      }
+    }
+
     try {
       const res = await fetch(url, {
         method: 'GET',

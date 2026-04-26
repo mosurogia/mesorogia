@@ -15,6 +15,39 @@
 
   // 一覧データをまとめて取得するときの1リクエスト上限
   const FETCH_LIMIT = 100;
+  let allListFetchPromise_ = null;
+
+  /**
+   * 共有URL時は初回から全件取得に切り替える
+   */
+  function shouldLoadAllItemsInitially_() {
+    try {
+      const sp = new URLSearchParams(window.location.search || '');
+      return !!(sp.get('pid') || sp.get('post'));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /**
+   * フィルターボタンの準備状態を表示する
+   */
+  function updateFilterReadyState_() {
+    const btn = document.getElementById('filterBtn');
+    if (!btn) return;
+
+    const state = getDeckPostState_();
+    const ready = !!state?.list?.hasAllItems;
+    const loading = !ready;
+
+    btn.disabled = !ready;
+    btn.dataset.loading = loading ? '1' : '0';
+    btn.textContent = ready ? 'フィルター' : 'フィルター準備中…';
+    btn.title = ready
+      ? '全投稿を対象にフィルターできます'
+      : '全投稿の読み込み完了後に使えます';
+    btn.setAttribute('aria-busy', loading ? 'true' : 'false');
+  }
 
   // =========================
   // 1) state / 外部参照
@@ -38,6 +71,84 @@
    */
   function detail() {
     return window.DeckPostDetail || {};
+  }
+
+  /**
+   * 右詳細に合わせて左一覧のスクロール上限を調整
+   */
+  function updateListMaxHeightFromPane_(layoutId, paneId) {
+    const layout = document.getElementById(layoutId);
+    const pane = document.getElementById(paneId);
+    const master = layout?.querySelector('.post-master-column');
+    const list = master?.querySelector('.post-list');
+
+    if (!layout || !pane || !master || !list) return;
+
+    if (!window.matchMedia('(min-width: 1024px)').matches) {
+      layout.style.removeProperty('--post-list-max-height');
+      return;
+    }
+
+    const topFooter = master.querySelector('.list-footer--top');
+    const bottomFooter = master.querySelector('.list-footer--bottom');
+    const paneContent =
+      pane.querySelector('.post-detail-inner') ||
+      pane.querySelector('.post-detail-empty') ||
+      pane.firstElementChild ||
+      pane;
+    const paneHeight = Math.ceil(paneContent.getBoundingClientRect().height);
+    const reservedHeight =
+      (topFooter?.offsetHeight || 0) +
+      (bottomFooter?.offsetHeight || 0) +
+      24;
+    const nextMaxHeight = Math.max(320, paneHeight - reservedHeight);
+
+    layout.style.setProperty('--post-list-max-height', `${nextMaxHeight}px`);
+  }
+
+  /**
+   * 左右カラム高さの同期を初期化
+   */
+  function bindListPaneHeightSync_() {
+    if (window.__deckPostPaneHeightSyncBound) return;
+    window.__deckPostPaneHeightSyncBound = true;
+
+    const targets = [
+      { layoutId: 'postMainLayout', paneId: 'postDetailPane' },
+      { layoutId: 'mineMainLayout', paneId: 'postDetailPaneMine' },
+    ];
+
+    const refresh = () => {
+      window.requestAnimationFrame(() => {
+        targets.forEach(({ layoutId, paneId }) => {
+          updateListMaxHeightFromPane_(layoutId, paneId);
+        });
+      });
+    };
+
+    refresh();
+    window.addEventListener('resize', refresh, { passive: true });
+    window.addEventListener('orientationchange', refresh, { passive: true });
+
+    if (typeof ResizeObserver === 'function') {
+      const observer = new ResizeObserver(() => {
+        refresh();
+      });
+
+      targets.forEach(({ layoutId, paneId }) => {
+        const layout = document.getElementById(layoutId);
+        const pane = document.getElementById(paneId);
+        const master = layout?.querySelector('.post-master-column');
+        const topFooter = master?.querySelector('.list-footer--top');
+        const bottomFooter = master?.querySelector('.list-footer--bottom');
+
+        if (pane) observer.observe(pane);
+        if (topFooter) observer.observe(topFooter);
+        if (bottomFooter) observer.observe(bottomFooter);
+      });
+
+      window.__deckPostPaneHeightSyncObserver = observer;
+    }
   }
 
   // =========================
@@ -889,43 +1000,106 @@
    */
   async function fetchAllList() {
     const state = getDeckPostState_();
-
-    const limit = FETCH_LIMIT;
-    let offset = 0;
-    let all = [];
-    let total = 0;
-
-    while (true) {
-      const res = await window.DeckPostApi.apiList({
-        limit,
-        offset,
-        mine: false,
-      });
-
-      if (!res || !res.ok) {
-        throw new Error((res && res.error) || 'list fetch failed');
-      }
-
-      const items = Array.isArray(res.items) ? res.items : [];
-      all.push(...items);
-
-      if (typeof res.total === 'number') {
-        total = res.total;
-      }
-
-      const nextOffset = (res.nextOffset ?? null);
-      if (nextOffset === null || items.length === 0) {
-        break;
-      }
-      offset = nextOffset;
+    if (state?.list?.hasAllItems) {
+      updateFilterReadyState_();
+      return state.list.allItems || [];
+    }
+    if (allListFetchPromise_) {
+      updateFilterReadyState_();
+      return allListFetchPromise_;
     }
 
-    state.list.allItems = all;
-    state.list.total = total || all.length;
-    state.list.hasAllItems = true;
+    updateFilterReadyState_();
+    allListFetchPromise_ = (async () => {
+      const limit = FETCH_LIMIT;
+      let offset = 0;
+      let all = [];
+      let total = 0;
+
+      while (true) {
+        const res = await window.DeckPostApi.apiList({
+          limit,
+          offset,
+          mine: false,
+        });
+
+        if (!res || !res.ok) {
+          throw new Error((res && res.error) || 'list fetch failed');
+        }
+
+        const items = Array.isArray(res.items) ? res.items : [];
+        all.push(...items);
+
+        if (typeof res.total === 'number') {
+          total = res.total;
+        }
+
+        const nextOffset = (res.nextOffset ?? null);
+        if (nextOffset === null || items.length === 0) {
+          break;
+        }
+        offset = nextOffset;
+      }
+
+      state.list.allItems = all;
+      state.list.items = all;
+      state.list.filteredItems = all;
+      state.list.total = total || all.length;
+      state.list.hasAllItems = true;
+      state.list.pageCache = {};
+
+      return all;
+    })().finally(() => {
+      allListFetchPromise_ = null;
+      updateFilterReadyState_();
+    });
+
+    return allListFetchPromise_;
+  }
+
+  /**
+   * 背景で全件取得を開始する
+   */
+  function prefetchAllListInBackground_() {
+    const state = getDeckPostState_();
+    if (state?.list?.hasAllItems || allListFetchPromise_) return;
+    updateFilterReadyState_();
+    fetchAllList().catch((e) => {
+      console.warn('prefetchAllListInBackground_ failed:', e);
+    });
+  }
+
+  /**
+   * 通常一覧の指定ページだけ取得
+   */
+  async function fetchListPage_(page) {
+    const state = getDeckPostState_();
+    const totalPages = Math.max(1, Number(state?.list?.totalPages || 1));
+    const p = Math.min(Math.max(Number(page || 1), 1), totalPages);
+    const offset = (p - 1) * PAGE_LIMIT;
+
+    const res = await window.DeckPostApi.apiList({
+      limit: PAGE_LIMIT,
+      offset,
+      mine: false,
+    });
+
+    if (!res || !res.ok) {
+      throw new Error((res && res.error) || 'list page fetch failed');
+    }
+
+    const items = Array.isArray(res.items) ? res.items : [];
+    const total = Number(res.total || 0);
+
+    state.list.items = items;
+    state.list.filteredItems = items;
+    state.list.total = total;
+    state.list.totalPages = Math.max(1, Math.ceil(Math.max(total, 0) / PAGE_LIMIT));
+    state.list.currentPage = Math.min(Math.max(p, 1), state.list.totalPages);
+    state.list.nextOffset = res.nextOffset ?? null;
     state.list.pageCache = {};
 
-    return all;
+    return items;
   }
 
   /**
@@ -936,6 +1110,10 @@
 
     // 全件取得されていない場合は取得する
     if (!state?.list?.hasAllItems) {
+      window.DeckPostList?.showListStatusMessage?.(
+        'loading',
+        '全投稿を読み込み中です…'
+      );
       await fetchAllList();
     }
 
@@ -993,11 +1171,46 @@
   /**
    * 一覧用：指定ページを描画
    */
-  function loadListPage(page) {
+  async function loadListPage(page) {
     const state = getDeckPostState_();
 
     const listEl = document.getElementById('postList');
     if (!listEl) return;
+
+    const requestedPage = Math.max(Number(page || 1), 1);
+    const hasCurrentPageItems =
+      Number(state?.list?.currentPage || 0) === requestedPage &&
+      Array.isArray(state?.list?.items) &&
+      state.list.items.length > 0;
+
+    if (!state?.list?.hasAllItems && requestedPage > 1) {
+      try {
+        listEl.replaceChildren();
+        showListStatusMessage('loading', '全投稿を読み込み中です…');
+        await fetchAllList();
+        window.DeckPostFilter?.rebuildFilteredItems?.();
+      } catch (e) {
+        console.error('全件取得に失敗しました', e);
+        showListStatusMessage(
+          'error',
+          '投稿一覧の読み込みに失敗しました。ページを再読み込みしてください。'
+        );
+        return;
+      }
+    } else if (!state?.list?.hasAllItems && !hasCurrentPageItems) {
+      try {
+        listEl.replaceChildren();
+        showListStatusMessage('loading', '投稿一覧を読み込み中です…');
+        await fetchListPage_(requestedPage);
+      } catch (e) {
+        console.error('一覧ページ取得に失敗しました', e);
+        showListStatusMessage(
+          'error',
+          '投稿一覧の読み込みに失敗しました。ページを再読み込みしてください。'
+        );
+        return;
+      }
+    }
 
     const filtered = Array.isArray(state?.list?.filteredItems)
       ? state.list.filteredItems
@@ -1015,7 +1228,9 @@
 
     const start = (p - 1) * PAGE_LIMIT;
     const end = start + PAGE_LIMIT;
-    const pageItems = filtered.slice(start, end);
+    const pageItems = state?.list?.hasAllItems
+      ? filtered.slice(start, end)
+      : filtered;
 
     listEl.replaceChildren();
 
@@ -1290,7 +1505,9 @@
     updateMineLoginStatus();
 
     state.token = window.DeckPostApi.resolveToken();
+    allListFetchPromise_ = null;
     window.DeckPostState.invalidateMineCache();
+    updateFilterReadyState_();
 
     if (window.DeckPostState.isInitialized()) {
       (async () => {
@@ -1366,6 +1583,9 @@
   async function init() {
     const state = getDeckPostState_();
 
+    bindListPaneHeightSync_();
+    updateFilterReadyState_();
+
     // =========================
     // 並び替えセレクト初期化
     // =========================
@@ -1391,14 +1611,39 @@
         '投稿一覧を読み込み中です…(5秒ほどかかります)'
       );
 
-      await window.DeckPostList?.fetchAllList?.();
+      if (shouldLoadAllItemsInitially_()) {
+        await window.DeckPostList?.fetchAllList?.();
+        window.DeckPostFilter?.applySharedPostFromUrl?.();
+        window.DeckPostFilter?.rebuildFilteredItems?.();
+      } else {
+        const res = await window.DeckPostApi.apiList({
+          limit: PAGE_LIMIT,
+          offset: 0,
+          mine: false,
+        });
+
+        if (!res || !res.ok) {
+          throw new Error((res && res.error) || 'initial list fetch failed');
+        }
+
+        const items = Array.isArray(res.items) ? res.items : [];
+        const total = Number(res.total || 0);
+
+        state.list.allItems = [];
+        state.list.items = items;
+        state.list.filteredItems = items;
+        state.list.total = total;
+        state.list.totalPages = Math.max(1, Math.ceil(Math.max(total, 0) / PAGE_LIMIT));
+        state.list.currentPage = 1;
+        state.list.nextOffset = res.nextOffset ?? null;
+        state.list.hasAllItems = false;
+        state.list.pageCache = {};
+        updateFilterReadyState_();
+      }
+
       prefetchMineItems_().catch(() => {});
-
-      window.DeckPostFilter?.applySharedPostFromUrl?.();
-      window.DeckPostFilter?.rebuildFilteredItems?.();
-
-      state.list.currentPage = 1;
-      window.DeckPostList?.loadListPage?.(1);
+      prefetchAllListInBackground_();
+      await window.DeckPostList?.loadListPage?.(1);
     } catch (e) {
       console.error('初期一覧取得に失敗しました', e);
       window.DeckPostList?.showListStatusMessage?.(

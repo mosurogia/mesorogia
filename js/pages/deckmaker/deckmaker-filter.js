@@ -160,11 +160,11 @@
         const out = {};
         for (const cd in all) {
           const k = window.normCd5 ? window.normCd5(cd) : String(cd).padStart(5, '0').slice(0, 5);
-          const v = all[cd] || {};
+          const v = all[cd];
           out[k] = {
-            normal:  v.normal  | 0,
-            shine:   v.shine   | 0,
-            premium: v.premium | 0,
+            normal:  typeof v === 'number'
+              ? (v | 0)
+              : ((v?.normal | 0) + (v?.shine | 0) + (v?.premium | 0)),
           };
         }
         return out;
@@ -179,8 +179,8 @@
         const k = window.normCd5 ? window.normCd5(cd) : String(cd).padStart(5, '0').slice(0, 5);
         const v = raw[cd];
         out[k] = (v && typeof v === 'object')
-          ? { normal: v.normal | 0, shine: v.shine | 0, premium: v.premium | 0 }
-          : { normal: (v | 0), shine: 0, premium: 0 };
+          ? { normal: (v.normal | 0) + (v.shine | 0) + (v.premium | 0) }
+          : { normal: (v | 0) };
       }
       return out;
     } catch {}

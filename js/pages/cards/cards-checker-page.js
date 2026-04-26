@@ -28,6 +28,8 @@
     return h1 + h2;
   }
 
+  window.__checkerStickyOffset = getStickyOffset_;
+
   function scrollToY_(y) {
     window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
   }
@@ -126,6 +128,8 @@ window.jumpToPack = function jumpToPack(packSlug) {
     window.showAllCardsTop?.();
     return;
   }
+
+  try { window.showCheckerPackSections?.(); } catch (_) {}
 
   suppressSpyUntil_ = Date.now() + 900; // ✅ 少し長めに（ズレ補正中に追従が暴れない）
 
@@ -230,6 +234,15 @@ window.jumpToPack = function jumpToPack(packSlug) {
     destroyPackScrollSpy_();
 
     const frag = document.createDocumentFragment();
+    const overallBtn = document.createElement('button');
+    overallBtn.type = 'button';
+    overallBtn.dataset.pack = '__overall_4x4';
+    overallBtn.textContent = 'ゲーム表示';
+    overallBtn.addEventListener('click', () => {
+      try { window.showCheckerOverallGrid?.(); } catch (_) {}
+      setActivePackTab_('__overall_4x4');
+    });
+    frag.appendChild(overallBtn);
 
     sections.forEach(sec => {
       const slug = sec.id.replace(/^pack-/, '');
@@ -241,7 +254,10 @@ window.jumpToPack = function jumpToPack(packSlug) {
       btn.dataset.pack = slug;
       btn.textContent = makePackTabLabel_(nameSub, nameMain);
 
-      btn.addEventListener('click', () => window.jumpToPack(slug));
+      btn.addEventListener('click', () => {
+        try { window.showCheckerPackSections?.(); } catch (_) {}
+        window.jumpToPack(slug);
+      });
 
       frag.appendChild(btn);
     });
@@ -254,6 +270,9 @@ window.jumpToPack = function jumpToPack(packSlug) {
 
     // タブ生成直後に現在位置に合わせてアクティブを決める
     try { scheduleSpySync_(); } catch (_) {}
+    if (window.__checkerSectionMode === 'overall-4x4') {
+      setActivePackTab_('__overall_4x4');
+    }
 
     return true;
   }
@@ -406,6 +425,10 @@ document.addEventListener('tab:switched', (e) => {
     spyRaf_ = requestAnimationFrame(() => {
       spyRaf_ = 0;
       if (Date.now() < suppressSpyUntil_) return;
+      if (window.__checkerSectionMode === 'overall-4x4') {
+        setActivePackTab_('__overall_4x4');
+        return;
+      }
 
       const slug = findActivePackSlugByScroll_();
       if (!slug) return;

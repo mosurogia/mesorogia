@@ -40,6 +40,15 @@
     return !/[\[\]［］]/.test(t);
   }
 
+  /** ユーザータグ検索用の正規化 */
+  function normalizeUserTagSearch_(value) {
+    return String(value || '')
+      .normalize('NFKC')
+      .trim()
+      .toLowerCase()
+      .replace(/[\u30a1-\u30f6]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+  }
+
   /** キャンペーンタグのCSS */
   function campaignTagClass_(tag){
   const t = String(tag || '').trim();
@@ -378,6 +387,158 @@
     if (campaignSection) {
       campaignSection.style.display = endedCampaigns.length ? '' : 'none';
     }
+
+    renderEnvironmentFilterUI_();
+  }
+
+  // =========================
+  // 4.5) 環境フィルター
+  // =========================
+
+  const ENVIRONMENTS_JSON_URL = './public/environments.json';
+  let environmentCatalogPromise_ = null;
+  let environmentCatalog_ = [];
+
+  function normalizeYmd_(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+
+    const direct = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    if (direct) {
+      return `${direct[1]}-${String(direct[2]).padStart(2, '0')}-${String(direct[3]).padStart(2, '0')}`;
+    }
+
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return '';
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
+  function ymdToTime_(value) {
+    const ymd = normalizeYmd_(value);
+    if (!ymd) return 0;
+    const time = Date.parse(`${ymd}T00:00:00`);
+    return Number.isNaN(time) ? 0 : time;
+  }
+
+  function normalizeEnvironmentRow_(row) {
+    const envId = String(row?.env_id || row?.envId || row?.id || '').trim();
+    const label = String(row?.label || row?.name || envId || '').trim();
+    const startAt = normalizeYmd_(row?.start_at || row?.startAt);
+    const endAt = normalizeYmd_(row?.end_at || row?.endAt);
+    if (!envId || !label || !startAt) return null;
+
+    return {
+      envId,
+      label,
+      startAt,
+      endAt,
+      kind: String(row?.kind || '').trim(),
+      note: String(row?.note || '').trim(),
+    };
+  }
+
+  function completeEnvironmentRanges_(rows) {
+    const list = (rows || [])
+      .map(normalizeEnvironmentRow_)
+      .filter(Boolean)
+      .sort((a, b) => ymdToTime_(a.startAt) - ymdToTime_(b.startAt));
+
+    return list.map((env, index) => {
+      if (env.endAt) return env;
+
+      const next = list[index + 1];
+      if (!next) return env;
+
+      const nextStart = ymdToTime_(next.startAt);
+      if (!nextStart) return env;
+
+      const end = new Date(nextStart - 24 * 60 * 60 * 1000);
+      return {
+        ...env,
+        endAt: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`,
+      };
+    });
+  }
+
+  function loadEnvironmentCatalog_() {
+    if (environmentCatalogPromise_) return environmentCatalogPromise_;
+
+    environmentCatalogPromise_ = fetch(ENVIRONMENTS_JSON_URL, { cache: 'no-store' })
+      .then((res) => {
+        if (!res.ok) throw new Error(`environment json ${res.status}`);
+        return res.json();
+      })
+      .then((json) => {
+        const raw = Array.isArray(json) ? json : (json?.environments || []);
+        environmentCatalog_ = completeEnvironmentRanges_(raw);
+        return environmentCatalog_;
+      })
+      .catch((err) => {
+        console.warn('[deck-post] environments.json 読み込み失敗:', err);
+        environmentCatalog_ = [];
+        return [];
+      });
+
+    return environmentCatalogPromise_;
+  }
+
+  function getEnvironmentById_(envId) {
+    const id = String(envId || '').trim();
+    return environmentCatalog_.find((env) => env.envId === id) || null;
+  }
+
+  function getPostJudgeYmd_(item) {
+    return normalizeYmd_(item?.createdAt || item?.created_at || item?.updatedAt || item?.updated_at || '');
+  }
+
+  function isPostInEnvironment_(item, env) {
+    const postTime = ymdToTime_(getPostJudgeYmd_(item));
+    const startTime = ymdToTime_(env?.startAt);
+    if (!postTime || !startTime) return false;
+
+    const endTime = ymdToTime_(env?.endAt);
+    if (postTime < startTime) return false;
+    return !endTime || postTime <= endTime;
+  }
+
+  function renderEnvironmentButtons_(envs) {
+    const section = document.getElementById('postFilterEnvironmentSection');
+    const root = document.getElementById('postFilterEnvironmentArea');
+    if (!section || !root) return;
+
+    const list = Array.isArray(envs) ? envs : [];
+    section.style.display = list.length ? '' : 'none';
+    root.replaceChildren();
+    if (!list.length) return;
+
+    const selected = window.PostFilterDraft?.selectedEnvironmentIds;
+    list.slice().reverse().forEach((env) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'filter-btn post-filter-env-btn';
+      btn.dataset.envId = env.envId;
+      btn.textContent = env.label;
+      if (selected?.has(env.envId)) btn.classList.add('selected');
+
+      btn.addEventListener('click', () => {
+        const draft = window.PostFilterDraft;
+        draft.selectedEnvironmentIds ??= new Set();
+
+        if (draft.selectedEnvironmentIds.has(env.envId)) {
+          draft.selectedEnvironmentIds.delete(env.envId);
+          btn.classList.remove('selected');
+        } else {
+          draft.selectedEnvironmentIds.add(env.envId);
+          btn.classList.add('selected');
+        }
+      });
+
+      root.appendChild(btn);
+    });
+  }
+
+  function renderEnvironmentFilterUI_() {
+    loadEnvironmentCatalog_().then(renderEnvironmentButtons_);
   }
 
   // =========================
@@ -388,6 +549,7 @@
   window.PostFilterState ??= {
     selectedTags: new Set(),
     selectedUserTags: new Set(),
+    selectedEnvironmentIds: new Set(),
     selectedPosterKey: '',
     selectedPosterLabel: '',
     selectedCardCds: new Set(),
@@ -400,6 +562,7 @@
   window.PostFilterDraft ??= {
     selectedTags: new Set(),
     selectedUserTags: new Set(),
+    selectedEnvironmentIds: new Set(),
     selectedPosterKey: '',
     selectedPosterLabel: '',
     selectedCardCds: new Set(),
@@ -408,6 +571,9 @@
     selectedPostLabel: '',
   };
 
+  window.PostFilterState.selectedEnvironmentIds ??= new Set();
+  window.PostFilterDraft.selectedEnvironmentIds ??= new Set();
+
   /** state → draft 同期 */
   function syncDraftFromApplied_() {
     const applied = window.PostFilterState;
@@ -415,6 +581,7 @@
 
     draft.selectedTags = new Set(Array.from(applied?.selectedTags || []));
     draft.selectedUserTags = new Set(Array.from(applied?.selectedUserTags || []));
+    draft.selectedEnvironmentIds = new Set(Array.from(applied?.selectedEnvironmentIds || []));
     draft.selectedPosterKey = String(applied?.selectedPosterKey || '');
     draft.selectedPosterLabel = String(applied?.selectedPosterLabel || '');
     draft.selectedCardCds = new Set(Array.from(applied?.selectedCardCds || []));
@@ -435,6 +602,7 @@
       const st = window.PostFilterState || {};
       const tags = Array.from(st.selectedTags || []);
       const user = Array.from(st.selectedUserTags || []);
+      const envIds = Array.from(st.selectedEnvironmentIds || []);
       const posterLabel = String(st.selectedPosterLabel || '').trim();
       const postLabel = String(st.selectedPostLabel || '').trim();
       const postId = String(st.selectedPostId || '').trim();
@@ -473,6 +641,28 @@
 
                   try {
                       window.__renderSelectedUserTags_?.();
+                  } catch (_) {}
+
+                  window.DeckPostFilter?.updateActiveChipsBar?.();
+                  window.DeckPostList?.applySortAndRerenderList?.(false);
+              }
+          });
+      });
+
+      envIds.forEach((envId) => {
+          const env = getEnvironmentById_(envId);
+          const label = env?.label || envId;
+          chips.push({
+              label: `環境:${label}`,
+              className: 'chip-environment',
+              onRemove: () => {
+                  window.PostFilterState.selectedEnvironmentIds?.delete?.(envId);
+                  window.PostFilterDraft?.selectedEnvironmentIds?.delete?.(envId);
+
+                  try {
+                      document
+                          .querySelectorAll(`.post-filter-env-btn[data-env-id="${CSS.escape(envId)}"]`)
+                          .forEach((btn) => btn.classList.remove('selected'));
                   } catch (_) {}
 
                   window.DeckPostFilter?.updateActiveChipsBar?.();
@@ -547,8 +737,10 @@
           onClearAll: () => {
               window.PostFilterState.selectedTags?.clear?.();
               window.PostFilterState.selectedUserTags?.clear?.();
+              window.PostFilterState.selectedEnvironmentIds?.clear?.();
               window.PostFilterDraft.selectedTags?.clear?.();
               window.PostFilterDraft.selectedUserTags?.clear?.();
+              window.PostFilterDraft.selectedEnvironmentIds?.clear?.();
 
               window.PostFilterState.selectedPosterKey = '';
               window.PostFilterState.selectedPosterLabel = '';
@@ -571,6 +763,7 @@
 
               try {
                   document.querySelectorAll('.post-filter-tag-btn.selected').forEach((b) => b.classList.remove('selected'));
+                  document.querySelectorAll('.post-filter-env-btn.selected').forEach((b) => b.classList.remove('selected'));
               } catch (_) {}
 
               try {
@@ -642,6 +835,22 @@ function rebuildFilteredItems(){
 
   // ★ 投稿フィルター（タグ） — window.PostFilterState を見る
   const fs = window.PostFilterState;
+
+  // ① 環境（作成日ベース / 複数選択 OR）
+  const selectedEnvIds = Array.from(fs?.selectedEnvironmentIds || [])
+    .map((id) => String(id || '').trim())
+    .filter(Boolean);
+  if (selectedEnvIds.length) {
+    const selectedEnvs = selectedEnvIds
+      .map(getEnvironmentById_)
+      .filter(Boolean);
+
+    if (selectedEnvs.length) {
+      filtered = filtered.filter((item) =>
+        selectedEnvs.some((env) => isPostInEnvironment_(item, env))
+      );
+    }
+  }
 
   // ★ 投稿1件だけ表示（共有リンク用）
   const selPid = String(fs?.selectedPostId || '').trim();
@@ -813,6 +1022,7 @@ function rebuildFilteredItems(){
 
     applied.selectedTags = new Set(Array.from(draft?.selectedTags || []));
     applied.selectedUserTags = new Set(Array.from(draft?.selectedUserTags || []));
+    applied.selectedEnvironmentIds = new Set(Array.from(draft?.selectedEnvironmentIds || []));
     applied.selectedPosterKey = String(draft?.selectedPosterKey || '');
     applied.selectedPosterLabel = String(draft?.selectedPosterLabel || '');
     applied.selectedCardCds = new Set(Array.from(draft?.selectedCardCds || []));
@@ -830,6 +1040,7 @@ function rebuildFilteredItems(){
     window.PostFilterDraft ??= {
       selectedTags: new Set(),
       selectedUserTags: new Set(),
+      selectedEnvironmentIds: new Set(),
       selectedPosterKey: '',
       selectedPosterLabel: '',
       selectedCardCds: new Set(),
@@ -840,6 +1051,7 @@ function rebuildFilteredItems(){
 
     window.PostFilterDraft.selectedTags.clear();
     window.PostFilterDraft.selectedUserTags.clear();
+    window.PostFilterDraft.selectedEnvironmentIds?.clear?.();
     window.PostFilterDraft.selectedPosterKey = '';
     window.PostFilterDraft.selectedPosterLabel = '';
     window.PostFilterDraft.selectedPostId = '';
@@ -851,6 +1063,7 @@ function rebuildFilteredItems(){
 
     try {
       document.querySelectorAll('.post-filter-tag-btn.selected').forEach((b) => b.classList.remove('selected'));
+      document.querySelectorAll('.post-filter-env-btn.selected').forEach((b) => b.classList.remove('selected'));
     } catch (_) {}
 
     const q = document.getElementById('userTagQuery');
@@ -879,7 +1092,9 @@ function rebuildFilteredItems(){
 
     window.PostFilterState.selectedTags?.clear?.();
     window.PostFilterState.selectedUserTags?.clear?.();
+    window.PostFilterState.selectedEnvironmentIds?.clear?.();
     window.PostFilterState.selectedCardCds?.clear?.();
+    window.PostFilterDraft.selectedEnvironmentIds?.clear?.();
     window.PostFilterState.selectedPosterKey = '';
     window.PostFilterState.selectedPosterLabel = '';
     window.PostFilterState.selectedPostId = String(pid);
@@ -1067,6 +1282,7 @@ function rebuildFilteredItems(){
   function openPostFilter() {
     const m = document.getElementById('postFilterModal');
     if (m) m.style.display = 'flex';
+    renderEnvironmentFilterUI_();
   }
 
   /** フィルターモーダルを閉じる */
@@ -1084,6 +1300,7 @@ function rebuildFilteredItems(){
     buildPostFilterTagUI: buildPostFilterTagUI_,
     applySharedPostFromUrl: applySharedPostFromUrl_,
     shouldShowTag: shouldShowTag_,
+    normalizeUserTagSearch: normalizeUserTagSearch_,
     syncDraftFromApplied: syncDraftFromApplied_,
     updateActiveChipsBar: updateActiveChipsBar_,
     openCardPickModal,
@@ -1255,26 +1472,16 @@ function rebuildFilteredItems(){
         if (selEmpty) selEmpty.style.display = list.length ? 'none' : '';
       }
 
-      function escapeHtmlLocal_(s) {
-        return String(s).replace(/[&<>"']/g, (c) => ({
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#39;',
-        })[c]);
-      }
-
       function renderSuggest_(queryRaw) {
         const freq = buildUserTagIndex_();
-        const query = String(queryRaw || '').trim().toLowerCase();
+        const query = normalizeUserTagSearch_(queryRaw);
         const selected = getDraftSet_();
 
         suggest.replaceChildren();
 
         const rows = [...freq.entries()]
           .filter(([t]) => !selected.has(t))
-          .filter(([t]) => !query || t.toLowerCase().includes(query))
+          .filter(([t]) => !query || normalizeUserTagSearch_(t).includes(query))
           .sort((a, b) => {
             if (b[1] !== a[1]) return b[1] - a[1];
             return a[0].localeCompare(b[0], 'ja');
@@ -1291,7 +1498,16 @@ function rebuildFilteredItems(){
           btn.type = 'button';
           btn.className = 'suggest-item';
           btn.dataset.utag = tag;
-          btn.innerHTML = `${escapeHtmlLocal_(tag)} <span class="c">${count}</span>`;
+
+          const label = document.createElement('span');
+          label.className = 'suggest-item-label';
+          label.textContent = tag;
+
+          const countBadge = document.createElement('span');
+          countBadge.className = 'c';
+          countBadge.textContent = String(count);
+
+          btn.append(label, countBadge);
 
           btn.addEventListener('click', (e) => {
             e.preventDefault();

@@ -83,6 +83,63 @@
         };
     }
 
+    function isLoggedIn_() {
+        const Auth = window.Auth;
+        return !!(Auth?.user && Auth?.token && Auth?.verified);
+    }
+
+    function getCardGroupStorageStatus_() {
+        const status = window.AccountCardGroupsSync?.getStatus?.() || window.AccountAppDataSync?.getStatus?.() || {};
+        const loggedIn = isLoggedIn_();
+        const state = status.state || 'local';
+        const localUpdatedAt = state === 'local' ? (window.CardGroups?.getUpdatedAt?.() || '') : '';
+        const lastSync = status.lastSync || (loggedIn ? readAccountLastSync_() : '') || localUpdatedAt;
+        if (status.syncing || status.state === 'syncing' || window.CardGroups?.canEdit?.() === false) {
+            return { label: 'アカウント確認中', modifier: 'syncing', title: buildCardGroupSourceTitle_(lastSync) };
+        }
+        if (status.state === 'error') {
+            return { label: '連携失敗', modifier: 'error', title: buildCardGroupSourceTitle_(lastSync) };
+        }
+
+        return loggedIn && (status.source === 'account' || status.state === 'account')
+            ? { label: 'アカウント連携中', modifier: 'account', title: buildCardGroupSourceTitle_(lastSync) }
+            : { label: 'ローカル保存', modifier: 'local', title: buildCardGroupSourceTitle_(lastSync) };
+    }
+
+    function readAccountLastSync_() {
+        try { return localStorage.getItem('appDataAccountLastSync') || ''; } catch { return ''; }
+    }
+
+    function formatCardGroupSourceUpdatedAt_(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+
+        const date = new Date(raw);
+        if (!Number.isNaN(date.getTime())) {
+            return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+        }
+
+        const normalized = raw.replace(/-/g, '/');
+        const match = normalized.match(/^(\d{4})\/0?(\d{1,2})\/0?(\d{1,2})/);
+        return match ? `${match[1]}/${Number(match[2])}/${Number(match[3])}` : raw;
+    }
+
+    function buildCardGroupSourceTitle_(value) {
+        const updatedAt = formatCardGroupSourceUpdatedAt_(value);
+        return updatedAt ? `最終更新:${updatedAt}` : 'カードグループ: ローカル保存';
+    }
+
+    function buildCardGroupAuthActionsEl_() {
+        const el = document.createElement('div');
+        el.className = 'cards-auth-actions filter-card-group-auth-actions data-source-auth-actions';
+        if (isLoggedIn_()) el.style.display = 'none';
+        el.innerHTML = `
+            <button type="button" class="cards-auth-btn primary" data-open="authLoginModal" data-auth-entry="login">ログイン</button>
+            <button type="button" class="cards-auth-btn" data-open="authLoginModal" data-auth-entry="signup">新規登録</button>
+        `;
+        return el;
+    }
+
     // ==============================
     // 所持フィルター（4ボタン） UI生成
     // - OFF / 所持 / 未コンプ / コンプ
@@ -124,6 +181,12 @@
     // ==============================
     function createCardGroupFilterBlock_(){
         const { wrapper } = createFilterBlock_('カードグループ');
+
+        const sourceRow = document.createElement('div');
+        sourceRow.className = 'filter-card-group-source-row data-source-row';
+        const help = wrapper.querySelector('.filter-help');
+        if (help) wrapper.insertBefore(sourceRow, help);
+        else wrapper.appendChild(sourceRow);
 
         const groupDiv = document.createElement('div');
         groupDiv.className = 'filter-group';
@@ -239,6 +302,8 @@
     }
 
     function handleCreateGroupAction_() {
+    if (window.CardGroups?.canEdit?.() === false) return;
+
     // ② デッキメーカー：図鑑へ飛ばす
     if (isDeckmakerPage_()) {
         location.href = 'cards.html';
@@ -318,6 +383,30 @@
     // 「図鑑へ」ボタンは残して作り直したいので一旦退避
     const goBtn = gWrap.querySelector('.filter-btn[data-action="go-create-group"]');
     gWrap.innerHTML = '';
+    const canEditGroups = window.CardGroups?.canEdit?.() !== false;
+    const storageStatus = getCardGroupStorageStatus_();
+
+    const statusEl = document.createElement('div');
+    statusEl.className = `filter-card-group-status data-source-badge is-${storageStatus.modifier}`;
+    statusEl.setAttribute('aria-live', 'polite');
+    statusEl.title = storageStatus.title;
+    statusEl.textContent = storageStatus.label;
+    let sourceRow = gWrap.closest('.filter-block')?.querySelector('.filter-card-group-source-row');
+    if (!sourceRow) {
+        sourceRow = document.createElement('div');
+        sourceRow.className = 'filter-card-group-source-row data-source-row';
+        gWrap.parentElement?.insertBefore(sourceRow, gWrap);
+    }
+    if (sourceRow) sourceRow.innerHTML = '';
+    sourceRow.appendChild(buildCardGroupAuthActionsEl_());
+    sourceRow.appendChild(statusEl);
+
+    if (goBtn) {
+        goBtn.textContent = '＋グループを作る';
+        goBtn.disabled = !canEditGroups;
+        goBtn.classList.toggle('is-disabled', !canEditGroups);
+    }
+
     if (goBtn) gWrap.appendChild(goBtn);
 
     try {
@@ -339,6 +428,8 @@
         btn.type = 'button';
         btn.className = 'filter-btn';
         btn.dataset.group = String(id);
+        btn.disabled = !canEditGroups;
+        btn.classList.toggle('is-disabled', !canEditGroups);
 
         const cnt = Object.keys(g.cards || {}).length;
         const name = g.name || 'グループ';
@@ -956,7 +1047,14 @@
     modal.id = 'filterModal';
     modal.innerHTML = `
         <div class="modal-content">
-            <h3 class="filter-maintitle">カード検索</h3>
+            <div class="filter-modal-head">
+                <h3 class="filter-maintitle">カード検索</h3>
+
+                <div class="filter-modal-tabs" role="tablist" aria-label="フィルター種別">
+                    <button type="button" class="filter-modal-tab is-active" data-tab="filters" role="tab" aria-selected="true">基本</button>
+                    <button type="button" class="filter-modal-tab" data-tab="personal" role="tab" aria-selected="false">所持状況・カードグループ</button>
+                </div>
+            </div>
 
             <section class="filter-modal-pane is-active" data-pane="filters" role="tabpanel">
                 <div id="main-filters">
@@ -965,6 +1063,12 @@
 
                 <h4 class="filter-subtitle">さらに詳しい条件フィルター</h4>
                 <div id="detail-filters"></div>
+            </section>
+
+            <section class="filter-modal-pane" data-pane="personal" role="tabpanel" aria-hidden="true">
+                <div id="personal-filters">
+                    <!-- 所持フィルター・カードグループ（JS生成） -->
+                </div>
             </section>
 
             <div class="modal-footer">
@@ -1019,6 +1123,7 @@
 
     const tabs = Array.from(modal.querySelectorAll('.filter-modal-tab'));
     const panes = Array.from(modal.querySelectorAll('.filter-modal-pane'));
+    if (!panes.some(p => p.dataset.pane === tab)) tab = 'filters';
 
     tabs.forEach(b => {
         const on = (b.dataset.tab === tab);
@@ -1056,10 +1161,12 @@
 
         const mainFilters = document.getElementById('main-filters');
         const detailFilters = document.getElementById('detail-filters');
-        if (!mainFilters || !detailFilters) return;
+        const personalFilters = document.getElementById('personal-filters');
+        if (!mainFilters || !detailFilters || !personalFilters) return;
 
         mainFilters.innerHTML = '';
         detailFilters.innerHTML = '';
+        personalFilters.innerHTML = '';
 
         const getUniqueValues = (key) =>
         [...new Set(cards.map(card => card[key]).filter(Boolean))];
@@ -1171,9 +1278,9 @@
 
         // ---- メイン ----
         if (hasAnyOwned_()) {
-        mainFilters.appendChild(createOwnedFilter4Buttons_()); // 所持フィルター（所持データがある時だけ）
+        personalFilters.appendChild(createOwnedFilter4Buttons_()); // 所持フィルター（所持データがある時だけ）
         }
-        mainFilters.appendChild(createCardGroupFilterBlock_()); // カードグループフィルター
+        personalFilters.appendChild(createCardGroupFilterBlock_()); // カードグループフィルター
         mainFilters.appendChild(createRangeStyleWrapper_('タイプ', types, 'type'));
         mainFilters.appendChild(createRangeStyleWrapper_('レアリティ', rarities, 'rarity'));
         mainFilters.appendChild(packWrapper);
@@ -2051,6 +2158,8 @@
         // ==============================
         const groupFilter = btn.closest('.filter-group[data-key="カードグループ"]');
         if (groupFilter && btn.dataset.group != null) {
+        if (window.CardGroups?.canEdit?.() === false) return;
+
         const isAlready = btn.classList.contains('selected');
         const id = String(btn.dataset.group || '');
 
@@ -2139,6 +2248,13 @@
             });
         }
         } catch {}
+
+        window.addEventListener('account-owned-sync:ready', () => {
+            try { refreshCardGroupFilterUI_(); } catch {}
+        });
+        window.addEventListener('account-owned-sync:status', () => {
+            try { refreshCardGroupFilterUI_(); } catch {}
+        });
 
         // キーワード：デバウンス
         const kw = document.getElementById('keyword');

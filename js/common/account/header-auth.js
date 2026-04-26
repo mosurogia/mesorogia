@@ -81,6 +81,7 @@
                     <div class="header-auth-menu" id="${MENU_ID}" role="menu" hidden>
                         <button type="button" role="menuitem" data-header-action="account">アカウント設定</button>
                         <a role="menuitem" href="deckmaker.html#saved-deck" data-header-action="saved-deck">保存デッキ</a>
+                        <a role="menuitem" href="match-results.html" data-header-action="match-results">戦績ページへ</a>
                         <a role="menuitem" href="cards.html#checker" data-header-action="owned-data">所持データ</a>
                         <a role="menuitem" href="deck-post.html#mine" data-header-action="mine-posts">マイ投稿</a>
                         <button type="button" role="menuitem" class="header-auth-logout" data-header-action="logout">ログアウト</button>

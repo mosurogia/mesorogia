@@ -12,6 +12,7 @@
 (function(){
 const Auth = window.Auth;
 let authModalMode = 'login';
+let authUiLoading = false;
 
 function getAuthModeLabel(mode){
     return mode === 'signup' ? '新規登録' : 'ログイン';
@@ -71,6 +72,11 @@ window.openAuthModal = openAuthModal;
 window.reflectLoginUI = function reflectLoginUI(){
     const loggedIn = !!(Auth?.user && Auth?.token && Auth?.verified);
     const user = loggedIn ? (Auth.user || {}) : null;
+    const authModal = document.getElementById('authLoginModal');
+    const isAuthModalOpen = !!(authModal && authModal.style.display !== 'none');
+    // ログイン処理中は、内部の認証成功反映で完了前にログイン済み表示へ切り替えない
+    const keepAuthFormVisible = !!(authUiLoading && isAuthModalOpen);
+    const showLoggedInPanel = loggedIn && !keepAuthFormVisible;
 
     // 既存のログインフォーム周り（大きい方）
     const $form     = document.getElementById('auth-login-form');
@@ -85,8 +91,8 @@ window.reflectLoginUI = function reflectLoginUI(){
     const $cardsAuthActions = document.getElementById('cards-auth-actions');
     const $summaryBar = document.querySelector('.summary-bar');
 
-    if ($form)   $form.style.display   = loggedIn ? 'none' : '';
-    if ($logged) $logged.style.display = loggedIn ? '' : 'none';
+    if ($form)   $form.style.display   = showLoggedInPanel ? 'none' : '';
+    if ($logged) $logged.style.display = showLoggedInPanel ? '' : 'none';
     if ($cardsAuthActions) $cardsAuthActions.style.display = loggedIn ? 'none' : '';
     if ($summaryBar) $summaryBar.classList.toggle('is-auth-logged-in', loggedIn);
 
@@ -131,6 +137,7 @@ window.reflectLoginUI = function reflectLoginUI(){
 
 // ===== 認証UIフィードバック =====
 function setAuthLoading(on, msg){
+    authUiLoading = !!on;
     const loginBtn  = document.getElementById('auth-login-btn-submit');
     const signupBtn = document.getElementById('auth-signup-btn');
     if (loginBtn)  loginBtn.disabled  = !!on;
@@ -150,6 +157,13 @@ function showAuthOK(msg){
 function showAuthError(msg){
     const st = document.getElementById('auth-inline-status');
     if (st) st.textContent = msg || 'エラーが発生しました';
+}
+
+function showForgotPasswordGuide(){
+    const st = document.getElementById('auth-inline-status');
+    if (!st) return;
+
+    st.textContent = 'ブラウザに保存されたパスワードをご確認ください。再設定が必要な場合は、ログインID・投稿者名・Xアカウント・投稿したデッキURLなど、本人確認に使える情報を添えて管理者へお問い合わせください。';
 }
 
 function startSlowTimer(ms = 5000) {
@@ -339,6 +353,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById('auth-logout-btn')?.addEventListener('click', doLogout);
+    document.getElementById('auth-forgot-password')?.addEventListener('click', showForgotPasswordGuide);
 
     // 認証状態の初期化
     Auth?.init?.();
@@ -368,7 +383,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!entry) return;
 
     const mode = entry.getAttribute('data-auth-entry');
-    setAuthModalMode(mode);
+    openAuthModal(mode);
 
     setTimeout(() => {
         try { document.getElementById('auth-username')?.focus?.(); } catch(_) {}

@@ -54,7 +54,7 @@ window.buildShareText = window.buildShareText || function buildShareText({
     if (!S?.get) return 0;
 
     const e = S.get(String(cd));
-    return (e?.normal | 0) + (e?.shine | 0) + (e?.premium | 0);
+    return e?.normal | 0;
   }
 
   // =====================================================
@@ -71,20 +71,42 @@ window.buildShareText = window.buildShareText || function buildShareText({
     const s = status || window.AccountOwnedSync?.getStatus?.() || {};
     const state = s.state || 'local';
     const message = String(s.message || '').trim();
-    const label = message
-      ? (message.startsWith('所持データ:') ? message : `所持データ: ${message}`)
-      : '';
+    const label = message.replace(/^所持データ:\s*/, '');
     const labels = {
-      account: '所持データ: アカウント連携中',
-      syncing: '所持データ: アカウント確認中',
-      error: label || '所持データ: 連携失敗・ローカル保存',
-      local: label || '所持データ: ローカル保存',
+      account: 'アカウント連携中',
+      syncing: 'アカウント確認中',
+      error: label || '連携失敗',
+      local: label || 'ローカル保存',
     };
 
     el.classList.remove('is-account', 'is-local', 'is-syncing', 'is-error');
     el.classList.add(`is-${state === 'account' ? 'account' : state === 'syncing' ? 'syncing' : state === 'error' ? 'error' : 'local'}`);
     el.textContent = labels[state] || labels.local;
-    el.title = s.lastSync ? `最終連携: ${s.lastSync}` : el.textContent;
+    const localUpdatedAt = state === 'local' ? (window.OwnedStore?.getUpdatedAt?.() || '') : '';
+    const updatedAt = formatDataSourceUpdatedAt_(s.lastSync || localUpdatedAt);
+    el.title = updatedAt ? `最終更新:${updatedAt}` : `所持データ: ${el.textContent}`;
+    if (state === 'local') {
+      el.dataset.tooltip = '所持カードはブラウザに保存されます。キャッシュを削除するとデータが消えるのでご注意ください。';
+      el.dataset.tooltip = '所持カードはブラウザに保存されます。\nキャッシュを削除するとデータが消えるのでご注意ください。';
+      el.tabIndex = 0;
+    } else {
+      delete el.dataset.tooltip;
+      el.removeAttribute('tabindex');
+    }
+  }
+
+  function formatDataSourceUpdatedAt_(value){
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+
+    const date = new Date(raw);
+    if (!Number.isNaN(date.getTime())) {
+      return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+    }
+
+    const normalized = raw.replace(/-/g, '/');
+    const match = normalized.match(/^(\d{4})\/0?(\d{1,2})\/0?(\d{1,2})/);
+    return match ? `${match[1]}/${Number(match[2])}/${Number(match[3])}` : raw;
   }
 
   window.addEventListener('account-owned-sync:status', (event) => {
@@ -93,27 +115,6 @@ window.buildShareText = window.buildShareText || function buildShareText({
 
   window.addEventListener('DOMContentLoaded', () => {
     updateOwnedDataSourceBadge_();
-    const sourceButton = document.getElementById('owned-data-source');
-    if (sourceButton && !sourceButton.dataset.wiredOwnedSource) {
-      sourceButton.dataset.wiredOwnedSource = '1';
-      sourceButton.addEventListener('click', () => {
-        const isLoggedIn = !!(window.Auth?.user && window.Auth?.token && window.Auth?.verified);
-        if (!isLoggedIn) {
-          if (typeof window.openAuthModal === 'function') {
-            window.openAuthModal('login');
-          } else {
-            const loginModal = document.getElementById('authLoginModal');
-            if (loginModal) loginModal.style.display = 'flex';
-          }
-          return;
-        }
-
-        if (window.AccountOwnedSync?.sync) {
-          window.AccountOwnedSync.sync('manual-badge-click');
-          return;
-        }
-      });
-    }
   });
 
   function escHtml_(s){
@@ -198,6 +199,7 @@ window.buildShareText = window.buildShareText || function buildShareText({
     const includeUnobtainable = getIncludeUnobtainable_();
 
     nodeList.forEach(card => {
+      if (card?.dataset?.summarySkip === '1') return;
       if (!includeUnobtainable && isUnobtainableCard_(card)) return;
 
       totalTypes++;
@@ -389,13 +391,13 @@ window.buildShareText = window.buildShareText || function buildShareText({
 
         note.innerHTML = `
 <div class="checker-note-sub">
-  ● 所持状況は自動保存されます（保存ボタン不要）
+  ● カードをタップ/クリックすると所持数が切り替わります（旧神は1枚まで）
 </div>
 <div class="checker-note-sub">
-  ● 保存はこの端末/ブラウザ内です
+  ● 所持データは自動保存されます。ログイン中はアカウント連携、未ログイン時はこの端末に保存されます
 </div>
 <div class="checker-note-sub">
-  ● 将来的にログイン機能により、所持状況を他端末と同期できる予定です
+  ● 4×4表示はアプリのカード一覧と同じ並びです。アプリ本体のフィルターでシグネチャーを「なし」にしてください
 </div>
 
 <div class="checker-note-row">
@@ -1053,7 +1055,7 @@ window.buildShareText = window.buildShareText || function buildShareText({
         if (!cd) return;
 
         const e = S.get(String(cd));
-        const own = (e?.normal | 0) + (e?.shine | 0) + (e?.premium | 0);
+        const own = e?.normal | 0;
 
         const race = cardEl?.dataset?.race || '';
         const max = (race === '旧神') ? 1 : 3;
@@ -1198,9 +1200,10 @@ window.buildShareText = window.buildShareText || function buildShareText({
     if (typeof window.queryCardsByPack !== 'function') {
       window.queryCardsByPack = function (pack) {
         const en = (pack?.nameMain || '').trim();
-        return en
+        const cards = en
           ? document.querySelectorAll(`#packs-root .card[data-pack^="${CSS.escape(en)}"]`)
           : document.querySelectorAll('#packs-root .card');
+        return Array.from(cards).filter(card => card.dataset.summarySkip !== '1');
       };
     }
 
@@ -1439,6 +1442,22 @@ window.buildShareText = window.buildShareText || function buildShareText({
       const isUnavailable = !!isUnavailablePack(pack);
       const packKey = String(pack.key || pack.nameMain || '').trim();
       const isDetailOpen = openPackSummaryDetails_.has(packKey);
+      const packSelector = pack.selector || (packKey ? `#pack-${packKey}` : '');
+      const packSection = packSelector.startsWith('#')
+        ? document.getElementById(packSelector.slice(1))
+        : document.querySelector(packSelector);
+      const packUrl = packSelector
+        ? new URL(packSelector, 'https://mosurogia.github.io/mesorogia-cards/cards.html').href
+        : 'https://mosurogia.github.io/mesorogia-cards/cards.html#checker';
+      const shareText = window.buildShareText({
+        header: pack.nameMain,
+        sum: s,
+        url: packUrl,
+      });
+      const packTweet = packSection?.querySelector?.('.pack-tweet-link') || null;
+      if (packTweet) {
+        packTweet.href = `https://twitter.com/intent/tweet?text=${shareText}`;
+      }
 
       const wrap = document.createElement('div');
       wrap.className = 'pack-summary';

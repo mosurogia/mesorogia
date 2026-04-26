@@ -48,6 +48,211 @@
     return options?.cardMap || window.cardMap || window.allCardsMap || {};
   }
 
+  const CARD_VERSIONS_URL_ = './public/cards_versions.json';
+  const CARD_DATA_BASE_ = './public/';
+  const ADJUSTMENT_FIELDS_ = [
+    'cost',
+    'power',
+    'effect_name1',
+    'effect_text1',
+    'effect_name2',
+    'effect_text2',
+    'effect_text_all',
+  ];
+  const cardAdjustmentCache_ = new Map();
+  let cardVersionsPromise_ = null;
+
+  function cardValue_(card, key) {
+    const v = card?.[key];
+    return v === null || v === undefined ? '' : String(v);
+  }
+
+  function isDifferentCardVersion_(a, b) {
+    return ADJUSTMENT_FIELDS_.some((key) => cardValue_(a, key) !== cardValue_(b, key));
+  }
+
+  async function fetchJson_(url) {
+    const res = await fetch(url, { cache: 'force-cache' });
+    if (!res.ok) throw new Error(`fetch failed: ${url} (${res.status})`);
+    return await res.json();
+  }
+
+  async function loadCardVersions_() {
+    if (cardVersionsPromise_) return cardVersionsPromise_;
+    cardVersionsPromise_ = fetchJson_(CARD_VERSIONS_URL_)
+      .then((json) => Array.isArray(json?.versions) ? json.versions : [])
+      .catch((err) => {
+        console.warn('[card-detail] cards_versions.json 読み込み失敗:', err);
+        return [];
+      });
+    return cardVersionsPromise_;
+  }
+
+  async function loadCardVersionRows_(cd) {
+    const cd5 = normalizeCd5_(cd);
+    if (!cd5) return [];
+    if (cardAdjustmentCache_.has(cd5)) return cardAdjustmentCache_.get(cd5);
+
+    const promise = (async () => {
+      const versions = await loadCardVersions_();
+      const rows = [];
+
+      for (const item of versions) {
+        const file = item?.file;
+        if (!file) continue;
+
+        try {
+          const cards = await fetchJson_(CARD_DATA_BASE_ + String(file).replace(/^\/+/, ''));
+          if (!Array.isArray(cards)) continue;
+          const card = cards.find((row) => normalizeCd5_(row?.cd) === cd5);
+          if (!card) continue;
+          rows.push({
+            version: item.version || card.updated_at || '',
+            label: item.version || card.updated_at || '',
+            card,
+          });
+        } catch (err) {
+          console.warn('[card-detail] カード履歴JSON読み込み失敗:', file, err);
+        }
+      }
+
+      const current = (window.cardMap || window.allCardsMap || {})[cd5];
+
+      const unique = [];
+      for (const row of rows) {
+        const prev = unique[unique.length - 1];
+        if (!prev || isDifferentCardVersion_(prev.card, row.card)) {
+          unique.push(row);
+        }
+      }
+
+      if (current) {
+        unique.push({
+          version: 'latest',
+          label: '最新版',
+          card: current,
+        });
+      }
+
+      const latest = unique[unique.length - 1];
+      if (!latest) return [];
+
+      const changed = unique.filter((row) => isDifferentCardVersion_(row.card, latest.card));
+      if (!changed.length) return [];
+
+      // 最新版と同じ役割になる直近の日付版は、切替ボタンから省く
+      const beforeRows = changed.reverse().slice(1);
+      if (!beforeRows.length) return [];
+
+      return [latest, ...beforeRows];
+    })();
+
+    cardAdjustmentCache_.set(cd5, promise);
+    return promise;
+  }
+
+  function cardEffectHtml_(card) {
+    const parts = [];
+    const en1 = card?.effect_name1 ?? '';
+    const et1 = card?.effect_text1 ?? '';
+    const en2 = card?.effect_name2 ?? '';
+    const et2 = card?.effect_text2 ?? '';
+
+    if (en1) parts.push(`<div><strong class="effect-name">${escapeHtml_(en1)}</strong></div>`);
+    if (et1) parts.push(`<div>${escapeHtml_(et1)}</div>`);
+    if (en2) parts.push(`<div><strong class="effect-name">${escapeHtml_(en2)}</strong></div>`);
+    if (et2) parts.push(`<div>${escapeHtml_(et2)}</div>`);
+
+    return parts.join('\n') || '<div>効果情報はありません</div>';
+  }
+
+  function applyCardVersionToDetail_(detailEl, row) {
+    const card = row?.card;
+    if (!detailEl || !card) return;
+
+    detailEl.dataset.currentVersion = row.version || '';
+    detailEl.__cardDetailCurrentCard = card;
+
+    const nameEl = detailEl.querySelector('.card-name');
+    if (nameEl) nameEl.textContent = card.name || '';
+
+    const packEl = detailEl.querySelector('.card-pack');
+    if (packEl) packEl.textContent = card.packName ?? card.pack_name ?? '';
+
+    const raceEl = detailEl.querySelector('.card-race');
+    if (raceEl) raceEl.textContent = card.race || '';
+
+    const categoryEl = detailEl.querySelector('.card-category');
+    if (categoryEl) categoryEl.textContent = card.category || '';
+
+    const effectEl = detailEl.querySelector('.card-effect');
+    if (effectEl) effectEl.innerHTML = cardEffectHtml_(card);
+
+    const zoomBtn = detailEl.querySelector('.detail-zoom-btn');
+    if (zoomBtn) zoomBtn.__cardDetailCurrentCard = card;
+
+    updateSourceCardImage_(detailEl, card);
+  }
+
+  function updateSourceCardImage_(detailEl, card) {
+    const sourceCard = detailEl?.__sourceCardElement;
+    const img = sourceCard?.querySelector?.('img');
+    if (!img || !card) return;
+
+    if (typeof window.setCardImageSrc === 'function') {
+      window.setCardImageSrc(img, card);
+      return;
+    }
+
+    const cd = normalizeCd5_(card.cd || sourceCard.dataset?.cd);
+    img.src = cd ? `img/${cd}.webp` : 'img/00000.webp';
+  }
+
+  function resetSourceCardImage_(detailEl) {
+    const sourceCard = detailEl?.__sourceCardElement;
+    const cd = normalizeCd5_(sourceCard?.dataset?.cd || detailEl?.dataset?.cd);
+    if (!sourceCard || !cd) return;
+
+    const latest = (window.cardMap || window.allCardsMap || {})[cd] || { cd };
+    updateSourceCardImage_(detailEl, latest);
+  }
+
+  async function attachAdjustmentSwitcher_(detailEl, cd) {
+    if (!detailEl || detailEl.dataset.adjustmentSwitcherBound === '1') return;
+    detailEl.dataset.adjustmentSwitcherBound = '1';
+
+    const effectEl = detailEl.querySelector('.card-effect');
+    if (!effectEl) return;
+
+    const rows = await loadCardVersionRows_(cd);
+    if (!rows.length || !detailEl.isConnected) return;
+
+    const currentVersion = rows[0]?.version || 'latest';
+    const wrap = document.createElement('div');
+    wrap.className = 'card-adjustment-switcher';
+
+    rows.forEach((row) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'card-adjustment-btn';
+      btn.textContent = row.version === 'latest' ? '最新版' : `${row.label} 調整前`;
+      btn.dataset.version = row.version || '';
+      btn.classList.toggle('is-active', (row.version || '') === currentVersion);
+      btn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        wrap.querySelectorAll('.card-adjustment-btn').forEach((el) => {
+          el.classList.toggle('is-active', el === btn);
+        });
+        applyCardVersionToDetail_(detailEl, row);
+      });
+      wrap.appendChild(btn);
+    });
+
+    effectEl.insertAdjacentElement('beforebegin', wrap);
+    applyCardVersionToDetail_(detailEl, rows[0]);
+  }
+
   // =========================
   // 2) 詳細HTMLテンプレート生成
   // =========================
@@ -188,12 +393,14 @@
 
     // 同じカードならトグルで閉じる
     if (existing && existing.getAttribute('data-cd') === cd) {
+      resetSourceCardImage_(existing);
       existing.remove();
       return;
     }
 
     // 別カード詳細が開いているなら先に閉じる
     if (existing) {
+      resetSourceCardImage_(existing);
       existing.remove();
     }
 
@@ -210,6 +417,7 @@
     cloned.classList.add('active');
     cloned.classList.add('card-detail');
     cloned.setAttribute('data-cd', cd);
+    cloned.__sourceCardElement = clickedCard;
 
     // 詳細内に所持数UIを付与
     attachOwnedEditor_(cloned, cd);
@@ -240,6 +448,7 @@
 
     // 行末の直後へ詳細を差し込む
     insertAfter.insertAdjacentElement('afterend', cloned);
+    attachAdjustmentSwitcher_(cloned, cd);
   }
 
   /**
@@ -367,16 +576,14 @@
 
     /**
      * 現在の所持数合計を取得
-     * - normal / shine / premium を合算して表示
+     * - normal の所持数を表示
      */
     function readTotal_() {
       try {
         const entry = window.OwnedStore?.get?.(String(cd)) || {
           normal: 0,
-          shine: 0,
-          premium: 0,
         };
-        return (entry.normal | 0) + (entry.shine | 0) + (entry.premium | 0);
+        return entry.normal | 0;
       } catch {
         return 0;
       }
@@ -395,11 +602,7 @@
       const next = Math.max(0, Math.min(max, value | 0));
 
       try {
-        window.OwnedStore?.set?.(String(cd), {
-          normal: next,
-          shine: 0,
-          premium: 0,
-        });
+        window.OwnedStore?.set?.(String(cd), next);
       } catch {}
 
       try {
@@ -539,7 +742,7 @@
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      window.CardZoomModal?.open?.(cd5);
+      window.CardZoomModal?.open?.(btn.__cardDetailCurrentCard || detailEl.__cardDetailCurrentCard || cd5);
     });
 
     // カード名の前に差し込む
@@ -621,6 +824,8 @@
     startLeft: 0,
     startTop: 0,
   };
+
+  const CARD_DETAIL_MODAL_VIEWPORT_MARGIN_ = 8;
 
   const CARD_DETAIL_MODAL_RACE_CLASSES_ = [
     'race-ドラゴン',
@@ -863,16 +1068,34 @@
     const desiredTop = rect.top ?? rect.bottom ?? vh / 2;
 
     requestAnimationFrame(() => {
-      const width = box.offsetWidth || 320;
-      const height = box.offsetHeight || 240;
-
-      const left = Math.min(Math.max(8, desiredLeft), vw - width - 8);
-      const top = Math.min(Math.max(8, desiredTop), vh - height - 8);
-
       box.style.transform = 'none';
-      box.style.left = left + 'px';
-      box.style.top = top + 'px';
+      clampCardDetailModalPosition_(desiredLeft, desiredTop);
     });
+  }
+
+  function clampCardDetailModalPosition_(left, top) {
+    const { box } = getCardDetailModalEls_();
+    if (!box) return;
+
+    const margin = CARD_DETAIL_MODAL_VIEWPORT_MARGIN_;
+    const width = box.offsetWidth || 320;
+    const height = box.offsetHeight || 240;
+    const maxLeft = Math.max(margin, window.innerWidth - width - margin);
+    const maxTop = Math.max(margin, window.innerHeight - height - margin);
+    const safeLeft = Math.min(Math.max(left, margin), maxLeft);
+    const safeTop = Math.min(Math.max(top, margin), maxTop);
+
+    box.style.left = safeLeft + 'px';
+    box.style.top = safeTop + 'px';
+  }
+
+  function keepCardDetailModalInViewport_() {
+    const { modal, box } = getCardDetailModalEls_();
+    if (!modal || !box || !modal.classList.contains('show')) return;
+
+    const rect = box.getBoundingClientRect();
+    box.style.transform = 'none';
+    clampCardDetailModalPosition_(rect.left, rect.top);
   }
 
   /**
@@ -906,13 +1129,17 @@
 
     if (img) {
       const imageBasePath = String(options.imageBasePath || 'img/');
-      img.src = `${imageBasePath}${cd}.webp`;
       img.alt = info.name || '';
 
-      img.onerror = () => {
-        img.onerror = null;
-        img.src = `${imageBasePath}00000.webp`;
-      };
+      if (typeof window.setCardImageSrc === 'function' && imageBasePath === 'img/') {
+        window.setCardImageSrc(img, info);
+      } else {
+        img.src = `${imageBasePath}${cd}.webp`;
+        img.onerror = () => {
+          img.onerror = null;
+          img.src = `${imageBasePath}00000.webp`;
+        };
+      }
     }
 
     if (title) {
@@ -965,6 +1192,11 @@
 
     els.modal.dataset.cardDetailBound = '1';
 
+    els.modal.addEventListener('click', (e) => {
+      if (els.box.contains(e.target)) return;
+      closeCardDetailModal_();
+    });
+
     const dragHandle = els.dragHandle;
 
     if (dragHandle) {
@@ -990,18 +1222,7 @@
         const left = cardDetailModalDrag_.startLeft + (point.clientX - cardDetailModalDrag_.startX);
         const top = cardDetailModalDrag_.startTop + (point.clientY - cardDetailModalDrag_.startY);
 
-        const width = els.box.offsetWidth || 320;
-        const height = els.box.offsetHeight || 240;
-
-        els.box.style.left = Math.min(
-          Math.max(left, 8 - width * 0.9),
-          window.innerWidth - 8
-        ) + 'px';
-
-        els.box.style.top = Math.min(
-          Math.max(top, 8 - height * 0.9),
-          window.innerHeight - 8
-        ) + 'px';
+        clampCardDetailModalPosition_(left, top);
       };
 
       const onUp = () => {
@@ -1020,6 +1241,14 @@
 
     els.close?.addEventListener('click', (e) => {
       e.stopPropagation();
+      closeCardDetailModal_();
+    });
+
+    window.addEventListener('resize', keepCardDetailModalInViewport_);
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (!els.modal.classList.contains('show')) return;
       closeCardDetailModal_();
     });
   }

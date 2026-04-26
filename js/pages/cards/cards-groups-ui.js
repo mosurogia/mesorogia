@@ -21,38 +21,64 @@ function ensureReady_() {
     return !!(window.CardGroups && document.getElementById('cards-groups-list') && document.getElementById('grid'));
 }
 
-function openAuthModal_(mode = 'login') {
-  if (typeof window.openAuthModal === 'function') {
-    window.openAuthModal(mode);
-    return;
-  }
-
-  const modal = document.getElementById('authLoginModal');
-  if (modal) modal.style.display = 'flex';
-
-  const target = mode === 'signup'
-    ? document.getElementById('auth-password-confirm')
-    : document.getElementById('auth-username');
-
-  setTimeout(() => {
-    try { (target || document.getElementById('auth-username'))?.focus?.(); } catch {}
-  }, 0);
-}
-
-function authLockOverlayHtml_() {
-  return `
-    <div class="cg-auth-lock" role="note" aria-live="polite">
-      <div class="cg-auth-lock-title">カードグループ機能利用にはログインが必要です</div>
-      <div class="cg-auth-lock-actions">
-        <button type="button" class="cg-auth-lock-btn primary" data-cg-auth-action="login">ログイン</button>
-        <button type="button" class="cg-auth-lock-btn" data-cg-auth-action="signup">新規登録</button>
-      </div>
-    </div>
-  `.trim();
-}
-
 // UI上の「選択中グループ」（activeId/editingIdとは別）
 let uiSelectedId = '';
+
+function getStorageStatus_() {
+  const Auth = window.Auth;
+  const loggedIn = !!(Auth?.user && Auth?.token && Auth?.verified);
+  const status = window.AccountCardGroupsSync?.getStatus?.() || window.AccountAppDataSync?.getStatus?.() || {};
+  const state = status.state || 'local';
+  const localUpdatedAt = state === 'local' ? (window.CardGroups?.getUpdatedAt?.() || '') : '';
+  const lastSync = status.lastSync || (loggedIn ? readAccountLastSync_() : '') || localUpdatedAt;
+
+  if (status.syncing || status.state === 'syncing' || window.CardGroups?.canEdit?.() === false) {
+    return { label: 'アカウント確認中', modifier: 'syncing', title: buildDataSourceTitle_(lastSync, 'カードグループ') };
+  }
+  if (status.state === 'error') {
+    return { label: '連携失敗', modifier: 'error', title: buildDataSourceTitle_(lastSync, 'カードグループ') };
+  }
+
+  return loggedIn && (status.source === 'account' || status.state === 'account')
+    ? { label: 'アカウント連携中', modifier: 'account', title: buildDataSourceTitle_(lastSync, 'カードグループ') }
+    : { label: 'ローカル保存', modifier: 'local', title: buildDataSourceTitle_(lastSync, 'カードグループ') };
+}
+
+function readAccountLastSync_() {
+  try { return localStorage.getItem('appDataAccountLastSync') || ''; } catch { return ''; }
+}
+
+function formatDataSourceUpdatedAt_(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  const date = new Date(raw);
+  if (!Number.isNaN(date.getTime())) {
+    return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+  }
+
+  const normalized = raw.replace(/-/g, '/');
+  const match = normalized.match(/^(\d{4})\/0?(\d{1,2})\/0?(\d{1,2})/);
+  return match ? `${match[1]}/${Number(match[2])}/${Number(match[3])}` : raw;
+}
+
+function buildDataSourceTitle_(value, fallback) {
+  const updatedAt = formatDataSourceUpdatedAt_(value);
+  return updatedAt ? `最終更新:${updatedAt}` : `${fallback}: ローカル保存`;
+}
+
+function buildLocalStorageTooltipAttr_(modifier, message) {
+  return modifier === 'local' ? ` data-tooltip="${escapeHtml_(message)}" tabindex="0"` : '';
+}
+
+function buildAuthActionsHtml_(loggedIn) {
+  return `
+    <div class="cards-auth-actions cg-auth-actions data-source-auth-actions" style="${loggedIn ? 'display:none;' : ''}">
+      <button type="button" class="cards-auth-btn primary" data-open="authLoginModal" data-auth-entry="login">ログイン</button>
+      <button type="button" class="cards-auth-btn" data-open="authLoginModal" data-auth-entry="signup">新規登録</button>
+    </div>
+  `;
+}
 
 // =====================================================
 // 画像生成の上限（カード合計枚数）
@@ -97,6 +123,8 @@ function renderSidebar_() {
     const st = window.CardGroups.getState();
     const groups = st.order.map(id => st.groups[id]).filter(Boolean);
     const canEditGroups = window.CardGroups.canEdit?.() !== false;
+    const storageStatus = getStorageStatus_();
+    const loggedIn = !!(window.Auth?.user && window.Auth?.token && window.Auth?.verified);
 
     // 選択が消えてたらクリア
     if (uiSelectedId && !st.groups[uiSelectedId]) uiSelectedId = '';
@@ -121,6 +149,11 @@ function renderSidebar_() {
     <div class="cg-head">
         <div class="cg-head-row cg-head-row-title">
         <div class="cg-head-title">🗂️ カードグループ</div>
+        </div>
+
+        <div class="cg-head-row cg-head-row-source data-source-row">
+        ${buildAuthActionsHtml_(loggedIn)}
+        <div class="cg-storage-status data-source-badge is-${storageStatus.modifier}" aria-live="polite" title="${escapeHtml_(storageStatus.title)}"${buildLocalStorageTooltipAttr_(storageStatus.modifier, 'カードグループはブラウザに保存されます。\nキャッシュを削除するとデータが消えるのでご注意ください。')}>${storageStatus.label}</div>
         </div>
 
         <div class="cg-head-row cg-head-row-status">
@@ -151,9 +184,8 @@ function renderSidebar_() {
         </div>
     </div>
 
-    <div class="cg-list ${canEditGroups ? '' : 'is-auth-locked'}" id="cg-sidebar-list">
+    <div class="cg-list ${canEditGroups ? '' : 'is-sync-locked'}" id="cg-sidebar-list">
         ${groups.map(g => rowHtml_(g, st)).join('')}
-        ${canEditGroups ? '' : authLockOverlayHtml_()}
     </div>
 
     <button type="button" class="cg-add" id="cg-sidebar-add">＋ グループを追加</button>
@@ -188,7 +220,7 @@ function renderSidebar_() {
     {
     const b = qs('#cg-op-export', host);
     if (b) {
-        b.disabled = !hasSel || selectedCardTotal <= 0;
+        b.disabled = !canEditGroups || !hasSel || selectedCardTotal <= 0;
         b.classList.toggle('is-disabled', b.disabled);
     }
     }
@@ -206,7 +238,7 @@ function renderSidebar_() {
     if (b) {
         b.disabled = !canEditGroups;
         b.classList.toggle('is-disabled', b.disabled);
-        b.title = canEditGroups ? '' : 'ログイン中のみ編集できます';
+        b.title = canEditGroups ? '' : 'アカウント同期中は操作できません';
     }
     }
 
@@ -398,18 +430,11 @@ function bindRowEvents_(root) {
   root.dataset.cgRowBound = '1';
 
   root.addEventListener('click', (e) => {
-    const authAction = e.target.closest('[data-cg-auth-action]');
-    if (authAction) {
-      e.preventDefault();
-      e.stopPropagation();
-      openAuthModal_(authAction.dataset.cgAuthAction || 'login');
-      return;
-    }
-
     const row = e.target.closest('.cg-row');
     if (!row) return;
     const gid = row.dataset.gid;
     if (!gid) return;
+    if (window.CardGroups.canEdit?.() === false) return;
 
     const st = window.CardGroups.getState();
 
@@ -543,6 +568,7 @@ function bindCardTapOverride_() {
     const st = window.CardGroups.getState();
     const editingId = st.editingId || '';
     if (!editingId) return;
+    if (window.CardGroups.canEdit?.() === false) return;
 
     if (e.target.closest('.zoom-btn')) return;
 
@@ -572,6 +598,7 @@ function selectAllCards_() {
   const st = window.CardGroups.getState();
   const editingId = st.editingId;
   if (!editingId) return;
+  if (window.CardGroups.canEdit?.() === false) return;
 
   const grid = document.getElementById('grid');
   if (!grid) return;
@@ -589,6 +616,7 @@ function selectAllCards_() {
   const st = window.CardGroups.getState();
   const editingId = st.editingId;
   if (!editingId) return;
+  if (window.CardGroups.canEdit?.() === false) return;
 
   const visibleCardCds = Array.isArray(window.__visibleCardCds)
     ? window.__visibleCardCds
@@ -614,6 +642,7 @@ function resetSelectedCards_() {
   const st = window.CardGroups.getState();
   const editingId = st.editingId;
   if (!editingId) return;
+  if (window.CardGroups.canEdit?.() === false) return;
   const groupName = String(st.groups?.[editingId]?.name || 'このグループ');
 
   if (!window.confirm(`「${groupName}」の選択カードをリセットします。よろしいですか？`)) {
@@ -673,4 +702,7 @@ document.getElementById('group-reset-btn')
 
 window.addEventListener('DOMContentLoaded', init);
 window.addEventListener('card-page:ready', init);
+window.addEventListener('card-groups:data-replaced', scheduleHeavySync_);
+window.addEventListener('account-owned-sync:ready', scheduleHeavySync_);
+window.addEventListener('account-owned-sync:status', scheduleHeavySync_);
 })();

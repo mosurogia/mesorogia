@@ -178,14 +178,17 @@
         // （任意）キャッシュ条件のブレを減らす
         img.referrerPolicy = 'no-referrer-when-downgrade';
 
-        // ✅ src は最後に
+        // 調整前カードは専用画像を優先し、無ければ通常画像へ戻す
+        if (typeof window.setCardImageSrc === 'function') {
+        window.setCardImageSrc(img, card);
+        } else {
         img.src = `img/${card.cd}.webp`;
-
         img.addEventListener('error', () => {
-        if (img.dataset.fallbackApplied) return;
-        img.dataset.fallbackApplied = '1';
-        img.src = 'img/00000.webp';
+            if (img.dataset.fallbackApplied) return;
+            img.dataset.fallbackApplied = '1';
+            img.src = 'img/00000.webp';
         });
+        }
 
         // modeによるデフォルト挙動
         // - deck: 左クリックで addCard、右クリックで removeCard

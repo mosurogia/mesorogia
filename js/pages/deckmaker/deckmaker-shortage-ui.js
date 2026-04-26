@@ -71,7 +71,7 @@
       if (!v) return 0;
       if (typeof v === 'number') return (v | 0);
       if (typeof v === 'object'){
-        return ((v.normal|0) + (v.shine|0) + (v.premium|0));
+        return (v.normal|0) + (v.shine|0) + (v.premium|0);
       }
       return 0;
     }
@@ -529,8 +529,10 @@ function wireShortagePreviewOnce() {
     if (window.OwnedStore?.getAll) {
       const all = window.OwnedStore.getAll() || {};
       for (const cd in all) {
-        const v = all[cd] || {};
-        const total = (v.normal | 0) + (v.shine | 0) + (v.premium | 0);
+        const v = all[cd];
+        const total = typeof v === 'number'
+          ? (v | 0)
+          : ((v?.normal | 0) + (v?.shine | 0) + (v?.premium | 0));
         if (total > 0) return true;
       }
     }

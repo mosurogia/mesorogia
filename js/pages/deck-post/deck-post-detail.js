@@ -26,6 +26,18 @@
     return s ? s.padStart(5, '0').slice(0, 5) : '';
   }
 
+  function cardImageSrc_(cardOrCd) {
+    if (typeof window.getCardImageSrc === 'function') return window.getCardImageSrc(cardOrCd);
+    const cd = normCd5_(typeof cardOrCd === 'object' ? (cardOrCd?.cd || cardOrCd?.id) : cardOrCd);
+    return cd ? `img/${cd}.webp` : 'img/00000.webp';
+  }
+
+  function cardImageErrorAttr_(cardOrCd) {
+    const cd = normCd5_(typeof cardOrCd === 'object' ? (cardOrCd?.cd || cardOrCd?.id) : cardOrCd);
+    const normal = cd ? `img/${cd}.webp` : 'img/00000.webp';
+    return `if(!this.dataset.normalFallback){this.dataset.normalFallback=1;this.src='${normal}';}else{this.onerror=null;this.src='img/00000.webp';}`;
+  }
+
   /**
    * 改行 → <br>
    */
@@ -85,8 +97,11 @@
     const safe = src ? src : 'img/noimage.webp';
     const alt = title ? escHtml_(title) : '';
     return `
-      <div class="thumb-box">
+      <div class="thumb-box" role="button" aria-label="デッキリストを表示">
         <img loading="lazy" src="${safe}" alt="${alt}">
+        <span class="thumb-deckpeek-badge">
+          <img src="img/deckicon.png" alt="">
+        </span>
       </div>
     `;
   }
@@ -361,21 +376,30 @@
     };
     return true;
   }
+  function normalizePackEnName_(enName) {
+    const s = String(enName || '').trim();
+    if (!s) return '';
+
+    // 旧データ・旧キャッシュに残ったAパックの誤表記を表示時に吸収する
+    if (s.toLowerCase() === 'awaking the oracle') return 'Awakening The Oracle';
+    return s;
+  }
+
   function packNameEn_(packName) {
     if (typeof window.getPackEnName === 'function') {
-      return window.getPackEnName(packName, '');
+      return normalizePackEnName_(window.getPackEnName(packName, ''));
     }
 
     const s = String(packName || '').trim();
     if (!s) return '';
 
     const idx = s.indexOf('「');
-    if (idx > 0) return s.slice(0, idx).trim();
+    if (idx > 0) return normalizePackEnName_(s.slice(0, idx));
 
     const slash = s.indexOf('／');
-    if (slash > 0) return s.slice(0, slash).trim();
+    if (slash > 0) return normalizePackEnName_(s.slice(0, slash));
 
-    return s;
+    return normalizePackEnName_(s);
   }
 
   function packAbbr_(enName) {
@@ -432,7 +456,7 @@
       const cd5 = normCd5_(cd);
       const card = cardMap[cd5] || {};
       const name = card.name || cd5;
-      const src = `img/${cd5}.webp`;
+      const src = cardImageSrc_(card);
 
       const packName = card.pack_name || card.packName || '';
       const en = packNameEn_(packName);
@@ -442,7 +466,7 @@
 
       return `
         <div class="deck-entry" data-cd="${cd5}"${packAttr} role="button" tabindex="0">
-          <img src="${src}" alt="${escHtml_(name)}" loading="lazy">
+          <img src="${src}" alt="${escHtml_(name)}" loading="lazy" onerror="${cardImageErrorAttr_(card)}">
           <div class="count-badge">x${n}</div>
         </div>
       `;
@@ -515,8 +539,104 @@
     return null;
   }
 
+  /**
+   * 一覧項目に詳細本文が含まれているか
+   */
+  function hasDetailPayload_(item) {
+    if (!item || typeof item !== 'object') return false;
+    return (
+      Object.prototype.hasOwnProperty.call(item, 'deckNote') ||
+      Object.prototype.hasOwnProperty.call(item, 'cardNotes')
+    );
+  }
+
+  /**
+   * 取得した詳細データを state 内の同一投稿へ反映
+   */
+  function mergeFetchedPostIntoState_(postId, patch) {
+    const pid = String(postId || '').trim();
+    if (!pid || !patch || typeof patch !== 'object') return null;
+
+    const state = window.DeckPostState?.getState?.();
+    if (!state) return null;
+
+    const mergeList = (arr) => {
+      if (!Array.isArray(arr)) return null;
+      let hit = null;
+      for (let i = 0; i < arr.length; i += 1) {
+        const item = arr[i];
+        if (String(item?.postId || '').trim() !== pid) continue;
+        arr[i] = { ...item, ...patch, postId: pid };
+        hit = arr[i];
+      }
+      return hit;
+    };
+
+    return (
+      mergeList(state.mine?.items) ||
+      mergeList(state.list?.items) ||
+      mergeList(state.list?.allItems) ||
+      mergeList(state.list?.filteredItems) ||
+      null
+    );
+  }
+
+  /**
+   * apiGetPost の応答を投稿オブジェクトに寄せる
+   */
+  function normalizeFetchedPostResponse_(res, fallbackItem) {
+    const base = fallbackItem && typeof fallbackItem === 'object' ? fallbackItem : {};
+    const src = res?.item || res?.post || res?.data || res || {};
+    if (!src || typeof src !== 'object') return null;
+
+    const next = { ...base, ...src };
+    next.postId = String(next.postId || base.postId || '').trim();
+    if (!next.postId) return null;
+
+    if (!Object.prototype.hasOwnProperty.call(next, 'deckNote')) {
+      next.deckNote = String(next.comment || base.comment || '');
+    }
+    if (!Array.isArray(next.cardNotes)) {
+      next.cardNotes = Array.isArray(base.cardNotes) ? base.cardNotes : [];
+    }
+    return next;
+  }
+
+  /**
+   * 詳細表示に必要な本文を不足時だけ1件取得する
+   */
+  async function ensurePostDetailData_(postId) {
+    const pid = String(postId || '').trim();
+    if (!pid) return null;
+
+    const current = findItemById_(pid);
+    if (!current) return null;
+    if (hasDetailPayload_(current)) return current;
+
+    const res = await window.DeckPostApi?.apiGetPost?.({ postId: pid });
+    if (!res || res.ok === false) {
+      throw new Error((res && res.error) || 'get failed');
+    }
+
+    const normalized = normalizeFetchedPostResponse_(res, current);
+    if (!normalized) return current;
+
+    return mergeFetchedPostIntoState_(pid, normalized) || normalized;
+  }
+
   window.__cardMapCache = window.__cardMapCache || new Map();
   window.__cardVersionsIndex = window.__cardVersionsIndex || null;
+
+  const ADJUSTMENT_COMPARE_FIELDS_ = [
+    'cost',
+    'power',
+    'effect_name1',
+    'effect_text1',
+    'effect_name2',
+    'effect_text2',
+    'effect_text_all',
+  ];
+  const cardAdjustmentHistoryCache_ = new Map();
 
   /**
    * JSON取得
@@ -566,6 +686,148 @@
 
     cache.set(fileName, map);
     return map;
+  }
+
+  async function loadLatestCardMap_() {
+    return loadCardMapFile_('cards_latest.json');
+  }
+
+  function cardCompareValue_(card, key) {
+    const v = card?.[key];
+    return v === null || v === undefined
+      ? ''
+      : String(v).replace(/\r\n/g, '\n').trim();
+  }
+
+  function isAdjustedFromLatest_(card, latestCard) {
+    if (!card || !latestCard) return false;
+    return ADJUSTMENT_COMPARE_FIELDS_.some((key) =>
+      cardCompareValue_(card, key) !== cardCompareValue_(latestCard, key)
+    );
+  }
+
+  async function loadCardAdjustmentRows_(cd) {
+    const cd5 = normCd5_(cd);
+    if (!cd5) return [];
+    if (cardAdjustmentHistoryCache_.has(cd5)) return cardAdjustmentHistoryCache_.get(cd5);
+
+    const promise = (async () => {
+      const idx = await loadCardVersionsIndex_();
+      const rows = [];
+
+      for (const item of idx?.versions || []) {
+        const file = item?.file;
+        if (!file) continue;
+
+        const map = await loadCardMapFile_(file);
+        const card = map?.[cd5];
+        if (!card) continue;
+
+        rows.push({
+          version: item.version || card.updated_at || '',
+          card,
+        });
+      }
+
+      const latestMap = await loadLatestCardMap_();
+      const latest = latestMap?.[cd5];
+      if (latest) {
+        rows.push({
+          version: 'latest',
+          card: latest,
+        });
+      }
+
+      const unique = [];
+      for (const row of rows) {
+        const prev = unique[unique.length - 1];
+        if (!prev || isAdjustedFromLatest_(prev.card, row.card)) {
+          unique.push(row);
+        }
+      }
+
+      const latestRow = unique[unique.length - 1];
+      if (!latestRow) return [];
+
+      const adjustedRows = unique.filter((row) => isAdjustedFromLatest_(row.card, latestRow.card));
+      return adjustedRows.reverse();
+    })();
+
+    cardAdjustmentHistoryCache_.set(cd5, promise);
+    return promise;
+  }
+
+  async function isCardUsingAdjustedVersion_(cd, snapshotCard) {
+    const rows = await loadCardAdjustmentRows_(cd);
+    if (!rows.length || !snapshotCard) return false;
+    const snapshotUpdated = cardCompareValue_(snapshotCard, 'updated_at');
+    return rows.some((row) => {
+      const rowUpdated = cardCompareValue_(row.card, 'updated_at');
+      if (snapshotUpdated && rowUpdated && snapshotUpdated === rowUpdated) return true;
+      return !isAdjustedFromLatest_(snapshotCard, row.card);
+    });
+  }
+
+  function buildCardAdjustmentNoticeHtml_() {
+    return `
+      <div class="post-adjustment-notice">
+        このカードは投稿当時の効果で表示しています。<br>
+        最新版とはカードの性能が違います。
+      </div>
+    `;
+  }
+
+  function buildDeckAdjustmentNoticeHtml_(names) {
+    const list = (names || []).filter(Boolean);
+    const items = list.map((name) => `<li>${escHtml_(name)}</li>`).join('');
+    return `
+      <div class="post-adjustment-notice post-adjustment-notice--deck">
+        <div class="post-adjustment-notice-title">調整が入ったカードがあります。投稿当時の効果で表示しています。</div>
+        <ul class="post-adjustment-list">${items}</ul>
+      </div>
+    `;
+  }
+
+  async function findAdjustedDeckCards_(item, snapshotMap) {
+    const deck = extractDeckMap(item);
+    if (!deck || !Object.keys(deck).length) return [];
+
+    const result = [];
+    for (const cd of Object.keys(deck).map(normCd5_).filter(Boolean)) {
+        const card = snapshotMap?.[cd];
+        if (await isCardUsingAdjustedVersion_(cd, card)) {
+          result.push({
+            cd,
+            name: card?.name || cd,
+          });
+        }
+    }
+    return result;
+  }
+
+  async function renderDeckAdjustmentNotice_(root, item, snapshotMap) {
+    if (!root || root.dataset.adjustmentNoticeRendered === '1') return;
+
+    try {
+      const adjusted = await findAdjustedDeckCards_(item, snapshotMap);
+      if (!adjusted.length || !root.isConnected) return;
+
+      const decklist = root.querySelector('.post-decklist');
+      if (!decklist || decklist.parentElement?.querySelector('.post-adjustment-notice--deck')) return;
+
+      const names = adjusted.map((row) => row.name);
+      decklist.insertAdjacentHTML('beforebegin', buildDeckAdjustmentNoticeHtml_(names));
+      root.dataset.adjustmentNoticeRendered = '1';
+    } catch (err) {
+      console.warn('[deck-post] 調整カード注意文の描画失敗:', err);
+    }
+  }
+
+  function renderDeckAdjustmentNoticeForPostDate_(root, item) {
+    if (!root || !item) return;
+    withCardMapForPostDate_(item, () =>
+      renderDeckAdjustmentNotice_(root, item, window.cardMap || {})
+    );
   }
 
   /**
@@ -632,7 +894,8 @@
       const cOk = c && !Number.isNaN(c.getTime());
       const uOk = u && !Number.isNaN(u.getTime());
 
-      const base = (uOk && (!cOk || u > c)) ? u : (cOk ? c : null);
+      // 投稿後の編集で環境がずれないよう、作成日を優先する
+      const base = cOk ? c : (uOk ? u : null);
       if (!base) return fn();
 
       const idx = await loadCardVersionsIndex_();
@@ -660,7 +923,7 @@
   /**
    * カード詳細HTML
    */
-  function buildCardDetailHtml_(cd5) {
+  function buildCardDetailHtml_(cd5, options = {}) {
     const cardMap = window.cardMap || {};
     const c = cardMap[normCd5_(cd5)] || {};
     const mainRace = getMainRace(c.races ?? (c.race ? [c.race] : []));
@@ -673,6 +936,7 @@
           ? window.splitPackName(packRaw)
           : { en: String(packRaw), jp: '' })
       : null;
+    if (pack) pack.en = normalizePackEnName_(pack.en);
 
     let packKey = '';
     if (packRaw) {
@@ -682,7 +946,7 @@
     }
 
     const cat = c.category || '';
-    const img = `img/${normCd5_(cd5)}.webp`;
+    const img = cardImageSrc_(c.cd ? c : { ...c, cd: cd5 });
 
     const rarityLabel = rarityLabelForPage4_(c.rarity);
     const rarityCls = rarityPillClassForPage4_(c.rarity);
@@ -691,6 +955,9 @@
     const e1t = c.effect_text1 || '';
     const e2n = c.effect_name2 || '';
     const e2t = c.effect_text2 || '';
+    const adjustedNotice = options.isAdjusted === true
+      ? buildCardAdjustmentNoticeHtml_()
+      : '';
 
     const effectBlocks = `
       ${e1n || e1t ? `
@@ -718,7 +985,7 @@
                loading="lazy"
                class="carddetail-thumb-img"
                data-cd="${escHtml_(normCd5_(cd5))}"
-               onerror="this.onerror=null;this.src='img/00000.webp';">
+               onerror="${cardImageErrorAttr_(c.cd ? c : { ...c, cd: cd5 })}">
         </div>
 
         <div class="carddetail-meta">
@@ -764,6 +1031,7 @@
 
       <div class="carddetail-body">
         ${effectBlocks}
+        ${adjustedNotice}
       </div>
     `;
   }
@@ -860,9 +1128,22 @@
     const postId = String(root?.dataset?.postid || '').trim();
     const item = postId ? findItemById_(postId) : null;
 
-    const html = item
-      ? await withCardMapForPostDate_(item, () => buildCardDetailHtml_(cd))
-      : buildCardDetailHtml_(cd);
+    try {
+      window.__latestCardMapForNotice = await loadLatestCardMap_();
+    } catch (err) {
+      console.warn('[deck-post] 最新カードJSON読み込み失敗:', err);
+      window.__latestCardMapForNotice = {};
+    }
+    let html = '';
+    if (item) {
+      const isAdjusted = await withCardMapForPostDate_(item, async () => {
+        const snapshotCard = (window.cardMap || {})[cd] || null;
+        return await isCardUsingAdjustedVersion_(cd, snapshotCard);
+      });
+      html = await withCardMapForPostDate_(item, () => buildCardDetailHtml_(cd, { isAdjusted }));
+    } else {
+      html = buildCardDetailHtml_(cd, { isAdjusted: false });
+    }
 
     const isPcWide = window.matchMedia('(min-width: 1024px)').matches;
 
@@ -1142,7 +1423,7 @@
       const cd5 = normCd5_(cdRaw);
       const card = cardMap[cd5] || {};
       const name = card.name || 'カード名未登録';
-      const img = `img/${cd5}.webp`;
+      const img = cardImageSrc_(card.cd ? card : { ...card, cd: cd5 });
       const textHtml = escHtml_(r.text || '').replace(/\n/g, '<br>');
 
       return `
@@ -1151,7 +1432,7 @@
             <img src="${img}"
                  alt="${escHtml_(name)}"
                  loading="lazy"
-                 onerror="this.onerror=null;this.src='img/00000.webp';">
+                 onerror="${cardImageErrorAttr_(card.cd ? card : { ...card, cd: cd5 })}">
           </div>
           <div class="post-cardnote-body">
             <div class="post-cardnote-title">${escHtml_(name)}</div>
@@ -1188,6 +1469,7 @@
 function renderDetailPaneForItem(item, basePaneId) {
   const pane = document.getElementById(basePaneId || 'postDetailPane');
   if (!pane || !item) return;
+  const snapshotMap = window.cardMap || {};
 
   const paneUid = `${basePaneId}-${String(item.postId || '').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
   const isMinePane = (basePaneId === 'postDetailPaneMine');
@@ -1487,6 +1769,10 @@ function renderDetailPaneForItem(item, basePaneId) {
   }
 
   if (root) {
+    renderDeckAdjustmentNotice_(root, item, snapshotMap);
+  }
+
+  if (root) {
     const compareBtn = root.querySelector(
       '.post-detail-panel[data-panel="info"] .btn-add-compare'
     );
@@ -1510,15 +1796,23 @@ function renderDetailPaneForItem(item, basePaneId) {
 }
 
   // 指定した記事要素に対して詳細ペインを表示する
-  function showDetailPaneForArticle(articleEl) {
+  async function showDetailPaneForArticle(articleEl) {
     const art = articleEl?.closest?.('.post-card') || articleEl;
     if (!art) return;
 
     const postId = String(art.dataset.postid || '').trim();
     if (!postId) return;
 
-    const item = findItemById_(postId);
+    let item = findItemById_(postId);
     if (!item) return;
+
+    if (!hasDetailPayload_(item)) {
+      try {
+        item = await ensurePostDetailData_(postId);
+      } catch (e) {
+        console.warn('showDetailPaneForArticle: apiGetPost failed', e);
+      }
+    }
 
     const isMine = !!art.closest('#myPostList, #pageMine');
     const basePaneId = isMine ? 'postDetailPaneMine' : 'postDetailPane';
@@ -1668,8 +1962,9 @@ function renderDetailPaneForItem(item, basePaneId) {
     overlay.style.bottom = 'auto';
   }
 
-  function toggleSpDetail_(art) {
-    const d = art?.querySelector('.post-detail');
+  async function toggleSpDetail_(articleEl) {
+    let art = articleEl;
+    let d = art?.querySelector('.post-detail');
     if (!art || !d) return;
 
     const willOpen = !!d.hidden;
@@ -1678,15 +1973,38 @@ function renderDetailPaneForItem(item, basePaneId) {
     // 開いた直後だけ、分布グラフを描画する
     if (willOpen && !d.dataset.chartsRendered) {
       const postId = String(art.dataset.postid || '').trim();
-      const item = findPostItemById(postId);
+      let item = findPostItemById(postId);
+      if (item && !hasDetailPayload_(item)) {
+        try {
+          item = await ensurePostDetailData_(postId);
+        } catch (err) {
+          console.warn('toggleSpDetail_: apiGetPost failed', err);
+        }
+
+        const isMine = !!art.closest('#myPostList, #pageMine');
+        const replacement = item && window.buildCardSp?.(item, { mode: isMine ? 'mine' : 'list' });
+        if (replacement) {
+          art.replaceWith(replacement);
+          art = replacement;
+          d = art.querySelector('.post-detail');
+          if (!d) return;
+          d.hidden = false;
+        }
+      }
+
       const charts = art.querySelector('.post-detail-charts');
       const paneUid = String(charts?.dataset?.paneid || '').trim();
+      const root = art.querySelector('.post-detail-inner');
+
+      if (item && root) {
+        renderDeckAdjustmentNoticeForPostDate_(root, item);
+      }
 
       if (item && paneUid) {
         requestAnimationFrame(() => {
           try {
             const ok = renderPostDistCharts_(item, paneUid);
-            if (ok) d.dataset.chartsRendered = '1';
+            if (ok && d) d.dataset.chartsRendered = '1';
           } catch (err) {
             console.warn('SP renderPostDistCharts_ failed:', err);
           }
@@ -1892,6 +2210,11 @@ function renderDetailPaneForItem(item, basePaneId) {
         const item = findPostItemById(postId);
         const charts = art.querySelector('.post-detail-charts');
         const paneUid = String(charts?.dataset?.paneid || '').trim();
+        const root = art.querySelector('.post-detail-inner');
+
+        if (item && root) {
+          renderDeckAdjustmentNoticeForPostDate_(root, item);
+        }
 
         if (item && paneUid) {
           requestAnimationFrame(() => {

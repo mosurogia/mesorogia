@@ -2,13 +2,14 @@
   'use strict';
 
   var config = {
-    version: '2026-04-20-003',
-    staticCacheName: 'mesorogia-static-2026-04-20-003',
-    runtimeCacheName: 'mesorogia-runtime-2026-04-20-003',
+    version: '2026-04-24-010',
+    staticCacheName: 'mesorogia-static-2026-04-24-010',
+    runtimeCacheName: 'mesorogia-runtime-2026-04-24-010',
     appShell: [
       './cards.html',
       './deckmaker.html',
       './deck-post.html',
+      './match-results.html',
       './settings.html',
       './favicon.ico',
       './manifest.webmanifest',
@@ -24,7 +25,9 @@
       './css/page2.css',
       './css/page3.css',
       './css/page4.css',
+      './css/page5.css',
       './public/cards_latest.json',
+      './public/cards_latest.meta.json',
       './public/cards_versions.json',
       './public/cv.json',
       './public/packs.json',
@@ -39,9 +42,11 @@
       './js/common/account/auth-ui.js',
       './js/common/account/account.js',
       './js/common/account/account-app-data-sync.js',
+      './js/common/account/account-match-results.js',
       './js/common/account/header-auth.js',
       './js/common/ui/tabs.js',
       './js/common/ui/deck-saved-ui.js',
+      './js/common/ui/deck-match-results-ui.js',
       './js/common/card/summary.js',
       './js/common/card/cardGrid.js',
       './js/common/card/card-detail.js',
@@ -87,7 +92,8 @@
       './js/pages/deck-post/deck-post-modals.js',
       './js/pages/deck-post/deck-post-page-loader.js',
       './js/pages/deck-post/deck-post-state.js',
-      './js/pages/deck-post/deck-post-utils.js'
+      './js/pages/deck-post/deck-post-utils.js',
+      './js/pages/match-results/match-results.js'
     ],
     offlineFallbackPage: './deckmaker.html',
     cacheFirstExtensions: [

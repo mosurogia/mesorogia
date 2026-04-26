@@ -11,6 +11,126 @@ window.scrollToTop = window.scrollToTop || function scrollToTop() {
 };
 
 // ========================
+// data-source-badge ツールチップ
+// ========================
+(function () {
+    let tooltipEl = null;
+    let tooltipTarget = null;
+
+    function ensureTooltipEl_() {
+        if (tooltipEl && document.body.contains(tooltipEl)) return tooltipEl;
+        const el = document.createElement('div');
+        el.id = 'data-source-badge-tooltip';
+        el.setAttribute('role', 'tooltip');
+        document.body.appendChild(el);
+        tooltipEl = el;
+        return el;
+    }
+
+    function hideTooltip_() {
+        tooltipTarget = null;
+        const el = tooltipEl || document.getElementById('data-source-badge-tooltip');
+        if (!el) return;
+        el.classList.remove('is-show');
+        el.textContent = '';
+    }
+
+    function positionTooltip_(anchor) {
+        const el = ensureTooltipEl_();
+        const rect = anchor.getBoundingClientRect();
+        const gap = 8;
+        const margin = 12;
+        const maxWidth = Math.min(280, Math.max(160, window.innerWidth - margin * 2));
+        el.style.width = `${maxWidth}px`;
+        el.style.maxWidth = `${Math.max(160, window.innerWidth - margin * 2)}px`;
+
+        const tipRect = el.getBoundingClientRect();
+        const left = Math.min(
+            Math.max(margin, rect.left),
+            Math.max(margin, window.innerWidth - tipRect.width - margin)
+        );
+        const topAbove = rect.top - tipRect.height - gap;
+        const topBelow = rect.bottom + gap;
+        const top = topAbove >= margin
+            ? topAbove
+            : Math.min(topBelow, Math.max(margin, window.innerHeight - tipRect.height - margin));
+
+        el.style.left = `${left}px`;
+        el.style.top = `${top}px`;
+    }
+
+    function showTooltip_(anchor) {
+        const text = String(anchor?.dataset?.tooltip || '').trim();
+        if (!text) return;
+        tooltipTarget = anchor;
+        const el = ensureTooltipEl_();
+        el.textContent = text;
+        positionTooltip_(anchor);
+        el.classList.add('is-show');
+    }
+
+    function bindTooltip_() {
+        if (document.body.dataset.dataSourceTooltipBound === '1') return;
+        document.body.dataset.dataSourceTooltipBound = '1';
+
+        document.addEventListener('mouseover', (e) => {
+            const target = e.target.closest('.data-source-badge[data-tooltip]');
+            if (!target) return;
+            showTooltip_(target);
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            const target = e.target.closest('.data-source-badge[data-tooltip]');
+            if (!target) return;
+            if (target.contains(e.relatedTarget)) return;
+            hideTooltip_();
+        });
+
+        document.addEventListener('focusin', (e) => {
+            const target = e.target.closest('.data-source-badge[data-tooltip]');
+            if (!target) return;
+            showTooltip_(target);
+        });
+
+        document.addEventListener('focusout', (e) => {
+            const target = e.target.closest('.data-source-badge[data-tooltip]');
+            if (!target) return;
+            if (target.contains(e.relatedTarget)) return;
+            hideTooltip_();
+        });
+
+        document.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('.data-source-badge[data-tooltip]')) return;
+            hideTooltip_();
+        });
+
+        document.addEventListener('scroll', () => {
+            if (!tooltipTarget) return;
+            hideTooltip_();
+        }, { passive: true, capture: true });
+
+        window.addEventListener('resize', () => {
+            if (!tooltipTarget) return;
+            positionTooltip_(tooltipTarget);
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindTooltip_, { once: true });
+    } else {
+        bindTooltip_();
+    }
+    window.__DataSourceBadgeTooltip = window.__DataSourceBadgeTooltip || {
+        show: showTooltip_,
+        hide: hideTooltip_,
+        reposition: () => {
+            if (!tooltipTarget) return;
+            positionTooltip_(tooltipTarget);
+        },
+    };
+})();
+
+// ========================
 // キャンペーン
 // ========================
 (function () {

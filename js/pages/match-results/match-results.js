@@ -1,6 +1,6 @@
 /* =========================
  * js/pages/match-results/match-results.js
- * - 戦績ページの保存デッキ一覧・戦績表示・登録フォーム
+ * - 戦績ページの保存デッキ一覧・戦績表示・登録フォーム・履歴編集
  * ========================= */
 (function () {
   'use strict';
@@ -13,6 +13,7 @@
   let matchesLoaded_ = false;
   let matchesDirty_ = false;
   let matchesLoading_ = false;
+  let editingMatchId_ = '';
   const CUSTOM_OPPONENT_KEY_ = 'matchResultsCustomOpponentDecks';
   const TODAY_MATCHES_KEY_BASE_ = 'matchResultsTodayMatches';
   const TODAY_MATCH_KEEP_MS_ = 24 * 60 * 60 * 1000;
@@ -85,6 +86,38 @@
     return status.source === 'account' || status.state === 'account';
   }
 
+  function getDeckChoicesEmptyMessage_(type) {
+    if (!isLoggedIn_()) {
+      return type === 'history'
+        ? 'ログイン後に戦績の表示デッキを選択できます。'
+        : 'ログイン後にデッキを選択できます。';
+    }
+
+    if (!isAccountDecksReady_()) {
+      return type === 'history'
+        ? '戦績の表示デッキを読み込み中です...'
+        : 'デッキを読み込み中です...';
+    }
+
+    return type === 'history'
+      ? '戦績を表示できる保存デッキがありません。'
+      : '使用できる保存デッキがありません。';
+  }
+
+  function getEntryDeckEmptyLabel_() {
+    if (!isLoggedIn_()) return 'ログインが必要';
+    if (!isAccountDecksReady_()) return '読み込み中';
+    return '未選択';
+  }
+
+  function renderFieldLabelValue_(label, prefix, value, emphasize) {
+    if (!label) return;
+    const valueHtml = emphasize
+      ? `<span class="match-entry-field-required">${escapeHtml_(value)}</span>`
+      : escapeHtml_(value);
+    label.innerHTML = `${escapeHtml_(prefix)}${valueHtml}`;
+  }
+
   function getRaceColorVar_(race) {
     const colorMap = {
       'ドラゴン': 'var(--race-dragon)',
@@ -120,13 +153,23 @@
     renderOpponentPicker_();
   }
 
+  function renderEditOpponentLabel_(form) {
+    if (!form) return;
+
+    const input = form.elements.opponentDeck;
+    const label = form.querySelector('[data-edit-opponent-label]');
+    if (!label) return;
+
+    const value = String(input?.value || '').trim();
+    renderFieldLabelValue_(label, '対戦デッキ：', value || '未選択', !value);
+  }
+
   function renderOpponentLabel_() {
     const input = document.getElementById('matchOpponentDeck');
     const label = document.getElementById('matchOpponentLabel');
     if (!label) return;
     const value = String(input?.value || '').trim();
-    label.textContent = `対戦デッキ：${value || '未選択'}`;
-    label.classList.remove('is-error');
+    renderFieldLabelValue_(label, '対戦デッキ：', value || '未選択', !value);
   }
 
   function addCustomOpponentDeck_(race, name) {
@@ -215,6 +258,127 @@
     `;
   }
 
+    function getEditOpponentRace_(form) {
+    const groups = getOpponentGroups_();
+    const savedRace = String(form?.dataset?.editOpponentRace || '').trim();
+    if (groups.some(group => group.race === savedRace)) return savedRace;
+
+    const selected = String(form?.elements?.opponentDeck?.value || '').trim();
+    const hit = groups.find(group => {
+      const raceOther = `${group.race}その他`;
+      return [...(group.list || []), raceOther].includes(selected);
+    });
+
+    return hit?.race || groups[0]?.race || '';
+  }
+
+  function setEditOpponentDeck_(form, name) {
+    if (!form) return;
+
+    const input = form.elements.opponentDeck;
+    if (input) input.value = String(name || '').trim();
+
+    renderEditOpponentLabel_(form);
+    renderEditOpponentPicker_(form);
+  }
+
+  function addEditCustomOpponentDeck_(form, race, name) {
+    const raceName = String(race || '').trim();
+    const deckName = String(name || '').trim();
+    if (!form || !raceName || !deckName) return;
+
+    const customMap = readCustomOpponentDecks_();
+    const list = Array.isArray(customMap[raceName]) ? customMap[raceName] : [];
+    customMap[raceName] = [...new Set([...list, deckName])];
+    writeCustomOpponentDecks_(customMap);
+
+    form.dataset.editOpponentRace = raceName;
+    setEditOpponentDeck_(form, deckName);
+  }
+
+  function deleteEditCustomOpponentDeck_(form, race, name) {
+    const raceName = String(race || '').trim();
+    const deckName = String(name || '').trim();
+    if (!form || !raceName || !deckName) return;
+
+    const customMap = readCustomOpponentDecks_();
+    const next = (customMap[raceName] || []).filter(item => item !== deckName);
+    if (next.length) customMap[raceName] = next;
+    else delete customMap[raceName];
+    writeCustomOpponentDecks_(customMap);
+
+    const input = form.elements.opponentDeck;
+    if (input?.value === deckName) input.value = '';
+
+    renderEditOpponentPicker_(form);
+  }
+
+  function renderEditOpponentPicker_(form) {
+    if (!form) return;
+
+    const root = form.querySelector('[data-edit-opponent-picker]');
+    if (!root) return;
+
+    const groups = getOpponentGroups_();
+    if (!groups.length) {
+      root.innerHTML = '<div class="match-opponent-empty">選択できる対戦デッキがありません。</div>';
+      return;
+    }
+
+    const selected = String(form.elements.opponentDeck?.value || '').trim();
+    const customMap = readCustomOpponentDecks_();
+    const activeRace = getEditOpponentRace_(form);
+    form.dataset.editOpponentRace = activeRace;
+
+    const activeGroup = groups.find(group => group.race === activeRace) || groups[0];
+    const race = activeGroup.race;
+    const raceOther = `${race}その他`;
+    const baseList = [...(activeGroup.list || [])];
+    if (!baseList.includes(raceOther)) baseList.push(raceOther);
+
+    const customList = (customMap[race] || []).filter(name => !baseList.includes(name));
+
+    const raceTabs = groups.map(group => {
+      const active = group.race === activeRace;
+      return `
+        <button type="button" class="match-opponent-race-tab${active ? ' is-active' : ''}" data-edit-opponent-race-tab="${escapeHtml_(group.race)}"${getOpponentRaceStyle_(group.race)}>
+          ${escapeHtml_(group.race)}
+        </button>
+      `;
+    }).join('');
+
+    const optionButtons = baseList.map(name => `
+      <button type="button" class="match-opponent-option${name === selected ? ' is-active' : ''}" data-edit-opponent-name="${escapeHtml_(name)}">
+        ${escapeHtml_(name)}
+      </button>
+    `).join('');
+
+    const customButtons = customList.map(name => `
+      <span class="match-opponent-custom-item">
+        <button type="button" class="match-opponent-option${name === selected ? ' is-active' : ''}" data-edit-opponent-name="${escapeHtml_(name)}">
+          ${escapeHtml_(name)}
+        </button>
+        <button type="button" class="match-opponent-delete" data-edit-opponent-delete="${escapeHtml_(name)}" data-edit-opponent-race="${escapeHtml_(race)}" aria-label="${escapeHtml_(name)}を削除">×</button>
+      </span>
+    `).join('');
+
+    root.innerHTML = `
+      <div class="match-opponent-race-tabs" role="tablist" aria-label="対戦デッキの種族">
+        ${raceTabs}
+      </div>
+      <section class="match-opponent-race"${getOpponentRaceStyle_(race)}>
+        <div class="match-opponent-options">
+          ${optionButtons}
+          ${customButtons}
+        </div>
+        <div class="match-opponent-add">
+          <input type="text" data-edit-opponent-add-input="${escapeHtml_(race)}" placeholder="${escapeHtml_(race)}のデッキ名を追加" maxlength="40" autocomplete="off">
+          <button type="button" data-edit-opponent-add="${escapeHtml_(race)}">追加</button>
+        </div>
+      </section>
+    `;
+  }
+
   function getDecks_() {
     if (!isAccountDecksReady_()) return [];
 
@@ -289,6 +453,14 @@
     return value.replace(/-/g, '/');
   }
 
+  function getMatchId_(match) {
+    return String(match?.matchId || match?.id || match?.uuid || '').trim();
+  }
+
+  function getMatchDeckId_(match) {
+    return String(match?.deckId || '').trim();
+  }
+
   function resultLabel_(value) {
     return String(value || '').toLowerCase() === 'win' ? '勝ち' : '負け';
   }
@@ -340,7 +512,12 @@
     if (!root) return;
 
     if (!todayMatches_.length) {
-      root.innerHTML = '<div class="today-match-empty">まだこのページで登録した対戦はありません。</div>';
+      root.innerHTML = `
+        <div class="today-match-empty">
+          <span>ここで登録した対戦を一時表示します。</span>
+          <span>再読込後は直近24時間以内の戦績だけ表示されます。</span>
+        </div>
+      `;
       return;
     }
 
@@ -394,8 +571,12 @@
     return Array.isArray(list) ? list : [];
   }
 
-  function isHistoryTabActive_() {
-    return !!document.querySelector('[data-match-panel="history"].is-active:not([hidden])');
+  function isInputTabActive_() {
+    return !!document.querySelector('[data-match-panel="input"].is-active:not([hidden])');
+  }
+
+  function isHistoryViewActive_() {
+    return !!document.querySelector('[data-match-view-panel="history"].is-active:not([hidden])');
   }
 
   function buildSummaryFromMatches_(matches) {
@@ -440,6 +621,26 @@
     const deckId = getScopeDeckId_();
     if (!deckId) return [];
     return cachedMatches_.filter(match => String(match?.deckId || '') === deckId);
+  }
+
+  function updateCachedMatch_(matchId, patch) {
+    const id = String(matchId || '').trim();
+    if (!id) return;
+    cachedMatches_ = cachedMatches_.map(item => (
+      getMatchId_(item) === id ? Object.assign({}, item, patch, { matchId: id }) : item
+    ));
+  }
+
+  function shouldFallbackReplace_(res) {
+    const error = String(res?.error || res?.message || '').toLowerCase();
+    return !!error && (
+      error.includes('unknown') ||
+      error.includes('unsupported') ||
+      error.includes('not implemented') ||
+      error.includes('invalid mode') ||
+      error.includes('mode') ||
+      error.includes('action')
+    );
   }
 
   function renderStatus_() {
@@ -587,8 +788,16 @@
     if (!root) return;
 
     const decks = getDecks_();
+    const editChoiceHtml = `
+      <a class="match-entry-deck-choice match-entry-deck-edit-choice" href="deckmaker.html#saved-deck" aria-label="保存デッキを追加・編集">
+        <span class="match-entry-deck-card match-entry-deck-edit-card">
+          <span class="match-entry-deck-edit-title">保存デッキ</span>
+          <span class="match-entry-deck-edit-text">追加・編集</span>
+        </span>
+      </a>
+    `;
     if (!decks.length) {
-      root.innerHTML = '<div class="match-entry-deck-empty">使用デッキを選択できません。</div>';
+      root.innerHTML = `<div class="match-entry-deck-empty">${escapeHtml_(getDeckChoicesEmptyMessage_('entry'))}</div>${editChoiceHtml}`;
       return;
     }
 
@@ -605,7 +814,7 @@
             <span class="match-entry-deck-thumb" role="button" tabindex="0" data-match-deck-peek-index="${index}" aria-label="${escapeHtml_(name)}のデッキリストを表示">
               <img src="img/${escapeHtml_(mainCd)}.webp" alt="" loading="lazy" onerror="this.src='img/00000.webp'">
               <span class="thumb-deckpeek-badge" aria-hidden="true">
-                <img src="img/deckicon.png" alt="">
+                <img src="img/deckicon.webp" alt="">
               </span>
             </span>
             <span class="match-entry-deck-text">
@@ -615,43 +824,7 @@
           </span>
         </label>
       `;
-    }).join('');
-  }
-
-  function renderHistoryDeckChoices_() {
-    const root = document.getElementById('matchHistoryDeckChoices');
-    if (!root) return;
-
-    const decks = getDecks_();
-    if (!decks.length) {
-      root.innerHTML = '<div class="match-entry-deck-empty">表示デッキを選択できません。</div>';
-      return;
-    }
-
-    root.innerHTML = decks.map((deck, index) => {
-      const mainCd = getDeckMainCd_(deck);
-      const name = String(deck?.name || '').trim() || `デッキ${index + 1}`;
-      const total = getDeckCardTotal_(deck);
-      const checked = index === activeDeckIndex_ ? ' checked' : '';
-      const raceStyle = getDeckRaceStyle_(deck);
-      return `
-        <label class="match-entry-deck-choice">
-          <input type="radio" name="historyDeckIndex" value="${index}"${checked}>
-          <span class="match-entry-deck-card"${raceStyle}>
-            <span class="match-entry-deck-thumb" role="button" tabindex="0" data-match-deck-peek-index="${index}" aria-label="${escapeHtml_(name)}のデッキリストを表示">
-              <img src="img/${escapeHtml_(mainCd)}.webp" alt="" loading="lazy" onerror="this.src='img/00000.webp'">
-              <span class="thumb-deckpeek-badge" aria-hidden="true">
-                <img src="img/deckicon.png" alt="">
-              </span>
-            </span>
-            <span class="match-entry-deck-text">
-              <span class="match-entry-deck-name">${escapeHtml_(name)}</span>
-              <span class="match-entry-deck-meta">${total}枚</span>
-            </span>
-          </span>
-        </label>
-      `;
-    }).join('');
+    }).join('') + editChoiceHtml;
   }
 
   function renderEntryDeckLabel_() {
@@ -659,7 +832,8 @@
     if (!label) return;
     const deck = getActiveDeck_();
     const name = String(deck?.name || '').trim();
-    label.textContent = `使用デッキ：${name || '未選択'}`;
+    const value = name || getEntryDeckEmptyLabel_();
+    renderFieldLabelValue_(label, '現在のデッキ：', value, value === '未選択');
   }
 
   function getHistoryRateTitle_() {
@@ -674,7 +848,6 @@
       activeDeckIndex_ = -1;
       activeScope_ = 'overall';
       renderEntryDeckChoices_();
-      renderHistoryDeckChoices_();
       updateHistoryActions_();
       updateEntryState_();
       renderEmptyHistory_('ログイン後に戦績を表示できます。');
@@ -686,10 +859,9 @@
       activeDeckIndex_ = -1;
       activeScope_ = 'overall';
       renderEntryDeckChoices_();
-      renderHistoryDeckChoices_();
       updateHistoryActions_();
       updateEntryState_();
-      if (isHistoryTabActive_()) renderCurrentMatches_();
+      renderCurrentMatches_();
       return;
     }
 
@@ -698,7 +870,6 @@
       activeScope_ = 'overall';
     }
     renderEntryDeckChoices_();
-    renderHistoryDeckChoices_();
     updateHistoryActions_();
     updateEntryState_();
   }
@@ -706,6 +877,10 @@
   function getScopeDeckId_() {
     if (activeScope_ !== 'deck') return '';
     return getActiveDeck_()?.id || '';
+  }
+
+  function isCurrentHistoryLoaded_() {
+    return matchesLoaded_;
   }
 
   function getScopeLabel_() {
@@ -734,7 +909,7 @@
     actions.className = 'match-history-actions';
     actions.innerHTML = `
       <span class="match-history-rate-title" id="matchHistoryRateTitle">全体勝率</span>
-      <button type="button" class="btn match-history-refresh" id="matchHistoryRefresh" title="戦績を更新" aria-label="戦績を更新" hidden>更新</button>
+      <button type="button" class="btn match-history-refresh" id="matchHistoryRefresh" title="戦績を取得" aria-label="戦績を取得" hidden>戦績取得</button>
     `;
     title.insertAdjacentElement('afterend', actions);
   }
@@ -743,15 +918,17 @@
     ensureHistoryActions_();
     const rateTitle = document.getElementById('matchHistoryRateTitle');
     const button = document.getElementById('matchHistoryRefresh');
-    const needsRefresh = isLoggedIn_() && !matchesLoading_ && (!matchesLoaded_ || matchesDirty_);
+    const needsInitialRetry = isHistoryViewActive_() && !matchesLoaded_;
+    const needsRefresh = isLoggedIn_() && !matchesLoading_ && (matchesDirty_ || needsInitialRetry);
     if (rateTitle) rateTitle.textContent = getHistoryRateTitle_();
     if (button) {
-      const tooltip = matchesDirty_ && matchesLoaded_
+      const tooltip = matchesDirty_ && isCurrentHistoryLoaded_()
         ? '未反映の戦績がある可能性があります。更新してください。'
         : '戦績を取得します。';
       button.hidden = !needsRefresh;
       button.disabled = !needsRefresh;
       button.title = tooltip;
+      button.textContent = matchesDirty_ && isCurrentHistoryLoaded_() ? '戦績更新' : '戦績取得';
       button.setAttribute('aria-label', tooltip);
     }
   }
@@ -788,6 +965,62 @@
     `;
   }
 
+  function renderMatchEditForm_(item, matchId) {
+    const result = String(item.result || '').toLowerCase();
+    const priority = String(item.priority || '').toLowerCase();
+    const opponent = item.opponentDeck || item.opponent || '';
+    const memo = item.memo || '';
+
+    return `
+      <form class="match-history-edit-form" data-match-edit-form="${escapeHtml_(matchId)}">
+
+        <fieldset class="match-entry-choice">
+          <legend>勝敗</legend>
+          <div class="match-choice-buttons">
+            <label class="match-choice-button">
+              <input type="radio" name="result" value="win" required${result === 'win' ? ' checked' : ''}>
+              <span>勝ち</span>
+            </label>
+            <label class="match-choice-button">
+              <input type="radio" name="result" value="lose" required${result === 'lose' ? ' checked' : ''}>
+              <span>負け</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset class="match-entry-choice">
+          <legend>優先権（任意）</legend>
+          <div class="match-choice-buttons">
+            <label class="match-choice-button">
+              <input type="radio" name="priority" value="self"${priority === 'self' ? ' checked' : ''}>
+              <span>先攻</span>
+            </label>
+            <label class="match-choice-button">
+              <input type="radio" name="priority" value="opponent"${priority === 'opponent' ? ' checked' : ''}>
+              <span>後攻</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <input type="hidden" name="opponentDeck" value="${escapeHtml_(opponent)}" required>
+        <fieldset class="match-entry-choice">
+          <legend data-edit-opponent-label>対戦デッキ：${escapeHtml_(opponent || '未選択')}</legend>
+          <div class="match-opponent-picker" data-edit-opponent-picker></div>
+        </fieldset>
+
+        <label class="match-history-edit-field match-history-edit-wide">
+          <span>メモ</span>
+          <textarea name="memo" rows="3" maxlength="200">${escapeHtml_(memo)}</textarea>
+        </label>
+
+        <div class="match-history-edit-actions">
+          <button type="button" class="btn ghost match-history-cancel" data-match-edit-cancel="${escapeHtml_(matchId)}">キャンセル</button>
+          <button type="submit" class="btn primary match-history-save">保存</button>
+        </div>
+      </form>
+    `;
+  }
+
   function renderMatchRows_(matches) {
     const body = document.getElementById('matchHistoryBody');
     if (!body) return;
@@ -799,29 +1032,73 @@
     body.innerHTML = `
       <div class="match-history-list">
         ${matches.map(item => {
+          const matchId = getMatchId_(item);
           const playedAt = item.playedAt || item.date || item.createdAt || '';
           const opponent = item.opponentDeck || item.opponent || '対面未入力';
           const result = item.result || '';
           const rating = item.rating || '';
           const priority = item.priority || '';
           const memo = item.memo || '';
+          const editing = matchId && editingMatchId_ === matchId;
+          const deckName = String(
+            getDecks_().find(deck => String(deck?.id || '') === String(item.deckId || ''))?.name || ''
+          ).trim();
+
+          const showOwnDeck = activeScope_ !== 'deck';
           return `
-            <article class="match-history-item">
+            <article class="match-history-item" data-match-id="${escapeHtml_(matchId)}">
               <div class="match-history-top">
                 <strong class="match-history-result is-${escapeHtml_(String(result || '').toLowerCase())}">${escapeHtml_(resultLabel_(result))}</strong>
                 <span>${escapeHtml_(formatDate_(playedAt))}</span>
               </div>
-              <div class="match-history-meta">
-                <span>対面: ${escapeHtml_(opponent)}</span>
-                ${rating ? `<span>レート: ${escapeHtml_(rating)}</span>` : ''}
-                ${priority ? `<span>${escapeHtml_(priorityLabel_(priority))}</span>` : ''}
+              <div class="match-history-body-row">
+                <div class="match-history-info">
+                  <div class="match-history-meta today-match-decks">
+                    ${showOwnDeck && deckName ? `
+                      <span class="today-match-own">${escapeHtml_(deckName)}</span>
+                      <span class="today-match-vs">vs</span>
+                    ` : ''}
+                    <span class="today-match-opponent">対面：${escapeHtml_(opponent)}</span>
+                    ${rating ? `<span class="match-history-sub">レート：${escapeHtml_(rating)}</span>` : ''}
+                    ${priority ? `<span class="match-history-sub">${escapeHtml_(priorityLabel_(priority))}</span>` : ''}
+                  </div>
+                  ${memo ? `<p class="match-history-memo">${escapeHtml_(memo)}</p>` : ''}
+                </div>
+
+                ${editing ? '' : `
+                  <div class="match-history-row-actions">
+                    <button
+                      type="button"
+                      class="btn ghost match-history-edit"
+                      data-match-edit="${escapeHtml_(matchId)}"
+                      ${matchId ? '' : ' disabled'}
+                    >
+                      編集
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn ghost match-history-delete"
+                      data-match-delete="${escapeHtml_(matchId)}"
+                      aria-label="戦績を削除"
+                      ${matchId ? '' : ' disabled'}
+                    >
+                      🗑
+                    </button>
+                  </div>
+                `}
               </div>
-              ${memo ? `<p class="match-history-memo">${escapeHtml_(memo)}</p>` : ''}
+
+              ${editing ? renderMatchEditForm_(item, matchId) : ''}
             </article>
           `;
         }).join('')}
       </div>
     `;
+    body.querySelectorAll('[data-match-edit-form]').forEach(form => {
+      renderEditOpponentLabel_(form);
+      renderEditOpponentPicker_(form);
+    });
   }
 
   function setHistoryLoading_() {
@@ -851,6 +1128,7 @@
       const listRes = await window.AccountMatchResults?.list?.({ limit: 1000 });
       if (requestId !== loadMatchesRequestId_) return;
       cachedMatches_ = normalizeMatches_(listRes);
+      if (editingMatchId_ && !cachedMatches_.some(item => getMatchId_(item) === editingMatchId_)) editingMatchId_ = '';
       matchesLoaded_ = true;
       matchesDirty_ = false;
       matchesLoading_ = false;
@@ -880,8 +1158,8 @@
       return;
     }
 
-    if (!matchesLoaded_) {
-      renderEmptyHistory_('戦績タブを開くと戦績を読み込みます。');
+    if (!isCurrentHistoryLoaded_()) {
+      renderEmptyHistory_('更新すると戦績を取得します。');
       updateHistoryActions_();
       return;
     }
@@ -949,10 +1227,7 @@
     }
     if (!form.elements.opponentDeck.value) {
       const label = document.getElementById('matchOpponentLabel');
-      if (label) {
-        label.textContent = '対戦デッキ：未選択（選択してください）';
-        label.classList.add('is-error');
-      }
+      renderFieldLabelValue_(label, '対戦デッキ：', '未選択（選択してください）', true);
       return;
     }
 
@@ -986,7 +1261,7 @@
       form.elements.playedAt.value = formatNow_();
       activeScope_ = deckId ? 'deck' : 'overall';
       matchesDirty_ = true;
-      if (isHistoryTabActive_()) renderCurrentMatches_();
+      renderCurrentMatches_();
     } catch (e) {
       window.alert?.(e?.message || '登録に失敗しました。');
     } finally {
@@ -995,11 +1270,99 @@
     }
   }
 
+  async function saveMatchEdit_(form) {
+    const matchId = String(form?.dataset?.matchEditForm || '').trim();
+    const original = cachedMatches_.find(item => getMatchId_(item) === matchId);
+    const submit = form?.querySelector('.match-history-save');
+    if (!matchId || !original || !form) return;
+
+    const opponentDeck = String(form.elements.opponentDeck?.value || '').trim();
+    if (!opponentDeck) {
+      form.elements.opponentDeck?.reportValidity?.();
+      return;
+    }
+
+    const payload = {
+      matchId,
+      deckId: getMatchDeckId_(original),
+      playedAt: original.playedAt || original.date || original.createdAt || '',
+      result: form.elements.result?.value || '',
+      opponentDeck,
+      rating: original.rating || '',
+      priority: form.elements.priority?.value || '',
+      memo: form.elements.memo?.value || '',
+    };
+
+    if (submit) submit.disabled = true;
+
+    try {
+      let usedReplace = false;
+      let res = await window.AccountMatchResults?.update?.(payload);
+      if (!res?.ok && shouldFallbackReplace_(res)) {
+        const addRes = await window.AccountMatchResults?.add?.(payload);
+        if (!addRes?.ok) {
+          window.alert?.(addRes?.error || '保存に失敗しました。');
+          return;
+        }
+
+        const deleteRes = await window.AccountMatchResults?.remove?.(matchId);
+        if (!deleteRes?.ok) {
+          window.alert?.('新しい内容は登録しましたが、古い戦績の削除に失敗しました。戦績を更新して重複がないか確認してください。');
+        }
+        res = addRes;
+        usedReplace = true;
+      }
+
+      if (!res?.ok) {
+        window.alert?.(res?.error || '保存に失敗しました。');
+        return;
+      }
+
+      editingMatchId_ = '';
+      if (usedReplace) {
+        matchesDirty_ = true;
+        updateCachedMatch_(matchId, payload);
+        renderCurrentMatches_();
+      } else {
+        updateCachedMatch_(matchId, payload);
+        renderCurrentMatches_();
+      }
+    } catch (e) {
+      window.alert?.(e?.message || '保存に失敗しました。');
+    } finally {
+      if (submit) submit.disabled = false;
+    }
+  }
+
   function bindEvents_() {
     document.addEventListener('click', event => {
       const tabButton = event.target.closest('[data-match-tab]');
       if (tabButton) {
         showMatchTab_(tabButton.dataset.matchTab);
+        return;
+      }
+
+      const viewTab = event.target.closest('[data-match-view-tab]');
+      if (viewTab) {
+        const next = viewTab.dataset.matchViewTab === 'history' ? 'history' : 'entry';
+
+        document.querySelectorAll('[data-match-view-tab]').forEach(button => {
+          const active = button.dataset.matchViewTab === next;
+          button.classList.toggle('is-active', active);
+          button.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+
+        document.querySelectorAll('[data-match-view-panel]').forEach(panel => {
+          const active = panel.dataset.matchViewPanel === next;
+          panel.classList.toggle('is-active', active);
+          panel.hidden = !active;
+        });
+
+        if (next === 'history' && !matchesLoaded_ && !matchesLoading_) {
+          loadMatches_();
+        } else if (next === 'history') {
+          renderCurrentMatches_();
+        }
         return;
       }
 
@@ -1022,8 +1385,110 @@
         return;
       }
 
+      const inputToggle = event.target.closest('[data-match-input-toggle]');
+      if (inputToggle) {
+        const box = inputToggle.closest('.match-input-box');
+        const collapsed = !box.classList.contains('is-collapsed');
+        box.classList.toggle('is-collapsed', collapsed);
+        inputToggle.textContent = collapsed ? '▲' : '▼';
+        inputToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        return;
+      }
+
       if (event.target.closest('#matchHistoryRefresh')) {
         loadMatches_();
+        return;
+      }
+
+      const matchEdit = event.target.closest('[data-match-edit]');
+      if (matchEdit) {
+        const matchId = String(matchEdit.dataset.matchEdit || '').trim();
+        if (matchId) {
+          editingMatchId_ = matchId;
+          renderCurrentMatches_();
+        }
+        return;
+      }
+
+      const matchDelete = event.target.closest('[data-match-delete]');
+      if (matchDelete) {
+        const matchId = String(matchDelete.dataset.matchDelete || '').trim();
+        if (!matchId) return;
+
+        const ok = window.confirm?.('この戦績を削除しますか？');
+        if (!ok) return;
+
+        (async () => {
+          try {
+            const res = await window.AccountMatchResults?.remove?.(matchId);
+
+            if (!res?.ok) {
+              window.alert?.(res?.error || '削除に失敗しました。');
+              return;
+            }
+
+            cachedMatches_ = cachedMatches_.filter(
+              item => getMatchId_(item) !== matchId
+            );
+
+            if (editingMatchId_ === matchId) {
+              editingMatchId_ = '';
+            }
+
+            renderCurrentMatches_();
+
+          } catch (e) {
+            window.alert?.(e?.message || '削除に失敗しました。');
+          }
+        })();
+
+        return;
+      }
+
+      const matchEditCancel = event.target.closest('[data-match-edit-cancel]');
+      if (matchEditCancel) {
+        editingMatchId_ = '';
+        renderCurrentMatches_();
+        return;
+      }
+
+      const editOpponentRaceTab = event.target.closest('[data-edit-opponent-race-tab]');
+      if (editOpponentRaceTab) {
+        const form = editOpponentRaceTab.closest('[data-match-edit-form]');
+        if (form) {
+          form.dataset.editOpponentRace = editOpponentRaceTab.dataset.editOpponentRaceTab || '';
+          renderEditOpponentPicker_(form);
+        }
+        return;
+      }
+
+      const editOpponentDelete = event.target.closest('[data-edit-opponent-delete]');
+      if (editOpponentDelete) {
+        const form = editOpponentDelete.closest('[data-match-edit-form]');
+        if (form) {
+          deleteEditCustomOpponentDeck_(
+            form,
+            editOpponentDelete.dataset.editOpponentRace,
+            editOpponentDelete.dataset.editOpponentDelete
+          );
+        }
+        return;
+      }
+
+      const editOpponentAdd = event.target.closest('[data-edit-opponent-add]');
+      if (editOpponentAdd) {
+        const form = editOpponentAdd.closest('[data-match-edit-form]');
+        const race = editOpponentAdd.dataset.editOpponentAdd;
+        const input = form?.querySelector(`[data-edit-opponent-add-input="${CSS.escape(race)}"]`);
+        addEditCustomOpponentDeck_(form, race, input?.value);
+        if (input) input.value = '';
+        return;
+      }
+
+      const editOpponentOption = event.target.closest('[data-edit-opponent-name]');
+      if (editOpponentOption) {
+        const form = editOpponentOption.closest('[data-match-edit-form]');
+        if (form) setEditOpponentDeck_(form, editOpponentOption.dataset.editOpponentName);
         return;
       }
 
@@ -1057,11 +1522,20 @@
     });
 
     document.addEventListener('click', event => {
+      const priorityChoice = event.target.closest('.match-choice-button');
+      const priorityRadio = priorityChoice?.querySelector?.('input[type="radio"][name="priority"]');
+      if (priorityRadio && priorityRadio.checked) {
+        event.preventDefault();
+        priorityRadio.checked = false;
+        priorityRadio.dispatchEvent(new Event('change', { bubbles: true }));
+        return;
+      }
+
       const deckChoice = event.target.closest('.match-entry-deck-choice');
       if (!deckChoice) return;
       if (event.target.closest('[data-match-deck-peek-index]')) return;
 
-      const deckRadio = deckChoice.querySelector('input[name="entryDeckIndex"], input[name="historyDeckIndex"]');
+      const deckRadio = deckChoice.querySelector('input[name="entryDeckIndex"]');
       const index = Number(deckRadio?.value);
       if (!deckRadio || !getDecks_()[index]) return;
 
@@ -1073,13 +1547,15 @@
 
     document.addEventListener('submit', event => {
       const form = event.target.closest('#matchEntryForm');
-      if (!form) return;
+      const editForm = event.target.closest('[data-match-edit-form]');
+      if (!form && !editForm) return;
       event.preventDefault();
-      submitMatch_(form);
+      if (form) submitMatch_(form);
+      else saveMatchEdit_(editForm);
     });
 
     document.addEventListener('change', event => {
-      const deckRadio = event.target.closest('input[name="entryDeckIndex"], input[name="historyDeckIndex"]');
+      const deckRadio = event.target.closest('input[name="entryDeckIndex"]');
       if (!deckRadio) return;
 
       const index = Number(deckRadio.value);
@@ -1088,6 +1564,15 @@
     });
 
     document.addEventListener('keydown', event => {
+      const editInput = event.target.closest('[data-edit-opponent-add-input]');
+      if (editInput && event.key === 'Enter') {
+        event.preventDefault();
+        const form = editInput.closest('[data-match-edit-form]');
+        const race = editInput.dataset.editOpponentAddInput;
+        addEditCustomOpponentDeck_(form, race, editInput.value);
+        editInput.value = '';
+        return;
+      }
       const input = event.target.closest('[data-opponent-add-input]');
       if (input && event.key === 'Enter') {
         event.preventDefault();
@@ -1116,7 +1601,7 @@
   }
 
   function showMatchTab_(tabName) {
-    const next = tabName === 'history' ? 'history' : 'input';
+    const next = tabName === 'settings' ? 'settings' : 'input';
     document.querySelectorAll('[data-match-tab]').forEach(button => {
       const active = button.dataset.matchTab === next;
       button.classList.toggle('is-active', active);
@@ -1128,13 +1613,16 @@
       panel.hidden = !active;
     });
 
-    if (next === 'history') {
-      if (!matchesLoaded_ && !matchesLoading_ && isLoggedIn_()) {
-        loadMatches_();
-      } else {
-        renderCurrentMatches_();
-      }
-    }
+    if (next === 'input') renderCurrentMatches_();
+  }
+
+  function renderHeaderAuth_() {
+    const loggedIn = isLoggedIn_();
+    document.querySelectorAll('.match-page-header-auth [data-auth-entry]').forEach(button => {
+      button.style.display = loggedIn ? 'none' : '';
+    });
+    const settingsBtn = document.getElementById('match-account-settings-btn');
+    if (settingsBtn) settingsBtn.style.display = loggedIn ? 'inline-flex' : 'none';
   }
 
   function chainReflectLoginUI_() {
@@ -1146,12 +1634,14 @@
         matchesLoaded_ = false;
         matchesDirty_ = false;
         matchesLoading_ = false;
+        editingMatchId_ = '';
       }
       todayMatches_ = readStoredTodayMatches_();
       writeStoredTodayMatches_();
       renderTodayMatches_();
       renderDecks_();
-      if (isHistoryTabActive_()) renderCurrentMatches_();
+      renderHeaderAuth_();
+      if (isInputTabActive_()) renderCurrentMatches_();
     };
   }
 
@@ -1167,24 +1657,33 @@
     if (playedAt) playedAt.value = formatNow_();
     ensureHistoryActions_();
     renderDecks_();
+    renderHeaderAuth_();
     renderCurrentMatches_();
   }
 
   window.addEventListener('saved-decks:data-replaced', () => {
     renderDecks_();
-    if (isHistoryTabActive_()) renderCurrentMatches_();
+    if (isInputTabActive_()) renderCurrentMatches_();
   });
   window.addEventListener('saved-decks:status', () => {
     renderDecks_();
-    if (isHistoryTabActive_()) renderCurrentMatches_();
+    if (isInputTabActive_()) renderCurrentMatches_();
   });
   window.addEventListener('account-owned-sync:ready', () => {
     renderDecks_();
-    if (isHistoryTabActive_()) renderCurrentMatches_();
+    if (isInputTabActive_()) renderCurrentMatches_();
+  });
+  window.addEventListener('account-match-results:reset', () => {
+    cachedMatches_ = [];
+    matchesLoaded_ = true;
+    matchesDirty_ = false;
+    matchesLoading_ = false;
+    editingMatchId_ = '';
+    renderCurrentMatches_();
   });
   window.SavedDeckStore?.onChange?.(() => {
     renderDecks_();
-    if (isHistoryTabActive_()) renderCurrentMatches_();
+    if (isInputTabActive_()) renderCurrentMatches_();
   });
 
   if (document.readyState === 'loading') {

@@ -2,20 +2,19 @@
   'use strict';
 
   var config = {
-    version: '2026-04-24-010',
-    staticCacheName: 'mesorogia-static-2026-04-24-010',
-    runtimeCacheName: 'mesorogia-runtime-2026-04-24-010',
+    version: '2026-05-01-001',
+    staticCacheName: 'mesorogia-static-2026-05-01-001',
+    runtimeCacheName: 'mesorogia-runtime-2026-05-01-001',
     appShell: [
       './cards.html',
       './deckmaker.html',
       './deck-post.html',
       './match-results.html',
-      './settings.html',
       './favicon.ico',
       './manifest.webmanifest',
-      './img/app-icon.png',
-      './img/app_icon_192.png',
-      './img/app_icon_512.png',
+      './img/appicon_1024.webp',
+      './img/appicon_192.webp',
+      './img/appicon_512.webp',
       './img/tatudosi.webp',
       './css/common.css',
       './css/common-page124.css',

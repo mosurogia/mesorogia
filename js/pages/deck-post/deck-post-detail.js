@@ -100,7 +100,7 @@
       <div class="thumb-box" role="button" aria-label="デッキリストを表示">
         <img loading="lazy" src="${safe}" alt="${alt}">
         <span class="thumb-deckpeek-badge">
-          <img src="img/deckicon.png" alt="">
+          <img src="img/deckicon.webp" alt="">
         </span>
       </div>
     `;
@@ -463,9 +463,11 @@
       const abbr = packAbbr_(en);
       const packKey = packKeyFromAbbr_(abbr);
       const packAttr = packKey ? ` data-pack="${packKey}"` : '';
+      const rarityKey = rarityKeyForPage4_(card.rarity) || 'unknown';
+      const rarityAttr = ` data-rarity="${rarityKey}"`;
 
       return `
-        <div class="deck-entry" data-cd="${cd5}"${packAttr} role="button" tabindex="0">
+        <div class="deck-entry" data-cd="${cd5}"${packAttr}${rarityAttr} role="button" tabindex="0">
           <img src="${src}" alt="${escHtml_(name)}" loading="lazy" onerror="${cardImageErrorAttr_(card)}">
           <div class="count-badge">x${n}</div>
         </div>
@@ -473,6 +475,340 @@
     }).join('');
 
     return `<div class="post-decklist">${tiles}</div>`;
+  }
+
+  // =========================
+  // 所持カード比較
+  // =========================
+  function normalizeOwnedCount_(entry) {
+    if (typeof entry === 'number' || typeof entry === 'string') {
+      return Math.max(0, Number(entry || 0) | 0);
+    }
+    return Math.max(0, Number(entry?.normal || 0) | 0);
+  }
+
+  function normalizeOwnedMap_(map) {
+    const src = (map && typeof map === 'object') ? map : {};
+    const out = {};
+    Object.entries(src).forEach(([cdRaw, entry]) => {
+      const cd = normCd5_(cdRaw);
+      const count = normalizeOwnedCount_(entry);
+      if (cd && count > 0) out[cd] = (out[cd] || 0) + count;
+    });
+    return out;
+  }
+
+  function hasOwnedData_(map) {
+    return Object.keys(normalizeOwnedMap_(map)).length > 0;
+  }
+
+  function readOwnedMapFromStorageKey_(key) {
+    try {
+      return normalizeOwnedMap_(JSON.parse(localStorage.getItem(key) || '{}'));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function readDeviceOwnedMap_() {
+    const candidates = [];
+    try {
+      if (window.OwnedStore?.getAll) candidates.push(window.OwnedStore.getAll());
+    } catch (_) {}
+
+    candidates.push(readOwnedMapFromStorageKey_('ownedCardsGuestLocal'));
+    candidates.push(readOwnedMapFromStorageKey_('ownedCards'));
+
+    for (const candidate of candidates) {
+      const owned = normalizeOwnedMap_(candidate);
+      if (hasOwnedData_(owned)) return owned;
+    }
+    return {};
+  }
+
+  function isLoggedInForDeckCompare_() {
+    const auth = window.Auth || {};
+    return !!(auth.user && auth.token && auth.verified);
+  }
+
+  async function resolveOwnedMapForDeckCompare_() {
+    let accountOwned = {};
+    if (isLoggedInForDeckCompare_() && window.AccountAppDataSync?.debug) {
+      try {
+        const snapshot = await window.AccountAppDataSync.debug({ log: false, fetchAccount: true });
+        accountOwned = normalizeOwnedMap_(snapshot?.accountData?.ownedCards);
+      } catch (_) {}
+    }
+
+    if (hasOwnedData_(accountOwned)) return { owned: accountOwned, source: 'account' };
+
+    const deviceOwned = readDeviceOwnedMap_();
+    if (hasOwnedData_(deviceOwned)) return { owned: deviceOwned, source: 'device' };
+
+    return { owned: {}, source: '' };
+  }
+
+  function rarityRankForCompare_(rarity) {
+    const key = rarityKeyForPage4_(rarity);
+    if (key === 'legend') return 0;
+    if (key === 'gold') return 1;
+    if (key === 'silver') return 2;
+    if (key === 'bronze') return 3;
+    return 4;
+  }
+
+  function rarityLabelForCompare_(key) {
+    if (key === 'legend') return 'レジェンド';
+    if (key === 'gold') return 'ゴールド';
+    if (key === 'silver') return 'シルバー';
+    if (key === 'bronze') return 'ブロンズ';
+    return 'その他';
+  }
+
+  function buildDeckShortageResult_(item, ownedMap) {
+    const deck = extractDeckMap(item);
+    const cardMap = window.cardMap || {};
+    if (!deck || !Object.keys(deck).length) return null;
+
+    const entries = window.sortCardEntries?.(Object.entries(deck), cardMap) || Object.entries(deck);
+    const shortages = [];
+    const rarityCounts = {};
+    let totalMissing = 0;
+
+    entries.forEach(([cdRaw, needRaw], index) => {
+      const cd = normCd5_(cdRaw);
+      const need = Math.max(0, Number(needRaw || 0) | 0);
+      const owned = Math.max(0, Number(ownedMap?.[cd] || 0) | 0);
+      const missing = Math.max(0, need - owned);
+      if (!cd || need <= 0 || missing <= 0) return;
+
+      const card = cardMap[cd] || {};
+      const rarityKey = rarityKeyForPage4_(card.rarity) || 'unknown';
+      rarityCounts[rarityKey] = (rarityCounts[rarityKey] || 0) + missing;
+      totalMissing += missing;
+      shortages.push({
+        cd,
+        name: card.name || cd,
+        rarity: card.rarity || '',
+        rarityKey,
+        need,
+        owned,
+        missing,
+        index,
+      });
+    });
+
+    shortages.sort((a, b) => {
+      const rarityDiff = rarityRankForCompare_(a.rarity) - rarityRankForCompare_(b.rarity);
+      if (rarityDiff) return rarityDiff;
+      if (b.missing !== a.missing) return b.missing - a.missing;
+      return a.index - b.index;
+    });
+
+    return { shortages, rarityCounts, totalTypes: shortages.length, totalMissing };
+  }
+
+  function buildDeckCompareHtml_(result) {
+    if (!result) return `<div class="deck-compare-message is-note">デッキ情報を確認できませんでした。</div>`;
+    const checkerLink = buildDeckCompareCheckerLinkHtml_();
+    if (!result.totalMissing) {
+      return `
+        <div class="deck-compare-message is-complete">このデッキは所持カードで作れます！</div>
+        ${checkerLink}
+      `;
+    }
+
+    const rarityOrder = ['legend', 'gold', 'silver', 'bronze', 'unknown'];
+    const rarityChips = rarityOrder
+      .filter((key) => Number(result.rarityCounts[key] || 0) > 0)
+      .map((key) => {
+        const n = Number(result.rarityCounts[key] || 0);
+        const cls = key !== 'unknown' ? ` carddetail-rarity carddetail-rarity--${key}` : '';
+        return `<span class="stat-chip deck-shortage-rarity${cls}">${rarityLabelForCompare_(key)} ${n}枚</span>`;
+      })
+      .join('');
+
+    const rows = result.shortages.map((row) => `
+      <div class="deck-shortage-row">
+        <div class="deck-shortage-thumb">
+          <img src="${cardImageSrc_(row.cd)}"
+            alt="${escHtml_(row.name)}"
+            loading="lazy"
+            onerror="${cardImageErrorAttr_(row.cd)}">
+        </div>
+        <div class="deck-shortage-row-body">
+          <div class="deck-shortage-row-main">
+            <span class="deck-shortage-name">${escHtml_(row.name)}</span>
+            <span class="deck-shortage-rarity-label">${escHtml_(row.rarity || '不明')}</span>
+          </div>
+          <div class="deck-shortage-counts">必要${row.need} / 所持${row.owned} / 不足${row.missing}</div>
+        </div>
+      </div>
+    `).join('');
+
+    return `
+      <div class="deck-shortage-summary">不足カード：${result.totalTypes}種類 / ${result.totalMissing}枚</div>
+      <div class="post-detail-chips deck-shortage-rarity-list">${rarityChips}</div>
+      <div class="deck-shortage-list">${rows}</div>
+      ${checkerLink}
+    `;
+  }
+
+  function buildDeckCompareCheckerLinkHtml_() {
+    return `
+      <div class="deck-compare-actions">
+        <a class="deck-compare-checker-link" href="cards.html#checker">所持率チェッカーを開く</a>
+      </div>
+    `;
+  }
+
+  function buildDeckCompareEmptyGuideHtml_() {
+    return `
+      <div class="deck-compare-message is-note">
+        <div>所持カードが登録されていません。</div>
+        <div>所持率チェッカーに所持カードを登録すると、このデッキを作るために足りないカードを確認できます。</div>
+        ${buildDeckCompareCheckerLinkHtml_()}
+      </div>
+    `;
+  }
+
+  function buildDeckCompareLikeGuideHtml_(loggedIn) {
+    const loginText = loggedIn
+      ? 'この投稿にいいねすると、所持率チェッカーのデータを参照して不足カードを確認できます。'
+      : '不足カードの確認には、ログインしてこの投稿にいいねする必要があります。ログインまたは新規登録後、この投稿にいいねしてください。';
+    return `<div class="deck-compare-message is-note">${escHtml_(loginText)}</div>`;
+  }
+
+  function showDeckCompareNoticePopup_(type, opts = {}) {
+    const old = document.getElementById('deckCompareNoticePopup');
+    if (old) old.remove();
+
+    const isLogin = type === 'login';
+    const isLike = type === 'like';
+
+    const title = isLogin
+      ? '不足カードの確認にはログインが必要です'
+      : 'この投稿をいいねすると確認できます';
+
+    const text = isLogin
+      ? 'ログインまたは新規登録後、この投稿にいいねしてください。'
+      : '不足カードを確認するには、このデッキをいいねして保存してください。';
+
+    const actionHtml = isLogin
+      ? `
+          <button type="button" class="auth-mini-btn primary" data-action="auth-login">ログイン</button>
+          <button type="button" class="auth-mini-btn" data-action="auth-signup">新規登録</button>
+        `
+      : `<button type="button" class="deck-compare-popup-primary" data-action="like">★ いいねして比較する</button>`;
+
+    const el = document.createElement('div');
+    el.id = 'deckCompareNoticePopup';
+    el.className = 'deck-compare-popup';
+    el.dataset.postid = String(opts.postId || '');
+    el.innerHTML = `
+      <div class="deck-compare-popup-backdrop" data-action="close"></div>
+      <div class="deck-compare-popup-panel" role="dialog" aria-modal="true">
+        <button type="button" class="deck-compare-popup-close" data-action="close" aria-label="閉じる">×</button>
+        <div class="deck-compare-popup-title">${escHtml_(title)}</div>
+        <div class="deck-compare-popup-text">${escHtml_(text)}</div>
+        <div class="deck-compare-popup-actions${isLogin ? ' is-auth' : ''}">
+          ${actionHtml}
+          <button type="button" class="deck-compare-popup-secondary" data-action="close">キャンセル</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(el);
+  }
+
+  function setDeckCompareButtonActive_(button, active) {
+    if (!button) return;
+    button.classList.toggle('is-active', !!active);
+    button.setAttribute('aria-expanded', active ? 'true' : 'false');
+    button.textContent = active ? '不足カードリストを閉じる' : '不足カードを確認';
+  }
+
+  function clearDeckShortageHighlight_(root) {
+    const decklist = root?.querySelector?.('.post-decklist');
+    if (!decklist) return;
+    decklist.classList.remove('is-pack-focus', 'is-rarity-focus', 'is-shortage-focus');
+    root.querySelectorAll('.pack-chip.is-active, .rarity-chip.is-active')
+      .forEach((el) => el.classList.remove('is-active'));
+    root.querySelectorAll('.deck-entry.pack-hl, .deck-entry.shortage-hl')
+      .forEach((el) => {
+        el.classList.remove('pack-hl', 'shortage-hl');
+        el.querySelector('.shortage-badge')?.remove();
+      });
+  }
+
+  function applyDeckShortageHighlight_(root, result) {
+    clearDeckShortageHighlight_(root);
+    const decklist = root?.querySelector?.('.post-decklist');
+    if (!decklist || !result?.shortages?.length) return;
+
+    result.shortages.forEach((row) => {
+      const safeCd = window.CSS?.escape ? CSS.escape(row.cd) : String(row.cd).replace(/"/g, '\\"');
+      const entry = decklist.querySelector(`.deck-entry[data-cd="${safeCd}"]`);
+      if (!entry) return;
+      entry.classList.add('shortage-hl');
+      entry.insertAdjacentHTML('beforeend', `<div class="shortage-badge">不足${row.missing}</div>`);
+    });
+
+    decklist.classList.add('is-shortage-focus');
+  }
+
+  async function handleDeckCompareClick_(button) {
+    const root = button?.closest?.('.post-detail-inner');
+    const resultBox = root?.querySelector?.('.deck-compare-result');
+    if (!root || !resultBox) return;
+
+    if (button.classList.contains('is-active')) {
+      setDeckCompareButtonActive_(button, false);
+      resultBox.hidden = true;
+      resultBox.innerHTML = '';
+      clearDeckShortageHighlight_(root);
+      return;
+    }
+
+    const postId = String(root.dataset.postid || '').trim();
+    const item = postId ? findItemById_(postId) : null;
+    if (!item) return;
+
+    const listMode = String(root.dataset.listMode || '').trim();
+    if (listMode === 'list' && !item.liked) {
+      clearDeckShortageHighlight_(root);
+      setDeckCompareButtonActive_(button, false);
+      resultBox.hidden = true;
+      resultBox.innerHTML = '';
+
+      showDeckCompareNoticePopup_(
+        isLoggedInForDeckCompare_() ? 'like' : 'login',
+        { postId }
+      );
+      return;
+    }
+
+    button.disabled = true;
+    resultBox.hidden = false;
+    resultBox.innerHTML = '<div class="deck-compare-message is-note">所持カードデータを読み込み、不足カードを確認しています...</div>';
+
+    try {
+      const { owned } = await resolveOwnedMapForDeckCompare_();
+      setDeckCompareButtonActive_(button, true);
+
+      if (!hasOwnedData_(owned)) {
+        clearDeckShortageHighlight_(root);
+        resultBox.innerHTML = buildDeckCompareEmptyGuideHtml_();
+        return;
+      }
+
+      const result = buildDeckShortageResult_(item, owned);
+      resultBox.innerHTML = buildDeckCompareHtml_(result);
+      if (result?.totalMissing) applyDeckShortageHighlight_(root, result);
+      else clearDeckShortageHighlight_(root);
+    } finally {
+      button.disabled = false;
+    }
   }
 
   // =========================
@@ -1289,11 +1625,11 @@
     if (!c) return '';
 
     const out = [];
-    if (c.legend) out.push(`<span class="stat-chip carddetail-rarity carddetail-rarity--legend">レジェンド ${c.legend}枚</span>`);
-    if (c.gold) out.push(`<span class="stat-chip carddetail-rarity carddetail-rarity--gold">ゴールド ${c.gold}枚</span>`);
-    if (c.silver) out.push(`<span class="stat-chip carddetail-rarity carddetail-rarity--silver">シルバー ${c.silver}枚</span>`);
-    if (c.bronze) out.push(`<span class="stat-chip carddetail-rarity carddetail-rarity--bronze">ブロンズ ${c.bronze}枚</span>`);
-    if (c.unknown) out.push(`<span class="stat-chip">不明 ${c.unknown}枚</span>`);
+    if (c.legend) out.push(`<span class="stat-chip carddetail-rarity rarity-chip carddetail-rarity--legend" data-rarity="legend" role="button" tabindex="0">レジェンド ${c.legend}枚 <span class="chip-icon">🔍</span></span>`);
+    if (c.gold) out.push(`<span class="stat-chip carddetail-rarity rarity-chip carddetail-rarity--gold" data-rarity="gold" role="button" tabindex="0">ゴールド ${c.gold}枚 <span class="chip-icon">🔍</span></span>`);
+    if (c.silver) out.push(`<span class="stat-chip carddetail-rarity rarity-chip carddetail-rarity--silver" data-rarity="silver" role="button" tabindex="0">シルバー ${c.silver}枚 <span class="chip-icon">🔍</span></span>`);
+    if (c.bronze) out.push(`<span class="stat-chip carddetail-rarity rarity-chip carddetail-rarity--bronze" data-rarity="bronze" role="button" tabindex="0">ブロンズ ${c.bronze}枚 <span class="chip-icon">🔍</span></span>`);
+    if (c.unknown) out.push(`<span class="stat-chip rarity-chip" data-rarity="unknown" role="button" tabindex="0">不明 ${c.unknown}枚 <span class="chip-icon">🔍</span></span>`);
 
     return out.join('');
   }
@@ -1351,7 +1687,7 @@
       const attr = packKey ? ` data-pack="${packKey}"` : '';
 
       out.push(
-        `<span class="stat-chip pack-chip"${attr}>
+        `<span class="stat-chip pack-chip"${attr} role="button" tabindex="0">
           ${escHtml_(abbr)} ${n}枚 <span class="pack-icon">🔍</span>
         </span>`
       );
@@ -1359,7 +1695,7 @@
 
     if (d.unknown) {
       out.push(
-        `<span class="stat-chip pack-chip">
+        `<span class="stat-chip pack-chip" role="button" tabindex="0">
           不明 ${Number(d.unknown)}枚 <span class="pack-icon">🔍</span>
         </span>`
       );
@@ -1466,13 +1802,14 @@
   // =========================
   // 9) 詳細ペイン描画
   // =========================
-function renderDetailPaneForItem(item, basePaneId) {
+function renderDetailPaneForItem(item, basePaneId, opts = {}) {
   const pane = document.getElementById(basePaneId || 'postDetailPane');
   if (!pane || !item) return;
   const snapshotMap = window.cardMap || {};
 
   const paneUid = `${basePaneId}-${String(item.postId || '').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
-  const isMinePane = (basePaneId === 'postDetailPaneMine');
+  const listMode = opts.listMode || ((basePaneId === 'postDetailPaneMine') ? 'mine' : 'list');
+  const canEdit = (listMode === 'mine');
 
   const mainRace = getMainRace(item.races);
   const oldGod = getOldGodNameFromItem(item) || 'なし';
@@ -1484,7 +1821,7 @@ function renderDetailPaneForItem(item, basePaneId) {
   const postId = String(item?.postId || '').trim();
 
   // ✅ deck-post-detail.js 側の安全版
-  const manageBoxHtml = isMinePane
+  const manageBoxHtml = canEdit
     ? (typeof window.DeckPostEditor?.buildDeckCodeBoxHtml_ === 'function'
         ? window.DeckPostEditor.buildDeckCodeBoxHtml_(postId, codeNorm)
         : buildDeckCodeBoxFallback_(postId, codeNorm))
@@ -1601,6 +1938,18 @@ function renderDetailPaneForItem(item, basePaneId) {
           </dd>
         </div>
 
+        <div class="deck-compare-block">
+          <button type="button"
+            class="deck-compare-toggle"
+            aria-expanded="false"
+            aria-label="所持カードデータから不足カードを確認"
+            data-tooltip="所持率チェッカーのデータを参照して、このデッキの不足カードを確認します"
+            title="所持率チェッカーのデータを参照して、このデッキの不足カードを確認します">
+            不足カードを確認
+          </button>
+          <div class="deck-compare-result" hidden></div>
+        </div>
+
         <div class="post-detail-charts" data-postcharts="${escHtml_(item.postId || '')}">
           <div class="post-detail-chartbox">
             <div class="post-detail-charthead">
@@ -1634,7 +1983,7 @@ function renderDetailPaneForItem(item, basePaneId) {
         <div class="post-detail-heading-row">
           <div class="post-detail-heading">デッキ解説</div>
 
-          ${isMinePane ? `
+          ${canEdit ? `
             <div class="post-detail-heading-actions">
               <button type="button" class="btn-decknote-edit">編集</button>
             </div>
@@ -1646,7 +1995,7 @@ function renderDetailPaneForItem(item, basePaneId) {
             ${deckNoteHtml || '<div style="color:#777;font-size:.9rem;">まだ登録されていません。</div>'}
           </div>
 
-          ${isMinePane ? `
+          ${canEdit ? `
             <div class="decknote-editor" hidden>
               <div class="note-preset-wrap note-preset-wrap--compact">
                 <div class="note-toolbar">
@@ -1685,7 +2034,7 @@ function renderDetailPaneForItem(item, basePaneId) {
         <div class="post-detail-heading-row post-detail-heading-row--cards">
           <div class="post-detail-heading">カード解説</div>
 
-          ${isMinePane ? `
+          ${canEdit ? `
             <div class="post-detail-heading-actions">
               <button type="button" class="btn-cardnotes-edit">編集</button>
             </div>
@@ -1697,7 +2046,7 @@ function renderDetailPaneForItem(item, basePaneId) {
             ${cardNotesHtml}
           </div>
 
-          ${isMinePane ? `
+          ${canEdit ? `
             <div class="cardnotes-editor" hidden
                  data-original='${escHtml_(JSON.stringify(item.cardNotes || []))}'>
               <div class="info-value" style="width:100%">
@@ -1734,7 +2083,7 @@ function renderDetailPaneForItem(item, basePaneId) {
   `;
 
   pane.innerHTML = `
-    <div class="post-detail-inner" data-postid="${escHtml_(item.postId || '')}" style="${bg ? `--race-bg:${bg};` : ''}">
+    <div class="post-detail-inner" data-postid="${escHtml_(item.postId || '')}" data-list-mode="${escHtml_(listMode)}" style="${bg ? `--race-bg:${bg};` : ''}">
       <div class="post-detail-maincol">
         ${tabsHtml}
         <div class="post-detail-body">
@@ -1814,10 +2163,11 @@ function renderDetailPaneForItem(item, basePaneId) {
       }
     }
 
-    const isMine = !!art.closest('#myPostList, #pageMine');
-    const basePaneId = isMine ? 'postDetailPaneMine' : 'postDetailPane';
+    const listMode = art.dataset.listMode || (art.closest('#myPostList') ? 'mine' : 'list');
+    const usesMinePane = !!art.closest('#myPostList, #pageMine');
+    const basePaneId = usesMinePane ? 'postDetailPaneMine' : 'postDetailPane';
 
-    withCardMapForPostDate_(item, () => renderDetailPaneForItem(item, basePaneId));
+    withCardMapForPostDate_(item, () => renderDetailPaneForItem(item, basePaneId, { listMode }));
 
     document.querySelectorAll('.post-card.is-active').forEach((el) => {
       el.classList.remove('is-active');
@@ -1981,8 +2331,8 @@ function renderDetailPaneForItem(item, basePaneId) {
           console.warn('toggleSpDetail_: apiGetPost failed', err);
         }
 
-        const isMine = !!art.closest('#myPostList, #pageMine');
-        const replacement = item && window.buildCardSp?.(item, { mode: isMine ? 'mine' : 'list' });
+        const listMode = art.dataset.listMode || (art.closest('#myPostList') ? 'mine' : 'list');
+        const replacement = item && window.buildCardSp?.(item, { mode: listMode });
         if (replacement) {
           art.replaceWith(replacement);
           art = replacement;
@@ -2134,6 +2484,57 @@ function renderDetailPaneForItem(item, basePaneId) {
       window.addEventListener('scroll', hidePostDeckPeek_, { passive: true });
       window.addEventListener('resize', hidePostDeckPeek_);
     }
+  }
+
+  function toggleDeckChipHighlight_(chip, kind) {
+    const root = chip.closest('.post-detail-inner') || document;
+    const decklist = root.querySelector('.post-decklist');
+    if (!decklist) return false;
+
+    const compareBtn = root.querySelector('.deck-compare-toggle.is-active');
+    const compareResult = root.querySelector('.deck-compare-result');
+    if (compareBtn) {
+      setDeckCompareButtonActive_(compareBtn, false);
+    }
+    if (compareResult) {
+      compareResult.hidden = true;
+      compareResult.innerHTML = '';
+    }
+    root.querySelectorAll('.deck-entry.shortage-hl')
+      .forEach((el) => {
+        el.classList.remove('shortage-hl');
+        el.querySelector('.shortage-badge')?.remove();
+      });
+    decklist.classList.remove('is-shortage-focus');
+
+    const chipSelector = kind === 'rarity' ? '.rarity-chip' : '.pack-chip';
+    const activeSelector = `${chipSelector}.is-active`;
+    const attrName = kind === 'rarity' ? 'rarity' : 'pack';
+    const value = chip.dataset[attrName] || null;
+
+    if (chip.classList.contains('is-active')) {
+      root.querySelectorAll(activeSelector)
+        .forEach((el) => el.classList.remove('is-active'));
+      root.querySelectorAll('.deck-entry.pack-hl')
+        .forEach((el) => el.classList.remove('pack-hl'));
+      decklist.classList.remove('is-pack-focus', 'is-rarity-focus');
+      return true;
+    }
+
+    root.querySelectorAll('.pack-chip.is-active, .rarity-chip.is-active')
+      .forEach((el) => el.classList.remove('is-active'));
+    root.querySelectorAll('.deck-entry.pack-hl')
+      .forEach((el) => el.classList.remove('pack-hl'));
+
+    if (!value) return true;
+
+    const safeValue = window.CSS?.escape ? CSS.escape(value) : String(value).replace(/"/g, '\\"');
+    chip.classList.add('is-active');
+    root.querySelectorAll(`.deck-entry[data-${attrName}="${safeValue}"]`)
+      .forEach((el) => el.classList.add('pack-hl'));
+    decklist.classList.toggle('is-pack-focus', kind === 'pack');
+    decklist.classList.toggle('is-rarity-focus', kind === 'rarity');
+    return true;
   }
 
   // =========================
@@ -2319,6 +2720,14 @@ function renderDetailPaneForItem(item, basePaneId) {
     // -------------------------
     // 7) 比較に追加（仮）
     // -------------------------
+    const deckCompareBtn = e.target.closest('.post-detail-inner .deck-compare-toggle');
+    if (deckCompareBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      await handleDeckCompareClick_(deckCompareBtn);
+      return;
+    }
+
     const compareBtn = e.target.closest('.btn-add-compare');
     if (compareBtn) {
       e.preventDefault();
@@ -2328,36 +2737,18 @@ function renderDetailPaneForItem(item, basePaneId) {
     }
 
     // -------------------------
-    // 8) パック構成チップ → デッキ内カード強調
+    // 8) 構成チップ → デッキ内カード強調
     // -------------------------
+    const rarityChip = e.target.closest('.post-detail-inner .rarity-chip');
+    if (rarityChip) {
+      toggleDeckChipHighlight_(rarityChip, 'rarity');
+      return;
+    }
+
     const chip = e.target.closest('.post-detail-inner .pack-chip');
     if (chip) {
-      const root = chip.closest('.post-detail-inner') || document;
-      const decklist = root.querySelector('.post-decklist');
-      if (!decklist) return;
-
-      const pack = chip.dataset.pack || null;
-
-      if (chip.classList.contains('is-active')) {
-        root.querySelectorAll('.pack-chip.is-active')
-          .forEach((el) => el.classList.remove('is-active'));
-        root.querySelectorAll('.deck-entry.pack-hl')
-          .forEach((el) => el.classList.remove('pack-hl'));
-        decklist.classList.remove('is-pack-focus');
-        return;
-      }
-
-      root.querySelectorAll('.pack-chip.is-active')
-        .forEach((el) => el.classList.remove('is-active'));
-      root.querySelectorAll('.deck-entry.pack-hl')
-        .forEach((el) => el.classList.remove('pack-hl'));
-
-      if (!pack) return;
-
-      chip.classList.add('is-active');
-      root.querySelectorAll(`.deck-entry[data-pack="${pack}"]`)
-        .forEach((el) => el.classList.add('pack-hl'));
-      decklist.classList.add('is-pack-focus');
+      toggleDeckChipHighlight_(chip, 'pack');
+      return;
     }
   });
 
@@ -2377,37 +2768,18 @@ function renderDetailPaneForItem(item, basePaneId) {
       if (cd) openCardDetailFromDeck_(cd, entry);
     }
 
-    // パック構成チップ → デッキ内カード強調
-    const packChip = e.target.closest('.pack-chip');
-    if (packChip) {
-      const pack = packChip.dataset.pack || null;
+    // 構成チップ → デッキ内カード強調
+    const rarityChip = e.target.closest?.('.rarity-chip');
+    if (rarityChip && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      toggleDeckChipHighlight_(rarityChip, 'rarity');
+      return;
+    }
 
-      const root = packChip.closest('.post-detail-inner') || document;
-      const decklist = root.querySelector('.post-decklist');
-      if (!decklist) return;
-
-      if (packChip.classList.contains('is-active')) {
-        root.querySelectorAll('.pack-chip.is-active')
-          .forEach(el => el.classList.remove('is-active'));
-        root.querySelectorAll('.deck-entry.pack-hl')
-          .forEach(el => el.classList.remove('pack-hl'));
-        decklist.classList.remove('is-pack-focus');
-        return;
-      }
-
-      root.querySelectorAll('.pack-chip.is-active')
-        .forEach(el => el.classList.remove('is-active'));
-      root.querySelectorAll('.deck-entry.pack-hl')
-        .forEach(el => el.classList.remove('pack-hl'));
-
-      if (!pack) return;
-
-      packChip.classList.add('is-active');
-
-      root.querySelectorAll(`.deck-entry[data-pack="${pack}"]`)
-        .forEach(el => el.classList.add('pack-hl'));
-
-      decklist.classList.add('is-pack-focus');
+    const packChip = e.target.closest?.('.pack-chip');
+    if (packChip && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      toggleDeckChipHighlight_(packChip, 'pack');
       return;
     }
 

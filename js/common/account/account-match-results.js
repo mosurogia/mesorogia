@@ -1,7 +1,7 @@
 /* =========================
  * js/common/account/account-match-results.js
  * - 保存デッキ戦績APIのクライアント
- * - GASの matchResultAdd / matchResultsList / matchResultDelete / matchResultsSummary を呼び出す
+ * - GASの matchResultAdd / matchResultUpdate / matchResultsList / matchResultDelete / matchResultsSummary を呼び出す
  * ========================= */
 (function () {
   'use strict';
@@ -57,9 +57,30 @@
     };
   }
 
+  function normalizeUpdateInput_(data = {}) {
+    return Object.assign(normalizeAddInput_(data), {
+      matchId: String(data.matchId || data.id || '').trim(),
+    });
+  }
+
+  function normalizeMatches_(res) {
+    const candidates = [res?.matches, res?.results, res?.items, res?.list, res?.data];
+    const list = candidates.find(Array.isArray);
+    return Array.isArray(list) ? list : [];
+  }
+
+  function getMatchId_(match) {
+    return String(match?.matchId || match?.id || match?.uuid || '').trim();
+  }
+
   async function add(data) {
     const payload = normalizeAddInput_(data);
     return request_('matchResultAdd', payload);
+  }
+
+  async function update(data) {
+    const payload = normalizeUpdateInput_(data);
+    return request_('matchResultUpdate', payload);
   }
 
   async function list(opts = {}) {
@@ -82,11 +103,47 @@
     });
   }
 
+  async function clearAll(opts = {}) {
+    const limit = Math.max(1, Math.min(Number(opts.limit || 5000) || 5000, 10000));
+    const maxBatches = Math.max(1, Math.min(Number(opts.maxBatches || 20) || 20, 100));
+    let deleted = 0;
+    let total = 0;
+
+    for (let batch = 0; batch < maxBatches; batch += 1) {
+      const listRes = await list({ limit });
+      if (!listRes?.ok) return Object.assign({ deleted }, listRes || { ok: false, error: 'list failed' });
+
+      total = Math.max(total, Number(listRes.total || listRes.count || 0) || 0);
+      const ids = [...new Set(normalizeMatches_(listRes).map(getMatchId_).filter(Boolean))];
+      if (!ids.length) return { ok: true, deleted, total };
+
+      const failed = [];
+      for (const matchId of ids) {
+        const res = await remove(matchId);
+        if (res?.ok) deleted += 1;
+        else failed.push({ matchId, error: res?.error || 'delete failed' });
+      }
+
+      if (failed.length) {
+        return {
+          ok: false,
+          deleted,
+          failed,
+          error: `${failed.length}件の削除に失敗しました`,
+        };
+      }
+    }
+
+    return { ok: false, deleted, total, error: '戦績件数が多いため一度で削除しきれませんでした。もう一度リセットしてください。' };
+  }
+
   window.AccountMatchResults = window.AccountMatchResults || {
     add,
+    update,
     list,
     delete: remove,
     remove,
+    clearAll,
     summary,
     isReady: isLoggedIn_,
   };

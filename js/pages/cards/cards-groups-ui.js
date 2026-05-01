@@ -80,6 +80,17 @@ function buildAuthActionsHtml_(loggedIn) {
   `;
 }
 
+function buildAccountSettingsButtonHtml_(loggedIn) {
+  if (!loggedIn) return '';
+  return `
+    <div class="cg-head-row cg-head-row-account">
+      <button type="button" class="btn danger cg-account-settings-btn" id="cg-account-settings-btn">
+        アカウント設定
+      </button>
+    </div>
+  `;
+}
+
 // =====================================================
 // 画像生成の上限（カード合計枚数）
 // =====================================================
@@ -150,6 +161,8 @@ function renderSidebar_() {
         <div class="cg-head-row cg-head-row-title">
         <div class="cg-head-title">🗂️ カードグループ</div>
         </div>
+
+        ${buildAccountSettingsButtonHtml_(loggedIn)}
 
         <div class="cg-head-row cg-head-row-source data-source-row">
         ${buildAuthActionsHtml_(loggedIn)}
@@ -241,6 +254,10 @@ function renderSidebar_() {
         b.title = canEditGroups ? '' : 'アカウント同期中は操作できません';
     }
     }
+
+    qs('#cg-account-settings-btn', host)?.addEventListener('click', () => {
+    window.openAccountDataModal?.({ scope: 'cards' });
+    });
 
     // 編集（= startEditing）／編集中なら「選択完了（stopEditing）」にトグル
     qs('#cg-op-edit', host)?.addEventListener('click', () => {
@@ -705,4 +722,5 @@ window.addEventListener('card-page:ready', init);
 window.addEventListener('card-groups:data-replaced', scheduleHeavySync_);
 window.addEventListener('account-owned-sync:ready', scheduleHeavySync_);
 window.addEventListener('account-owned-sync:status', scheduleHeavySync_);
+window.__CardGroupsUI.refresh = scheduleHeavySync_;
 })();

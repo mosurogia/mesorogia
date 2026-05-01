@@ -111,6 +111,7 @@ window.reflectLoginUI = function reflectLoginUI(){
 
     if ($miniOut) $miniOut.style.display = loggedIn ? 'none' : '';
     if ($miniIn)  $miniIn.style.display  = loggedIn ? '' : 'none';
+    window.__CardGroupsUI?.refresh?.();
 
     // mine-login-note（マイ投稿ページ用）
     const note = document.querySelector('.mine-login-note');
@@ -163,7 +164,7 @@ function showForgotPasswordGuide(){
     const st = document.getElementById('auth-inline-status');
     if (!st) return;
 
-    st.textContent = 'ブラウザに保存されたパスワードをご確認ください。再設定が必要な場合は、ログインID・投稿者名・Xアカウント・投稿したデッキURLなど、本人確認に使える情報を添えて管理者へお問い合わせください。';
+    st.textContent = 'ブラウザに保存されたパスワードをご確認ください。再設定が必要な場合は、ユーザー名・投稿者名・Xアカウント・投稿したデッキURLなど、本人確認に使える情報を添えて管理者へお問い合わせください。';
 }
 
 function startSlowTimer(ms = 5000) {

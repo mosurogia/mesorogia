@@ -61,7 +61,9 @@
     }
 
     function render(){
-        document.querySelectorAll('[data-header-auth]').forEach(root => {
+        document.querySelectorAll('[data-header-auth]').forEach((root, index) => {
+            const menuId = `${MENU_ID}-${index + 1}`;
+
             if (!isLoggedIn()) {
                 root.innerHTML = `
                     <button type="button" class="header-auth-login" data-header-action="login">
@@ -74,16 +76,16 @@
             const label = window.escapeHtml_ ? window.escapeHtml_(getUserLabel()) : getUserLabel();
             root.innerHTML = `
                 <div class="header-auth-dropdown">
-                    <button type="button" class="header-auth-user" aria-haspopup="true" aria-expanded="false" aria-controls="${MENU_ID}">
+                    <button type="button" class="header-auth-user" aria-haspopup="true" aria-expanded="false" aria-controls="${menuId}">
                         <span aria-hidden="true">👤</span>
                         <span class="header-auth-name">${label}</span>
                     </button>
-                    <div class="header-auth-menu" id="${MENU_ID}" role="menu" hidden>
-                        <button type="button" role="menuitem" data-header-action="account">アカウント設定</button>
+                    <div class="header-auth-menu" id="${menuId}" role="menu" hidden>
+                        <button type="button" role="menuitem" data-header-action="account">アカウントデータ</button>
+                        <a role="menuitem" href="cards.html#checker" data-header-action="owned-data">所持データ</a>
                         <a role="menuitem" href="deckmaker.html#saved-deck" data-header-action="saved-deck">保存デッキ</a>
                         <a role="menuitem" href="match-results.html" data-header-action="match-results">戦績ページへ</a>
-                        <a role="menuitem" href="cards.html#checker" data-header-action="owned-data">所持データ</a>
-                        <a role="menuitem" href="deck-post.html#mine" data-header-action="mine-posts">マイ投稿</a>
+                        <a role="menuitem" href="deck-post.html#mine" data-header-action="mine-posts">マイページ</a>
                         <button type="button" role="menuitem" class="header-auth-logout" data-header-action="logout">ログアウト</button>
                     </div>
                 </div>
@@ -168,8 +170,13 @@
 
             if (action === 'account') {
                 event.preventDefault();
-                fillAccountForm();
-                openModal('accountDataModal');
+
+                if (typeof window.openAccountDataModal === 'function') {
+                    window.openAccountDataModal({ scope: 'all' });
+                } else {
+                    openModal('accountDataModal');
+                }
+
                 closeMenu(root);
                 return;
             }

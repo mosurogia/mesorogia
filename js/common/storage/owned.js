@@ -41,12 +41,7 @@ function readOwnedDataSafe() {
             return clampInt_(e);
         }
 
-        return (
-            clampInt_(e?.normal) +
-            clampInt_(e?.nomal) +
-            clampInt_(e?.shine) +
-            clampInt_(e?.premium)
-        );
+        return clampInt_(e?.normal);
     }
 
     function normalizeEntry_(e) {

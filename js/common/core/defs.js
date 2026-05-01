@@ -69,12 +69,10 @@ window.BASE_PATH = window.BASE_PATH ?? '';
 // =======================================
 window.GAS_API_BASE =
   window.GAS_API_BASE ||
-  'https://script.google.com/macros/s/AKfycby5Dygwf9Qi_zB697yXdH8JYtejwF0wyd5iE9-n71IPrpDH6HIqU3cvHOrGxgz6PNuL/exec';
+  'https://script.google.com/macros/s/AKfycbwuPmx_Yz48oKvJxFjfV3sqnE5vNb3I3421SyiJ-tWk1Q3kiG6OtCX9fMa1KK03ZZyT/exec';
 
-window.DECKPOST_API_BASE =
-  window.DECKPOST_API_BASE ||
-  'https://script.google.com/macros/s/AKfycbyDaMWpx0QHQdtxBhVdcWi1KKV5P0Tu57Qg1KSBpR7Of_M5JAHUnUhL8wb_gD0MJWZq/exec';
-window.AUTH_API_BASE     = window.AUTH_API_BASE     || window.GAS_API_BASE;
+window.DECKPOST_API_BASE ??= window.GAS_API_BASE;
+window.AUTH_API_BASE     ??= window.GAS_API_BASE;
 
 // ========================
 // 投稿・デッキ共通：タグ定義

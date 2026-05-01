@@ -53,6 +53,24 @@
         }
     }
 
+    function _isSavedDeckEditLocked(key = DEFAULT_KEY) {
+        if (key !== DEFAULT_KEY) return false;
+        try {
+        const sync = window.AccountSavedDecksSync || window.AccountAppDataSync;
+        if (sync && typeof sync.isReady === 'function' && !sync.isReady()) return true;
+        const status = sync?.getStatus?.() || {};
+        return !!(status.syncing || status.state === 'syncing');
+        } catch {
+        return false;
+        }
+    }
+
+    function _guardEdit(key = DEFAULT_KEY, opts = {}) {
+        if (opts.allowDuringSync || opts.persist === false) return null;
+        if (!_isSavedDeckEditLocked(key)) return null;
+        return { ok: false, reason: 'syncing' };
+    }
+
     function _normalizeDeckId(v) {
         const id = String(v || '').trim();
         return id || _newDeckId();
@@ -197,6 +215,8 @@
 
         remove(index, opts = {}) {
         const key = opts.key || DEFAULT_KEY;
+        const locked = _guardEdit(key, opts);
+        if (locked) return locked;
         const list = _loadAll(key);
         if (!list[index]) return { ok: false, reason: 'not_found' };
         list.splice(index, 1);
@@ -206,6 +226,8 @@
 
         clear(opts = {}) {
         const key = opts.key || DEFAULT_KEY;
+        const locked = _guardEdit(key, opts);
+        if (locked) return locked;
         if (key === DEFAULT_KEY && _isAccountDeckMode(key)) {
             displayList = [];
             _emit([]);
@@ -223,6 +245,8 @@
 
         replaceAll(list, opts = {}) {
         const key = opts.key || DEFAULT_KEY;
+        const locked = _guardEdit(key, opts);
+        if (locked) return locked;
         const normalized = Array.isArray(list) ? list.map(normalizeSavedDeck).filter(Boolean) : [];
 
         if (key === DEFAULT_KEY && opts.persist === false) {
@@ -298,6 +322,8 @@
          */
         upsert(savedDeck, opts = {}) {
         const key = opts.key || DEFAULT_KEY;
+        const locked = _guardEdit(key, opts);
+        if (locked) return locked;
         const cap = Number.isFinite(+opts.cap) ? (+opts.cap) : DEFAULT_CAP;
         const list = _loadAll(key);
 

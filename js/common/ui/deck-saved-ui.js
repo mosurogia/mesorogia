@@ -124,12 +124,29 @@
   }
 
   function updateSavedDeckShareCode_(index, code, opts = {}) {
+    if (isSavedDeckInteractionLocked_()) return false;
     const key = opts.key || window.SavedDeckStore?.KEY || 'savedDecks';
     const list = window.SavedDeckStore?.list?.({ key }) || [];
     if (!list[index]) return false;
 
     list[index] = { ...list[index], shareCode: String(code || '').trim() };
     return !!window.SavedDeckStore?.replaceAll?.(list, { key });
+  }
+
+  function isSavedDeckInteractionLocked_() {
+    const sync = window.AccountSavedDecksSync || window.AccountAppDataSync;
+    if (!sync) return false;
+    try {
+      if (typeof sync.isReady === 'function' && !sync.isReady()) return true;
+      const status = sync.getStatus?.() || {};
+      return !!(status.syncing || status.state === 'syncing');
+    } catch {
+      return false;
+    }
+  }
+
+  function showSavedDeckSyncLocked_() {
+    alert('アカウントデータを確認中です。同期完了後に操作してください。');
   }
 
   function buildPeekEntries_(deckData) {
@@ -330,6 +347,31 @@
     return el;
   }
 
+  function ensureSavedDeckAccountSettingsEl_() {
+    let el = document.getElementById('savedDeckAccountSettingsBtn');
+    if (el) return el;
+
+    const layout = ensureSavedDeckHeaderLayout_();
+    const meta = layout?.meta || document.querySelector('#saved-deck .saved-deck-head-meta');
+    if (!meta) return null;
+
+    el = document.createElement('button');
+    el.id = 'savedDeckAccountSettingsBtn';
+    el.type = 'button';
+    el.className = 'btn danger saved-deck-account-settings-btn';
+    el.dataset.open = 'accountDataModal';
+    el.dataset.accountScope = 'deckmaker';
+    el.innerHTML = `
+      <span>アカウント設定</span>
+    `;
+    window.AccountDataManager?.refreshLabels?.();
+
+    const source = document.getElementById('savedDeckSource');
+    if (source && source.parentElement === meta) meta.insertBefore(el, source);
+    else meta.appendChild(el);
+    return el;
+  }
+
   function ensureSavedDeckMatchLinkEl_() {
     let el = document.getElementById('savedDeckMatchLink');
     if (el) return el;
@@ -368,6 +410,15 @@
     el.style.display = loggedIn ? 'none' : '';
   }
 
+  function renderSavedDeckAccountSettings_() {
+    const el = ensureSavedDeckAccountSettingsEl_();
+    if (!el) return;
+
+    const auth = window.Auth || {};
+    const loggedIn = !!(auth.token && auth.user && auth.verified);
+    el.style.display = loggedIn ? 'inline-flex' : 'none';
+  }
+
   function renderSavedDeckSource_() {
     const el = ensureSavedDeckSourceEl_();
     if (!el) return;
@@ -390,6 +441,7 @@
       <span class="saved-deck-source-text">${escapeHtml_(source.label)}</span>
     `;
     renderSavedDeckAuthActions_();
+    renderSavedDeckAccountSettings_();
     renderSavedDeckMatchLink_();
   }
 
@@ -535,6 +587,11 @@
     const key = opts.key || window.SavedDeckStore?.KEY || 'savedDecks';
     const cap = Number.isFinite(+opts.cap) ? (+opts.cap) : 20;
 
+    if (isSavedDeckInteractionLocked_()) {
+      showSavedDeckSyncLocked_();
+      return { ok: false, reason: 'syncing' };
+    }
+
     if (!window.SavedDeckStore) {
       alert('SavedDeckStore が読み込まれていません');
       return { ok: false, reason: 'no_store' };
@@ -668,6 +725,11 @@
       }
 
       if (action === 'paste-code') {
+        if (isSavedDeckInteractionLocked_()) {
+          showSavedDeckSyncLocked_();
+          return;
+        }
+
         if (!navigator.clipboard?.readText) {
           alert('クリップボードを読み取れません。ブラウザ設定を確認してください');
           return;
@@ -722,14 +784,29 @@
       }
 
       if (action === 'delete') {
+        if (isSavedDeckInteractionLocked_()) {
+          showSavedDeckSyncLocked_();
+          return;
+        }
+
         const ok = confirm('この保存デッキを削除しますか？');
         if (!ok) return;
-        window.SavedDeckStore.remove(index, { key });
+        const res = window.SavedDeckStore.remove(index, { key });
+        if (res?.reason === 'syncing') {
+          showSavedDeckSyncLocked_();
+          return;
+        }
         renderSavedDeckList_({ key, cap, containerId: opts.containerId, counterId: opts.counterId });
       }
     });
 
     document.addEventListener('click', (e) => {
+      const accountBtn = e.target.closest('#savedDeckAccountSettingsBtn');
+      if (accountBtn) {
+        window.openAccountDataModal?.({ scope: accountBtn.dataset.accountScope || 'deckmaker' });
+        return;
+      }
+
       const authBtn = e.target.closest('#savedDeckAuthActions [data-auth-entry]');
       if (!authBtn) return;
 
@@ -753,7 +830,10 @@
 
     window.addEventListener('scroll', hideSavedDeckPeek_, { passive: true });
     window.addEventListener('resize', hideSavedDeckPeek_);
-    window.addEventListener('account-owned-sync:status', renderSavedDeckAuthActions_);
+    window.addEventListener('account-owned-sync:status', () => {
+      renderSavedDeckAuthActions_();
+      renderSavedDeckAccountSettings_();
+    });
     window.addEventListener('saved-decks:status', renderSavedDeckSource_);
     window.addEventListener('saved-decks:data-replaced', renderSavedDeckSource_);
 
@@ -786,8 +866,17 @@
     return window.SavedDeckUI.applyToCurrent(data, opts.hooks || {});
   };
   window.deleteDeckFromIndex ??= function (index, opts = {}) {
+    if (isSavedDeckInteractionLocked_()) {
+      showSavedDeckSyncLocked_();
+      return false;
+    }
+
     const key = opts.key || window.SavedDeckStore?.KEY || 'savedDecks';
-    window.SavedDeckStore?.remove?.(+index, { key });
+    const res = window.SavedDeckStore?.remove?.(+index, { key });
+    if (res?.reason === 'syncing') {
+      showSavedDeckSyncLocked_();
+      return false;
+    }
 
     const cap = Number.isFinite(+opts.cap) ? (+opts.cap) : 20;
     window.SavedDeckUI.render({ key, cap, containerId: opts.containerId, counterId: opts.counterId });

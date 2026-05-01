@@ -71,7 +71,7 @@
       if (!v) return 0;
       if (typeof v === 'number') return (v | 0);
       if (typeof v === 'object'){
-        return (v.normal|0) + (v.shine|0) + (v.premium|0);
+        return v.normal | 0;
       }
       return 0;
     }
@@ -532,7 +532,7 @@ function wireShortagePreviewOnce() {
         const v = all[cd];
         const total = typeof v === 'number'
           ? (v | 0)
-          : ((v?.normal | 0) + (v?.shine | 0) + (v?.premium | 0));
+          : (v?.normal | 0);
         if (total > 0) return true;
       }
     }
@@ -542,7 +542,7 @@ function wireShortagePreviewOnce() {
       for (const cd in raw) {
         const v = raw[cd];
         if (typeof v === 'object' && v) {
-          if ((v.normal | 0) + (v.shine | 0) + (v.premium | 0) > 0) return true;
+          if ((v.normal | 0) > 0) return true;
         } else if ((v | 0) > 0) {
           return true;
         }

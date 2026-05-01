@@ -1269,7 +1269,7 @@
             if (typeof v === 'number') {
             if ((v | 0) > 0) return true;
             } else if (v && typeof v === 'object') {
-            const total = (v.normal | 0) + (v.shine | 0) + (v.premium | 0);
+            const total = v.normal | 0;
             if (total > 0) return true;
             }
         }
@@ -1822,7 +1822,7 @@
             if (typeof entry === 'number') {
             total = entry;
             } else if (entry && typeof entry === 'object') {
-            total = (entry.normal | 0) + (entry.shine | 0) + (entry.premium | 0);
+            total = entry.normal | 0;
             }
 
             if (ownedBtnOn && total <= 0) visible = false;

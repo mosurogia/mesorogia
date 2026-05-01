@@ -682,7 +682,7 @@ if (!window.__wiredMissingPreview){
 function getOwnedEntry_(map, cd){
   const e = map[String(cd)];
   if (e && typeof e === 'object') return {
-    normal: Number(e.normal||0) + Number(e.shine||0) + Number(e.premium||0),
+    normal: Number(e.normal || 0),
   };
   // 旧形式（数値）も一応吸収
   return { normal: Number(e||0) };

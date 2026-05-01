@@ -164,7 +164,7 @@
           out[k] = {
             normal:  typeof v === 'number'
               ? (v | 0)
-              : ((v?.normal | 0) + (v?.shine | 0) + (v?.premium | 0)),
+              : (v?.normal | 0),
           };
         }
         return out;
@@ -179,7 +179,7 @@
         const k = window.normCd5 ? window.normCd5(cd) : String(cd).padStart(5, '0').slice(0, 5);
         const v = raw[cd];
         out[k] = (v && typeof v === 'object')
-          ? { normal: (v.normal | 0) + (v.shine | 0) + (v.premium | 0) }
+          ? { normal: (v.normal | 0) }
           : { normal: (v | 0) };
       }
       return out;

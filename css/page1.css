@@ -166,6 +166,32 @@
     flex: 0 0 auto;
 }
 
+.cg-head-row-account {
+    justify-content: stretch;
+}
+
+.cg-account-settings-btn.btn.danger {
+    background: linear-gradient(90deg, #ef4444, #f97316);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: .45rem .5rem;
+    font-weight: 700;
+    font-size: .7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+    justify-self: stretch;
+    text-align: center;
+}
+
+@media (max-width: 1024px) {
+    .cg-account-settings-btn.btn.danger {
+        width: auto;
+        flex: 1;
+    }
+}
+
 .cg-head-title {
     font-weight: 900;
     font-size: 16px;
@@ -452,7 +478,6 @@
     }
 
     .cg-head-row-source .data-source-badge {
-        flex-basis: 100%;
         width: fit-content;
     }
 

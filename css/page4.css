@@ -148,6 +148,10 @@ body {
     font-size: 1.25rem;
     cursor: pointer;
     font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 @media (max-width: 1023px) {
@@ -159,6 +163,27 @@ body {
 
 .btn-ghost:hover {
     box-shadow: 0 1px 6px rgba(0, 0, 0, .08);
+}
+
+.btn-ghost:disabled {
+    cursor: default;
+    opacity: .78;
+}
+
+.btn-ghost[data-loading="1"]::after {
+    content: "";
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(37, 99, 235, .2);
+    border-top-color: #2563eb;
+    border-radius: 50%;
+    animation: deck-post-filter-spin .8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-ghost[data-loading="1"]::after {
+        animation: none;
+    }
 }
 
 /* ユーザータグ検索入力 */
@@ -1416,6 +1441,60 @@ body {
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .55);
 }
 
+.stat-chip.rarity-chip {
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.stat-chip.rarity-chip.is-active {
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, .65),
+        0 0 0 2px rgba(var(--rarity-rgb, 120, 120, 120), .35),
+        0 4px 10px rgba(0, 0, 0, .18);
+}
+
+.stat-chip.rarity-chip.is-active:hover {
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, .65),
+        0 0 0 2px rgba(var(--rarity-rgb, 120, 120, 120), .4),
+        0 4px 10px rgba(0, 0, 0, .2);
+    transform: translateY(1px);
+}
+
+.stat-chip.rarity-chip:hover {
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, .65),
+        0 2px 8px rgba(0, 0, 0, .12);
+    transform: translateY(-1px);
+}
+
+.stat-chip.rarity-chip:focus-visible,
+.stat-chip.pack-chip:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.stat-chip.rarity-chip .chip-icon {
+    font-size: .7rem;
+    opacity: .65;
+}
+
+.stat-chip.rarity-chip[data-rarity="legend"] {
+    --rarity-rgb: 145, 228, 251;
+}
+
+.stat-chip.rarity-chip[data-rarity="gold"] {
+    --rarity-rgb: 255, 215, 0;
+}
+
+.stat-chip.rarity-chip[data-rarity="silver"] {
+    --rarity-rgb: 192, 192, 192;
+}
+
+.stat-chip.rarity-chip[data-rarity="bronze"] {
+    --rarity-rgb: 205, 133, 63;
+}
+
 /* レアリティ別 */
 .carddetail-rarity.carddetail-rarity--legend {
     border-image: var(--rarity-border-legend) 1;
@@ -1926,15 +2005,17 @@ body {
 
 }
 
-/* 対象パック表示中：それ以外を薄く */
-.post-decklist.is-pack-focus .deck-entry:not(.pack-hl) {
+/* 対象構成表示中：それ以外を薄く */
+.post-decklist.is-pack-focus .deck-entry:not(.pack-hl),
+.post-decklist.is-rarity-focus .deck-entry:not(.pack-hl) {
     opacity: .35;
     filter: grayscale(.6) brightness(.9);
     transition: opacity .15s ease, filter .15s ease;
 }
 
 /* 強調カードはそのまま */
-.post-decklist.is-pack-focus .deck-entry.pack-hl {
+.post-decklist.is-pack-focus .deck-entry.pack-hl,
+.post-decklist.is-rarity-focus .deck-entry.pack-hl {
     opacity: 1;
     filter: none;
     z-index: 2;
@@ -1975,6 +2056,27 @@ body {
 
 .deck-entry[data-pack="COLLAB"] {
     --pack-rgb: var(--pack-collab-rgb);
+}
+
+/* レアリティ別カラー割当 */
+.deck-entry[data-rarity="legend"] {
+    --pack-rgb: 145, 228, 251;
+}
+
+.deck-entry[data-rarity="gold"] {
+    --pack-rgb: 255, 215, 0;
+}
+
+.deck-entry[data-rarity="silver"] {
+    --pack-rgb: 192, 192, 192;
+}
+
+.deck-entry[data-rarity="bronze"] {
+    --pack-rgb: 205, 133, 63;
+}
+
+.deck-entry[data-rarity="unknown"] {
+    --pack-rgb: 120, 120, 120;
 }
 
 /* =========================
@@ -2290,6 +2392,10 @@ body {
 
     /* safe-area は “中身の余白” として足す（浮かせない） */
     padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+}
+
+body.is-pwa-standalone #cardDetailDrawer .carddetail-drawer-inner {
+    bottom: var(--app-bottom-nav-offset);
 }
 
 /* PCでは基本使わない前提：背景を透明に */
@@ -2887,7 +2993,7 @@ body {
     }
 }
 
-/* ログインID行 */
+/* ユーザー名行 */
 .mine-login-row {
     display: flex;
     align-items: baseline;
@@ -3058,6 +3164,60 @@ body {
     display: flex;
     flex-direction: column;
     gap: 6px;
+}
+
+/* マイ投稿内タブ */
+.mine-tabs {
+    display: inline-flex;
+    align-items: center;
+    width: 100%;
+    flex: 1 1 auto;
+    gap: 4px;
+    margin: 8px 0 6px;
+    border-radius: 10px;
+    background: #f9fafb;
+}
+
+.mine-tab {
+    appearance: none;
+    width: 100%;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: #4b5563;
+    cursor: pointer;
+    font-size: .9rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 9px 14px;
+    min-width: 120px;
+}
+
+.mine-tab.is-active {
+    border-color: #bfdbfe;
+    background: #fff;
+    color: #1d4ed8;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, .08);
+}
+
+.mine-tab:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, .35);
+    outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+    .mine-tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .mine-tab {
+        min-width: 0;
+        width: 100%;
+        padding-inline: 8px;
+    }
 }
 
 /*=======================

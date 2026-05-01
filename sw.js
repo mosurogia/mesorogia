@@ -66,7 +66,16 @@ self.addEventListener('fetch', function (event) {
     return;
   }
 
-  var requestUrl = new URL(event.request.url);
+  var requestUrl;
+  try {
+    requestUrl = new URL(event.request.url);
+  } catch (_) {
+    return;
+  }
+
+  if (requestUrl.protocol !== 'http:' && requestUrl.protocol !== 'https:') {
+    return;
+  }
 
   if (event.request.mode === 'navigate') {
     event.respondWith(networkFirst(event.request, true));
@@ -74,7 +83,6 @@ self.addEventListener('fetch', function (event) {
   }
 
   if (requestUrl.origin !== self.location.origin) {
-    event.respondWith(cacheFirst(event.request));
     return;
   }
 
@@ -139,7 +147,10 @@ function putRuntimeCache(request, response) {
   }
 
   return caches.open(runtimeCacheName).then(function (cache) {
-    cache.put(request, response.clone());
-    return response;
+    return cache.put(request, response.clone()).catch(function () {
+      return undefined;
+    }).then(function () {
+      return response;
+    });
   });
 }

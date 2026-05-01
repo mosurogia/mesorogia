@@ -266,6 +266,7 @@
 @media (max-width: 410px) {
 .deck-summary {
         font-size: 8.5px;
+        width: 100px;
     }
 }
 @media (max-width: 768px) {
@@ -1642,6 +1643,11 @@
     /* 可視・不可視はJSで切替 */
     z-index: 3000;
     box-shadow: 0 -4px 12px rgba(0, 0, 0, .08);
+}
+
+body.is-pwa-standalone .deck-code-controls,
+body.is-pwa-standalone .deck-code-controls.floating {
+    bottom: var(--app-bottom-nav-offset);
 }
 
 /* モバイル以外では常に無効（念のため） */
@@ -3757,6 +3763,28 @@ font-size: .8rem;
     font-weight: 800;
 }
 
+.saved-deck-account-settings-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-width: 0;
+    min-height: 28px;
+    padding: .45rem .5rem;
+    margin: 0;
+    background: linear-gradient(90deg, #ef4444, #f97316);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: .7rem;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+    cursor: pointer;
+}
+
 .saved-deck-auth-actions {
     display: inline-flex;
     align-items: center;
@@ -3809,7 +3837,7 @@ font-size: .8rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 28px;
+    /* min-height: 20px; */
     padding: 0.3rem 0.6rem;
     border: 1px solid #2563eb;
     border-radius: 8px;
@@ -3871,15 +3899,19 @@ font-size: .8rem;
         line-height: 1;
     }
 
+    .saved-deck-account-settings-btn {
+        padding: 0.24rem 0.38rem;
+        border-radius: 7px;
+        font-size: 10px;
+    }
+
     .saved-deck-match-link {
-        width: 100%;
         margin-left: 0;
     }
 
     .saved-deck-match-link-btn {
         width: 100%;
-        min-height: 28px;
-        padding: 0.3rem 0.4rem;
+        padding: .4rem 0.4rem;
         font-size: 11px;
     }
 

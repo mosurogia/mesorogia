@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="5NzYWNH5_YUg0dUV2iCzg_bSo7M1lLJi6IzOeF2dGXM" />
     <link rel="icon" href="favicon.ico">
-    <link rel="apple-touch-icon" href="img/app-icon.png">
+    <link rel="apple-touch-icon" href="img/appicon_1024.webp">
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#111827">
 
@@ -57,9 +57,20 @@
         <img src="img/tatudosi.webp" alt="神託のメソロギア ロゴ" />
     </div>
     <nav class="header-nav">
-        <a class="active-page" href="cards.html">📖 図鑑</a>
-        <a href="deckmaker.html">🃏 デッキメーカー</a>
-        <a href="deck-post.html">📤 デッキ投稿</a>
+        <a class="active-page" href="cards.html">
+            <img src="img/header_icon_1.webp" alt="">
+            <span>図鑑</span>
+        </a>
+
+        <a href="deckmaker.html">
+            <img src="img/header_icon_2.webp" alt="">
+            <span>デッキメーカー</span>
+        </a>
+
+        <a href="deck-post.html">
+            <img src="img/header_icon_3.webp" alt="">
+            <span>デッキ投稿</span>
+        </a>
     </nav>
     <div class="header-account" data-header-auth></div>
 </header>
@@ -73,6 +84,7 @@
         <span>📊 所持率チェッカー</span>
     </div>
 </div>
+
 
 <!-- ✅ tab1: カード一覧 -->
 <div id="cards" class="tab-content active">
@@ -216,6 +228,12 @@
                         </button>
                     </div>
 
+                    <button id="checker-account-settings-btn" class="btn danger checker-account-settings-btn" type="button"
+                        data-open="accountDataModal" data-account-scope="cards">
+                        <span class="checker-account-settings-label-full">アカウント設定</span>
+                        <span class="checker-account-settings-label-short">設定</span>
+                    </button>
+
                     <span id="owned-data-source" class="owned-data-source data-source-badge" aria-live="polite">
                         確認中...
                     </span>
@@ -314,7 +332,7 @@
                 <!-- 非ログイン時に表示 -->
                 <form id="auth-login-form" class="auth-login-form">
                     <div class="poster-line" style="margin-top:6px;">
-                        <input id="auth-username" name="username" type="text" placeholder="ログインID" autocomplete="username"
+                        <input id="auth-username" name="username" type="text" placeholder="ユーザー名" autocomplete="username"
                             autocapitalize="none" autocorrect="off" spellcheck="false">
                     </div>
 
@@ -355,61 +373,7 @@
 </div>
 
 <!-- ▼ アカウントデータ モーダル -->
-<div class="account-modal" id="accountDataModal" style="display:none;">
-    <form id="account-data-form" class="modal-content" role="dialog" aria-modal="true"
-        aria-labelledby="accountModalTitle">
 
-        <div class="account-modal-head">
-            <h3 id="accountModalTitle">アカウントデータ変更</h3>
-            <button type="button" class="account-close" data-close="accountDataModal" aria-label="閉じる">×</button>
-        </div>
-
-        <div class="account-modal-body">
-            <!-- 新しいログイン名 -->
-            <div class="account-field">
-                <label>新しいログイン名</label>
-                <input id="acct-login-name" name="new-username" type="text" autocomplete="username"
-                    placeholder="新しいログイン名を入力">
-            </div>
-
-            <!-- 新しいパスワード -->
-            <div class="account-field">
-                <label>新しいパスワード</label>
-                <div class="account-pass-row">
-                    <input id="acct-password" name="new-password" type="password" autocomplete="new-password"
-                        placeholder="※4文字以上">
-                    <button type="button" class="btn ghost" id="acct-pass-toggle">表示</button>
-                </div>
-                <small class="account-hint">※ 保存時に現在のパスワード確認を行います</small>
-            </div>
-
-            <!-- 投稿者名 -->
-            <div class="account-field">
-                <label>投稿者名</label>
-                <input id="acct-poster-name" name="poster-name" type="text" autocomplete="nickname"
-                    placeholder="投稿に表示する名前（任意）">
-            </div>
-
-            <!-- Xアカウント -->
-            <div class="account-field">
-                <label>Xアカウント</label>
-                <div class="X-info">
-                    <input id="acct-x" name="poster-x" type="text" inputmode="verbatim" placeholder="（@なし可）">
-                    <button type="button" class="x-link-btn" id="acct-x-open" title="Xプロフィールを開く">X を確認</button>
-                </div>
-            </div>
-
-            <div class="account-note">
-                ※ 投稿者名・Xアカウントを登録すると、次回以降のログイン時に自動入力されます。
-            </div>
-        </div>
-
-        <div class="account-modal-footer">
-            <button type="button" class="btn ghost" data-close="accountDataModal">キャンセル</button>
-            <button type="submit" class="btn danger" id="acct-save-btn" disabled>保存</button>
-        </div>
-    </form>
-</div>
 
 <!-- ▼ パスワード保存用の隠しログインフォーム -->
 <form id="auth-login-save" method="get" action="" target="auth-login-save-frame" autocomplete="on" style="position:absolute; left:-9999px; top:-9999px;
@@ -432,6 +396,7 @@
 <script src="js/common/account/auth-ui.js"></script>
 <script src="js/common/account/account.js"></script>
 <script src="js/common/account/account-app-data-sync.js"></script>
+<script src="js/common/account/account-data-manager.js"></script>
 <script src="js/common/account/account-match-results.js"></script>
 <script src="js/common/account/header-auth.js"></script>
 

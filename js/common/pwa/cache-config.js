@@ -2,9 +2,9 @@
   'use strict';
 
   var config = {
-    version: '2026-05-01-001',
-    staticCacheName: 'mesorogia-static-2026-05-01-001',
-    runtimeCacheName: 'mesorogia-runtime-2026-05-01-001',
+    version: '2026-05-02-001',
+    staticCacheName: 'mesorogia-static-2026-05-02-001',
+    runtimeCacheName: 'mesorogia-runtime-2026-05-02-001',
     appShell: [
       './cards.html',
       './deckmaker.html',
@@ -29,6 +29,7 @@
       './public/cards_latest.meta.json',
       './public/cards_versions.json',
       './public/cv.json',
+      './public/environments.json',
       './public/packs.json',
       './js/common/core/defs.js',
       './js/common/core/card-core.js',
@@ -41,6 +42,7 @@
       './js/common/account/auth-ui.js',
       './js/common/account/account.js',
       './js/common/account/account-app-data-sync.js',
+      './js/common/account/account-data-manager.js',
       './js/common/account/account-match-results.js',
       './js/common/account/header-auth.js',
       './js/common/ui/tabs.js',
@@ -60,7 +62,9 @@
       './js/common/deck/deck-analysis.js',
       './js/common/deck/deck-note-presets.js',
       './js/common/deck/screenshot-panel.js',
+      './js/common/pwa/cache-config.js',
       './js/common/pwa/install-ui.js',
+      './js/common/pwa/offline-cards.js',
       './js/common/pwa/register.js',
       './js/pages/cards/cards-checker-owned-ops.js',
       './js/pages/cards/cards-checker-page.js',

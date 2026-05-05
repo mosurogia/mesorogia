@@ -38,6 +38,79 @@
     return `if(!this.dataset.normalFallback){this.dataset.normalFallback=1;this.src='${normal}';}else{this.onerror=null;this.src='img/00000.webp';}`;
   }
 
+  function parseJsonObject_(value) {
+    if (!value) return null;
+    if (typeof value === 'object' && !Array.isArray(value)) return value;
+    if (typeof value !== 'string') return null;
+
+    const raw = value.trim();
+    if (!raw) return null;
+
+    try {
+      const parsed = JSON.parse(raw);
+      return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function parseJsonArray_(value) {
+    if (Array.isArray(value)) return value;
+    if (typeof value !== 'string') return [];
+
+    const raw = value.trim();
+    if (!raw) return [];
+
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function normalizeCardNotes_(value) {
+    return parseJsonArray_(value)
+      .map((row) => ({
+        cd: String(row?.cd || row?.id || row?.cardId || ''),
+        text: String(row?.text || row?.note || row?.comment || ''),
+      }))
+      .filter((row) => row.cd || row.text);
+  }
+
+  function decodeDeckCodeObject_(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+
+    try {
+      const json = decodeURIComponent(escape(atob(raw)));
+      return parseJsonObject_(json);
+    } catch (_) {
+      try {
+        return parseJsonObject_(atob(raw));
+      } catch (_) {
+        return null;
+      }
+    }
+  }
+
+  function parseCodeNormObject_(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+
+    const deck = {};
+    raw.split(',').forEach((part) => {
+      const m = String(part || '').trim().match(/^(\d{1,5})\s*x\s*(\d+)$/i);
+      if (!m) return;
+
+      const cd = normCd5_(m[1]);
+      const count = Number(m[2] || 0) || 0;
+      if (cd && count > 0) deck[cd] = (deck[cd] || 0) + count;
+    });
+
+    return Object.keys(deck).length ? deck : null;
+  }
+
   /**
    * 改行 → <br>
    */
@@ -220,10 +293,10 @@
     if (Array.isArray(item?.cards) && item.cards.length) {
       deck = {};
       for (const c of item.cards) {
-        const cd = String(c?.cd || '').trim();
+        const cd = String(c?.cd || c?.id || c?.cardId || c?.code || '').trim();
         if (!cd) continue;
 
-        const n = Number(c?.count || 0) || 0;
+        const n = Number(c?.count ?? c?.num ?? c?.n ?? 1) || 0;
         if (n <= 0) continue;
 
         deck[cd] = (deck[cd] || 0) + n;
@@ -260,6 +333,27 @@
     }
 
     // ---- cdキーを必ず5桁に正規化（repCd照合ズレ防止）----
+    if (!deck) {
+      const obj =
+        parseJsonObject_(item?.cardsJSON) ||
+        parseJsonObject_(item?.deck) ||
+        decodeDeckCodeObject_(item?.code || item?.deckCode) ||
+        parseCodeNormObject_(item?.codeNorm);
+
+      if (obj) {
+        deck = {};
+        for (const [cd, nRaw] of Object.entries(obj)) {
+          const key = String(cd || '').trim();
+          if (!key) continue;
+
+          const n = Number(nRaw || 0) || 0;
+          if (n <= 0) continue;
+
+          deck[key] = (deck[key] || 0) + n;
+        }
+      }
+    }
+
     if (deck && typeof deck === 'object') {
       const norm = {};
       for (const [cd, n] of Object.entries(deck)) {
@@ -456,7 +550,8 @@
       const cd5 = normCd5_(cd);
       const card = cardMap[cd5] || {};
       const name = card.name || cd5;
-      const src = cardImageSrc_(card);
+      const cardForImage = card.cd ? card : { ...card, cd: cd5 };
+      const src = cardImageSrc_(cardForImage);
 
       const packName = card.pack_name || card.packName || '';
       const en = packNameEn_(packName);
@@ -468,7 +563,7 @@
 
       return `
         <div class="deck-entry" data-cd="${cd5}"${packAttr}${rarityAttr} role="button" tabindex="0">
-          <img src="${src}" alt="${escHtml_(name)}" loading="lazy" onerror="${cardImageErrorAttr_(card)}">
+          <img src="${src}" alt="${escHtml_(name)}" loading="lazy" onerror="${cardImageErrorAttr_(cardForImage)}">
           <div class="count-badge">x${n}</div>
         </div>
       `;
@@ -618,6 +713,7 @@
       `;
     }
 
+    const generatedGroupId = 'generated';
     const rarityOrder = ['legend', 'gold', 'silver', 'bronze', 'unknown'];
     const rarityChips = rarityOrder
       .filter((key) => Number(result.rarityCounts[key] || 0) > 0)
@@ -638,10 +734,23 @@
         </div>
         <div class="deck-shortage-row-body">
           <div class="deck-shortage-row-main">
-            <span class="deck-shortage-name">${escHtml_(row.name)}</span>
-            <span class="deck-shortage-rarity-label">${escHtml_(row.rarity || '不明')}</span>
+            <div class="deck-shortage-text">
+              <span class="deck-shortage-name">${escHtml_(row.name)}</span>
+              <span class="deck-shortage-counts">必要${row.need} / 所持${row.owned} / 不足${row.missing}</span>
+            </div>
+            <div class="deck-shortage-side">
+              <span class="deck-shortage-rarity-label">${escHtml_(row.rarity || '不明')}</span>
+              <button type="button"
+                class="deck-shortage-group-add${window.CardGroups?.hasCard?.(generatedGroupId, row.cd) ? ' is-added' : ''}"
+                data-cd="${escHtml_(row.cd)}"
+                data-group-id="${generatedGroupId}"
+                data-tooltip="生成したいカードグループに追加します"
+                title="生成したいカードグループに追加します"
+                aria-label="${escHtml_(row.name)}を生成したいカードグループに追加">
+                ${window.CardGroups?.hasCard?.(generatedGroupId, row.cd) ? '追加済' : '生成候補に追加'}
+              </button>
+            </div>
           </div>
-          <div class="deck-shortage-counts">必要${row.need} / 所持${row.owned} / 不足${row.missing}</div>
         </div>
       </div>
     `).join('');
@@ -652,6 +761,99 @@
       <div class="deck-shortage-list">${rows}</div>
       ${checkerLink}
     `;
+  }
+
+  function updateDeckShortageGroupButtons_(cd) {
+    const safeCd = normCd5_(cd);
+    if (!safeCd) return;
+
+    document.querySelectorAll(`.deck-shortage-group-add[data-cd="${safeCd}"]`).forEach((button) => {
+      button.classList.add('is-added');
+      button.textContent = '追加済';
+      button.setAttribute('aria-label', '生成したいカードグループに追加済み');
+    });
+  }
+
+  function hasCardGroupUserData_() {
+    const state = window.CardGroups?.getState?.();
+    if (window.CardGroups?.hasUserData) return window.CardGroups.hasUserData(state);
+    return !!Object.keys(state?.groups?.generated?.cards || {}).length;
+  }
+
+  function shouldWriteLocalCardGroupsDirectly_() {
+    const status = window.AccountCardGroupsSync?.getStatus?.()
+      || window.AccountAppDataSync?.getStatus?.()
+      || {};
+    return String(status.source || status.state || '') === 'account' && !hasCardGroupUserData_();
+  }
+
+  function addCardToLocalGeneratedGroup_(cd) {
+    const safeCd = normCd5_(cd);
+    if (!safeCd) return { ok: false };
+
+    try {
+      const key = 'cardGroupsV1';
+      const updatedAtKey = 'cardGroupsUpdatedAt';
+      const raw = localStorage.getItem(key);
+      const state = raw ? JSON.parse(raw) : {};
+      const groups = (state.groups && typeof state.groups === 'object') ? state.groups : {};
+      const order = Array.isArray(state.order) ? state.order : [];
+      const generated = groups.generated || { id: 'generated', name: '生成したいカード', fixed: true, cards: {} };
+
+      generated.id = 'generated';
+      generated.name = '生成したいカード';
+      generated.fixed = true;
+      generated.cards = (generated.cards && typeof generated.cards === 'object') ? generated.cards : {};
+      generated.cards[safeCd] = 1;
+
+      groups.generated = generated;
+      if (!order.includes('generated')) order.push('generated');
+
+      const nextState = Object.assign({}, state, {
+        v: Number(state.v || 1),
+        order,
+        groups,
+      });
+
+      localStorage.setItem(key, JSON.stringify(nextState));
+      localStorage.setItem(updatedAtKey, new Date().toISOString());
+      return { ok: true };
+    } catch (_) {
+      return { ok: false };
+    }
+  }
+
+  function showDeckShortageGroupToast_(message) {
+    if (typeof window.showActionToast === 'function') {
+      window.showActionToast(message);
+      return;
+    }
+    if (typeof window.showMiniToast_ === 'function') {
+      window.showMiniToast_(message);
+    }
+  }
+
+  function handleDeckShortageGroupAdd_(button) {
+    const cd = normCd5_(button?.dataset?.cd);
+    const groupId = String(button?.dataset?.groupId || 'generated');
+    if (!cd || !window.CardGroups?.addCardToGroup) {
+      showDeckShortageGroupToast_('カードグループを読み込めませんでした');
+      return;
+    }
+
+    const result = shouldWriteLocalCardGroupsDirectly_()
+      ? addCardToLocalGeneratedGroup_(cd)
+      : window.CardGroups.addCardToGroup(groupId, cd);
+    if (!result?.ok) {
+      const message = result?.reason === 'syncing'
+        ? 'カードグループ同期中です。少し待ってから追加してください'
+        : 'カードグループに追加できませんでした';
+      showDeckShortageGroupToast_(message);
+      return;
+    }
+
+    updateDeckShortageGroupButtons_(cd);
+    showDeckShortageGroupToast_('生成したいカードに追加しました');
   }
 
   function buildDeckCompareCheckerLinkHtml_() {
@@ -932,9 +1134,8 @@
     if (!Object.prototype.hasOwnProperty.call(next, 'deckNote')) {
       next.deckNote = String(next.comment || base.comment || '');
     }
-    if (!Array.isArray(next.cardNotes)) {
-      next.cardNotes = Array.isArray(base.cardNotes) ? base.cardNotes : [];
-    }
+    next.cardNotes = normalizeCardNotes_(next.cardNotes);
+    if (!next.cardNotes.length) next.cardNotes = normalizeCardNotes_(base.cardNotes);
     return next;
   }
 
@@ -1743,10 +1944,7 @@
 
   // カード解説HTML
   function buildCardNotesHtml(item) {
-    const srcList = Array.isArray(item?.cardNotes) ? item.cardNotes : [];
-    const list = srcList
-      .map((r) => ({ cd: String(r?.cd || ''), text: String(r?.text || '') }))
-      .filter((r) => r.cd || r.text);
+    const list = normalizeCardNotes_(item?.cardNotes);
 
     if (!list.length) {
       return `<div class="post-cardnotes-empty">投稿者によるカード解説はまだ登録されていません。</div>`;
@@ -1819,6 +2017,7 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
   const bg = raceBg(item.races);
 
   const postId = String(item?.postId || '').trim();
+  item.cardNotes = normalizeCardNotes_(item.cardNotes);
 
   // ✅ deck-post-detail.js 側の安全版
   const manageBoxHtml = canEdit
@@ -2725,6 +2924,14 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
       e.preventDefault();
       e.stopPropagation();
       await handleDeckCompareClick_(deckCompareBtn);
+      return;
+    }
+
+    const shortageGroupAddBtn = e.target.closest('.post-detail-inner .deck-shortage-group-add');
+    if (shortageGroupAddBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      handleDeckShortageGroupAdd_(shortageGroupAddBtn);
       return;
     }
 

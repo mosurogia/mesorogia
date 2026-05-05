@@ -411,7 +411,7 @@ window.addEventListener('DOMContentLoaded', () => {
 (function(){
   'use strict';
 
-  // これが質問の DEFAULT_DRAW_TEXT の置き場所（auth-ui.js）
+  // 既存キャンペーン用の既定説明
   const DEFAULT_DRAW_TEXT =
 `【抽選枠】
 応募口数（最大3口）をもとに抽選します。
@@ -431,14 +431,108 @@ window.addEventListener('DOMContentLoaded', () => {
 ※レジェンドなしデッキにはキャンペーンタグとは別で自動で専用タグが付きます
 `;
 
-  // あなたの運用だと抽選文は固定でOKとのことなので固定用も残す
-  const DEFAULT_DRAW_TEXT_FIXED = DEFAULT_DRAW_TEXT;
-
   function parseRules_(camp){
+    const direct = camp?.rules;
+    if (direct && typeof direct === 'object') return direct;
     const raw = camp?.rulesJSON;
     if (!raw) return null;
     if (typeof raw === 'object') return raw;
     try { return JSON.parse(String(raw)); } catch(_) { return null; }
+  }
+
+  function formatDeckConditionLabel_(cond){
+    const type = String(cond?.type || '').trim();
+    const rarity = String(cond?.rarity || '').trim();
+    const max = Number(cond?.max ?? cond?.value);
+    const min = Number(cond?.min ?? cond?.value);
+
+    if (cond?.label) return String(cond.label);
+    if (type === 'rarityMax' && rarity && Number.isFinite(max)) return `${rarity}${max}枚以下`;
+    if (type === 'rarityMin' && rarity && Number.isFinite(min)) return `${rarity}${min}枚以上`;
+    return '指定デッキ条件';
+  }
+
+  function buildDrawText_(rules){
+    const custom = String(rules?.drawText || '').trim();
+    if (custom) return custom;
+
+    const prizeObj = rules?.prize || {};
+    const lottery = Array.isArray(prizeObj.lottery) ? prizeObj.lottery : [];
+    const selection = Array.isArray(prizeObj.selection) ? prizeObj.selection : [];
+
+    if (!lottery.length && selection.length){
+      const lines = [
+        '【選考賞】',
+        '応募条件を満たした投稿を対象に、運営が内容を見て選考します（抽選ではありません）。',
+      ];
+      return lines.join('\n');
+    }
+
+    return DEFAULT_DRAW_TEXT;
+  }
+
+  function hasPrizeItems_(items){
+    return Array.isArray(items) && items.length > 0;
+  }
+
+  function getPrizeGroups_(rules){
+    const prizeObj = rules?.prize || {};
+    return {
+      lottery: hasPrizeItems_(prizeObj.lottery) ? prizeObj.lottery : [],
+      participation: hasPrizeItems_(prizeObj.participation) ? prizeObj.participation : [],
+      selection: hasPrizeItems_(prizeObj.selection) ? prizeObj.selection : [],
+    };
+  }
+
+  function renderCampaignSteps_(rules){
+    const stepsEl = document.getElementById('campaignDetailSteps');
+    if (!stepsEl) return;
+
+    const requireLogin = rules?.requireLogin !== false;
+    const requireX = rules?.requireX !== false;
+    const requireGameUserId = !!rules?.requireGameUserId;
+    const deckConditions = Array.isArray(rules?.deckConditions) ? rules.deckConditions : [];
+    const items = [];
+
+    if (requireLogin){
+      items.push('<li><b>アカウント新規登録 or ログイン</b></li>');
+    }
+    if (requireX){
+      items.push(`
+        <li>
+          <b>投稿内のXアカウント欄を記入</b>
+          <div class="campaign-warn">未入力だと、当選しても届けられません（重要）</div>
+        </li>
+      `);
+    }
+    if (requireGameUserId){
+      items.push(`
+        <li>
+          <b>投稿内の16桁ゲーム内ユーザーID欄を記入</b>
+          <div class="campaign-warn">未入力または桁数違いだと、参加条件を満たせません（重要）</div>
+        </li>
+      `);
+    }
+    if (deckConditions.length){
+      items.push(`
+        <li>
+          <b>デッキ条件を満たしたデッキを投稿</b>
+          <ul class="campaign-prize-list">
+            ${deckConditions.map(cond => `<li>${window.escapeHtml_(formatDeckConditionLabel_(cond))}</li>`).join('')}
+          </ul>
+        </li>
+      `);
+    }
+    items.push(`
+      <li>
+        <b>デッキ投稿にキャンペーン対象のタグが付いていれば応募完了</b>
+        <div class="campaign-tagbox tag-chips post-tags-main" data-campaign-tagbox>
+          <span class="chip active">（対象タグ：準備中）</span>
+        </div>
+      </li>
+    `);
+
+    stepsEl.innerHTML = items.join('');
   }
 
   function ensureCampaignDetailModal_(){
@@ -473,7 +567,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
           <div class="campaign-card">
             <div class="campaign-card-title">📝 参加方法（投稿の仕方）</div>
-            <ol class="campaign-steps">
+            <ol class="campaign-steps" id="campaignDetailSteps">
               <li><b>アカウント新規登録 or ログイン</b></li>
               <li>
                 <b>投稿内のXアカウント欄を記入</b>
@@ -488,16 +582,16 @@ window.addEventListener('DOMContentLoaded', () => {
             </ol>
           </div>
 
-          <div class="campaign-card">
+          <div class="campaign-card" id="campaignDetailEntryCard">
             <div class="campaign-card-title">🎟 応募口数</div>
-            <div class="campaign-card-text">
+            <div class="campaign-card-text" id="campaignDetailEntryText">
               <b>1ユーザーにつき最大3口まで応募OK</b><br>
               <span class="campaign-boost">たくさん投稿すると当選確率アップ！</span>
             </div>
           </div>
 
           <div class="campaign-card">
-            <div class="campaign-card-title">🎲 抽選方法</div>
+            <div class="campaign-card-title" id="campaignDetailDrawTitle">🎲 抽選方法</div>
             <div class="campaign-card-text" id="campaignDetailDrawText"></div>
           </div>
 
@@ -539,21 +633,43 @@ window.addEventListener('DOMContentLoaded', () => {
     const rules = parseRules_(camp) || {};
     const drawEl   = document.getElementById('campaignDetailDrawText');
     const prizesEl = document.getElementById('campaignDetailPrizesText');
+    const drawTitleEl = document.getElementById('campaignDetailDrawTitle');
+    const entryCardEl = document.getElementById('campaignDetailEntryCard');
+    const entryTextEl = document.getElementById('campaignDetailEntryText');
+    const prizeGroups = getPrizeGroups_(rules);
+    const prizeObj = rules?.prize;
+    const hasPrizeConfig = !!(prizeObj && typeof prizeObj === 'object');
+    const hasLottery = prizeGroups.lottery.length > 0;
+    const hasSelectionOnly = !hasLottery && prizeGroups.selection.length > 0;
+    const shouldShowEntryCard = hasLottery || !hasPrizeConfig;
 
-    // 抽選方法：固定文
+    renderCampaignSteps_(rules);
+
+    // 抽選・選考方法：キャンペーン設定を優先
+    if (drawTitleEl){
+      drawTitleEl.textContent = hasSelectionOnly ? '🏅 選考方法' : '🎲 抽選方法';
+    }
     if (drawEl){
-      drawEl.innerHTML = window.escapeHtml_(DEFAULT_DRAW_TEXT_FIXED).replaceAll('\n','<br>');
+      drawEl.innerHTML = window.escapeHtml_(buildDrawText_(rules)).replaceAll('\n','<br>');
+    }
+    if (entryCardEl){
+      entryCardEl.hidden = !shouldShowEntryCard;
+    }
+    if (entryTextEl && shouldShowEntryCard){
+      const maxEntries = Number(rules?.maxEntriesPerUser ?? 3);
+      const safeMaxEntries = Number.isFinite(maxEntries) && maxEntries > 0 ? maxEntries : 3;
+      entryTextEl.innerHTML = `<b>1ユーザーにつき最大${safeMaxEntries}口まで応募OK</b><br><span class="campaign-boost">たくさん投稿すると当選確率アップ！</span>`;
     }
     if (!prizesEl) return;
 
     // ---- 報酬：新旧どっちでも表示できるようにする ----
     // 旧: rules.prizes = ["...","..."]
-    // 新: rules.prize = { lottery:[{label,amount,winners}], selection:[...] }
+    // 新: rules.prize = { lottery:[{label,amount,winners}], participation:[...], selection:[...] }
     const legacy = Array.isArray(rules.prizes) ? rules.prizes.filter(Boolean) : [];
 
-    const prizeObj  = rules.prize || {};
-    const lottery   = Array.isArray(prizeObj.lottery)   ? prizeObj.lottery   : [];
-    const selection = Array.isArray(prizeObj.selection) ? prizeObj.selection : [];
+    const lottery = prizeGroups.lottery;
+    const participation = prizeGroups.participation;
+    const selection = prizeGroups.selection;
 
     const fmt = (p) => {
       const label   = String(p?.label ?? '').trim();
@@ -574,6 +690,13 @@ window.addEventListener('DOMContentLoaded', () => {
         }</ul></div>`
       );
     }
+    if (participation.length){
+      blocks.push(
+        `<div class="campaign-prize-block"><b>【参加賞】</b><ul class="campaign-prize-list">${
+          participation.map(p=>`<li>${window.escapeHtml_(fmt(p))}</li>`).join('')
+        }</ul></div>`
+      );
+    }
     if (selection.length){
       blocks.push(
         `<div class="campaign-prize-block"><b>【選考枠】</b><ul class="campaign-prize-list">${
@@ -590,7 +713,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (legacy.length){
       prizesEl.innerHTML =
         `<ul class="campaign-prize-list">` +
-        legacy.map(p=>`<li>${window.escapeHtml_(p)}</li>`).join('')
+        legacy.map(p=>`<li>${window.escapeHtml_(p)}</li>`).join('') +
         `</ul>`;
       return;
     }

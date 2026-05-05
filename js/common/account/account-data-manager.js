@@ -797,11 +797,130 @@
     }
   }
 
+  function setHidden_(id, hidden) {
+    const el = document.getElementById(id);
+    if (el) el.hidden = !!hidden;
+  }
+
+  function setOfflineCardError_(text) {
+    const el = document.getElementById('offline-card-save-error');
+    if (!el) return;
+    el.textContent = text || '';
+    el.hidden = !text;
+  }
+
+  function formatDateTime_(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hour = String(date.getHours()).padStart(2, '0');
+    const minute = String(date.getMinutes()).padStart(2, '0');
+    return `${year}/${month}/${day} ${hour}:${minute}`;
+  }
+
+  function renderOfflineCardStatus_(status = {}) {
+    const state = String(status.state || '');
+    const savedCount = Number(status.savedCount || 0);
+    const failedCount = Number(status.failedCount || 0);
+    const total = Number(status.total || 0);
+    const savedAtText = formatDateTime_(status.savedAt);
+
+    const progress = document.getElementById('offline-card-save-progress');
+    const savedAt = document.getElementById('offline-card-save-date');
+    const button = document.getElementById('offline-card-save-btn');
+
+    setOfflineCardError_('');
+    if (button) button.disabled = state === 'saving';
+
+    if (state === 'saving') {
+      setStatus_('offline-card-save-status', total ? `保存中 ${savedCount}/${total}` : '保存中');
+      if (progress) progress.textContent = total ? `${savedCount}/${total}件を保存中` : '保存準備中';
+      setHidden_('offline-card-save-date', true);
+      return;
+    }
+
+    if (state === 'saved') {
+      setStatus_('offline-card-save-status', failedCount > 0 ? '保存済み（一部失敗）' : '保存済み');
+      if (progress) {
+        progress.textContent = failedCount > 0
+          ? `${savedCount}件保存 / ${failedCount}件失敗`
+          : `${savedCount}件保存済み`;
+      }
+      if (savedAt) {
+        savedAt.textContent = savedAtText ? `最終保存日: ${savedAtText}` : '';
+        savedAt.hidden = !savedAtText;
+      }
+      if (failedCount > 0) {
+        setOfflineCardError_('一部の画像を保存できませんでした。通信状態を確認してもう一度保存してください。');
+      }
+      return;
+    }
+
+    if (state === 'failed') {
+      setStatus_('offline-card-save-status', '保存失敗');
+      if (progress) progress.textContent = savedCount ? `${savedCount}件保存済み` : '';
+      setHidden_('offline-card-save-date', true);
+      setOfflineCardError_(status.error || 'カードデータを保存できませんでした。通信状態を確認してください。');
+      return;
+    }
+
+    setStatus_('offline-card-save-status', '未保存');
+    if (progress) progress.textContent = '';
+    setHidden_('offline-card-save-date', true);
+  }
+
+  function refreshOfflineCards_() {
+    const status = window.MesorogiaOfflineCards?.getStatus?.() || {};
+    renderOfflineCardStatus_(status);
+  }
+
+  async function saveOfflineCards_(button) {
+    if (!window.MesorogiaOfflineCards?.save) {
+      renderOfflineCardStatus_({
+        state: 'failed',
+        error: 'カードデータ保存機能を読み込めませんでした。ページを再読み込みしてください。',
+      });
+      return;
+    }
+
+    if (button) button.disabled = true;
+    renderOfflineCardStatus_({ state: 'saving', savedCount: 0, failedCount: 0, total: 0 });
+
+    try {
+      const status = await window.MesorogiaOfflineCards.save({
+        onProgress: renderOfflineCardStatus_,
+      });
+      renderOfflineCardStatus_(status);
+    } catch (err) {
+      renderOfflineCardStatus_({
+        state: 'failed',
+        error: err?.message || String(err),
+      });
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
   function bindOnce_() {
     if (bound) return;
     bound = true;
 
+    window.addEventListener('offline-cards:progress', (event) => {
+      renderOfflineCardStatus_(event.detail || {});
+    });
+
     document.addEventListener('click', (ev) => {
+      const offlineSave = ev.target.closest?.('[data-offline-cards-save]');
+      if (offlineSave) {
+        ev.preventDefault();
+        saveOfflineCards_(offlineSave);
+        return;
+      }
+
       const jump = ev.target.closest?.('[data-account-jump]');
       if (jump) {
         ev.preventDefault();
@@ -839,6 +958,7 @@
     refreshLabels();
 
     refresh();
+    refreshOfflineCards_();
 
     const firstSection = applyScopeVisibility_(scope);
     scrollToScope_(firstSection);

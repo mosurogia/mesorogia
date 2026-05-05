@@ -43,6 +43,8 @@
   }
 
   function parseCampaignRules_(camp){
+    const direct = camp?.rules;
+    if (direct && typeof direct === 'object') return direct || {};
     const raw = camp?.rulesJSON;
     if (!raw) return {};
     if (typeof raw === 'object') return raw || {};
@@ -52,6 +54,155 @@
   function campaignRequiresGameUserId_(camp){
     const rules = parseCampaignRules_(camp);
     return !!rules.requireGameUserId;
+  }
+
+  function getDeckConditionRules_(camp){
+    const rules = parseCampaignRules_(camp);
+    return Array.isArray(rules.deckConditions) ? rules.deckConditions : [];
+  }
+
+  function formatDeckConditionLabel_(cond){
+    const type = String(cond?.type || '').trim();
+    const rarity = String(cond?.rarity || '').trim();
+    const max = Number(cond?.max ?? cond?.value);
+    const min = Number(cond?.min ?? cond?.value);
+
+    if (cond?.label) return String(cond.label);
+    if (type === 'rarityMax' && rarity && Number.isFinite(max)) return `${rarity}${max}枚以下`;
+    if (type === 'rarityMin' && rarity && Number.isFinite(min)) return `${rarity}${min}枚以上`;
+    return '指定デッキ条件';
+  }
+
+  function getCurrentRarityCounts_(){
+    const deckMap = window.deck || {};
+    const cardMap = window.cardMap || window.allCardsMap || {};
+
+    try{
+      if (typeof window.buildDeckAnalysisCards === 'function' && typeof window.analyzeDeckCards === 'function'){
+        const cards = window.buildDeckAnalysisCards(deckMap, cardMap);
+        const analysis = window.analyzeDeckCards(cards);
+        return analysis?.rarityCounts || {};
+      }
+    }catch(_){}
+
+    const counts = {};
+    Object.entries(deckMap || {}).forEach(([cdRaw, nRaw]) => {
+      const n = Number(nRaw || 0) || 0;
+      if (!n) return;
+      const cd = typeof window.normCd5 === 'function'
+        ? window.normCd5(cdRaw)
+        : String(cdRaw ?? '').trim().padStart(5, '0').slice(0, 5);
+      const card = cardMap[cd] || cardMap[String(cdRaw)] || null;
+      const rarity = String(card?.rarity || '').trim();
+      if (!rarity) return;
+      counts[rarity] = (counts[rarity] || 0) + n;
+    });
+    return counts;
+  }
+
+  function checkDeckConditions_(camp){
+    const conditions = getDeckConditionRules_(camp);
+    if (!conditions.length) return { ok: true, reasons: [] };
+
+    const rarityCounts = getCurrentRarityCounts_();
+    const reasons = [];
+
+    conditions.forEach(cond => {
+      const type = String(cond?.type || '').trim();
+      const rarity = String(cond?.rarity || '').trim();
+      const count = Number(rarityCounts[rarity] || 0);
+      const max = Number(cond?.max ?? cond?.value);
+      const min = Number(cond?.min ?? cond?.value);
+      const label = formatDeckConditionLabel_(cond);
+
+      if (type === 'rarityMax' && rarity && Number.isFinite(max) && count > max){
+        reasons.push(`${label}（現在${count}枚）`);
+      }else if (type === 'rarityMin' && rarity && Number.isFinite(min) && count < min){
+        reasons.push(`${label}（現在${count}枚）`);
+      }
+    });
+
+    return { ok: reasons.length === 0, reasons };
+  }
+
+  function getDeckConditionSummary_(camp){
+    const conditions = getDeckConditionRules_(camp);
+    if (!conditions.length) return '';
+    return conditions.map(formatDeckConditionLabel_).join(' / ');
+  }
+
+  function getCampaignTagRequirementResult_(camp){
+    const reasons = [];
+
+    const deckResult = checkDeckConditions_(camp);
+    if (!deckResult.ok) {
+      deckResult.reasons.forEach(reason => reasons.push(`デッキ条件：${reason}`));
+    }
+
+    const A = window.Auth;
+    const loggedIn = !!(A?.user && A?.token && A?.verified);
+    if (!loggedIn) reasons.push('ログインを完了してください');
+
+    const xRaw = document.getElementById('auth-x')?.value || '';
+    const x = String(xRaw).trim().replace(/^@+/, '');
+    if (!x) reasons.push('Xアカウントを入力してください');
+
+    if (campaignRequiresGameUserId_(camp)){
+      const gameUserId = readCampaignGameUserId_();
+      if (!isValidGameUserId_(gameUserId)) reasons.push('ゲーム内ユーザーIDを16桁で入力してください');
+    }
+
+    return { ok: reasons.length === 0, reasons };
+  }
+
+  function openCampaignTagHelpModal_(reasons){
+    const list = Array.isArray(reasons) ? reasons.filter(Boolean) : [];
+    const modal = document.createElement('div');
+    modal.className = 'campaign-tag-help-modal';
+    modal.innerHTML = `
+      <div class="modal-content campaign-tag-help-content" role="dialog" aria-modal="true" aria-labelledby="campaignTagHelpTitle">
+        <h3 id="campaignTagHelpTitle">キャンペーンタグはまだ追加できません</h3>
+        <p>下の条件を満たすことでタグを追加できます。</p>
+        ${
+          list.length
+            ? `<ul class="campaign-tag-help-list">${list.map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>`
+            : '<p>条件の再判定を行ってから、もう一度タグをタップしてください。</p>'
+        }
+        <div class="modal-actions">
+          <button type="button" class="primary" data-close-campaign-tag-help>閉じる</button>
+        </div>
+      </div>
+    `;
+
+    let keyHandler = null;
+    const close = () => {
+      if (keyHandler) document.removeEventListener('keydown', keyHandler);
+      modal.remove();
+    };
+    modal.addEventListener('click', (e)=>{
+      if (e.target === modal || e.target.closest('[data-close-campaign-tag-help]')) close();
+    });
+    keyHandler = function onKeyDown(e){
+      if (e.key !== 'Escape') return;
+      close();
+    };
+    document.addEventListener('keydown', keyHandler);
+
+    document.body.appendChild(modal);
+    modal.querySelector('button')?.focus?.();
+  }
+
+  function handleCampaignTagAttempt_(label){
+    const tag = String(window.__activeCampaignTag || '').trim();
+    if (!tag || String(label || '').trim() !== tag) return true;
+
+    const camp = window.__activeCampaign;
+    const result = getCampaignTagRequirementResult_(camp);
+    if (result.ok) return true;
+
+    try { window.updateCampaignBannerEligibility_?.(); } catch(_) {}
+    openCampaignTagHelpModal_(result.reasons);
+    return false;
   }
 
   function normalizeGameUserId_(value){
@@ -220,14 +371,33 @@
 
     const gameUserIdWrap = document.getElementById('campaign-game-user-id-wrap');
     const gameUserIdCriteria = criteriaRoot?.querySelector?.('[data-criteria="game-user-id"]');
+    const deckConditionCriteria = criteriaRoot?.querySelector?.('[data-criteria="deck-condition"]');
+    const deckConditionText = document.getElementById('campaign-deck-condition-text');
     const tagHelp = document.getElementById('campaign-tag-help');
+    const deckConditions = getDeckConditionRules_(camp);
+    const needsDeckCondition = deckConditions.length > 0;
 
     if (gameUserIdWrap) gameUserIdWrap.style.display = needsGameUserId ? '' : 'none';
     if (gameUserIdCriteria) gameUserIdCriteria.style.display = needsGameUserId ? '' : 'none';
+    if (deckConditionCriteria) deckConditionCriteria.style.display = needsDeckCondition ? '' : 'none';
+    if (deckConditionText && needsDeckCondition) {
+      deckConditionText.textContent = `デッキ条件：${getDeckConditionSummary_(camp)}`;
+    }
+    const requirementParts = [
+      ...(needsDeckCondition ? ['デッキ条件'] : []),
+      'ログイン',
+      'Xアカウント',
+      ...(needsGameUserId ? ['必要なID入力'] : []),
+    ];
+    const requirementText = `${requirementParts.join('、')}が完了すると選択できます`;
+    if (tagHelp) {
+      tagHelp.textContent = `${requirementText.replace('選択できます', '')}下の対象タグを選択できます。`;
+    }
 
-    function updateCriteriaUI({ isLoggedIn, hasX, hasTag, hasGameUserId }){
+    function updateCriteriaUI({ isLoggedIn, hasX, hasTag, hasGameUserId, deckOk }){
       if (!criteriaRoot) return;
       const map = {
+        'deck-condition': needsDeckCondition ? !!deckOk : true,
         login: !!isLoggedIn,
         x: !!hasX,
         tag: !!hasTag,
@@ -255,11 +425,7 @@
       }
     };
 
-    const canSelectCampaignTag = ()=>{
-      const st = getAuthState();
-      const hasGameUserId = !needsGameUserId || isValidGameUserId_(readCampaignGameUserId_());
-      return !!(st.loggedIn && st.hasX && hasGameUserId);
-    };
+    const canSelectCampaignTag = ()=> getCampaignTagRequirementResult_(camp).ok;
 
     const setCampaignTagSelected = (on)=>{
       const tag = campTag();
@@ -289,35 +455,56 @@
       try{ window.updateCampaignBannerEligibility_?.(); }catch(_){}
     };
 
+    const syncCampaignTagButtonState = (canSelect)=>{
+      if (!tagRow || !tagBtn) return;
+      tagRow.style.display = '';
+      tagBtn.textContent = campTag() || 'キャンペーン';
+      tagBtn.disabled = false;
+      tagBtn.classList.toggle('is-disabled', !canSelect);
+      tagBtn.setAttribute('aria-disabled', String(!canSelect));
+      tagBtn.title = canSelect
+        ? ''
+        : requirementText;
+      if (tagHelp) tagHelp.classList.toggle('is-disabled', !canSelect);
+      tagBtn.classList.toggle('active', isCampaignTagSelected());
+      tagBtn.setAttribute('aria-pressed', String(isCampaignTagSelected()));
+    };
+
     const refreshCampaignTagUI = ()=>{
       if (!tagRow || !tagBtn) return;
       const canSelect = canSelectCampaignTag();
-      tagRow.style.display = '';
-      tagBtn.textContent = campTag() || 'キャンペーン';
-      tagBtn.disabled = !canSelect;
-      tagBtn.title = canSelect
-        ? ''
-        : 'ログイン、Xアカウント、必要なID入力が完了すると選択できます';
-      if (tagHelp) tagHelp.classList.toggle('is-disabled', !canSelect);
+      syncCampaignTagButtonState(canSelect);
       if (!canSelect && isCampaignTagSelected()) setCampaignTagSelected(false);
-      setCampaignTagSelected(isCampaignTagSelected()); // UI sync only
     };
 
     bindCampaignGameUserIdInput_(refreshCampaignTagUI);
 
     window.updateCampaignBannerEligibility_ = function(){
       const st = getAuthState();
+      const deckResult = checkDeckConditions_(camp);
+      const canSelect = canSelectCampaignTag();
+      if (deckConditionText && needsDeckCondition) {
+        deckConditionText.textContent = deckResult.ok
+          ? `デッキ条件：${getDeckConditionSummary_(camp)}`
+          : `デッキ条件：${deckResult.reasons.join(' / ')}`;
+      }
       updateCriteriaUI({
         isLoggedIn: st.loggedIn,
         hasX: st.hasX,
         hasTag: isCampaignTagSelected(),
         hasGameUserId: isValidGameUserId_(readCampaignGameUserId_()),
+        deckOk: deckResult.ok,
       });
+      syncCampaignTagButtonState(canSelect);
+      if (!canSelect && isCampaignTagSelected()) setCampaignTagSelected(false);
     };
 
     if (tagRow && tagBtn){
       tagBtn.onclick = ()=>{
-        if (!canSelectCampaignTag()) return;
+        if (!canSelectCampaignTag()) {
+          openCampaignTagHelpModal_(getCampaignTagRequirementResult_(camp).reasons);
+          return;
+        }
         const next = !isCampaignTagSelected();
         setCampaignTagSelected(next);
       };
@@ -331,6 +518,19 @@
         try { orig?.apply(this, args); } catch(_) {}
         try { refreshCampaignTagUI(); } catch(_) {}
       };
+    }
+
+    if (!window.__campaignDeckWatcherHooked){
+      window.__campaignDeckWatcherHooked = true;
+      ['addCard', 'removeCard', 'updateDeck', 'renderDeckList'].forEach(name => {
+        const orig = window[name];
+        if (typeof orig !== 'function') return;
+        window[name] = function(...args){
+          const ret = orig.apply(this, args);
+          setTimeout(() => window.updateCampaignBannerEligibility_?.(), 0);
+          return ret;
+        };
+      });
     }
 
     window.updateCampaignBannerEligibility_();
@@ -362,6 +562,11 @@
       hasTag = !!(needTag && set.has(needTag));
     }catch(_){}
     if (!hasTag) reasons.push('キャンペーンタグが未選択です');
+
+    const deckResult = checkDeckConditions_(camp);
+    if (!deckResult.ok) {
+      deckResult.reasons.forEach(reason => reasons.push(`デッキ条件未達：${reason}`));
+    }
 
     return { ok: reasons.length === 0, reasons };
   }
@@ -497,14 +702,19 @@
     renderDeckmakerCampaignMiniNotice,
     renderDeckmakerCampaignBanner,
     checkCampaignEligibility_,
+    getCampaignTagRequirementResult_,
+    openCampaignTagHelpModal_,
+    handleCampaignTagAttempt_,
     openCampaignConfirmModal,
     onClickPostButton,
     readCampaignGameUserId_,
     isValidGameUserId_,
+    checkDeckConditions_,
   };
 
   // 互換（必要なら）
   window.checkCampaignEligibility_ ??= checkCampaignEligibility_;
+  window.handleCampaignTagAttempt_ ??= handleCampaignTagAttempt_;
   window.openCampaignConfirmModal ??= openCampaignConfirmModal;
   window.onClickPostButton        ??= onClickPostButton;
 

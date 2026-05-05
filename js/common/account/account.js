@@ -217,6 +217,20 @@
             </div>
             </section>
 
+            <section class="account-data-section account-offline-card-section" id="account-section-offline-cards" aria-labelledby="account-offline-card-title">
+            <div class="account-section-head">
+                <h4 id="account-offline-card-title">カードデータ保存</h4>
+                <span class="account-section-status" id="offline-card-save-status">未保存</span>
+            </div>
+            <p class="account-offline-card-note">カードデータと全カード画像をこの端末に保存します。画像込みのため通信量が多くなります。</p>
+            <div class="account-section-actions account-offline-card-actions">
+                <button type="button" class="btn ghost" id="offline-card-save-btn" data-offline-cards-save>カードデータを保存</button>
+                <span class="account-offline-card-progress" id="offline-card-save-progress" aria-live="polite"></span>
+            </div>
+            <p class="account-offline-card-saved-at" id="offline-card-save-date" hidden></p>
+            <p class="account-offline-card-error" id="offline-card-save-error" hidden></p>
+            </section>
+
             <section class="account-data-section account-site-info-section" id="account-section-site-info" aria-labelledby="account-site-info-title">
             <div class="account-section-head">
                 <h4 id="account-site-info-title">サイト情報</h4>

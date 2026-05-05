@@ -261,8 +261,9 @@ function buildOverallGridSectionHTML(cards){
   html += `    <span class="pack-title-text">ゲーム表示</span>`;
   html += `  </h3>`;
   html += `  <div class="checker-overall-note">`;
-  html += `    <div class="checker-note-sub">● アプリのカード一覧と同じ表示です</div>`;
-  html += `    <div class="checker-note-sub">※アプリ本体のフィルターでシグネチャーを「なし」にしてください</div>`;
+  html += `    <div class="checker-note-sub">● アプリのカード一覧とほとんど同じ表示です</div>`;
+  html += `    <div class="checker-note-sub">※アプリ本体のフィルターでシグネチャーと「なし」にしてエディションも「ノーマル」にしてください</div>`;
+  html += `    <div class="checker-note-sub">（シャインやプレミアムのカードは別で登録するのがおすすめです）</div>`;
   html += `  </div>`;
 
   html += `  <div class="checker-overall-pages" data-current-page="0" data-total-pages="${totalPages}">`;
@@ -694,6 +695,11 @@ function setOwnedTotalToNormal_(map, cd, total){
   else map[String(cd)] = 0;
 }
 
+function ownedCountOfEntry_(value){
+  if (value && typeof value === 'object') return Number(value.normal || 0);
+  return Number(value || 0);
+}
+
 // ✅ 一括変更：OwnedStore.replaceAll を1回だけ呼ぶ
 function bulkUpdateOwned_(mutator){
   const sync = window.AccountOwnedSync || window.AccountAppDataSync;
@@ -704,8 +710,19 @@ function bulkUpdateOwned_(mutator){
 
   // ✅ patch があるなら差分だけで更新（速い）
   if (typeof S.patch === 'function') {
+    const current = (typeof S.getAll === 'function') ? (S.getAll() || {}) : {};
+    const next = Object.assign({}, current);
+    mutator(next);
+
     const patch = {};
-    mutator(patch);          // mutator は patch に cd->entry を詰める
+    const keys = new Set([...Object.keys(current), ...Object.keys(next)]);
+    keys.forEach((cd) => {
+      if (ownedCountOfEntry_(current[cd]) !== ownedCountOfEntry_(next[cd])) {
+        patch[cd] = next[cd] || 0;
+      }
+    });
+
+    if (!Object.keys(patch).length) return true;
     S.patch(patch);
     return true;
   }

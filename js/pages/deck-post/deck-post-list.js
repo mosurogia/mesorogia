@@ -1128,13 +1128,23 @@ document.addEventListener('click', async (e) => {
       let total = 0;
 
       while (true) {
+        window.debugLog?.('F1 fetchAllList', { offset, limit });
         const res = await window.DeckPostApi.apiList({
           limit,
           offset,
           mine: false,
         });
 
+        window.debugLog?.('F2 fetchAllList result', {
+          ok: res?.ok,
+          error: res?.error,
+          items: Array.isArray(res?.items) ? res.items.length : 'not array',
+          total: res?.total,
+          nextOffset: res?.nextOffset,
+        });
+
         if (!res || !res.ok) {
+          window.debugLog?.('❌ fetchAllList failed', res);
           throw new Error((res && res.error) || 'list fetch failed');
         }
 
@@ -1895,7 +1905,8 @@ if (!res || !res.ok) {
       }
 
       prefetchMineItems_().catch(() => {});
-      prefetchAllListInBackground_();
+      // スマホ/タブレットでGAS連続取得が不安定なため、初期表示時の全件先読みは停止する。
+      // prefetchAllListInBackground_();
       await window.DeckPostList?.loadListPage?.(1);
 } catch (e) {
   debugLog('❌ 初期一覧取得catch', e.message);

@@ -1863,13 +1863,25 @@ document.addEventListener('click', async (e) => {
     // =========================
     try {
       state.list.loading = true;
+      const shouldLoadAllInitially = shouldLoadAllItemsInitially_();
+      window.debugLog?.('L0 list init branch', {
+        shouldLoadAllInitially,
+        search: window.location.search || '',
+        hasAllItems: !!state?.list?.hasAllItems,
+        items: Array.isArray(state?.list?.items) ? state.list.items.length : 'not array',
+      });
       window.DeckPostList?.showListStatusMessage?.(
         'loading',
         '投稿一覧を読み込み中です…(5秒ほどかかります)'
       );
 
-      if (shouldLoadAllItemsInitially_()) {
+      if (shouldLoadAllInitially) {
+        window.debugLog?.('L0A shared url fetchAllList前');
         await window.DeckPostList?.fetchAllList?.();
+        window.debugLog?.('L0B shared url fetchAllList後', {
+          hasAllItems: !!state?.list?.hasAllItems,
+          items: Array.isArray(state?.list?.items) ? state.list.items.length : 'not array',
+        });
         window.DeckPostFilter?.applySharedPostFromUrl?.();
         window.DeckPostFilter?.rebuildFilteredItems?.();
       } else {

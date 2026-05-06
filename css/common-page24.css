@@ -453,7 +453,8 @@
 /* =========================
    キャンペーンバナー（イベント感：華やか）
 ========================= */
-.campaign-banner {
+.campaign-banner,
+.event-notice-panel {
     position: relative;
     overflow: hidden;
 
@@ -471,7 +472,8 @@
     box-shadow: 0 14px 32px rgba(17, 24, 39, .18);
 }
 
-.campaign-banner::after {
+.campaign-banner::after,
+.event-notice-panel::after {
     content: "";
     position: absolute;
     inset: -60px -80px auto auto;
@@ -488,7 +490,8 @@
 }
 
 /* 上段：🎉 + タイトル + 期間 */
-.campaign-banner-title-row {
+.campaign-banner-title-row,
+.event-notice-title-row {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -496,7 +499,8 @@
     min-width: 0;
 }
 
-.campaign-banner-emoji {
+.campaign-banner-emoji,
+.event-notice-emoji {
     width: 34px;
     height: 34px;
     display: grid;
@@ -512,7 +516,8 @@
     flex: 0 0 auto;
 }
 
-.campaign-banner-title {
+.campaign-banner-title,
+.event-notice-title {
     font-weight: 900;
     font-size: 1.02rem;
     letter-spacing: .01em;
@@ -524,7 +529,8 @@
     flex: 1 1 auto;
 }
 
-.campaign-banner-range {
+.campaign-banner-range,
+.event-notice-range {
     font-size: .82rem;
     font-weight: 800;
     color: #0f172a;
@@ -537,7 +543,8 @@
 }
 
 /* 下段：宣伝文 + 詳細（スマホでも横並び固定） */
-.campaign-banner-cta-row {
+.campaign-banner-cta-row,
+.event-notice-cta-row {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -545,7 +552,8 @@
     min-width: 0;
 }
 
-.campaign-banner-desc {
+.campaign-banner-desc,
+.event-notice-desc {
     font-size: .90rem;
     color: rgba(255, 255, 255, .92);
     text-shadow: 0 2px 10px rgba(0, 0, 0, .18);
@@ -556,22 +564,26 @@
 }
 
 /* デフォルト（PC）：改行しない */
-.campaign-banner-desc .sp-break {
+.campaign-banner-desc .sp-break,
+.event-notice-desc .sp-break {
     display: inline;
 }
 
-.campaign-btn.campaign-banner-btn {
+.campaign-btn.campaign-banner-btn,
+.event-notice-action.event-notice-btn {
     padding: 6px 12px;
     font-size: .82rem;
     flex: 0 0 auto;
 }
 
-.campaign-btn.campaign-banner-btn:hover {
+.campaign-btn.campaign-banner-btn:hover,
+.event-notice-action.event-notice-btn:hover {
     background: rgba(255, 255, 255, .30);
     box-shadow: 0 12px 26px rgba(0, 0, 0, .14);
 }
 
-.campaign-btn.campaign-banner-btn:focus-visible {
+.campaign-btn.campaign-banner-btn:focus-visible,
+.event-notice-action.event-notice-btn:focus-visible {
     outline: 2px solid rgba(255, 255, 255, .85);
     outline-offset: 2px;
 }
@@ -596,41 +608,47 @@
    スマホ最適化
 ========================= */
 @media (max-width: 768px) {
-    .campaign-banner {
+    .campaign-banner,
+    .event-notice-panel {
         padding: 12px 12px;
         margin: 8px 0 10px;
         border-radius: 16px;
         box-shadow: 0 10px 24px rgba(17, 24, 39, .16);
     }
 
-    .campaign-banner::after {
+    .campaign-banner::after,
+    .event-notice-panel::after {
         width: 200px;
         height: 200px;
         inset: -50px -70px auto auto;
         opacity: .55;
     }
 
-    .campaign-banner-emoji {
+    .campaign-banner-emoji,
+    .event-notice-emoji {
         width: 30px;
         height: 30px;
         border-radius: 12px;
         font-size: 17px;
     }
 
-    .campaign-banner-title {
+    .campaign-banner-title,
+    .event-notice-title {
         font-size: .98rem;
         /* タイトルは折り返しOK（途切れ対策） */
         white-space: normal;
         overflow-wrap: anywhere;
     }
 
-    .campaign-banner-range {
+    .campaign-banner-range,
+    .event-notice-range {
         font-size: .74rem;
         padding: 2px 8px;
     }
 
     /* CTAは“横並び固定”のまま、文章だけ2行省略 */
-    .campaign-banner-desc {
+    .campaign-banner-desc,
+    .event-notice-desc {
         font-size: .86rem;
 
         display: -webkit-box;
@@ -642,34 +660,40 @@
         word-break: break-word;
     }
 
-    .campaign-banner-desc .sp-break {
+    .campaign-banner-desc .sp-break,
+    .event-notice-desc .sp-break {
         display: block;
         height: 0;
     }
 
     /* 念のため：日本語の不自然な分断を防ぐ */
-    .campaign-banner-desc {
+    .campaign-banner-desc,
+    .event-notice-desc {
         line-break: strict;
         word-break: keep-all;
     }
 
-    .campaign-btn.campaign-banner-btn {
+    .campaign-btn.campaign-banner-btn,
+    .event-notice-action.event-notice-btn {
         font-size: .78rem;
         padding: 6px 10px;
     }
 
-    #campaign-banner-text {
+    #campaign-banner-text,
+    #event-notice-text {
         line-height: 1.55;
     }
 
-    #campaign-banner-text strong {
+    #campaign-banner-text strong,
+    #event-notice-text strong {
         font-weight: 700;
     }
 }
 
 /* さらに小さい端末用の保険 */
 @media (max-width: 380px) {
-    .campaign-btn.campaign-banner-btn {
+    .campaign-btn.campaign-banner-btn,
+    .event-notice-action.event-notice-btn {
         font-size: .76rem;
         padding: 6px 9px;
     }
@@ -681,7 +705,8 @@
 ========================= */
 
 /* CTAボタン共通ベース（バナー右の「詳細」など） */
-.campaign-btn {
+.campaign-btn,
+.event-notice-action {
     appearance: none;
     border-radius: 999px;
     font-weight: 800;
@@ -693,12 +718,14 @@
     box-shadow: 0 10px 22px rgba(0, 0, 0, .12);
 }
 
-.campaign-btn:hover {
+.campaign-btn:hover,
+.event-notice-action:hover {
     background: rgba(255, 255, 255, .30);
 }
 
 /* バナーの「詳細」ボタン */
-.campaign-btn.campaign-banner-btn {
+.campaign-btn.campaign-banner-btn,
+.event-notice-action.event-notice-btn {
     padding: 4px 10px;
     font-size: .82rem;
     margin-left: auto;
@@ -852,10 +879,73 @@
     margin-top: 8px;
 }
 
-/* disabledでも“chipらしさ”を維持しつつ押せない感 */
-#campaign-tag-toggle:disabled {
+/* 条件不足時も押して案内を出せるように、見た目だけ無効状態にする */
+#campaign-tag-toggle:disabled,
+#campaign-tag-toggle.is-disabled {
     opacity: .6;
     cursor: not-allowed;
+}
+
+/* キャンペーンタグ条件案内モーダル */
+.campaign-tag-help-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 5200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(15, 23, 42, .55);
+}
+
+.campaign-tag-help-content {
+    width: min(420px, 94vw);
+    max-height: 86vh;
+    padding: 18px;
+    border-radius: 12px;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, .24);
+}
+
+.campaign-tag-help-content h3 {
+    margin: 0 0 10px;
+    color: #111827;
+    font-size: 1.1rem;
+}
+
+.campaign-tag-help-content p {
+    margin: 0 0 10px;
+    color: #374151;
+    line-height: 1.55;
+}
+
+.campaign-tag-help-list {
+    display: grid;
+    gap: 8px;
+    margin: 12px 0 14px;
+    padding-left: 1.25rem;
+    color: #7f1d1d;
+    font-weight: 700;
+}
+
+.campaign-tag-help-content .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.campaign-tag-help-content .primary {
+    min-height: 38px;
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #ff9040, #ff6a3d);
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.campaign-tag-help-content .primary:focus-visible {
+    outline: 2px solid rgba(59, 130, 246, .75);
+    outline-offset: 2px;
 }
 
 
@@ -863,6 +953,128 @@
    キャンペーン詳細モーダル
    ※詳細モーダルを使うなら残す（使わないなら丸ごと削除OK）
 ========================= */
+/* キャンペーン投稿確認モーダル */
+.campaign-confirm-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 5300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 20px;
+    background: rgba(15, 23, 42, .58);
+}
+
+.campaign-confirm-content {
+    box-sizing: border-box;
+    width: min(460px, 94vw);
+    max-height: min(86vh, 520px);
+    margin: 0;
+    padding: 22px;
+    overflow-y: auto;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 20px 54px rgba(15, 23, 42, .26);
+}
+
+.campaign-confirm-content h3 {
+    margin: 0 0 12px;
+    color: #111827;
+    font-size: 1.18rem;
+    line-height: 1.35;
+}
+
+.campaign-confirm-content p {
+    margin: 0 0 12px;
+    color: #374151;
+    line-height: 1.65;
+}
+
+.campaign-confirm-content ul {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 14px;
+    padding-left: 1.25rem;
+    color: #7f1d1d;
+    font-weight: 700;
+}
+
+.campaign-confirm-content .modal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 18px;
+}
+
+.campaign-confirm-content button {
+    min-height: 40px;
+    padding: 8px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    color: #374151;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.campaign-confirm-content button:hover {
+    background: #f9fafb;
+}
+
+.campaign-confirm-content .primary {
+    border-color: transparent;
+    background: #16a34a;
+    color: #fff;
+}
+
+.campaign-confirm-content .primary:hover {
+    background: #15803d;
+}
+
+.campaign-confirm-content .ghost {
+    border-color: #93c5fd;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.campaign-confirm-content .ghost:hover {
+    background: #dbeafe;
+}
+
+.campaign-confirm-content .cancel {
+    border-color: #e5e7eb;
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.campaign-confirm-content button:focus-visible {
+    outline: 2px solid rgba(59, 130, 246, .75);
+    outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+    .campaign-confirm-modal {
+        align-items: flex-end;
+        padding: 12px;
+    }
+
+    .campaign-confirm-content {
+        width: 100%;
+        max-height: 88vh;
+        padding: 18px;
+    }
+
+    .campaign-confirm-content .modal-actions {
+        justify-content: stretch;
+    }
+
+    .campaign-confirm-content button {
+        flex: 1 1 100%;
+    }
+}
+
 .campaign-modal {
     width: min(760px, 94vw);
     max-height: 88vh;
@@ -963,7 +1175,8 @@
    SP調整
 ========================= */
 @media (max-width: 768px) {
-    .campaign-btn.campaign-banner-btn {
+    .campaign-btn.campaign-banner-btn,
+    .event-notice-action.event-notice-btn {
         font-size: .78rem;
         padding: 3px 9px;
     }

@@ -26,6 +26,21 @@
     return s ? s.padStart(5, '0').slice(0, 5) : '';
   }
 
+  /**
+   * Xアカウントをリンク用のユーザーIDへ正規化する
+   */
+  function normalizePosterXUser_(value) {
+    if (typeof window.normX_ === 'function') return window.normX_(value);
+
+    return String(value || '')
+      .trim()
+      .replace(/^https?:\/\/(www\.)?x\.com\//i, '')
+      .replace(/^https?:\/\/(www\.)?twitter\.com\//i, '')
+      .replace(/^@+/, '')
+      .replace(/[\/?#].*$/, '')
+      .toLowerCase();
+  }
+
   function cardImageSrc_(cardOrCd) {
     if (typeof window.getCardImageSrc === 'function') return window.getCardImageSrc(cardOrCd);
     const cd = normCd5_(typeof cardOrCd === 'object' ? (cardOrCd?.cd || cardOrCd?.id) : cardOrCd);
@@ -1082,10 +1097,14 @@
    */
   function hasDetailPayload_(item) {
     if (!item || typeof item !== 'object') return false;
-    return (
-      Object.prototype.hasOwnProperty.call(item, 'deckNote') ||
-      Object.prototype.hasOwnProperty.call(item, 'cardNotes')
-    );
+    if (item.__detailPayloadLoaded === true) return true;
+
+    const deckNote = Object.prototype.hasOwnProperty.call(item, 'deckNote')
+      ? String(item.deckNote || '').trim()
+      : '';
+    const cardNotes = normalizeCardNotes_(item.cardNotes);
+
+    return !!deckNote || cardNotes.length > 0;
   }
 
   /**
@@ -1127,15 +1146,23 @@
     const src = res?.item || res?.post || res?.data || res || {};
     if (!src || typeof src !== 'object') return null;
 
+    const payload = parseJsonObject_(src.payload || src.payloadJSON || src.rawPayload);
     const next = { ...base, ...src };
     next.postId = String(next.postId || base.postId || '').trim();
     if (!next.postId) return null;
 
-    if (!Object.prototype.hasOwnProperty.call(next, 'deckNote')) {
-      next.deckNote = String(next.comment || base.comment || '');
-    }
-    next.cardNotes = normalizeCardNotes_(next.cardNotes);
+    next.deckNote = String(
+      Object.prototype.hasOwnProperty.call(src, 'deckNote')
+        ? src.deckNote
+        : (payload?.deckNote || next.deckNote || next.comment || base.comment || '')
+    );
+    next.cardNotes = normalizeCardNotes_(
+      Object.prototype.hasOwnProperty.call(src, 'cardNotes')
+        ? src.cardNotes
+        : payload?.cardNotes
+    );
     if (!next.cardNotes.length) next.cardNotes = normalizeCardNotes_(base.cardNotes);
+    next.__detailPayloadLoaded = true;
     return next;
   }
 
@@ -2031,7 +2058,7 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
   const tagsUser = tagChipsUser_(item.tagsUser);
 
   const posterXRaw = String(item.posterX || '').trim();
-  const posterXUser = posterXRaw.startsWith('@') ? posterXRaw.slice(1) : posterXRaw;
+  const posterXUser = normalizePosterXUser_(posterXRaw);
   const posterXHtml = posterXUser ? `
     <a class="meta-x"
       href="https://x.com/${encodeURIComponent(posterXUser)}"
@@ -2344,7 +2371,26 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
 }
 
   // 指定した記事要素に対して詳細ペインを表示する
-  async function showDetailPaneForArticle(articleEl) {
+  let detailPaneRequestSeq_ = 0;
+
+  function renderDetailPaneLoading_(paneId, item) {
+    const pane = document.getElementById(paneId || 'postDetailPane');
+    if (!pane) return;
+
+    const title = String(item?.title || '選択したデッキ').trim();
+    pane.setAttribute('aria-busy', 'true');
+    pane.innerHTML = `
+      <div class="post-detail-loading" role="status">
+        <div class="post-detail-loading-spinner" aria-hidden="true"></div>
+        <div class="post-detail-loading-text">
+          <div class="post-detail-loading-title">デッキ詳細を読み込み中です</div>
+          <div class="post-detail-loading-sub">${escHtml_(title)}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function showDetailPaneForArticle(articleEl, opts = {}) {
     const art = articleEl?.closest?.('.post-card') || articleEl;
     if (!art) return;
 
@@ -2354,7 +2400,19 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
     let item = findItemById_(postId);
     if (!item) return;
 
-    if (!hasDetailPayload_(item)) {
+    const requestSeq = ++detailPaneRequestSeq_;
+    const listMode = art.dataset.listMode || (art.closest('#myPostList') ? 'mine' : 'list');
+    const usesMinePane = !!art.closest('#myPostList, #pageMine');
+    const basePaneId = usesMinePane ? 'postDetailPaneMine' : 'postDetailPane';
+
+    document.querySelectorAll('.post-card.is-active').forEach((el) => {
+      el.classList.remove('is-active');
+    });
+    art.classList.add('is-active');
+
+    renderDetailPaneLoading_(basePaneId, item);
+
+    if (!opts.skipFetch && !hasDetailPayload_(item)) {
       try {
         item = await ensurePostDetailData_(postId);
       } catch (e) {
@@ -2362,16 +2420,31 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
       }
     }
 
-    const listMode = art.dataset.listMode || (art.closest('#myPostList') ? 'mine' : 'list');
-    const usesMinePane = !!art.closest('#myPostList, #pageMine');
-    const basePaneId = usesMinePane ? 'postDetailPaneMine' : 'postDetailPane';
+    if (requestSeq !== detailPaneRequestSeq_) return;
 
-    withCardMapForPostDate_(item, () => renderDetailPaneForItem(item, basePaneId, { listMode }));
+    try {
+      await withCardMapForPostDate_(item, () => renderDetailPaneForItem(item, basePaneId, { listMode }));
+    } catch (e) {
+      console.warn('showDetailPaneForArticle: render failed', e);
+      if (requestSeq === detailPaneRequestSeq_) {
+        const pane = document.getElementById(basePaneId);
+        if (pane) {
+          pane.innerHTML = `
+            <div class="post-detail-loading post-detail-loading--error" role="status">
+              <div class="post-detail-loading-text">
+                <div class="post-detail-loading-title">デッキ詳細を表示できませんでした</div>
+                <div class="post-detail-loading-sub">時間をおいてもう一度クリックしてください。</div>
+              </div>
+            </div>
+          `;
+        }
+      }
+    }
 
-    document.querySelectorAll('.post-card.is-active').forEach((el) => {
-      el.classList.remove('is-active');
-    });
-    art.classList.add('is-active');
+    if (requestSeq === detailPaneRequestSeq_) {
+      const pane = document.getElementById(basePaneId);
+      if (pane) pane.removeAttribute('aria-busy');
+    }
   }
 
   function findPostItemById(postId) {
@@ -2518,6 +2591,20 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
 
     const willOpen = !!d.hidden;
     d.hidden = !d.hidden;
+
+    if (willOpen && d.dataset.lazyDetail === '1') {
+      const postId = String(art.dataset.postid || '').trim();
+      const item = findPostItemById(postId);
+      const listMode = art.dataset.listMode || (art.closest('#myPostList') ? 'mine' : 'list');
+      const replacement = item && window.buildCardSp?.(item, { mode: listMode, deferDetail: false });
+      if (replacement) {
+        art.replaceWith(replacement);
+        art = replacement;
+        d = art.querySelector('.post-detail');
+        if (!d) return;
+        d.hidden = false;
+      }
+    }
 
     // 開いた直後だけ、分布グラフを描画する
     if (willOpen && !d.dataset.chartsRendered) {

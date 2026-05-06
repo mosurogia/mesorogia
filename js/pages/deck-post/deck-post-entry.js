@@ -4,47 +4,8 @@
  * - 各モジュールの初期化順を管理
 ================================================== */
 
-// ローダーを経由しない古いキャッシュでも最低限ログを出せるようにする。
-window.debugLog = window.debugLog || function debugLog(...args) {
-  const el = document.getElementById('debug-log') || (() => {
-    const d = document.createElement('div');
-    d.id = 'debug-log';
-    d.style = [
-      'position:fixed',
-      'bottom:0',
-      'left:0',
-      'right:0',
-      'max-height:40%',
-      'overflow:auto',
-      'background:#000',
-      'color:#0f0',
-      'font-size:11px',
-      'z-index:99999',
-    ].join(';');
-    document.body.appendChild(d);
-    return d;
-  })();
-
-  el.insertAdjacentHTML(
-    'beforeend',
-    `<div>${args.map((a) => {
-      try {
-        return JSON.stringify(a);
-      } catch (_) {
-        return String(a);
-      }
-    }).join(' ')}</div>`
-  );
-};
-
-window.addEventListener('error', (e) => {
-  debugLog('❌ JS error', e.message, e.filename, e.lineno);
-});
-
-window.addEventListener('unhandledrejection', (e) => {
-  debugLog('❌ Promise error', e.reason?.message || e.reason);
-});
-
+// 本番画面にはデバッグログを表示しない。
+window.debugLog = window.debugLog || function debugLog() {};
 
 const DeckPostApp = (() => {
   'use strict';
@@ -117,22 +78,12 @@ async function init() {
   }
 
   try {
-    window.DeckPostList?.showListStatusMessage?.('loading', '投稿一覧を読み込み中です…(5秒ほどかかります)');
+    window.DeckPostList?.showListStatusMessage?.('loading', '最新の投稿を読み込み中…');
   } catch (e) {
     debugLog('status表示エラー', e.message);
   }
 
   await waitForPaint_();
-
-  debugLog('③ cardMap読み込み前');
-
-  try {
-    await withTimeout_(window.ensureCardMapLoaded(), 6000, 'cardMap');
-    debugLog('④ cardMap成功', Object.keys(window.cardMap || {}).length);
-  } catch (e) {
-    debugLog('❌ cardMap失敗', e.message);
-    console.error('カードマスタ読み込みに失敗しました', e);
-  }
 
   debugLog('⑤ token設定前');
 
@@ -157,7 +108,20 @@ async function init() {
   window.DeckPostDetail?.init?.();
 
   debugLog('⑩ campaign init前');
-  window.DeckPostCampaign?.init?.();
+  window.setTimeout(() => {
+    window.DeckPostCampaign?.init?.();
+  }, 0);
+
+  debugLog('③ cardMap読み込み前');
+  Promise.resolve()
+    .then(() => withTimeout_(window.ensureCardMapLoaded(), 6000, 'cardMap'))
+    .then(() => {
+      debugLog('④ cardMap成功', Object.keys(window.cardMap || {}).length);
+    })
+    .catch((e) => {
+      debugLog('❌ cardMap失敗', e.message);
+      console.error('カードマスタ読み込みに失敗しました', e);
+    });
 
   debugLog('⑪ hash処理前');
   await openInitialHashPage_();

@@ -832,13 +832,24 @@
     try { localStorage.removeItem('deck_autosave_v1'); } catch (_) {}
   }
 
+  function normalizeRestoreData_(data) {
+    if (!data || typeof data !== 'object') return null;
+    const cardCounts =
+      (data.cardCounts && typeof data.cardCounts === 'object') ? data.cardCounts :
+      (data.cards && typeof data.cards === 'object' && !Array.isArray(data.cards)) ? data.cards :
+      null;
+    if (!cardCounts) return null;
+    return { ...data, cardCounts };
+  }
+
   function loadAutosave_(data) {
-    if (!data || !data.cardCounts) return;
+    const restoreData = normalizeRestoreData_(data);
+    if (!restoreData) return false;
 
     // deck 入れ替え（参照維持 + cd5正規化）
     Object.keys(deck).forEach(k => delete deck[k]);
 
-    const src = (data.cardCounts && typeof data.cardCounts === 'object') ? data.cardCounts : {};
+    const src = restoreData.cardCounts;
     for (const [cdRaw, nRaw] of Object.entries(src)) {
       const n = Number(nRaw) || 0;
       if (n <= 0) continue;
@@ -847,24 +858,26 @@
     }
 
     // 代表カード
-    const rep = data.m ? normCd5(data.m) : (data.representativeCd ? normCd5(data.representativeCd) : null);
+    const rep = restoreData.m ? normCd5(restoreData.m) : (restoreData.representativeCd ? normCd5(restoreData.representativeCd) : null);
     representativeCd = (rep && deck[rep]) ? rep : null;
     window.representativeCd = representativeCd;
 
     // 入力復元
-    window.writeDeckNameInput?.(data.name || '');
-    window.writePostNote?.(data.note || '');
+    window.writeDeckNameInput?.(restoreData.name || '');
+    window.writePostNote?.(restoreData.note || '');
 
     // 投稿者名
     try {
       const nameEl = document.getElementById('poster-name');
-      const restoredName = (typeof data.poster === 'string') ? data.poster : (data.poster?.name || '');
-      if (nameEl) nameEl.value = restoredName || '';
+      if (nameEl && Object.prototype.hasOwnProperty.call(restoreData, 'poster')) {
+        const restoredName = (typeof restoreData.poster === 'string') ? restoreData.poster : (restoreData.poster?.name || '');
+        nameEl.value = restoredName || '';
+      }
     } catch(_) {}
 
     // 貼り付けコード
     try {
-      const v = String(data.shareCode || '');
+      const v = String(restoreData.shareCode || '');
       window.writePastedDeckCode?.(v);
 
       const shareEl = document.getElementById('post-share-code');
@@ -873,13 +886,13 @@
 
     // selectTags / userTags / cardNotes は「存在するAPIがあれば」復元
     try {
-      if (Array.isArray(data.selectTags)) {
+      if (Array.isArray(restoreData.selectTags)) {
         // ✅ deckmaker-post.js の正規API（Set/ArrayどっちでもOK）
         if (typeof window.__dmWriteSelectedTags === 'function') {
-          window.__dmWriteSelectedTags(data.selectTags);
+          window.__dmWriteSelectedTags(restoreData.selectTags);
         } else if (typeof window.writeSelectedTags === 'function') {
           // 旧互換が残ってる環境用
-          window.writeSelectedTags(data.selectTags);
+          window.writeSelectedTags(restoreData.selectTags);
         }
         // UI再描画（存在すれば）
         window.renderPostSelectTags?.();
@@ -888,18 +901,18 @@
     } catch(_) {}
 
     try {
-      if (Array.isArray(data.userTags) && typeof window.writeUserTags === 'function') {
-        window.writeUserTags(data.userTags);
+      if (Array.isArray(restoreData.userTags) && typeof window.writeUserTags === 'function') {
+        window.writeUserTags(restoreData.userTags);
       }
     } catch(_) {}
 
     try {
-      if (data.cardNotes != null) {
+      if (restoreData.cardNotes != null) {
         // 既存の CardNotes モジュールがあるならそれを使う
         if (window.CardNotes?.replace) {
-          window.CardNotes.replace(Array.isArray(data.cardNotes) ? data.cardNotes : []);
+          window.CardNotes.replace(Array.isArray(restoreData.cardNotes) ? restoreData.cardNotes : []);
         } else if (typeof window.writeCardNotes === 'function') {
-          window.writeCardNotes(Array.isArray(data.cardNotes) ? data.cardNotes : []);
+          window.writeCardNotes(Array.isArray(restoreData.cardNotes) ? restoreData.cardNotes : []);
         }
       }
     } catch(_) {}
@@ -913,6 +926,7 @@
     window.updateDeckSummaryDisplay?.();
     window.updateExchangeSummary?.();
     window.updateRepresentativeHighlight?.();
+    return true;
   }
 
   function resetDeckState() {
@@ -977,6 +991,7 @@
   // - saveAutosaveNow / clearAutosave を提供
   // =========================
   const AUTOSAVE_KEY = 'deck_autosave_v1';
+  const POST_DRAFT_KEY = 'deckmaker_post_draft_v1';
 
   let __autosaveDirty = false;       // 変更が起きたときだけ true
   let __autosaveJustLoaded = true;   // 初期描画直後のガード
@@ -1092,6 +1107,39 @@
     }
 
     return payload;
+  }
+
+  function buildPostDraftPayload_() {
+    const payload = buildAutosavePayload_();
+    delete payload.poster;
+    payload.savedAt = new Date().toISOString();
+    payload.version = 1;
+    return payload;
+  }
+
+  function readPostDraftMeta_() {
+    try {
+      const raw = localStorage.getItem(POST_DRAFT_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      return data && typeof data === 'object' ? data : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function savePostDraft_() {
+    const payload = buildPostDraftPayload_();
+    localStorage.setItem(POST_DRAFT_KEY, JSON.stringify(payload));
+    return payload;
+  }
+
+  function restorePostDraft_() {
+    const data = readPostDraftMeta_();
+    if (!data) return null;
+    if (!loadAutosave_(data)) return null;
+    try { scheduleAutosave(); } catch (_) {}
+    return data;
   }
 
   function saveAutosaveNow() {
@@ -1374,6 +1422,10 @@
   window.withDeckBarScrollKept = withDeckBarScrollKept;
   window.scheduleAutosave = scheduleAutosave;
   window.maybeRestoreFromStorage = maybeRestoreFromStorage;
+  window.saveDeckmakerPostDraft = window.saveDeckmakerPostDraft || savePostDraft_;
+  window.restoreDeckmakerPostDraft = window.restoreDeckmakerPostDraft || restorePostDraft_;
+  window.readDeckmakerPostDraft = window.readDeckmakerPostDraft || readPostDraftMeta_;
+  window.canRestoreDeckmakerData = window.canRestoreDeckmakerData || ((data) => !!normalizeRestoreData_(data));
 
   window.setDeckState = window.setDeckState || setDeckState;
   window.resetDeckState = window.resetDeckState || resetDeckState;

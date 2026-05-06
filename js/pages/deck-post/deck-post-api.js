@@ -88,6 +88,34 @@
   // =========================
   // 3) 共通GET(JSONP fallback)
   // =========================
+  function makeRequestError_(base, fallbackCode, fallbackReason) {
+    const err = new Error(base?.message || fallbackReason || 'request failed');
+    err.code = base?.code || fallbackCode;
+    err.reason = base?.reason || fallbackReason;
+    err.status = base?.status;
+    err.statusText = base?.statusText;
+    return err;
+  }
+
+  function fetchWithTimeout_(url, timeoutMs) {
+    const controller = (typeof AbortController === 'function') ? new AbortController() : null;
+    let timer = null;
+
+    if (controller) {
+      timer = setTimeout(() => controller.abort(), timeoutMs);
+    }
+
+    return fetch(url, {
+      method: 'GET',
+      mode: 'cors',
+      credentials: 'omit',
+      cache: 'no-store',
+      signal: controller ? controller.signal : undefined,
+    }).finally(() => {
+      if (timer) clearTimeout(timer);
+    });
+  }
+
   function jsonpRequest(url) {
     return new Promise((resolve, reject) => {
       const cbName =
@@ -97,11 +125,13 @@
 
       const sep = url.includes('?') ? '&' : '?';
       const script = document.createElement('script');
-      script.src = url + sep + 'callback=' + cbName;
+      script.src = url + sep + 'callback=' + encodeURIComponent(cbName);
       script.async = true;
+      script.referrerPolicy = 'no-referrer-when-downgrade';
 
       let cleaned = false;
       let timer = null;
+      let didCallback = false;
 
       const cleanup = () => {
         if (cleaned) return;
@@ -120,9 +150,10 @@
       timer = setTimeout(() => {
         cleanup();
         reject(new Error('JSONP timeout'));
-      }, 10000);
+      }, 30000);
 
       window[cbName] = (data) => {
+        didCallback = true;
         cleanup();
         resolve(data);
       };
@@ -132,42 +163,59 @@
         reject(new Error('JSONP script error'));
       };
 
-      document.body.appendChild(script);
+      script.onload = () => {
+        if (didCallback) return;
+        cleanup();
+        reject(new Error('JSONP callback missing'));
+      };
+
+      (document.head || document.body || document.documentElement).appendChild(script);
     });
   }
 
   async function fetchJsonWithJsonpFallback_(url) {
-    let requestUrl = null;
-    try {
-      requestUrl = new URL(url);
-    } catch (_) {}
-
-    if (requestUrl && requestUrl.hostname === 'script.google.com') {
-      try {
-        return await jsonpRequest(url);
-      } catch (_) {
-        return null;
-      }
-    }
+    let lastError = null;
 
     try {
-      const res = await fetch(url, {
-        method: 'GET',
-        mode: 'cors',
-        credentials: 'omit',
-        cache: 'no-store',
-      });
+      const res = await fetchWithTimeout_(url, 12000);
 
       if (res.ok) {
         const data = await res.json().catch(() => null);
         if (data) return data;
+        lastError = {
+          code: 'INVALID_JSON',
+          reason: 'APIの応答をJSONとして読み取れませんでした。',
+          status: res.status,
+          statusText: res.statusText,
+        };
+      } else {
+        lastError = {
+          code: `HTTP_${res.status}`,
+          reason: 'APIがエラーステータスを返しました。',
+          status: res.status,
+          statusText: res.statusText,
+        };
       }
-    } catch (_) {}
+    } catch (e) {
+      lastError = {
+        code: 'FETCH_FAILED',
+        reason: 'fetchでAPIへ接続できませんでした。',
+        message: e?.message || '',
+      };
+    }
 
     try {
       return await jsonpRequest(url);
-    } catch (_) {
-      return null;
+    } catch (e) {
+      throw makeRequestError_(
+        {
+          message: e?.message || lastError?.message || '',
+          status: lastError?.status,
+          statusText: lastError?.statusText,
+        },
+        'JSONP_FAILED',
+        'JSONPでAPI応答を取得できませんでした。'
+      );
     }
   }
 
@@ -180,24 +228,51 @@
     const limit = Number(opts.limit ?? DEFAULT_PAGE_LIMIT);
     const offset = Number(opts.offset ?? 0);
     const mine = !!opts.mine;
+    const sort = String(opts.sort || opts.sortKey || '').trim();
 
     const qs = new URLSearchParams();
     qs.set('mode', 'list');
     qs.set('limit', String(limit));
     qs.set('offset', String(offset));
     if (mine) qs.set('mine', '1');
+    if (sort) qs.set('sort', sort);
 
     const tk = (window.Auth && window.Auth.token) || opts.token || resolveToken();
     if (tk) qs.set('token', String(tk));
 
     const url = `${GAS_BASE}?${qs.toString()}`;
-    const data = await fetchJsonWithJsonpFallback_(url);
+    let data = null;
+    try {
+      data = await fetchJsonWithJsonpFallback_(url);
+    } catch (e) {
+      return {
+        ok: false,
+        error: e?.code || 'list failed',
+        code: e?.code || 'LIST_REQUEST_FAILED',
+        reason: e?.reason || e?.message || '投稿一覧APIの呼び出しに失敗しました。',
+        status: e?.status,
+        statusText: e?.statusText,
+      };
+    }
+
+    if (data && data.ok === false) {
+      return {
+        ...data,
+        code: data.code || data.error || 'LIST_API_ERROR',
+        reason: data.reason || data.message || data.error || '投稿一覧APIが失敗応答を返しました。',
+      };
+    }
 
     if (data && (Array.isArray(data.items) || data.ok !== undefined || data.error)) {
       return data;
     }
 
-    return { ok: false, error: 'list failed' };
+    return {
+      ok: false,
+      error: 'list failed',
+      code: 'INVALID_LIST_RESPONSE',
+      reason: '投稿一覧APIの応答形式が想定と異なります。',
+    };
   }
 
   // =========================
@@ -210,7 +285,7 @@
     qs.set('mode', 'campaignTags');
 
     const url = `${GAS_BASE}?${qs.toString()}`;
-    const data = await fetchJsonWithJsonpFallback_(url);
+    const data = await fetchJsonWithJsonpFallback_(url).catch(() => null);
 
     return data || { ok: false, error: 'campaignTags failed' };
   }
@@ -231,7 +306,7 @@
     if (tk) qs.set('token', String(tk));
 
     const url = `${GAS_BASE}?${qs.toString()}`;
-    const data = await fetchJsonWithJsonpFallback_(url);
+    const data = await fetchJsonWithJsonpFallback_(url).catch(() => null);
 
     return data || { ok: false, error: 'get failed' };
   }

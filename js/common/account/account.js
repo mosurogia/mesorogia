@@ -219,15 +219,31 @@
 
             <section class="account-data-section account-offline-card-section" id="account-section-offline-cards" aria-labelledby="account-offline-card-title">
             <div class="account-section-head">
-                <h4 id="account-offline-card-title">カードデータ保存</h4>
-                <span class="account-section-status" id="offline-card-save-status">未保存</span>
+                <h4 id="account-offline-card-title">データ・表示の管理</h4>
+                <span class="account-section-status" id="offline-card-save-status">確認用</span>
             </div>
-            <p class="account-offline-card-note">カードデータと全カード画像をこの端末に保存します。画像込みのため通信量が多くなります。</p>
-            <div class="account-section-actions account-offline-card-actions">
-                <button type="button" class="btn ghost" id="offline-card-save-btn" data-offline-cards-save>カードデータを保存</button>
+
+            <div class="account-maintenance-list">
+                <div class="account-maintenance-item">
+                    <div class="account-maintenance-text">
+                        <strong>オフライン用データ</strong>
+                        <span>カード画像などをこの端末に保存します。通信量は多めです。</span>
+                    </div>
+                    <button type="button" class="btn ghost" id="offline-card-save-btn" data-offline-cards-save>
+                        カードデータを保存
+                    </button>
+                </div>
+
+            </div>
+
+            <div class="account-offline-card-status-row">
                 <span class="account-offline-card-progress" id="offline-card-save-progress" aria-live="polite"></span>
+                <span class="account-offline-card-saved-wrap" id="offline-card-save-date-wrap" hidden>
+                    <span class="account-offline-card-saved-at" id="offline-card-save-date"></span>
+                    <button type="button" class="account-offline-card-delete" id="offline-card-clear-btn"
+                        data-offline-cards-clear aria-label="保存済みカード画像を削除" title="保存済みカード画像を削除">🗑</button>
+                </span>
             </div>
-            <p class="account-offline-card-saved-at" id="offline-card-save-date" hidden></p>
             <p class="account-offline-card-error" id="offline-card-save-error" hidden></p>
             </section>
 
@@ -402,7 +418,7 @@
 
             // 開催期間（バナー表示を優先）
             const $range = document.getElementById('campaignDetailRange');
-            const $srcRange = document.getElementById('campaign-banner-range');
+            const $srcRange = document.getElementById('event-notice-range');
             if ($range) {
                 const t = ($srcRange?.textContent || '').trim();
                 $range.textContent = t || '（日程はバナー表示に合わせて運用）';
@@ -410,14 +426,14 @@
 
             // キャンペーン名（バナー表示を優先）
             const $name = document.getElementById('campaignDetailNameInline');
-            const $srcName = document.getElementById('campaign-banner-title');
+            const $srcName = document.getElementById('event-notice-title');
             if ($name) {
                 const n = ($srcName?.textContent || '').trim();
                 $name.textContent = n || 'キャンペーン';
             }
 
             // 対象タグ（とりあえずバナーのタイトルを1個タグとして入れる運用）
-            const n = (document.getElementById('campaign-banner-title')?.textContent || '').trim();
+            const n = (document.getElementById('event-notice-title')?.textContent || '').trim();
             if (n && window.setCampaignDetailTags) window.setCampaignDetailTags([n]);
             }
         });

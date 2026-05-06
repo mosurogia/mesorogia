@@ -7,12 +7,55 @@
 (function () {
   'use strict';
 
+  function setCampaignBannerVisible_(box, visible) {
+    if (!box) return;
+    if (visible) {
+      box.style.setProperty('display', 'block', 'important');
+    } else {
+      box.style.setProperty('display', 'none');
+    }
+  }
+
   // =========================
   // 0) バナー描画
   // =========================
   /**
    * キャンペーンバナー描画
    */
+  function getCampaignTag_(camp, fallbackTitle) {
+    const explicit = String(camp?.tag || camp?.campaignTag || '').trim();
+    if (explicit) return explicit;
+    return String(fallbackTitle || '').trim();
+  }
+
+  function parseCampaignBoundary_(value, isEnd) {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+
+    const m = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+    if (m) {
+      const y = Number(m[1]);
+      const mo = Number(m[2]) - 1;
+      const d = Number(m[3]);
+      return isEnd
+        ? new Date(y, mo, d, 23, 59, 59, 999)
+        : new Date(y, mo, d, 0, 0, 0, 0);
+    }
+
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return null;
+    return date;
+  }
+
+  function isWithinCampaignPeriod_(camp, now = new Date()) {
+    const start = parseCampaignBoundary_(camp?.startAt, false);
+    const end = parseCampaignBoundary_(camp?.endAt, true);
+    const time = now.getTime();
+    if (start && time < start.getTime()) return false;
+    if (end && time > end.getTime()) return false;
+    return !!(start || end);
+  }
+
   async function renderCampaignBanner() {
     const box = document.getElementById('campaign-banner');
     const titleEl = document.getElementById('campaign-banner-title');
@@ -28,13 +71,12 @@
       camp = null;
     }
 
-    const isActive =
-      camp &&
-      (camp.isActive === true || String(camp.isActive) === 'true') &&
-      String(camp.campaignId || '');
+    const hasCampaignId = !!(camp && String(camp.campaignId || '').trim());
+    const isActiveByFlag = !!(camp && (camp.isActive === true || String(camp.isActive) === 'true'));
+    const isActive = hasCampaignId && (isActiveByFlag || isWithinCampaignPeriod_(camp));
 
     if (!isActive) {
-      box.style.display = 'none';
+      setCampaignBannerVisible_(box, false);
       window.__isCampaignRunning = false;
       window.__activeCampaignTag = '';
       return;
@@ -57,7 +99,7 @@
     titleEl.textContent = cleanTitle || 'キャンペーン';
 
     window.__isCampaignRunning = true;
-    window.__activeCampaignTag = cleanTitle || '';
+    window.__activeCampaignTag = getCampaignTag_(camp, cleanTitle);
 
     if (rangeEl) {
       rangeEl.textContent = (!titleHasRange && computedRange) ? computedRange : '';
@@ -66,7 +108,7 @@
     textEl.textContent =
       'デッキを投稿して、キャンペーンに参加しよう！ 詳しい参加条件や報酬は、詳細をチェック！';
 
-    box.style.display = '';
+    setCampaignBannerVisible_(box, true);
   }
 
   // =========================

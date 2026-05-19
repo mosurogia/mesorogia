@@ -1645,9 +1645,48 @@
         .map(btn => btn.dataset[key]);
     }
 
+    function resetOpenedDetailSourceImage_(detailEl) {
+        const sourceCard = detailEl?.__sourceCardElement;
+        const img = sourceCard?.querySelector?.('img');
+        if (!img) return;
+
+        const cd = window.normCd5
+            ? window.normCd5(sourceCard.dataset?.cd || detailEl.dataset?.cd || '')
+            : String(sourceCard.dataset?.cd || detailEl.dataset?.cd || '').padStart(5, '0').slice(0, 5);
+        if (!cd) return;
+
+        const card = (window.cardMap || window.allCardsMap || {})[cd] || { cd };
+        if (typeof window.setCardImageSrc === 'function') {
+            window.setCardImageSrc(img, card);
+        } else {
+            img.src = `img/${cd}.webp`;
+        }
+    }
+
+    function closeOpenedDetailIfSourceHidden_(detailEl, gridRoot) {
+        if (!detailEl) return;
+
+        const cd = window.normCd5
+            ? window.normCd5(detailEl.dataset?.cd || '')
+            : String(detailEl.dataset?.cd || '').padStart(5, '0').slice(0, 5);
+        const escapedCd = window.CSS?.escape ? CSS.escape(cd) : cd.replace(/"/g, '\\"');
+        const sourceCard = detailEl.__sourceCardElement ||
+            (cd ? gridRoot?.querySelector?.(`.card[data-cd="${escapedCd}"]`) : null);
+        if (!sourceCard || !sourceCard.isConnected) {
+            resetOpenedDetailSourceImage_(detailEl);
+            detailEl.remove();
+            return;
+        }
+
+        const style = getComputedStyle(sourceCard);
+        if (style.display === 'none' || style.visibility === 'hidden') {
+            resetOpenedDetailSourceImage_(detailEl);
+            detailEl.remove();
+        }
+    }
+
     function applyFilters() {
-        const opened = document.querySelector('.card-detail.active');
-        if (opened) opened.remove();
+        const openedDetail = document.querySelector('.card-detail.active');
 
         const tokens = window.getKeywordTokens?.('keyword') || [];
         const cvTokens = getCvFilterTokens_();
@@ -1861,6 +1900,8 @@
             if (cd) visibleCardCds.push(cd);
         }
         });
+
+        closeOpenedDetailIfSourceHidden_(openedDetail, gridRoot);
 
         window.__visibleCardCds = visibleCardCds;
 

@@ -33,6 +33,20 @@
         </nav>
 
         <div class="account-modal-body account-data-sections">
+            <section class="account-data-section account-login-required-section" data-account-loggedout>
+            <div class="account-section-head">
+                <h4>アカウント連携</h4>
+                <span class="account-section-status">未ログイン</span>
+            </div>
+            <p class="account-login-required-text">
+                アカウント情報、投稿、カードグループ、所持率、保存デッキ、戦績はログインすると表示できます。
+            </p>
+            <div class="account-login-required-actions">
+                <button type="button" class="cards-auth-btn primary" data-open="authLoginModal" data-auth-entry="login">ログイン</button>
+                <button type="button" class="cards-auth-btn" data-open="authLoginModal" data-auth-entry="signup">新規登録</button>
+            </div>
+            </section>
+
             <section class="account-data-section" id="account-section-account" data-account-section="account">
             <div class="account-section-head">
                 <h4>アカウント情報</h4>
@@ -219,7 +233,7 @@
 
             <section class="account-data-section account-offline-card-section" id="account-section-offline-cards" aria-labelledby="account-offline-card-title">
             <div class="account-section-head">
-                <h4 id="account-offline-card-title">データ・表示の管理</h4>
+                <h4 id="account-offline-card-title">オフラインデータの管理</h4>
                 <span class="account-section-status" id="offline-card-save-status">確認用</span>
             </div>
 
@@ -233,7 +247,6 @@
                         カードデータを保存
                     </button>
                 </div>
-
             </div>
 
             <div class="account-offline-card-status-row">
@@ -244,7 +257,26 @@
                         data-offline-cards-clear aria-label="保存済みカード画像を削除" title="保存済みカード画像を削除">🗑</button>
                 </span>
             </div>
+
             <p class="account-offline-card-error" id="offline-card-save-error" hidden></p>
+            </section>
+
+            <section class="account-data-section account-cache-repair-section" id="account-section-cache-repair" aria-labelledby="account-cache-repair-title">
+            <div class="account-section-head">
+                <h4 id="account-cache-repair-title">不具合修正</h4>
+            </div>
+
+            <div class="account-maintenance-list">
+                <div class="account-maintenance-item">
+                    <div class="account-maintenance-text">
+                        <strong>再読み込み</strong>
+                        <span>古い不要なファイルなどを削除して再読み込みします。<br>カードデータなどは残ります。</span>
+                    </div>
+                    <button type="button" class="btn ghost" data-pwa-cache-repair>
+                        再読み込み
+                    </button>
+                </div>
+            </div>
             </section>
 
             <section class="account-data-section account-site-info-section" id="account-section-site-info" aria-labelledby="account-site-info-title">
@@ -332,6 +364,79 @@
 
     function openModal(id){ const m = document.getElementById(id); if (m) m.style.display = 'flex'; }
     function closeModal(id){ const m = document.getElementById(id); if (m) m.style.display = 'none'; }
+    function getTextByIds_(ids){
+        for (const id of ids) {
+            const text = (document.getElementById(id)?.textContent || '').trim();
+            if (text) return text;
+        }
+        return '';
+    }
+    function cleanCampaignTitle_(title){
+        return String(title || '')
+            .replace(/[（(]\s*\d{4}\/\d{1,2}\/\d{1,2}\s*〜\s*\d{4}\/\d{1,2}\/\d{1,2}\s*[)）]\s*/g, '')
+            .trim();
+    }
+    function formatCampaignDate_(value){
+        if (!value) return '';
+        const date = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        return window.fmtDate?.(date) || `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+    }
+    function getCampaignRangeText_(camp){
+        const visibleRange = getTextByIds_(['event-notice-range', 'campaign-info-range', 'campaign-banner-range']);
+        if (visibleRange) return visibleRange;
+
+        const startText = formatCampaignDate_(camp?.startAt);
+        const endText = formatCampaignDate_(camp?.endAt);
+        if (startText && endText) return `${startText}〜${endText}`;
+        return startText || endText || '';
+    }
+    function getCampaignNameText_(camp){
+        const visibleName = getTextByIds_(['event-notice-title', 'campaign-info-title', 'campaign-banner-title']);
+        if (visibleName) return visibleName;
+        return cleanCampaignTitle_(camp?.title) || 'キャンペーン';
+    }
+    async function prepareCampaignDetailModal_(btn){
+        const prevText = (btn?.textContent || '').trim();
+        if (btn) {
+            btn.disabled = true;
+            btn.setAttribute('aria-busy', 'true');
+            btn.textContent = '読み込み中…';
+        }
+
+        try {
+            let camp = null;
+            try {
+                camp = window.__activeCampaign ||
+                    await (window.fetchActiveCampaign?.({ ttlMs: 60000 }) || Promise.resolve(null));
+                if (camp) window.__activeCampaign = camp;
+            } catch(_) {
+                camp = window.__activeCampaign || null;
+            }
+
+            try {
+                window.setCampaignDetailRules?.(camp);
+            } catch(_) {}
+
+            const campaignName = getCampaignNameText_(camp);
+            const campaignRange = getCampaignRangeText_(camp);
+            const campaignTag = String(camp?.tag || camp?.campaignTag || window.__activeCampaignTag || campaignName || '').trim();
+
+            const $range = document.getElementById('campaignDetailRange');
+            if ($range) $range.textContent = campaignRange || '開催期間はキャンペーン告知をご確認ください';
+
+            const $name = document.getElementById('campaignDetailNameInline');
+            if ($name) $name.textContent = campaignName;
+
+            if (window.setCampaignDetailTags) window.setCampaignDetailTags(campaignTag ? [campaignTag] : []);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.removeAttribute('aria-busy');
+                btn.textContent = prevText || '詳細 ▶';
+            }
+        }
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
         ensureAccountDataModal_();
@@ -403,39 +508,13 @@
                 return;
             }
 
-            if (id) openModal(id);
-
-            // accountDataModal 開いた瞬間に既知情報を流し込み
             if (id === 'campaignDetailModal') {
-            try {
-                const camp =
-                window.__activeCampaign ||
-                await (window.fetchActiveCampaign?.() || Promise.resolve(null));
-
-                // ルール（報酬/抽選文）を描画
-                window.setCampaignDetailRules?.(camp);
-            } catch(_) {}
-
-            // 開催期間（バナー表示を優先）
-            const $range = document.getElementById('campaignDetailRange');
-            const $srcRange = document.getElementById('event-notice-range');
-            if ($range) {
-                const t = ($srcRange?.textContent || '').trim();
-                $range.textContent = t || '（日程はバナー表示に合わせて運用）';
+                await prepareCampaignDetailModal_(btn);
+                openModal(id);
+                return;
             }
 
-            // キャンペーン名（バナー表示を優先）
-            const $name = document.getElementById('campaignDetailNameInline');
-            const $srcName = document.getElementById('event-notice-title');
-            if ($name) {
-                const n = ($srcName?.textContent || '').trim();
-                $name.textContent = n || 'キャンペーン';
-            }
-
-            // 対象タグ（とりあえずバナーのタイトルを1個タグとして入れる運用）
-            const n = (document.getElementById('event-notice-title')?.textContent || '').trim();
-            if (n && window.setCampaignDetailTags) window.setCampaignDetailTags([n]);
-            }
+            if (id) openModal(id);
         });
         });
 

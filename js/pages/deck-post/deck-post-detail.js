@@ -448,6 +448,7 @@
       manaEffEl.textContent = manaState.text;
       manaEffEl.className = manaState.className;
     }
+    renderManaExcludedCards_(paneUid, analysis);
 
     const powerSumEl = document.getElementById(`power-summary-${paneUid}`);
     if (typeof renderDeckTypePowerSummary === 'function') {
@@ -484,6 +485,98 @@
       power: renderedCharts.powerChart,
     };
     return true;
+  }
+
+  function renderManaExcludedCards_(paneUid, analysis) {
+    const noteEl = document.getElementById(`mana-excluded-cards-${paneUid}`);
+    if (!noteEl) return;
+
+    const names = Array.isArray(analysis?.manaExcludedCardNames)
+      ? analysis.manaExcludedCardNames.filter(Boolean)
+      : [];
+
+    noteEl.replaceChildren();
+    if (!names.length) {
+      noteEl.hidden = true;
+      return;
+    }
+
+    const lead = document.createElement('div');
+    lead.className = 'mana-excluded-lead';
+    lead.textContent = '※以下のカードは計算から除外しています';
+
+    const list = document.createElement('ul');
+    list.className = 'mana-excluded-list';
+    names.forEach((name) => {
+      const itemEl = document.createElement('li');
+      itemEl.textContent = name;
+      list.appendChild(itemEl);
+    });
+
+    noteEl.append(lead, list);
+    noteEl.hidden = false;
+  }
+
+  function setPostChartLoading_(paneUid, loading, message = 'グラフ生成中…') {
+    const id = String(paneUid || '').trim();
+    if (!id) return;
+
+    [`costChart-${id}`, `powerChart-${id}`].forEach((canvasId) => {
+      const canvas = document.getElementById(canvasId);
+      const box = canvas?.closest?.('.post-detail-chartcanvas');
+      if (!box) return;
+
+      box.classList.toggle('is-chart-loading', !!loading);
+      let loadingEl = box.querySelector('.post-detail-chart-loading');
+
+      if (loading) {
+        if (!loadingEl) {
+          loadingEl = document.createElement('div');
+          loadingEl.className = 'post-detail-chart-loading';
+          loadingEl.setAttribute('role', 'status');
+          loadingEl.setAttribute('aria-live', 'polite');
+          box.appendChild(loadingEl);
+        }
+        loadingEl.textContent = message;
+        return;
+      }
+
+      loadingEl?.remove();
+    });
+  }
+
+  function schedulePostDistCharts_(item, paneUid, opts = {}) {
+    const id = String(paneUid || '').trim();
+    if (!item || !id) return;
+
+    setPostChartLoading_(id, true);
+
+    const run = () => {
+      window.setTimeout(() => {
+        if (opts.isStale?.()) return;
+
+        let ok = false;
+        try {
+          ok = renderPostDistCharts_(item, id);
+        } catch (e) {
+          console.warn('renderPostDistCharts_ failed:', e);
+        }
+
+        if (ok) {
+          setPostChartLoading_(id, false);
+          opts.onRendered?.();
+        } else {
+          setPostChartLoading_(id, true, 'グラフを表示できませんでした');
+          opts.onFailed?.();
+        }
+      }, 0);
+    };
+
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(run));
+    } else {
+      window.setTimeout(run, 0);
+    }
   }
   function normalizePackEnName_(enName) {
     const s = String(enName || '').trim();
@@ -1077,11 +1170,16 @@
     if (!pid) return null;
 
     const state = window.DeckPostState.getState();
+
+    const pageCacheItems = Object.values(state?.list?.pageCache || {})
+      .flatMap((p) => Array.isArray(p?.items) ? p.items : []);
+
     const pools = [
       state?.mine?.items,
       state?.list?.items,
       state?.list?.allItems,
       state?.list?.filteredItems,
+      pageCacheItems,
     ].filter(Array.isArray);
 
     for (const arr of pools) {
@@ -1097,14 +1195,33 @@
    */
   function hasDetailPayload_(item) {
     if (!item || typeof item !== 'object') return false;
-    if (item.__detailPayloadLoaded === true) return true;
+    return item.__detailPayloadLoaded === true;
+  }
 
-    const deckNote = Object.prototype.hasOwnProperty.call(item, 'deckNote')
-      ? String(item.deckNote || '').trim()
-      : '';
-    const cardNotes = normalizeCardNotes_(item.cardNotes);
+  const detailPayloadCache_ = new Map();
+  const detailPayloadInFlight_ = new Map();
 
-    return !!deckNote || cardNotes.length > 0;
+  function getPostIdFromItem_(itemOrPostId) {
+    if (itemOrPostId && typeof itemOrPostId === 'object') {
+      return String(itemOrPostId.postId || '').trim();
+    }
+    return String(itemOrPostId || '').trim();
+  }
+
+  function getCachedPostDetail_(postId) {
+    const pid = getPostIdFromItem_(postId);
+    if (!pid) return null;
+
+    const current = findItemById_(pid);
+    if (hasDetailPayload_(current)) {
+      detailPayloadCache_.set(pid, current);
+      return current;
+    }
+
+    const cached = detailPayloadCache_.get(pid);
+    if (!cached) return null;
+
+    return mergeFetchedPostIntoState_(pid, cached) || cached;
   }
 
   /**
@@ -1162,6 +1279,8 @@
         : payload?.cardNotes
     );
     if (!next.cardNotes.length) next.cardNotes = normalizeCardNotes_(base.cardNotes);
+    next.hasCardNotes = next.cardNotes.some((row) => row && (row.cd || row.text));
+    next.deckNoteLength = Array.from(String(next.deckNote || '').trim()).length;
     next.__detailPayloadLoaded = true;
     return next;
   }
@@ -1173,19 +1292,75 @@
     const pid = String(postId || '').trim();
     if (!pid) return null;
 
+    const cached = getCachedPostDetail_(pid);
+    if (cached) return cached;
+
+    const inFlight = detailPayloadInFlight_.get(pid);
+    if (inFlight) return await inFlight;
+
     const current = findItemById_(pid);
     if (!current) return null;
     if (hasDetailPayload_(current)) return current;
 
-    const res = await window.DeckPostApi?.apiGetPost?.({ postId: pid });
-    if (!res || res.ok === false) {
-      throw new Error((res && res.error) || 'get failed');
-    }
+    const promise = (async () => {
+      const latest = findItemById_(pid) || current;
+      if (hasDetailPayload_(latest)) {
+        detailPayloadCache_.set(pid, latest);
+        return latest;
+      }
 
-    const normalized = normalizeFetchedPostResponse_(res, current);
-    if (!normalized) return current;
+      const res = await window.DeckPostApi?.apiGetPost?.({ postId: pid });
+      if (!res || res.ok === false) {
+        throw new Error((res && res.error) || 'get failed');
+      }
 
-    return mergeFetchedPostIntoState_(pid, normalized) || normalized;
+      const normalized = normalizeFetchedPostResponse_(res, latest);
+      if (!normalized) return latest;
+
+      const merged = mergeFetchedPostIntoState_(pid, normalized) || normalized;
+      detailPayloadCache_.set(pid, merged);
+      return merged;
+    })().finally(() => {
+      detailPayloadInFlight_.delete(pid);
+    });
+
+    detailPayloadInFlight_.set(pid, promise);
+    return await promise;
+  }
+
+  function prefetchPostDetail_(itemOrPostId, opts = {}) {
+    const pid = getPostIdFromItem_(itemOrPostId);
+    if (!pid) return Promise.resolve(null);
+    if (opts.signal?.stopped) return Promise.resolve(null);
+    return ensurePostDetailData_(pid).catch((err) => {
+      console.warn('prefetchPostDetail_ failed:', err);
+      return null;
+    });
+  }
+
+  async function prefetchPostDetails_(items, opts = {}) {
+    const list = (Array.isArray(items) ? items : [])
+      .map((item) => getPostIdFromItem_(item))
+      .filter(Boolean);
+    const seen = new Set();
+    const ids = list.filter((pid) => {
+      if (seen.has(pid)) return false;
+      seen.add(pid);
+      return true;
+    });
+    const concurrency = Math.max(1, Math.min(2, Number(opts.concurrency || 1) || 1));
+    let index = 0;
+
+    const worker = async () => {
+      while (index < ids.length) {
+        if (opts.signal?.stopped || document.hidden) return;
+        const pid = ids[index];
+        index += 1;
+        await prefetchPostDetail_(pid, opts);
+      }
+    };
+
+    await Promise.all(Array.from({ length: concurrency }, worker));
   }
 
   window.__cardMapCache = window.__cardMapCache || new Map();
@@ -1254,6 +1429,35 @@
 
   async function loadLatestCardMap_() {
     return loadCardMapFile_('cards_latest.json');
+  }
+
+  function hasUsableCardMap_(map) {
+    return !!(map && typeof map === 'object' && Object.keys(map).length);
+  }
+
+  async function runWithTemporaryCardMap_(map, fn) {
+    const prev = window.cardMap;
+    window.cardMap = map;
+    try {
+      return await fn();
+    } finally {
+      window.cardMap = prev;
+    }
+  }
+
+  async function runWithLatestCardMapIfNeeded_(fn) {
+    if (hasUsableCardMap_(window.cardMap)) return fn();
+
+    try {
+      const map = await loadLatestCardMap_();
+      if (hasUsableCardMap_(map)) {
+        return runWithTemporaryCardMap_(map, fn);
+      }
+    } catch (e) {
+      console.warn('runWithLatestCardMapIfNeeded_ failed:', e);
+    }
+
+    return fn();
   }
 
   function cardCompareValue_(card, key) {
@@ -1460,25 +1664,23 @@
 
       // 投稿後の編集で環境がずれないよう、作成日を優先する
       const base = cOk ? c : (uOk ? u : null);
-      if (!base) return fn();
+      if (!base) return runWithLatestCardMapIfNeeded_(fn);
 
       const idx = await loadCardVersionsIndex_();
       const file = pickSnapshotFileForPostDate_(idx?.versions, base);
-      if (!file) return fn();
+      if (!file) return runWithLatestCardMapIfNeeded_(fn);
 
       const map = await loadCardMapFile_(file);
-
-      const prev = window.cardMap;
-      window.cardMap = map;
-      try {
-        return await fn();
-      } finally {
-        window.cardMap = prev;
-      }
+      return runWithTemporaryCardMap_(map, fn);
     } catch (e) {
       console.warn('withCardMapForPostDate_ failed:', e);
-      return fn();
+      return runWithLatestCardMapIfNeeded_(fn);
     }
+  }
+
+  async function buildCardSpWithPostCardMap_(item, opts = {}) {
+    if (!item || typeof window.buildCardSp !== 'function') return null;
+    return withCardMapForPostDate_(item, () => window.buildCardSp(item, opts));
   }
 
   // =========================
@@ -2158,6 +2360,7 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
           </dt>
           <dd class="mana-eff-row">
             <span id="mana-efficiency-${paneUid}" class="mana-eff">-</span>
+            <div id="mana-excluded-cards-${escHtml_(paneUid)}" class="mana-excluded-cards" hidden></div>
             <span class="avg-charge-inline">
               （平均チャージ量：<span id="avg-charge-${escHtml_(paneUid)}">-</span>）
             </span>
@@ -2183,6 +2386,7 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
               <div class="post-detail-chartchips" id="cost-summary-${escHtml_(paneUid)}"></div>
             </div>
             <div class="post-detail-chartcanvas">
+              <div class="post-detail-chart-loading" role="status" aria-live="polite">グラフ生成中…</div>
               <canvas id="costChart-${escHtml_(paneUid)}"></canvas>
             </div>
           </div>
@@ -2193,6 +2397,7 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
               <div class="post-detail-chartchips" id="power-summary-${escHtml_(paneUid)}"></div>
             </div>
             <div class="post-detail-chartcanvas">
+              <div class="post-detail-chart-loading" role="status" aria-live="polite">グラフ生成中…</div>
               <canvas id="powerChart-${escHtml_(paneUid)}"></canvas>
             </div>
           </div>
@@ -2361,11 +2566,7 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
     }
   }
 
-  try {
-    renderPostDistCharts_(item, paneUid);
-  } catch (e) {
-    console.warn('renderPostDistCharts_ failed:', e);
-  }
+  schedulePostDistCharts_(item, paneUid);
 
   refreshDeckPeekOnSp_();
 }
@@ -2421,6 +2622,22 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
     }
 
     if (requestSeq !== detailPaneRequestSeq_) return;
+
+    if (!hasDetailPayload_(item)) {
+      const pane = document.getElementById(basePaneId);
+      if (pane) {
+        pane.innerHTML = `
+          <div class="post-detail-loading post-detail-loading--error" role="status">
+            <div class="post-detail-loading-text">
+              <div class="post-detail-loading-title">デッキ詳細を取得できませんでした</div>
+              <div class="post-detail-loading-sub">時間をおいてもう一度クリックしてください。</div>
+            </div>
+          </div>
+        `;
+        pane.removeAttribute('aria-busy');
+      }
+      return;
+    }
 
     try {
       await withCardMapForPostDate_(item, () => renderDetailPaneForItem(item, basePaneId, { listMode }));
@@ -2491,10 +2708,16 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
 
     const cardMap = window.cardMap || {};
     const entries = window.sortCardEntries?.(Object.entries(deck), cardMap) || Object.entries(deck);
-    return entries.map(([cd, n]) => ({
-      code: normCd5_(cd),
-      count: n,
-    }));
+    return entries.map(([cd, n]) => {
+      const cd5 = normCd5_(cd);
+      const card = cardMap[cd5] || {};
+      const cardForImage = card.cd ? card : { ...card, cd: cd5 };
+      return {
+        code: cd5,
+        count: n,
+        imageSrc: cardImageSrc_(cardForImage),
+      };
+    });
   }
 
   function refreshDeckPeekOnSp_() {
@@ -2531,7 +2754,7 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
     overlay.style.width = '';
   }
 
-  function showPostDeckPeekForArticle_(art, thumbEl) {
+  async function showPostDeckPeekForArticle_(art, thumbEl) {
     if (!window.matchMedia('(max-width: 1023px)').matches) return;
 
     const postId = String(art?.dataset?.postid || '').trim();
@@ -2545,7 +2768,7 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
     if (!body) return;
 
     overlay.dataset.postid = postId;
-    body.innerHTML = buildDeckListHtml(item);
+    body.innerHTML = await withCardMapForPostDate_(item, () => buildDeckListHtml(item));
     overlay.style.display = 'block';
     overlay.style.left = '';
     overlay.style.top = '';
@@ -2590,26 +2813,44 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
     if (!art || !d) return;
 
     const willOpen = !!d.hidden;
-    d.hidden = !d.hidden;
+    if (!willOpen) {
+      d.hidden = true;
+      return;
+    }
+
+    const postId = String(art.dataset.postid || '').trim();
+    const listMode = art.dataset.listMode || (art.closest('#myPostList') ? 'mine' : 'list');
+    let item = postId ? findPostItemById(postId) : null;
+    d.setAttribute('aria-busy', 'true');
 
     if (willOpen && d.dataset.lazyDetail === '1') {
-      const postId = String(art.dataset.postid || '').trim();
-      const item = findPostItemById(postId);
-      const listMode = art.dataset.listMode || (art.closest('#myPostList') ? 'mine' : 'list');
-      const replacement = item && window.buildCardSp?.(item, { mode: listMode, deferDetail: false });
+      if (item && !hasDetailPayload_(item)) {
+        try {
+          item = await ensurePostDetailData_(postId);
+        } catch (err) {
+          console.warn('toggleSpDetail_: apiGetPost failed', err);
+        }
+      }
+
+      if (!item || !hasDetailPayload_(item)) {
+        d.removeAttribute('aria-busy');
+        window.showActionToast?.('詳細情報を取得できませんでした。もう一度お試しください。');
+        return;
+      }
+
+      const replacement = await buildCardSpWithPostCardMap_(item, { mode: listMode, deferDetail: false });
       if (replacement) {
         art.replaceWith(replacement);
         art = replacement;
         d = art.querySelector('.post-detail');
         if (!d) return;
-        d.hidden = false;
+        d.setAttribute('aria-busy', 'true');
       }
     }
 
     // 開いた直後だけ、分布グラフを描画する
-    if (willOpen && !d.dataset.chartsRendered) {
-      const postId = String(art.dataset.postid || '').trim();
-      let item = findPostItemById(postId);
+    if (willOpen && !d.dataset.chartsRendered && !d.dataset.chartsScheduled) {
+      item = item || findPostItemById(postId);
       if (item && !hasDetailPayload_(item)) {
         try {
           item = await ensurePostDetailData_(postId);
@@ -2617,14 +2858,19 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
           console.warn('toggleSpDetail_: apiGetPost failed', err);
         }
 
-        const listMode = art.dataset.listMode || (art.closest('#myPostList') ? 'mine' : 'list');
-        const replacement = item && window.buildCardSp?.(item, { mode: listMode });
+        if (!item || !hasDetailPayload_(item)) {
+          d.removeAttribute('aria-busy');
+          window.showActionToast?.('詳細情報を取得できませんでした。もう一度お試しください。');
+          return;
+        }
+
+        const replacement = await buildCardSpWithPostCardMap_(item, { mode: listMode, deferDetail: false });
         if (replacement) {
           art.replaceWith(replacement);
           art = replacement;
           d = art.querySelector('.post-detail');
           if (!d) return;
-          d.hidden = false;
+          d.setAttribute('aria-busy', 'true');
         }
       }
 
@@ -2637,13 +2883,19 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
       }
 
       if (item && paneUid) {
-        requestAnimationFrame(() => {
-          try {
-            const ok = renderPostDistCharts_(item, paneUid);
-            if (ok && d) d.dataset.chartsRendered = '1';
-          } catch (err) {
-            console.warn('SP renderPostDistCharts_ failed:', err);
-          }
+        d.hidden = false;
+        d.dataset.chartsScheduled = '1';
+        schedulePostDistCharts_(item, paneUid, {
+          isStale: () => !d?.isConnected,
+          onRendered: () => {
+            if (!d) return;
+            d.dataset.chartsRendered = '1';
+            delete d.dataset.chartsScheduled;
+          },
+          onFailed: () => {
+            if (!d) return;
+            delete d.dataset.chartsScheduled;
+          },
         });
       } else {
         console.warn('SP charts skipped: item or paneUid missing', {
@@ -2651,8 +2903,31 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
           hasItem: !!item,
           paneUid,
         });
+        d.hidden = false;
       }
+    } else {
+      d.hidden = false;
     }
+
+    d.removeAttribute('aria-busy');
+  }
+
+  function setSpDetailButtonLoading_(button, loading) {
+    if (!button) return;
+
+    if (loading) {
+      button.dataset.originalText = button.dataset.originalText || button.textContent || '詳細';
+      button.dataset.loading = '1';
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+      button.textContent = '読み込み中…';
+      return;
+    }
+
+    button.dataset.loading = '0';
+    button.disabled = false;
+    button.removeAttribute('aria-busy');
+    button.textContent = button.dataset.originalText || '詳細';
   }
 
   function isElementInViewport_(element) {
@@ -2726,7 +3001,20 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
         render: ({ grid }) => {
           const postId = getDeckPeekContext_().postId;
           const item = postId ? findItemById_(postId) : null;
-          const items = item ? buildDeckPeekEntries_(item) : [];
+          const items = [];
+          if (item) {
+            withCardMapForPostDate_(item, () => buildDeckPeekEntries_(item)).then((nextItems) => {
+              if (postId !== getDeckPeekContext_().postId) return;
+              window.DeckPeekCommon.renderGrid(grid, nextItems, {
+                emptyText: '繝・ャ繧ｭ繝ｪ繧ｹ繝域悴逋ｻ骭ｲ',
+              });
+            }).catch((err) => {
+              console.warn('[deck-post] deck peek render failed:', err);
+              window.DeckPeekCommon.renderGrid(grid, buildDeckPeekEntries_(item), {
+                emptyText: '繝・ャ繧ｭ繝ｪ繧ｹ繝域悴逋ｻ骭ｲ',
+              });
+            });
+          }
           window.DeckPeekCommon.renderGrid(grid, items, {
             emptyText: 'デッキリスト未登録',
           });
@@ -2878,46 +3166,26 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
         hidePostDeckPeek_();
         return;
       }
-      showPostDeckPeekForArticle_(art, thumbBox);
+      await showPostDeckPeekForArticle_(art, thumbBox);
       return;
     }
 
     const detailBtn = e.target.closest('.btn-detail');
     if (detailBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (detailBtn.dataset.loading === '1') return;
+
       const art = detailBtn.closest('.post-card');
       const d = art?.querySelector('.post-detail');
-      if (!art || !d) return;
+      const willOpen = !!d?.hidden;
+      if (willOpen) setSpDetailButtonLoading_(detailBtn, true);
 
-      const willOpen = !!d.hidden;
-      d.hidden = !d.hidden;
-
-      // 開いた瞬間だけ、分布グラフを描画
-      if (willOpen && !d.dataset.chartsRendered) {
-        const postId = String(art.dataset.postid || '').trim();
-        const item = findPostItemById(postId);
-        const charts = art.querySelector('.post-detail-charts');
-        const paneUid = String(charts?.dataset?.paneid || '').trim();
-        const root = art.querySelector('.post-detail-inner');
-
-        if (item && root) {
-          renderDeckAdjustmentNoticeForPostDate_(root, item);
-        }
-
-        if (item && paneUid) {
-          requestAnimationFrame(() => {
-            try {
-              const ok = renderPostDistCharts_(item, paneUid);
-              if (ok) d.dataset.chartsRendered = '1';
-            } catch (err) {
-              console.warn('SP renderPostDistCharts_ failed:', err);
-            }
-          });
-        } else {
-          console.warn('SP charts skipped: item or paneUid missing', {
-            postId,
-            hasItem: !!item,
-            paneUid,
-          });
+      try {
+        await toggleSpDetail_(art);
+      } finally {
+        if (willOpen && detailBtn.isConnected) {
+          setSpDetailButtonLoading_(detailBtn, false);
         }
       }
       return;
@@ -3123,7 +3391,13 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
 
   window.DeckPostDetail.buildDeckNoteHtml = buildDeckNoteHtml;
   window.DeckPostDetail.buildCardNotesHtml = buildCardNotesHtml;
+  window.DeckPostDetail.hasDetailPayload = hasDetailPayload_;
+  window.DeckPostDetail.getCachedPostDetail = getCachedPostDetail_;
+  window.DeckPostDetail.ensurePostDetailData = ensurePostDetailData_;
+  window.DeckPostDetail.prefetchPostDetail = prefetchPostDetail_;
+  window.DeckPostDetail.prefetchPostDetails = prefetchPostDetails_;
   window.DeckPostDetail.renderDetailPaneForItem = renderDetailPaneForItem;
+  window.DeckPostDetail.buildCardSpWithPostCardMap = buildCardSpWithPostCardMap_;
   window.DeckPostDetail.showDetailPaneForArticle = showDetailPaneForArticle;
   window.DeckPostDetail.findPostItemById = findPostItemById;
   window.DeckPostDetail.setupDeckPeekOnSp = setupDeckPeekOnSp;

@@ -69,7 +69,7 @@ window.BASE_PATH = window.BASE_PATH ?? '';
 // =======================================
 window.GAS_API_BASE =
   window.GAS_API_BASE ||
-  'https://script.google.com/macros/s/AKfycbzYQH-cjO4gXjT9CAuZHl3WHUwXYp9I3xXP3CziFrJZi24sgDvEzlJk6qUVEle_2MHj/exec';
+  'https://script.google.com/macros/s/AKfycbyRGYgIlWqLGwJW1fjrYzxKcBMjWlYV1Dtrf_0BZf5UHPUSW0tQweJ3j4S2X4yNVBo/exec';
 
 window.DECKPOST_API_BASE ??= window.GAS_API_BASE;
 window.AUTH_API_BASE     ??= window.GAS_API_BASE;

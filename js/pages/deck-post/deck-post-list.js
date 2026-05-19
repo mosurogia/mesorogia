@@ -19,6 +19,8 @@
   const BACKGROUND_MAX_ERROR_COUNT = 3;
   let allListFetchPromise_ = null;
   let backgroundListController_ = null;
+  let currentPageDetailPrefetchController_ = null;
+  let incrementalFilterController_ = null;
   let listProgressEl_ = null;
   let listBackgroundChain_ = Promise.resolve();
   let lastBackgroundRequestAt_ = 0;
@@ -78,11 +80,14 @@
     if (!el) return;
 
     const loaded = Number(state?.list?.allItems?.length || state?.list?.items?.length || 0);
-    const total = Number(state?.list?.total || loaded || 0);
+    const sourceTotal = getKnownSourceTotal_();
+    const total = Number(sourceTotal || (!hasActivePostFilter_() ? state?.list?.total : 0) || 0);
     const hasCompleteAllItems = total > 0 && loaded >= total;
     if (hasCompleteAllItems && state?.list && !state.list.hasAllItems) {
       state.list.hasAllItems = true;
-      if (Array.isArray(state.list.allItems) && state.list.allItems.length) {
+
+      // フィルター中は検索結果を壊さない
+      if (!hasActivePostFilter_() && !hasListSort_() && Array.isArray(state.list.allItems) && state.list.allItems.length) {
         state.list.filteredItems = state.list.allItems;
       }
     }
@@ -91,10 +96,14 @@
       el.textContent = label;
     } else if (state?.list?.hasAllItems || hasCompleteAllItems) {
       el.textContent = `全投稿読込済み ${loaded} / ${total}`;
+    } else if (incrementalFilterController_ && !incrementalFilterController_.stopped) {
+      el.textContent = total
+        ? `条件に合う投稿を検索中… ${loaded} / ${total}`
+        : `条件に合う投稿を検索中… ${loaded}件読込済み`;
     } else if (backgroundListController_?.stopped) {
       el.textContent = '裏読み停止中';
     } else {
-      el.textContent = `検索準備 ${loaded} / ${total}`;
+      el.textContent = total ? `検索準備 ${loaded} / ${total}` : `検索準備 ${loaded}件読込済み`;
     }
 
     el.hidden = false;
@@ -103,8 +112,13 @@
   function hasCompleteAllItems_() {
     const state = getDeckPostState_();
     const allItems = Array.isArray(state?.list?.allItems) ? state.list.allItems : [];
-    const total = Number(state?.list?.total || 0);
+    const total = Number(getKnownSourceTotal_() || (!hasActivePostFilter_() ? state?.list?.total : 0) || 0);
     return total > 0 && allItems.length >= total;
+  }
+
+  function hasListSort_() {
+    const state = getDeckPostState_();
+    return String(state?.list?.sortKey || 'new') !== 'new';
   }
 
   function normalizeCompleteAllItemsState_() {
@@ -112,11 +126,42 @@
     if (!state?.list || !hasCompleteAllItems_()) return false;
 
     state.list.hasAllItems = true;
+
+    // フィルター中は filteredItems を allItems で上書きしない
+    if (hasActivePostFilter_() || hasListSort_()) {
+      return true;
+    }
+
     state.list.filteredItems = Array.isArray(state.list.allItems) ? state.list.allItems : [];
     state.list.items = state.list.filteredItems;
-    state.list.total = Number(state.list.total || state.list.filteredItems.length || 0);
+    state.list.total = state.list.filteredItems.length;
     state.list.totalPages = Math.max(1, Math.ceil(Math.max(state.list.total, 0) / PAGE_LIMIT));
     return true;
+  }
+
+  function isQuickFilterReady_() {
+    const state = getDeckPostState_();
+    return !!state?.list?.hasAllItems || normalizeCompleteAllItemsState_();
+  }
+
+  function quickFilterButtonAttrs_() {
+    return isQuickFilterReady_()
+      ? 'data-ready="1"'
+      : 'data-ready="0" title="読み込み済みの投稿から検索し、追加取得しながら結果を更新します。"';
+  }
+
+  function updateQuickFilterButtonsReadyState_() {
+    const ready = isQuickFilterReady_();
+    document.querySelectorAll('#postList .btn-filter-poster, #postList .btn-user-tag-search').forEach((btn) => {
+      btn.disabled = false;
+      btn.dataset.ready = ready ? '1' : '0';
+      btn.setAttribute('aria-disabled', 'false');
+      if (ready) {
+        btn.removeAttribute('title');
+      } else {
+        btn.title = '読み込み済みの投稿から検索し、追加取得しながら結果を更新します。';
+      }
+    });
   }
 
   function getPageLoadProgress_(page) {
@@ -131,6 +176,28 @@
     const loaded = Math.max(0, Math.min(expected, allItems.length - start));
 
     return { loaded, expected };
+  }
+
+  function getKnownSourceTotal_() {
+    const state = getDeckPostState_();
+    if (state?.list?.hasAllItems) {
+      return Array.isArray(state.list.allItems) ? state.list.allItems.length : 0;
+    }
+
+    const sourceTotal = Number(state?.list?.sourceTotal || 0);
+    if (Number.isFinite(sourceTotal) && sourceTotal > 0) return sourceTotal;
+
+    const totals = Object.values(state?.list?.pageCache || {})
+      .map((entry) => Number(entry?.total || 0))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    if (totals.length) return Math.max(...totals);
+
+    const rawTotal = Number(state?.list?.total || 0);
+    if (!hasActivePostFilter_() && Number.isFinite(rawTotal) && rawTotal > 0) {
+      return rawTotal;
+    }
+
+    return 0;
   }
 
   function getLoadedPageItems_(page) {
@@ -166,6 +233,88 @@
     return added;
   }
 
+  function getSharedPostIdFromUrl_() {
+    try {
+      const sp = new URLSearchParams(window.location.search || '');
+      return String(sp.get('pid') || sp.get('post') || '').trim();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function getAdoptionCardCdFromUrl_() {
+    try {
+      const sp = new URLSearchParams(window.location.search || '');
+      if (String(sp.get('pid') || sp.get('post') || '').trim()) return '';
+      const raw = String(sp.get('card') || '').trim();
+      const cd = typeof window.normCd5 === 'function'
+        ? window.normCd5(raw)
+        : (raw ? raw.padStart(5, '0').slice(0, 5) : '');
+      return cd && cd !== '00000' ? cd : '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function parseJsonObject_(value) {
+    if (!value) return null;
+    if (typeof value === 'object' && !Array.isArray(value)) return value;
+    if (typeof value !== 'string') return null;
+
+    try {
+      const parsed = JSON.parse(value.trim());
+      return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function parseJsonArray_(value) {
+    if (Array.isArray(value)) return value;
+    if (typeof value !== 'string') return [];
+
+    try {
+      const parsed = JSON.parse(value.trim());
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function normalizeSharedCardNotes_(value) {
+    return parseJsonArray_(value)
+      .map((row) => ({
+        cd: String(row?.cd || row?.id || row?.cardId || ''),
+        text: String(row?.text || row?.note || row?.comment || ''),
+      }))
+      .filter((row) => row.cd || row.text);
+  }
+
+  function normalizeSharedPostResponse_(res, postId) {
+    const src = res?.item || res?.post || res?.data || res || {};
+    if (!src || typeof src !== 'object') return null;
+
+    const payload = parseJsonObject_(src.payload || src.payloadJSON || src.rawPayload);
+    const item = { ...src };
+    item.postId = String(item.postId || postId || '').trim();
+    if (!item.postId) return null;
+
+    item.deckNote = String(
+      Object.prototype.hasOwnProperty.call(src, 'deckNote')
+        ? src.deckNote
+        : (payload?.deckNote || item.deckNote || item.comment || '')
+    );
+    item.cardNotes = normalizeSharedCardNotes_(
+      Object.prototype.hasOwnProperty.call(src, 'cardNotes')
+        ? src.cardNotes
+        : payload?.cardNotes
+    );
+    item.hasCardNotes = item.cardNotes.some((row) => row && (row.cd || row.text));
+    item.deckNoteLength = Array.from(String(item.deckNote || '').trim()).length;
+    item.__detailPayloadLoaded = true;
+    return item;
+  }
+
   /**
    * Xアカウントをリンク用のユーザーIDへ正規化する
    */
@@ -189,15 +338,10 @@
   }
 
   /**
-   * 共有URL時は初回から全件取得に切り替える
+   * 初期表示で全件取得を待つかどうか
    */
   function shouldLoadAllItemsInitially_() {
-    try {
-      const sp = new URLSearchParams(window.location.search || '');
-      return !!(sp.get('pid') || sp.get('post'));
-    } catch (_) {
-      return false;
-    }
+    return false;
   }
 
   /**
@@ -205,19 +349,34 @@
    */
   function updateFilterReadyState_() {
     const btn = document.getElementById('filterBtn');
-    if (!btn) return;
 
     const state = getDeckPostState_();
-    const ready = !!state?.list?.hasAllItems;
-    const loading = !ready && !!allListFetchPromise_;
+    const ready = !!state?.list?.hasAllItems || normalizeCompleteAllItemsState_();
 
-    btn.disabled = false;
-    btn.dataset.loading = loading ? '1' : '0';
-    btn.textContent = 'フィルター';
-    btn.title = ready
-      ? '全投稿を対象にフィルターできます'
-      : '検索準備中です。取得済み分からフィルターを開けます';
-    btn.setAttribute('aria-busy', loading ? 'true' : 'false');
+    if (btn) {
+      btn.disabled = false;
+      btn.dataset.ready = ready ? '1' : '0';
+      btn.dataset.loading = '0';
+      btn.textContent = 'フィルター';
+      btn.title = ready
+        ? '全投稿を対象にフィルターできます'
+        : '読み込み済みの投稿から検索し、追加取得しながら結果を更新します';
+      btn.setAttribute('aria-busy', 'false');
+    }
+
+    const sortSelect = document.getElementById('sortSelect');
+    if (sortSelect) {
+      sortSelect.disabled = !ready;
+      sortSelect.title = ready
+        ? ''
+        : '並び替えは全投稿の読み込み完了後に使えます';
+      if (!ready && sortSelect.value !== 'new') {
+        sortSelect.value = 'new';
+        if (state?.list) state.list.sortKey = 'new';
+      }
+    }
+
+    updateQuickFilterButtonsReadyState_();
     updateListLoadProgress_();
   }
 
@@ -416,7 +575,13 @@
       if (node) frag.appendChild(node);
     });
 
+    if (opts.pendingMessage) {
+      const pending = buildListSearchPendingNode_(opts.pendingMessage, opts.pendingSubText);
+      if (pending) frag.appendChild(pending);
+    }
+
     box.appendChild(frag);
+    updateQuickFilterButtonsReadyState_();
   }
 
   // =========================
@@ -480,6 +645,7 @@
                     class="btn-filter-poster"
                     data-poster="${escapeHtml(item.posterName || item.username || '')}"
                     data-poster-key="${escapeHtml(window.posterKeyFromItem_?.(item) || '')}"
+                    ${quickFilterButtonAttrs_()}
                     aria-label="この投稿者で絞り込む">👤</button>
                 ` : ''}
               </div>
@@ -559,6 +725,7 @@
                       class="btn-filter-poster"
                       data-poster="${escapeHtml(item.posterName || item.username || '')}"
                       data-poster-key="${escapeHtml(window.posterKeyFromItem_?.(item) || '')}"
+                      ${quickFilterButtonAttrs_()}
                       aria-label="この投稿者で絞り込む">🔎</button>
                   ` : ''}
                 </div>
@@ -652,7 +819,9 @@
     const codeNorm = String(item?.shareCode || '').trim();
 
     const codeManageHtml = isMine
-      ? (window.buildDeckCodeBoxHtml_?.(postId, codeNorm) || '')
+      ? (window.DeckPostEditor?.buildDeckCodeBoxHtml_?.(postId, codeNorm)
+        || window.buildDeckCodeBoxHtml_?.(postId, codeNorm)
+        || '')
       : '';
 
     const codeCopyBtnHtml = codeNorm ? `
@@ -728,6 +897,7 @@
                     class="btn-filter-poster"
                     data-poster="${escapeHtml(item.posterName || item.username || '')}"
                     data-poster-key="${escapeHtml(window.posterKeyFromItem_?.(item) || '')}"
+                    ${quickFilterButtonAttrs_()}
                     aria-label="この投稿者で絞り込む">👤</button>
                 ` : ''}
               </div>
@@ -802,6 +972,7 @@
               </dt>
               <dd class="mana-eff-row">
                 <span id="mana-efficiency-${escapeHtml(spPaneId)}" class="mana-eff">-</span>
+                <div id="mana-excluded-cards-${escapeHtml(spPaneId)}" class="mana-excluded-cards" hidden></div>
                 <span class="avg-charge-inline">
                   （平均チャージ量：<span id="avg-charge-${escapeHtml(spPaneId)}">-</span>）
                 </span>
@@ -827,6 +998,7 @@
                   <div class="post-detail-chartchips" id="cost-summary-${escapeHtml(spPaneId)}"></div>
                 </div>
                 <div class="post-detail-chartcanvas">
+                  <div class="post-detail-chart-loading" role="status" aria-live="polite">グラフ生成中…</div>
                   <canvas id="costChart-${escapeHtml(spPaneId)}"></canvas>
                 </div>
               </div>
@@ -837,6 +1009,7 @@
                   <div class="post-detail-chartchips" id="power-summary-${escapeHtml(spPaneId)}"></div>
                 </div>
                 <div class="post-detail-chartcanvas">
+                  <div class="post-detail-chart-loading" role="status" aria-live="polite">グラフ生成中…</div>
                   <canvas id="powerChart-${escapeHtml(spPaneId)}"></canvas>
                 </div>
               </div>
@@ -916,7 +1089,7 @@
       .slice(0, PAGE_LIMIT);
     if (!cards.length) return;
 
-    const run = (deadline = null) => {
+    const run = async (deadline = null) => {
       const startedAt = Date.now();
       while (cards.length) {
         if (deadline?.timeRemaining && deadline.timeRemaining() < 8) break;
@@ -925,10 +1098,13 @@
         const card = cards.shift();
         const postId = String(card?.dataset?.postid || '').trim();
         const item = postId ? findPostItemById(postId) : null;
-        const replacement = item && buildCardSp(item, {
+        const cardOpts = {
           mode: card.dataset.listMode || 'list',
           deferDetail: false,
-        });
+        };
+        const replacement = item && (typeof window.DeckPostDetail?.buildCardSpWithPostCardMap === 'function'
+          ? await window.DeckPostDetail.buildCardSpWithPostCardMap(item, cardOpts)
+          : buildCardSp(item, cardOpts));
         if (replacement && card.isConnected) card.replaceWith(replacement);
       }
 
@@ -1008,6 +1184,36 @@
     `;
   }
 
+  function buildListSearchPendingNode_(text, subText = '') {
+    const node = document.createElement('div');
+    node.className = 'post-list-message post-list-message--loading post-list-message--tail';
+    node.setAttribute('role', 'status');
+    node.setAttribute('aria-live', 'polite');
+
+    const spinner = document.createElement('span');
+    spinner.className = 'post-list-message-spinner';
+    spinner.setAttribute('aria-hidden', 'true');
+
+    const body = document.createElement('span');
+    body.className = 'post-list-message-body';
+
+    const main = document.createElement('span');
+    main.className = 'post-list-message-main';
+    main.textContent = String(text || '条件に合う投稿を検索中…');
+    body.appendChild(main);
+
+    const sub = String(subText || '').trim();
+    if (sub) {
+      const note = document.createElement('span');
+      note.className = 'post-list-message-sub';
+      note.textContent = sub;
+      body.appendChild(note);
+    }
+
+    node.append(spinner, body);
+    return node;
+  }
+
   /**
    * 一覧ステータスメッセージ表示
    */
@@ -1020,6 +1226,16 @@
     const detailsHtml = (type === 'error')
       ? buildListErrorDetailsHtml_(details)
       : buildListLoadingDetailsHtml_(details);
+
+    if (type === 'loading') {
+      const pending = buildListSearchPendingNode_(text, details?.subText || '');
+      if (!pending) return;
+      const detailsWrap = document.createElement('div');
+      detailsWrap.innerHTML = detailsHtml;
+      pending.append(...Array.from(detailsWrap.childNodes));
+      listEl.replaceChildren(pending);
+      return;
+    }
 
     listEl.innerHTML =
       `<div class="${baseClass}${errorClass}">
@@ -1468,7 +1684,8 @@ document.addEventListener('click', async (e) => {
     allListFetchPromise_ = (async () => {
       const limit = FETCH_LIMIT;
       let offset = 0;
-      let total = Number(state?.list?.total || 0);
+      const sharedPostId = getSharedPostIdFromUrl_();
+      let total = sharedPostId ? 0 : Number(state?.list?.total || 0);
       let errorCount = 0;
       let completed = false;
 
@@ -1533,9 +1750,10 @@ document.addEventListener('click', async (e) => {
         mergeListItemsDedup_(items);
         errorCount = 0;
 
-        if (typeof res.total === 'number') {
-          total = res.total;
-        }
+      if (typeof res.total === 'number') {
+        total = res.total;
+        state.list.sourceTotal = total;
+      }
 
         const nextOffset = (res.nextOffset ?? null);
         offset = nextOffset ?? (offset + items.length);
@@ -1560,7 +1778,9 @@ document.addEventListener('click', async (e) => {
       if (shouldUseAllItemsForList_()) {
         state.list.items = state.list.allItems;
       }
-      state.list.filteredItems = state.list.allItems;
+      if (!hasActivePostFilter_() && !hasListSort_()) {
+        state.list.filteredItems = state.list.allItems;
+      }
       state.list.total = total || state.list.allItems.length;
       state.list.hasAllItems = true;
       state.list.pageCache = state.list.pageCache || {};
@@ -1641,6 +1861,7 @@ document.addEventListener('click', async (e) => {
 
     const items = Array.isArray(res.items) ? res.items : [];
     const total = Number(res.total || state.list.total || 0);
+    if (total > 0) state.list.sourceTotal = total;
     const totalPages = Math.max(1, Math.ceil(Math.max(total, 0) / PAGE_LIMIT));
 
     state.list.pageCache = state.list.pageCache || {};
@@ -1673,12 +1894,73 @@ document.addEventListener('click', async (e) => {
     });
   }
 
+  function stopCurrentPageDetailPrefetch_() {
+    if (currentPageDetailPrefetchController_) {
+      currentPageDetailPrefetchController_.stopped = true;
+    }
+  }
+
+  function getPostIdFromPrefetchItem_(item) {
+    return String(item?.postId || '').trim();
+  }
+
+  function showFirstCardAfterDetailPrefetch_(controller, firstPostId) {
+    if (controller?.stopped || !window.matchMedia('(min-width: 1024px)').matches) return;
+    if (document.querySelector('#postList .post-card.is-active')) return;
+
+    const safePostId = window.CSS?.escape
+      ? CSS.escape(firstPostId)
+      : String(firstPostId).replace(/"/g, '\\"');
+    const firstCard = document.querySelector(`#postList .post-card[data-postid="${safePostId}"]`);
+    if (!firstCard || typeof detail().showDetailPaneForArticle !== 'function') return;
+
+    const item = detail().findPostItemById?.(firstPostId);
+    const hasDetail = detail().hasDetailPayload?.(item);
+    detail().showDetailPaneForArticle(firstCard, hasDetail ? { skipFetch: true } : {});
+  }
+
+  function startCurrentPageDetailPrefetch_(pageItems) {
+    stopCurrentPageDetailPrefetch_();
+
+    const items = (Array.isArray(pageItems) ? pageItems : [])
+      .filter((item) => !!getPostIdFromPrefetchItem_(item));
+    if (!items.length) return;
+
+    const D = detail();
+    if (typeof D.prefetchPostDetail !== 'function' || typeof D.prefetchPostDetails !== 'function') {
+      return;
+    }
+
+    const controller = { stopped: false, startedAt: Date.now() };
+    currentPageDetailPrefetchController_ = controller;
+
+    const [firstItem, ...restItems] = items;
+    const firstPostId = getPostIdFromPrefetchItem_(firstItem);
+
+    (async () => {
+      await D.prefetchPostDetail(firstItem, { signal: controller });
+      if (controller.stopped) return;
+
+      showFirstCardAfterDetailPrefetch_(controller, firstPostId);
+
+      if (restItems.length) {
+        await D.prefetchPostDetails(restItems, {
+          concurrency: 1,
+          signal: controller,
+        });
+      }
+    })().catch((e) => {
+      if (!controller.stopped) console.warn('current page detail prefetch failed:', e);
+    });
+  }
+
   function hasActivePostFilter_() {
     const fs = window.PostFilterState || {};
     return (
       !!fs.selectedTags?.size ||
       !!fs.selectedUserTags?.size ||
       !!fs.selectedEnvironmentIds?.size ||
+      !!fs.selectedContentFilters?.size ||
       !!fs.selectedCardCds?.size ||
       !!String(fs.selectedPosterKey || '').trim() ||
       !!String(fs.selectedPoster || '').trim() ||
@@ -1717,6 +1999,7 @@ document.addEventListener('click', async (e) => {
 
     const items = Array.isArray(res.items) ? res.items : [];
     const total = Number(res.total || 0);
+    if (total > 0) state.list.sourceTotal = total;
     const totalPages = Math.max(1, Math.ceil(Math.max(total, 0) / PAGE_LIMIT));
 
     state.list.pageCache = state.list.pageCache || {};
@@ -1727,7 +2010,8 @@ document.addEventListener('click', async (e) => {
       nextOffset: res.nextOffset ?? null,
     };
     state.list.items = items;
-    state.list.filteredItems = items;
+    // filteredItems は全件/フィルター用なので、ページ単位では上書きしない
+    // state.list.filteredItems = items;
     state.list.total = total;
     state.list.totalPages = totalPages;
     state.list.currentPage = Math.min(Math.max(p, 1), state.list.totalPages);
@@ -1752,9 +2036,10 @@ document.addEventListener('click', async (e) => {
 
     if (!state?.list?.hasAllItems) {
       try {
-        await fetchAllList();
+        await applyFilterIncrementally_({ resetToFirstPage });
+        return;
       } catch (e) {
-        console.warn('applySortAndRerenderList fetchAllList failed:', e);
+        console.warn('applySortAndRerenderList incremental filter failed:', e);
       }
     }
 
@@ -1813,11 +2098,412 @@ document.addEventListener('click', async (e) => {
     });
   }
 
+  async function loadInitialSharedPost_(postId) {
+    const pid = String(postId || '').trim();
+    const state = getDeckPostState_();
+    const listEl = document.getElementById('postList');
+    if (!pid || !listEl) return false;
+
+    showListStatusMessage('loading', '共有リンクのデッキを読み込み中…');
+
+    const res = await window.DeckPostApi?.apiGetPost?.({ postId: pid });
+    if (!res || res.ok === false) {
+      throw createListFetchError_((res && res.error) || 'shared post fetch failed', res);
+    }
+
+    const item = normalizeSharedPostResponse_(res, pid);
+    if (!item) {
+      throw createListFetchError_('shared post response invalid', {
+        code: 'INVALID_SHARED_POST_RESPONSE',
+        reason: '共有リンクの投稿データ形式が想定と異なります。',
+      });
+    }
+
+    state.list.allItems = [item];
+    state.list.items = [item];
+    state.list.filteredItems = [item];
+    state.list.total = 1;
+    state.list.totalPages = 1;
+    state.list.currentPage = 1;
+    state.list.nextOffset = 0;
+    state.list.hasAllItems = false;
+    state.list.pageCache = {};
+
+    window.DeckPostFilter?.applySharedPostFromUrl?.();
+    window.DeckPostFilter?.rebuildFilteredItems?.();
+
+    const pageItems = Array.isArray(state.list.filteredItems) && state.list.filteredItems.length
+      ? state.list.filteredItems
+      : [item];
+
+    listEl.replaceChildren();
+    renderPostListInto('postList', pageItems, { mode: 'list' });
+    scheduleVisibleSpDetailWarmup_();
+
+    const total = pageItems.length;
+    const resultCount = document.getElementById('resultCount');
+    if (resultCount) resultCount.textContent = `投稿：${total}件`;
+
+    const resultCountTop = document.getElementById('resultCountTop');
+    if (resultCountTop) resultCountTop.textContent = `投稿：${total}件`;
+
+    updatePagerUI();
+    startCurrentPageDetailPrefetch_(pageItems);
+    startSlowBackgroundListFetch_();
+    scrollToPostListTop_();
+    return true;
+  }
+
+  function renderAdoptionCardSearchResults_(complete = false) {
+    const state = getDeckPostState_();
+    const listEl = document.getElementById('postList');
+    if (!state?.list || !listEl) return;
+
+    const filtered = Array.isArray(state.list.filteredItems) ? state.list.filteredItems : [];
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(Math.max(total, 0) / PAGE_LIMIT));
+    const page = Math.min(Math.max(Number(state.list.currentPage || 1), 1), totalPages);
+    const start = (page - 1) * PAGE_LIMIT;
+    const pageItems = filtered.slice(start, start + PAGE_LIMIT);
+    const showPendingTail = !complete && total > 0 && page === totalPages;
+
+    state.list.total = total;
+    state.list.totalPages = totalPages;
+    state.list.currentPage = page;
+    state.list.items = complete ? state.list.allItems : pageItems;
+
+    listEl.replaceChildren();
+
+    if (!total) {
+      showListStatusMessage(
+        complete ? 'empty' : 'loading',
+        complete ? '条件に合う投稿がありません' : '採用デッキを検索中…'
+      );
+    } else {
+      renderPostListInto('postList', pageItems, {
+        mode: 'list',
+        pendingMessage: showPendingTail ? '採用デッキを検索中…' : '',
+        pendingSubText: showPendingTail ? '追加で条件に合う投稿が見つかる可能性があります。' : '',
+      });
+      scheduleVisibleSpDetailWarmup_();
+      startCurrentPageDetailPrefetch_(pageItems);
+    }
+
+    const resultText = complete ? `投稿：${total}件` : `検索中：${total}件`;
+    const resultCount = document.getElementById('resultCount');
+    if (resultCount) resultCount.textContent = resultText;
+
+    const resultCountTop = document.getElementById('resultCountTop');
+    if (resultCountTop) resultCountTop.textContent = resultText;
+
+    updatePagerUI();
+  }
+
+  function renderIncrementalFilterResults_(complete = false) {
+    const state = getDeckPostState_();
+    const listEl = document.getElementById('postList');
+    if (!state?.list || !listEl) return;
+
+    const filtered = Array.isArray(state.list.filteredItems) ? state.list.filteredItems : [];
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(Math.max(total, 0) / PAGE_LIMIT));
+    let page = Math.min(Math.max(Number(state.list.currentPage || 1), 1), totalPages);
+    const start = (page - 1) * PAGE_LIMIT;
+    let pageItems = filtered.slice(start, start + PAGE_LIMIT);
+    if (total > 0 && !pageItems.length) {
+      page = 1;
+      pageItems = filtered.slice(0, PAGE_LIMIT);
+    }
+    const showPendingTail = !complete && total > 0 && page === totalPages;
+
+    state.list.total = total;
+    state.list.totalPages = totalPages;
+    state.list.currentPage = page;
+    state.list.items = complete ? state.list.allItems : pageItems;
+
+    listEl.replaceChildren();
+
+    if (!total) {
+      showListStatusMessage(
+        complete ? 'empty' : 'loading',
+        complete ? '条件に合う投稿がありません' : '条件に合う投稿を検索中…'
+      );
+    } else {
+      renderPostListInto('postList', pageItems, {
+        mode: 'list',
+        pendingMessage: showPendingTail ? '条件に合う投稿を検索中…' : '',
+        pendingSubText: showPendingTail ? '全投稿の読み込み完了まで結果が増える可能性があります。' : '',
+      });
+      scheduleVisibleSpDetailWarmup_();
+      startCurrentPageDetailPrefetch_(pageItems);
+    }
+
+    const resultText = complete ? `投稿：${total}件` : `検索中：${total}件`;
+    const resultCount = document.getElementById('resultCount');
+    if (resultCount) resultCount.textContent = resultText;
+
+    const resultCountTop = document.getElementById('resultCountTop');
+    if (resultCountTop) resultCountTop.textContent = resultText;
+
+    updatePagerUI();
+  }
+
+  async function revealIncrementalFilterChunk_(items, controller) {
+    const state = getDeckPostState_();
+    const rows = Array.isArray(items) ? items : [];
+    if (!rows.length || !state?.list) return;
+
+    const batchSize = 10;
+    for (let i = 0; i < rows.length && !controller?.stopped; i += batchSize) {
+      const chunk = rows.slice(i, i + batchSize);
+      mergeListItemsDedup_(chunk);
+      window.DeckPostFilter?.rebuildFilteredItems?.();
+      renderIncrementalFilterResults_(false);
+      updateListLoadProgress_(`条件に合う投稿を検索中… ${state.list.allItems.length}件読込済み`);
+
+      if (i + batchSize < rows.length) {
+        await wait_(40);
+      }
+    }
+  }
+
+  async function applyFilterIncrementally_(opts = {}) {
+    const state = getDeckPostState_();
+    if (!state?.list) return [];
+
+    if (incrementalFilterController_) {
+      incrementalFilterController_.stopped = true;
+    }
+    const controller = { stopped: false, startedAt: Date.now() };
+    incrementalFilterController_ = controller;
+
+    stopSlowBackgroundListFetch_('裏読み停止中');
+    stopCurrentPageDetailPrefetch_();
+
+    if (opts.resetToFirstPage !== false) {
+      state.list.currentPage = 1;
+    }
+
+    window.DeckPostFilter?.rebuildFilteredItems?.();
+    renderIncrementalFilterResults_(!!state.list.hasAllItems);
+    window.DeckPostFilter?.updateActiveChipsBar?.();
+
+    if (state.list.hasAllItems || normalizeCompleteAllItemsState_()) {
+      renderIncrementalFilterResults_(true);
+      updateFilterReadyState_();
+      return state.list.filteredItems || [];
+    }
+
+    if (!Array.isArray(state.list.filteredItems) || !state.list.filteredItems.length) {
+      showListStatusMessage('loading', '条件に合う投稿を検索中…', {
+        subText: '全投稿の読み込み完了まで結果が増える可能性があります。',
+      });
+    }
+    const limit = FETCH_LIMIT;
+    let offset = Array.isArray(state.list.allItems) ? state.list.allItems.length : 0;
+    let totalKnown = getKnownSourceTotal_();
+    let renderedOnce = false;
+    let errorCount = 0;
+    let completed = false;
+
+    while (!controller.stopped) {
+      if (offset > 0) {
+        const okToContinue = await waitBackgroundInterval_(controller, BACKGROUND_FETCH_DELAY_MS);
+        if (!okToContinue) break;
+      }
+
+      let res = null;
+      try {
+        res = await enqueueBackgroundListRequest_(() => window.DeckPostApi.apiList({
+          limit,
+          offset,
+          mine: false,
+          sort: 'new',
+        }));
+      } catch (e) {
+        errorCount += 1;
+        if (errorCount < BACKGROUND_MAX_ERROR_COUNT) {
+          console.warn('フィルター用の追加取得を再試行します:', e);
+          continue;
+        }
+        if (renderedOnce || state.list.allItems.length) {
+          console.warn('フィルター用の追加取得に失敗しました:', e);
+          updateListLoadProgress_('一部の投稿だけ表示中です');
+          return state.list.filteredItems || [];
+        }
+        throw createListFetchError_(e?.message || 'filter incremental fetch failed');
+      }
+
+      if (!res || !res.ok) {
+        errorCount += 1;
+        if (errorCount < BACKGROUND_MAX_ERROR_COUNT) {
+          console.warn('フィルター用の追加取得を再試行します:', res);
+          continue;
+        }
+        if (renderedOnce || state.list.allItems.length) {
+          console.warn('フィルター用の追加取得に失敗しました:', res);
+          updateListLoadProgress_('一部の投稿だけ表示中です');
+          return state.list.filteredItems || [];
+        }
+        throw createListFetchError_((res && res.error) || 'filter incremental fetch failed', res);
+      }
+
+      const items = Array.isArray(res.items) ? res.items : [];
+      errorCount = 0;
+      if (typeof res.total === 'number') {
+        totalKnown = res.total;
+        state.list.sourceTotal = totalKnown;
+      }
+
+      await revealIncrementalFilterChunk_(items, controller);
+      renderedOnce = true;
+
+      const loaded = state.list.allItems.length;
+      updateListLoadProgress_(
+        totalKnown
+          ? `条件に合う投稿を検索中… ${loaded} / ${totalKnown}`
+          : `条件に合う投稿を検索中… ${loaded}件読込済み`
+      );
+
+      const nextOffset = res.nextOffset ?? null;
+      if (nextOffset === null || items.length === 0) {
+        completed = true;
+        break;
+      }
+      offset = nextOffset;
+      if (totalKnown && state.list.allItems.length >= totalKnown) {
+        completed = true;
+        break;
+      }
+    }
+
+    if (controller.stopped) return state.list.filteredItems || [];
+    if (!completed) {
+      updateListLoadProgress_('一部の投稿だけ表示中です');
+      return state.list.filteredItems || [];
+    }
+
+    state.list.hasAllItems = true;
+    state.list.items = state.list.allItems;
+    window.DeckPostFilter?.rebuildFilteredItems?.();
+    renderIncrementalFilterResults_(true);
+    updateFilterReadyState_();
+    updateListLoadProgress_(`検索完了 ${state.list.filteredItems.length}件`);
+    return state.list.filteredItems || [];
+  }
+
+  async function loadInitialAdoptionCardSearch_(cd) {
+    const targetCd = String(cd || '').trim();
+    const state = getDeckPostState_();
+    const listEl = document.getElementById('postList');
+    if (!targetCd || !state?.list || !listEl) return false;
+
+    stopSlowBackgroundListFetch_('裏読み停止中');
+    stopCurrentPageDetailPrefetch_();
+
+    state.list.allItems = [];
+    state.list.items = [];
+    state.list.filteredItems = [];
+    state.list.nextOffset = 0;
+    state.list.currentPage = 1;
+    state.list.totalPages = 1;
+    state.list.total = 0;
+    state.list.sourceTotal = 0;
+    state.list.hasAllItems = false;
+    state.list.pageCache = {};
+
+    window.DeckPostFilter?.applyAdoptionCardFromUrl?.();
+    window.DeckPostFilter?.rebuildFilteredItems?.();
+    window.DeckPostFilter?.updateActiveChipsBar?.();
+
+    showListStatusMessage('loading', '採用デッキを検索中…', {
+      subText: '追加で条件に合う投稿が見つかる可能性があります。',
+    });
+    updateListLoadProgress_('採用デッキを検索中…');
+
+    const limit = FETCH_LIMIT;
+    let offset = 0;
+    let totalKnown = 0;
+    let renderedOnce = false;
+
+    while (true) {
+      let res = null;
+      try {
+        res = await window.DeckPostApi.apiList({
+          limit,
+          offset,
+          mine: false,
+          sort: 'new',
+        });
+      } catch (e) {
+        if (renderedOnce) {
+          console.warn('採用デッキ検索の途中取得に失敗しました:', e);
+          updateListLoadProgress_('一部の投稿だけ表示中です');
+          return true;
+        }
+        throw createListFetchError_(e?.message || 'adoption card search failed');
+      }
+
+      if (!res || !res.ok) {
+        if (renderedOnce) {
+          console.warn('採用デッキ検索の途中取得に失敗しました:', res);
+          updateListLoadProgress_('一部の投稿だけ表示中です');
+          return true;
+        }
+        throw createListFetchError_((res && res.error) || 'adoption card search failed', res);
+      }
+
+      const items = Array.isArray(res.items) ? res.items : [];
+      mergeListItemsDedup_(items);
+
+      if (typeof res.total === 'number') {
+        totalKnown = res.total;
+        state.list.sourceTotal = totalKnown;
+      }
+
+      window.DeckPostFilter?.applyAdoptionCardFromUrl?.();
+      window.DeckPostFilter?.rebuildFilteredItems?.();
+
+      const hitCount = Array.isArray(state.list.filteredItems) ? state.list.filteredItems.length : 0;
+      if (hitCount || renderedOnce) {
+        renderedOnce = true;
+        renderAdoptionCardSearchResults_(false);
+      } else {
+        showListStatusMessage('loading', '採用デッキを検索中…', {
+          subText: '追加で条件に合う投稿が見つかる可能性があります。',
+        });
+      }
+
+      const loaded = state.list.allItems.length;
+      updateListLoadProgress_(
+        totalKnown
+          ? `採用デッキを検索中… ${loaded} / ${totalKnown}`
+          : `採用デッキを検索中… ${loaded}件読込済み`
+      );
+
+      const nextOffset = res.nextOffset ?? null;
+      if (nextOffset === null || items.length === 0) break;
+      offset = nextOffset;
+      if (totalKnown && state.list.allItems.length >= totalKnown) break;
+    }
+
+    state.list.hasAllItems = true;
+    state.list.items = state.list.allItems;
+    window.DeckPostFilter?.applyAdoptionCardFromUrl?.();
+    window.DeckPostFilter?.rebuildFilteredItems?.();
+    renderAdoptionCardSearchResults_(true);
+    updateFilterReadyState_();
+    updateListLoadProgress_(`採用デッキ検索完了 ${state.list.filteredItems.length}件`);
+    scrollToPostListTop_();
+    return true;
+  }
+
   /**
    * 一覧用：指定ページを描画
    */
   async function loadListPage(page) {
     const state = getDeckPostState_();
+    stopCurrentPageDetailPrefetch_();
     normalizeCompleteAllItemsState_();
 
     const listEl = document.getElementById('postList');
@@ -1837,14 +2523,16 @@ document.addEventListener('click', async (e) => {
 
     if (!usesAllItems && cachedPage && Array.isArray(cachedPage.items)) {
       state.list.items = cachedPage.items;
-      state.list.filteredItems = cachedPage.items;
+      // filteredItems は全件/フィルター用なので、ページ単位では上書きしない
+      // state.list.filteredItems = cachedPage.items;
       state.list.total = Number(cachedPage.total || state.list.total || cachedPage.items.length);
       state.list.totalPages = Number(cachedPage.totalPages || state.list.totalPages || 1);
       state.list.currentPage = requestedPage;
       state.list.nextOffset = cachedPage.nextOffset ?? null;
     } else if (!usesAllItems && loadedPageItems) {
       state.list.items = loadedPageItems;
-      state.list.filteredItems = loadedPageItems;
+      // filteredItems は全件/フィルター用なので、ページ単位では上書きしない
+      // state.list.filteredItems = loadedPageItems;
       state.list.currentPage = requestedPage;
     }
 
@@ -1888,9 +2576,14 @@ document.addEventListener('click', async (e) => {
     const filtered = Array.isArray(state?.list?.filteredItems)
       ? state.list.filteredItems
       : [];
-    const sourceItems = usesAllItems && state?.list?.hasAllItems
-      ? (Array.isArray(state?.list?.allItems) ? state.list.allItems : filtered)
-      : filtered;
+
+    const cachedItems = Array.isArray(cachedPage?.items)
+      ? cachedPage.items
+      : null;
+
+    const sourceItems = usesAllItems
+      ? filtered
+      : (cachedItems || loadedPageItems || state.list.items || []);
 
     const total = Number(state?.list?.total || sourceItems.length || 0);
     const totalPages = total > 0
@@ -1950,15 +2643,7 @@ document.addEventListener('click', async (e) => {
     updatePagerUI();
     scheduleNextPagePrefetch_(p);
     startSlowBackgroundListFetch_();
-
-    if (window.matchMedia('(min-width: 1024px)').matches) {
-      const firstCard = document.querySelector('#postList .post-card');
-      if (firstCard && typeof detail().showDetailPaneForArticle === 'function') {
-        window.setTimeout(() => {
-          detail().showDetailPaneForArticle(firstCard, { skipFetch: true });
-        }, 0);
-      }
-    }
+    startCurrentPageDetailPrefetch_(pageItems);
 
     scrollToPostListTop_();
   }
@@ -2398,7 +3083,10 @@ document.addEventListener('click', async (e) => {
     if (!window.__deckPostListVisibilityBound) {
       window.__deckPostListVisibilityBound = true;
       document.addEventListener('visibilitychange', () => {
-        if (document.hidden) stopSlowBackgroundListFetch_('裏読み停止中');
+        if (document.hidden) {
+          stopSlowBackgroundListFetch_('裏読み停止中');
+          stopCurrentPageDetailPrefetch_();
+        }
       });
     }
 
@@ -2412,6 +3100,13 @@ document.addEventListener('click', async (e) => {
       state.list.sortKey = sortSelect.value || 'new';
 
       sortSelect.addEventListener('change', () => {
+        const nextSort = sortSelect.value || 'new';
+        if (nextSort !== 'new' && !(state?.list?.hasAllItems || normalizeCompleteAllItemsState_())) {
+          sortSelect.value = 'new';
+          state.list.sortKey = 'new';
+          return;
+        }
+
         state.list.sortKey = sortSelect.value || 'new';
         window.DeckPostList?.applySortAndRerenderList?.();
       });
@@ -2422,8 +3117,12 @@ document.addEventListener('click', async (e) => {
     // =========================
     try {
       state.list.loading = true;
+      const sharedPostId = getSharedPostIdFromUrl_();
+      const adoptionCardCd = getAdoptionCardCdFromUrl_();
       const shouldLoadAllInitially = shouldLoadAllItemsInitially_();
       window.debugLog?.('L0 list init branch', {
+        sharedPostId,
+        adoptionCardCd,
         shouldLoadAllInitially,
         search: window.location.search || '',
         hasAllItems: !!state?.list?.hasAllItems,
@@ -2434,7 +3133,18 @@ document.addEventListener('click', async (e) => {
         '最新の投稿を読み込み中…'
       );
 
-      if (shouldLoadAllInitially) {
+      if (sharedPostId) {
+        window.debugLog?.('L0S shared post apiGetPost前', { sharedPostId });
+        await loadInitialSharedPost_(sharedPostId);
+        window.debugLog?.('L0T shared post apiGetPost後');
+      } else if (adoptionCardCd) {
+        window.debugLog?.('L0C adoption card search前', { adoptionCardCd });
+        await loadInitialAdoptionCardSearch_(adoptionCardCd);
+        window.debugLog?.('L0D adoption card search後', {
+          hasAllItems: !!state?.list?.hasAllItems,
+          filtered: Array.isArray(state?.list?.filteredItems) ? state.list.filteredItems.length : 'not array',
+        });
+      } else if (shouldLoadAllInitially) {
         window.debugLog?.('L0A shared url fetchAllList前');
         await window.DeckPostList?.fetchAllList?.();
         window.debugLog?.('L0B shared url fetchAllList後', {
@@ -2468,6 +3178,7 @@ document.addEventListener('click', async (e) => {
 
         const items = Array.isArray(res.items) ? res.items : [];
         const total = Number(res.total || 0);
+        if (total > 0) state.list.sourceTotal = total;
 
         state.list.allItems = [];
         state.list.items = items;
@@ -2489,11 +3200,13 @@ document.addEventListener('click', async (e) => {
         updateFilterReadyState_();
       }
 
-      // 初回一覧の体感速度とGAS通信の安定性を優先し、マイ投稿はマイページ表示時に読む。
-      // prefetchMineItems_().catch(() => {});
-      // スマホ/タブレットでGAS連続取得が不安定なため、初期表示時の全件先読みは停止する。
-      // prefetchAllListInBackground_();
-      await window.DeckPostList?.loadListPage?.(1);
+      if (!sharedPostId && !adoptionCardCd) {
+        // 初回一覧の体感速度とGAS通信の安定性を優先し、マイ投稿はマイページ表示時に読む。
+        // prefetchMineItems_().catch(() => {});
+        // スマホ/タブレットでGAS連続取得が不安定なため、初期表示時の全件先読みは停止する。
+        // prefetchAllListInBackground_();
+        await window.DeckPostList?.loadListPage?.(1);
+      }
     } catch (e) {
       window.debugLog?.('❌ 初期一覧取得catch', e.message);
       console.error('初期一覧取得に失敗しました', e);
@@ -2625,6 +3338,7 @@ document.addEventListener('click', async (e) => {
   window.stopSlowBackgroundListFetch_ = stopSlowBackgroundListFetch_;
   window.prefetchListPage_ = prefetchListPage_;
   window.mergeListItemsDedup_ = mergeListItemsDedup_;
+  window.applyFilterIncrementally_ = applyFilterIncrementally_;
 
   // 新namespace
   window.DeckPostList = window.DeckPostList || {};
@@ -2641,6 +3355,7 @@ document.addEventListener('click', async (e) => {
   window.DeckPostList.stopSlowBackgroundListFetch = stopSlowBackgroundListFetch_;
   window.DeckPostList.prefetchListPage = prefetchListPage_;
   window.DeckPostList.mergeListItemsDedup = mergeListItemsDedup_;
+  window.DeckPostList.applyFilterIncrementally = applyFilterIncrementally_;
   window.DeckPostList.showListStatusMessage = showListStatusMessage;
   window.DeckPostList.showList = showList;
   window.DeckPostList.showMine = showMine;

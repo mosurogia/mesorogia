@@ -66,6 +66,24 @@
     });
   }
 
+  function updateServiceWorkers_() {
+    if (!navigator.serviceWorker || typeof navigator.serviceWorker.getRegistrations !== 'function') {
+      return Promise.resolve();
+    }
+
+    return navigator.serviceWorker.getRegistrations().then(function (registrations) {
+      return Promise.all(registrations.map(function (registration) {
+        if (!registration || typeof registration.update !== 'function') {
+          return Promise.resolve();
+        }
+
+        return registration.update().catch(function () {
+          return undefined;
+        });
+      }));
+    });
+  }
+
   function reloadWithCacheBust_() {
     var url = new URL(window.location.href);
     url.searchParams.set('cache_reset', String(Date.now()));
@@ -81,7 +99,9 @@
       localStorage.setItem(markerKey, String(Date.now()));
     } catch (_) {}
 
-    return deleteCaches_({ all: !!opts.all, keepRuntime: !!opts.keepRuntime }).then(function () {
+    return updateServiceWorkers_().then(function () {
+      return deleteCaches_({ all: !!opts.all, keepRuntime: !!opts.keepRuntime });
+    }).then(function () {
       if (opts.unregister) {
         return unregisterServiceWorkers_();
       }
@@ -94,11 +114,6 @@
   function autoRepairOldCaches_() {
     var version = getCurrentVersion_();
     var markerKey = CACHE_REPAIR_PREFIX + ':' + version;
-    var wasSwRefreshed = false;
-
-    try {
-      wasSwRefreshed = new URL(window.location.href).searchParams.get('sw_refresh') === version;
-    } catch (_) {}
 
     try {
       if (localStorage.getItem(markerKey)) {
@@ -106,14 +121,10 @@
       }
     } catch (_) {}
 
-    return deleteCaches_({ all: false }).then(function () {
+    return deleteCaches_({ all: false, keepRuntime: true }).then(function () {
       try {
         localStorage.setItem(markerKey, String(Date.now()));
       } catch (_) {}
-
-      if (navigator.serviceWorker.controller && !wasSwRefreshed) {
-        reloadWithCacheBust_();
-      }
     }).catch(function (error) {
       console.warn('PWAキャッシュの更新処理に失敗しました。', error);
     });

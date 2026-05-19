@@ -25,7 +25,6 @@
     const EMPTY_ERRORS = new Set(['unknown mode', 'not implemented', 'unsupported mode']);
     const STATUS_LOCAL_ONLY = '端末内保存';
     const STATUS_ACCOUNT_LINKED = 'アカウント連携中';
-    const STATUS_UNLINKED_LOCAL = '未連携・端末内保存';
     const STATUS_SYNC_ERROR = '同期エラー・端末内保存';
     const MIGRATION_DECISION_SKIPPED = 'skipped';
     const MIGRATION_DECISION_EMPTY_ACCOUNT = 'empty-account';
@@ -45,6 +44,11 @@
     let cardsTabSwitchSeen = false;
     let lastAccountSaveDebug = null;
     let suppressOwnedAutosave = false;
+    let suppressCardGroupsAutosave = false;
+    let lastCardGroupsAutosaveKey = '';
+    let lastAutoSyncAt = 0;
+    let lastAutoSyncKey = '';
+    const AUTO_SYNC_COOLDOWN_MS = 30000;
     const savedDecksStatus = {
         source: 'local',
         state: 'local',
@@ -337,6 +341,18 @@
         }
     }
 
+    function isSameCardGroups_(a, b){
+        return cardGroupsDataKey_(a) === cardGroupsDataKey_(b);
+    }
+
+    function isCardGroupsEditing_(){
+        try {
+            return !!window.CardGroups?.getState?.()?.editingId;
+        } catch(_) {
+            return false;
+        }
+    }
+
     function readCardGroupsMigrationDecision_(){
         return readMigrationDecision_(LS_CARD_GROUPS_MIGRATION_DECISION);
     }
@@ -376,6 +392,23 @@
         } catch(_) {}
     }
 
+    function clearMigrationDecision_(key){
+        const normalizedKey = String(key || '').trim();
+        const keys = normalizedKey === 'all' || !normalizedKey
+            ? [LS_CARD_GROUPS_MIGRATION_DECISION, LS_OWNED_MIGRATION_DECISION, LS_SAVED_DECKS_MIGRATION_DECISION]
+            : normalizedKey === 'cardGroups'
+                ? [LS_CARD_GROUPS_MIGRATION_DECISION]
+                : normalizedKey === 'ownedCards'
+                    ? [LS_OWNED_MIGRATION_DECISION]
+                    : normalizedKey === 'savedDecks'
+                        ? [LS_SAVED_DECKS_MIGRATION_DECISION]
+                        : [];
+
+        keys.forEach((storageKey) => {
+            try { localStorage.removeItem(storageKey); } catch(_) {}
+        });
+    }
+
     function hasCardGroupsMigrationDecision_(groups){
         return hasMigrationDecision_(readCardGroupsMigrationDecision_(), cardGroupsDataKey_(groups));
     }
@@ -385,8 +418,7 @@
             data &&
             data.userId === getUserDecisionId_() &&
             data.key === dataKey &&
-            data.decision &&
-            data.decision !== MIGRATION_DECISION_SKIPPED
+            data.decision
         );
     }
 
@@ -511,28 +543,25 @@
     }
 
     function handleMigrationCancel_(label, writeDecision, data){
-        const startEmptyAccount = confirmStartEmptyAccount_(label);
-        writeDecision(startEmptyAccount ? MIGRATION_DECISION_EMPTY_ACCOUNT : MIGRATION_DECISION_SKIPPED, data);
-        if (startEmptyAccount) {
-            if (label === 'カードグループ') {
-                writeLocalCardGroups_({}, { source: 'account' });
-                refreshCardGroupsDisplay_('account-card-groups-empty-started');
-            } else if (label === '所持率データ') {
-                writeLocalOwned_({}, { source: 'account' });
-                refreshOwnedDisplay_('account-owned-empty-started');
-            } else if (label === '保存デッキリスト') {
-                writeLocalSavedDecks_([], {
-                    silent: true,
-                    source: 'account',
-                    reason: 'account-saved-decks-empty-started',
-                });
-            }
-            setAccountLinked_();
-            return true;
+        writeDecision(MIGRATION_DECISION_EMPTY_ACCOUNT, data);
+        if (writeDecision === writeCardGroupsMigrationDecision_) {
+            writeLocalCardGroups_({}, { source: 'account' });
+            persistAccountViewData_({ cardGroups: {} });
+            refreshCardGroupsDisplay_('account-card-groups-empty-started');
+        } else if (writeDecision === writeOwnedMigrationDecision_) {
+            writeLocalOwned_({}, { source: 'account' });
+            persistAccountViewData_({ ownedCards: {} });
+            refreshOwnedDisplay_('account-owned-empty-started');
+        } else if (writeDecision === writeSavedDecksMigrationDecision_) {
+            writeLocalSavedDecks_([], {
+                silent: true,
+                source: 'account',
+                reason: 'account-saved-decks-empty-started',
+            });
+            persistAccountViewData_({ savedDecks: [] });
         }
-
-        setLocalOnly_();
-        return false;
+        setAccountLinked_();
+        return true;
     }
 
     function queueCardGroupsSync_(remoteGroups, reason){
@@ -638,19 +667,6 @@
         return window.confirm(message);
     }
 
-    function confirmStartEmptyAccount_(label){
-        return confirmOwnedSync_(
-            `${label}はアカウントに保存しませんでした。\n\n` +
-            `アカウント連携を開始しますか？\n\n` +
-            `OK: ローカルとは分けて、空のアカウントデータで始める\n` +
-            `キャンセル: 今は連携せず、この端末だけで使う`
-        );
-    }
-
-    function keepLocalOnlyAfterSkip_(label){
-        setLocalOnly_();
-    }
-
     function isOwnedInteractionReady_(){
         return !authCheckPending && !syncing;
     }
@@ -658,7 +674,7 @@
     const ACCOUNT_LINKED_MESSAGE = STATUS_ACCOUNT_LINKED;
 
     function getLocalOnlyMessage_(){
-        return isLoggedIn_() ? STATUS_UNLINKED_LOCAL : STATUS_LOCAL_ONLY;
+        return STATUS_LOCAL_ONLY;
     }
 
     function setSyncError_(){
@@ -683,11 +699,6 @@
         try { localStorage.setItem(LS_LAST_SYNC, syncedAt); } catch(_) {}
         try { localStorage.setItem(LS_ACTIVE_SOURCE, 'account'); } catch(_) {}
         try { window.OwnedStore?.setAutosave?.(false); } catch(_) {}
-        try {
-            if (window.CardGroups?.replaceAll && window.CardGroups?.exportState) {
-                window.CardGroups.replaceAll(window.CardGroups.exportState(), { source: 'account', persist: false });
-            }
-        } catch(_) {}
         updateStatus_({
             source: 'account',
             state: 'account',
@@ -718,7 +729,12 @@
         try {
             const raw = localStorage.getItem(LS_CARD_GROUPS);
             const groups = normalizeCardGroups_(raw ? JSON.parse(raw) : {});
-            window.CardGroups?.replaceAll?.(groups, { source: 'local', persist: true });
+            suppressCardGroupsAutosave = true;
+            try {
+                window.CardGroups?.replaceAll?.(groups, { source: 'local', persist: true });
+            } finally {
+                suppressCardGroupsAutosave = false;
+            }
         } catch(_) {}
         try {
             const raw = localStorage.getItem('savedDecks');
@@ -895,10 +911,15 @@
 
         try {
             if (window.CardGroups?.replaceAll) {
-                window.CardGroups.replaceAll(normalized, {
-                    source: opts.source,
-                    persist: opts.source === 'account' ? false : true,
-                });
+                suppressCardGroupsAutosave = true;
+                try {
+                    window.CardGroups.replaceAll(normalized, {
+                        source: opts.source,
+                        persist: opts.source === 'account' ? false : true,
+                    });
+                } finally {
+                    suppressCardGroupsAutosave = false;
+                }
                 return;
             }
         } catch(_) {}
@@ -958,6 +979,43 @@
         });
     }
 
+    function restoreGuestDataForMigration_(key){
+        const normalizedKey = String(key || '').trim();
+        let restored = false;
+
+        if (normalizedKey === 'ownedCards' || normalizedKey === 'all' || !normalizedKey) {
+            const guestOwned = readGuestOwned_();
+            if (hasOwnedData_(guestOwned)) {
+                writeLocalOwned_(guestOwned, { source: 'local' });
+                refreshOwnedDisplay_('migration-confirm-restore-local');
+                restored = true;
+            }
+        }
+
+        if (normalizedKey === 'cardGroups' || normalizedKey === 'all' || !normalizedKey) {
+            const guestGroups = readGuestCardGroups_();
+            if (hasCardGroupsData_(guestGroups)) {
+                writeLocalCardGroups_(guestGroups, { source: 'local' });
+                refreshCardGroupsDisplay_('migration-confirm-restore-local');
+                restored = true;
+            }
+        }
+
+        if (normalizedKey === 'savedDecks' || normalizedKey === 'all' || !normalizedKey) {
+            const guestDecks = readGuestSavedDecks_();
+            if (hasSavedDecksData_(guestDecks)) {
+                writeLocalSavedDecks_(guestDecks, {
+                    silent: true,
+                    source: 'local',
+                    reason: 'migration-confirm-restore-local',
+                });
+                restored = true;
+            }
+        }
+
+        return restored;
+    }
+
     function refreshCardGroupsDisplay_(reason){
         try {
             window.dispatchEvent(new CustomEvent('card-groups:data-replaced', {
@@ -983,12 +1041,23 @@
         const isManual = !!opts.isManual;
         const currentLocalGroups = readLocalCardGroups_();
         const guestGroups = readGuestCardGroups_();
-        const localGroups = hasCardGroupsData_(currentLocalGroups) ? currentLocalGroups : guestGroups;
+        const localGroups = hasCardGroupsData_(currentLocalGroups)
+            ? currentLocalGroups
+            : (isAccountSourceActive_() ? {} : guestGroups);
         const remoteGroups = normalizeCardGroups_(remoteAppData?.cardGroups);
         const hasLocalGroups = hasCardGroupsData_(localGroups);
         const hasRemoteGroups = hasCardGroupsData_(remoteGroups);
 
         if (hasRemoteGroups) {
+            if (isSameCardGroups_(currentLocalGroups, remoteGroups)) {
+                return { groups: remoteGroups, saveRemote: false, same: true };
+            }
+
+            // 編集中の上書きは選択状態と編集中カードを消すため、次回同期まで待つ。
+            if (isCardGroupsEditing_()) {
+                return { groups: currentLocalGroups, saveRemote: false, pending: true, reason: 'card-groups-editing-skip-restore' };
+            }
+
             writeLocalCardGroups_(remoteGroups, { source: 'account' });
             refreshCardGroupsDisplay_('account-card-groups-restored');
             return { groups: remoteGroups, saveRemote: false, restored: true };
@@ -1003,16 +1072,22 @@
 
                 const cardGroupsDecision = isManual ? '' : getCardGroupsMigrationDecision_(localGroups);
                 if (cardGroupsDecision === MIGRATION_DECISION_EMPTY_ACCOUNT) {
+                    writeLocalCardGroups_({}, { source: 'account' });
+                    persistAccountViewData_({ cardGroups: {} });
+                    setAccountLinked_();
                     return { groups: {}, saveRemote: false, skipped: true, reason: 'card-groups-empty-account-recently' };
                 }
                 if (cardGroupsDecision === MIGRATION_DECISION_SKIPPED) {
-                    setLocalOnly_();
-                    return { groups: localGroups, saveRemote: false, skipped: true, reason: 'card-groups-migration-skipped-recently' };
+                    handleMigrationCancel_('カードグループ', writeCardGroupsMigrationDecision_, localGroups);
+                    return { groups: {}, saveRemote: false, skipped: true, reason: 'card-groups-skipped-converted-empty-account' };
                 }
 
                 if (!isCardsTabOpen_() && !isManual) {
                     queueCardGroupsSync_(remoteGroups, isLoginSync ? 'login' : 'manual');
-                    return { groups: localGroups, saveRemote: false, pending: true };
+                    writeLocalCardGroups_({}, { source: 'account' });
+                    persistAccountViewData_({ cardGroups: {} });
+                    setAccountLinked_();
+                    return { groups: {}, saveRemote: false, pending: true };
                 }
 
                 const ok = confirmCardGroupsSync_(getCardGroupsSyncConfirmMessage_());
@@ -1027,7 +1102,10 @@
                 return { groups: localGroups, saveRemote: false, skipped: true };
             }
 
-            return { groups: localGroups, saveRemote: false, skipped: true };
+            writeLocalCardGroups_({}, { source: 'account' });
+            persistAccountViewData_({ cardGroups: {} });
+            setAccountLinked_();
+            return { groups: {}, saveRemote: false, skipped: true, reason: 'card-groups-empty-account-started' };
         }
 
         return { groups: localGroups, saveRemote: false, empty: true };
@@ -1066,22 +1144,42 @@
 
         if (!hasRemoteDecks && hasLocalDecks) {
             if (!isManual && !isLoginSync) {
-                updateSavedDecksStatus_({ source: 'local', state: 'local', message: getLocalOnlyMessage_() });
-                return { decks: localDecks, saveRemote: false, skipped: true };
+                writeLocalSavedDecks_([], {
+                    silent: true,
+                    source: 'account',
+                    reason: 'account-saved-decks-empty-started',
+                });
+                persistAccountViewData_({ savedDecks: [] });
+                setAccountLinked_();
+                return { decks: [], saveRemote: false, skipped: true, reason: 'saved-decks-empty-account-started' };
             }
 
             const savedDecksDecision = isManual ? '' : getSavedDecksMigrationDecision_(localDecks);
             if (savedDecksDecision === MIGRATION_DECISION_EMPTY_ACCOUNT) {
+                writeLocalSavedDecks_([], {
+                    silent: true,
+                    source: 'account',
+                    reason: 'account-saved-decks-empty-recently',
+                });
+                persistAccountViewData_({ savedDecks: [] });
+                setAccountLinked_();
                 return { decks: [], saveRemote: false, skipped: true, reason: 'saved-decks-empty-account-recently' };
             }
             if (savedDecksDecision === MIGRATION_DECISION_SKIPPED) {
-                setLocalOnly_();
-                return { decks: localDecks, saveRemote: false, skipped: true, reason: 'saved-decks-migration-skipped-recently' };
+                handleMigrationCancel_('保存デッキリスト', writeSavedDecksMigrationDecision_, localDecks);
+                return { decks: [], saveRemote: false, skipped: true, reason: 'saved-decks-skipped-converted-empty-account' };
             }
 
             if (!isDeckmakerPage_() && !isManual) {
                 queueSavedDecksSync_(localDecks, isLoginSync ? 'login' : 'manual');
-                return { decks: localDecks, saveRemote: false, pending: true };
+                writeLocalSavedDecks_([], {
+                    silent: true,
+                    source: 'account',
+                    reason: 'account-saved-decks-pending-empty-view',
+                });
+                persistAccountViewData_({ savedDecks: [] });
+                setAccountLinked_();
+                return { decks: [], saveRemote: false, pending: true };
             }
 
             const ok = confirmOwnedSync_(getSavedDecksSyncConfirmMessage_());
@@ -1093,13 +1191,7 @@
             if (handleMigrationCancel_('保存デッキリスト', writeSavedDecksMigrationDecision_, localDecks)) {
                 return { decks: [], saveRemote: false, skipped: true, reason: 'saved-decks-empty-account-started' };
             }
-            updateSavedDecksStatus_({
-                source: 'local',
-                state: 'local',
-                syncing: false,
-                message: getLocalOnlyMessage_(),
-            });
-            return { decks: localDecks, saveRemote: false, skipped: true };
+            return { decks: [], saveRemote: false, skipped: true };
         }
 
         if (hasRemoteDecks && hasLocalDecks) {
@@ -1118,8 +1210,13 @@
             }
 
             if (!isManual) {
-                updateSavedDecksStatus_({ source: 'local', state: 'local', message: getLocalOnlyMessage_() });
-                return { decks: localDecks, saveRemote: false, skipped: true, reason: 'saved-decks-conflict-manual-required' };
+                writeLocalSavedDecks_(remoteDecks, {
+                    silent: true,
+                    source: 'account',
+                    reason: 'account-saved-decks-conflict-auto-restored',
+                });
+                setAccountLinked_();
+                return { decks: remoteDecks, saveRemote: false, skipped: true, reason: 'saved-decks-conflict-account-restored' };
             }
 
             const useLocal = confirmOwnedSync_(
@@ -1141,9 +1238,13 @@
                 return { decks: remoteDecks, saveRemote: false, restored: true };
             }
 
-            setLocalOnly_();
-            updateSavedDecksStatus_({ source: 'local', state: 'local', message: getLocalOnlyMessage_() });
-            return { decks: localDecks, saveRemote: false, skipped: true, reason: 'saved-decks-conflict-cancelled' };
+            writeLocalSavedDecks_(remoteDecks, {
+                silent: true,
+                source: 'account',
+                reason: 'account-saved-decks-conflict-kept',
+            });
+            setAccountLinked_();
+            return { decks: remoteDecks, saveRemote: false, skipped: true, reason: 'saved-decks-conflict-account-kept' };
         }
 
         return { decks: [], saveRemote: false, empty: true };
@@ -1179,6 +1280,30 @@
         } catch(_) {
             return '';
         }
+    }
+
+    function isAccountSourceActive_(){
+        return readActiveSource_() === 'account';
+    }
+
+    function persistAccountViewData_(patch = {}){
+        try {
+            if (hasOwn_(patch, 'ownedCards')) {
+                localStorage.setItem(LS_OWNED, JSON.stringify(normalizeOwnedMap_(patch.ownedCards)));
+            }
+        } catch(_) {}
+
+        try {
+            if (hasOwn_(patch, 'cardGroups')) {
+                localStorage.setItem(LS_CARD_GROUPS, JSON.stringify(normalizeCardGroups_(patch.cardGroups)));
+            }
+        } catch(_) {}
+
+        try {
+            if (hasOwn_(patch, 'savedDecks')) {
+                localStorage.setItem('savedDecks', JSON.stringify(normalizeSavedDecks_(patch.savedDecks)));
+            }
+        } catch(_) {}
     }
 
     function buildDebugSummary_(data){
@@ -1297,18 +1422,18 @@
         }
 
         updateStatus_({
-            source: accountOwnedLinkEnabled ? 'account' : 'local',
-            state: accountOwnedLinkEnabled ? 'account' : 'local',
+            source: 'account',
+            state: 'account',
             syncing: false,
             lastSync,
-            message: accountOwnedLinkEnabled ? STATUS_ACCOUNT_LINKED : STATUS_UNLINKED_LOCAL,
+            message: STATUS_ACCOUNT_LINKED,
         });
         updateSavedDecksStatus_({
-            source: accountOwnedLinkEnabled ? 'account' : 'local',
-            state: accountOwnedLinkEnabled ? 'account' : 'local',
+            source: 'account',
+            state: 'account',
             syncing: false,
             lastSync,
-            message: accountOwnedLinkEnabled ? STATUS_ACCOUNT_LINKED : STATUS_UNLINKED_LOCAL,
+            message: STATUS_ACCOUNT_LINKED,
         });
     }
 
@@ -1359,10 +1484,10 @@
         }
         if (!accountOwnedLinkEnabled && !opts.confirmed) {
             updateStatus_({
-                source: 'local',
-                state: 'local',
+                source: 'account',
+                state: 'account',
                 syncing: false,
-                message: STATUS_UNLINKED_LOCAL,
+                message: STATUS_ACCOUNT_LINKED,
             });
             return { ok: false, skipped: true, reason: 'account-write-not-confirmed' };
         }
@@ -1476,7 +1601,9 @@
         if (!accountOwnedLinkEnabled) {
             return { ok: false, skipped: true, reason: 'account-link-disabled' };
         }
-        return saveAccountAppData_({ cardGroups: readLocalCardGroups_() });
+        const groups = readLocalCardGroups_();
+        lastCardGroupsAutosaveKey = cardGroupsDataKey_(groups);
+        return saveAccountAppData_({ cardGroups: groups });
     }
 
     async function saveSavedDecksToAccount_(){
@@ -1488,6 +1615,32 @@
 
     function isCardGroupsEditable_(){
         return !syncing;
+    }
+
+    async function requestMigrationConfirm_(key = 'all'){
+        if (!isLoggedIn_()) return { ok: false, skipped: true, reason: 'login-required' };
+
+        clearMigrationDecision_(key);
+        accountOwnedLinkEnabled = false;
+
+        const restored = restoreGuestDataForMigration_(key);
+        if (!restored) {
+            setAccountLinked_();
+            return { ok: false, skipped: true, reason: 'no-guest-data' };
+        }
+
+        return await syncAppDataWithAccount('manual-badge-click');
+    }
+
+    function hasGuestMigrationData_(key = 'all'){
+        const normalizedKey = String(key || '').trim();
+        if (normalizedKey === 'ownedCards') return hasOwnedData_(readGuestOwned_());
+        if (normalizedKey === 'cardGroups') return hasCardGroupsData_(readGuestCardGroups_());
+        if (normalizedKey === 'savedDecks') return hasSavedDecksData_(readGuestSavedDecks_());
+
+        return hasOwnedData_(readGuestOwned_()) ||
+            hasCardGroupsData_(readGuestCardGroups_()) ||
+            hasSavedDecksData_(readGuestSavedDecks_());
     }
 
     async function syncAppDataWithAccount(reason = 'manual'){
@@ -1521,7 +1674,9 @@
         try {
             const localOwnedRaw = readLocalOwned_();
             const guestOwned = readGuestOwned_();
-            const localOwned = hasOwnedData_(localOwnedRaw) ? localOwnedRaw : guestOwned;
+            const localOwned = hasOwnedData_(localOwnedRaw)
+                ? localOwnedRaw
+                : (isAccountSourceActive_() ? {} : guestOwned);
             const hasLocalOwned = hasOwnedData_(localOwned);
             const remoteRes = await fetchAccountAppData_();
 
@@ -1557,22 +1712,29 @@
 
                 const ownedDecision = isManual ? '' : getOwnedMigrationDecision_(localOwned);
                 if (ownedDecision === MIGRATION_DECISION_EMPTY_ACCOUNT) {
+                    writeLocalOwned_({}, { source: 'account' });
+                    persistAccountViewData_({ ownedCards: {} });
+                    setAccountLinked_();
                     return { ok: true, skipped: true, reason: 'owned-empty-account-recently' };
                 }
                 if (ownedDecision === MIGRATION_DECISION_SKIPPED) {
-                    setLocalOnly_();
-                    return { ok: false, skipped: true, reason: 'owned-migration-skipped-recently' };
+                    handleMigrationCancel_('所持率データ', writeOwnedMigrationDecision_, localOwned);
+                    return { ok: true, skipped: true, reason: 'owned-skipped-converted-empty-account' };
                 }
 
                 if (!isManual && !isLoginSync) {
-                    setLocalOnly_();
-                    return { ok: false, skipped: true, reason: 'local-to-account-requires-manual-confirm' };
+                    writeLocalOwned_({}, { source: 'account' });
+                    persistAccountViewData_({ ownedCards: {} });
+                    setAccountLinked_();
+                    return { ok: true, skipped: true, reason: 'local-to-account-empty-account-started' };
                 }
 
                 if (!isCheckerTabOpen_() && !isManual) {
                     queueOwnedSync_(localOwned, isLoginSync ? 'login' : 'manual');
-                    setLocalOnly_();
-                    return { ok: false, pending: true, reason: 'owned-sync-pending-until-checker-tab' };
+                    writeLocalOwned_({}, { source: 'account' });
+                    persistAccountViewData_({ ownedCards: {} });
+                    setAccountLinked_();
+                    return { ok: true, pending: true, reason: 'owned-sync-pending-until-checker-tab' };
                 }
 
                 const ok = confirmOwnedSync_(getOwnedSyncConfirmMessage_());
@@ -1588,8 +1750,11 @@
 
             if (hasRemoteOwned && !hasLocalOwned) {
                 if (!isManual && !isLoginSync) {
-                    setLocalOnly_();
-                    return { ok: false, skipped: true, reason: 'account-to-local-requires-login-or-manual' };
+                    writeLocalOwned_(remoteOwned, { source: 'account' });
+                    if (remoteOwnedNeedsMigration) pendingOwnedAccountSave = true;
+                    refreshOwnedDisplay_('account-owned-restored');
+                    setAccountLinked_();
+                    return { ok: true, restored: true, reason: 'account-to-local-auto-restored' };
                 }
 
                 if (isLoginSync) {
@@ -1608,8 +1773,11 @@
                     'アカウントに保存済みの所持データがあります。この端末に反映しますか？\nOK: アカウントの所持データを読み込み\nキャンセル: 連携せず、この端末だけで保存'
                 );
                 if (!ok) {
-                    setLocalOnly_();
-                    return { ok: false, skipped: true, reason: 'user-cancelled-account-to-local' };
+                    writeLocalOwned_(remoteOwned, { source: 'account' });
+                    if (remoteOwnedNeedsMigration) pendingOwnedAccountSave = true;
+                    refreshOwnedDisplay_('account-owned-restored');
+                    setAccountLinked_();
+                    return { ok: true, skipped: true, reason: 'user-cancelled-account-to-local-account-kept' };
                 }
 
                 writeLocalOwned_(remoteOwned, { source: 'account' });
@@ -1659,8 +1827,11 @@
                 }
 
                 if (!isManual) {
-                    setLocalOnly_();
-                    return { ok: false, skipped: true, reason: 'conflict-requires-manual-confirm' };
+                    writeLocalOwned_(remoteOwned, { source: 'account' });
+                    if (remoteOwnedNeedsMigration) pendingOwnedAccountSave = true;
+                    refreshOwnedDisplay_('account-owned-restored');
+                    setAccountLinked_();
+                    return { ok: true, restored: true, reason: 'conflict-account-auto-restored' };
                 }
 
                 const useLocal = confirmOwnedSync_(
@@ -1685,8 +1856,11 @@
                     return { ok: true, restored: true, reason };
                 }
 
-                setLocalOnly_();
-                return { ok: false, skipped: true, reason: 'user-cancelled-conflict' };
+                writeLocalOwned_(remoteOwned, { source: 'account' });
+                if (remoteOwnedNeedsMigration) pendingOwnedAccountSave = true;
+                refreshOwnedDisplay_('account-owned-restored');
+                setAccountLinked_();
+                return { ok: true, skipped: true, reason: 'user-cancelled-conflict-account-kept' };
             }
 
             if (hasAppDataPatch) {
@@ -1738,11 +1912,17 @@
         bindCardGroupsAutosave_._bound = true;
 
         window.CardGroups.onChange(() => {
+            if (suppressCardGroupsAutosave) return;
             if (!isLoggedIn_() || syncing || !accountOwnedLinkEnabled) return;
+
+            const groupsSnapshot = readLocalCardGroups_();
+            const snapshotKey = cardGroupsDataKey_(groupsSnapshot);
+            if (snapshotKey && snapshotKey === lastCardGroupsAutosaveKey) return;
 
             clearTimeout(bindCardGroupsAutosave_._timer);
             bindCardGroupsAutosave_._timer = setTimeout(() => {
-                saveCardGroupsToAccount_();
+                lastCardGroupsAutosaveKey = snapshotKey;
+                saveAccountAppData_({ cardGroups: groupsSnapshot });
             }, 1200);
         });
     }
@@ -1772,6 +1952,23 @@
 
     function runAccountSyncInBackground_(reason){
         try {
+            const reasonKey = String(reason || '');
+            const userKey = getUserDecisionId_();
+            const syncKey = `${userKey}:${reasonKey}`;
+            const isAuto = reasonKey === 'auto-login' || reasonKey === 'whoami' || reasonKey === 'init';
+            const now = Date.now();
+
+            if (isAuto && syncKey === lastAutoSyncKey && now - lastAutoSyncAt < AUTO_SYNC_COOLDOWN_MS) {
+                refreshStatusFromAuth_();
+                notifyReady_();
+                return;
+            }
+
+            if (isAuto) {
+                lastAutoSyncKey = syncKey;
+                lastAutoSyncAt = now;
+            }
+
             syncAppDataWithAccount(reason).catch((err) => {
                 console.warn('[account-app-data-sync] background sync failed:', err);
                 refreshStatusFromAuth_();
@@ -1841,6 +2038,9 @@
         saveSavedDecks: saveSavedDecksToAccount_,
         readLocal: readLocalAppData_,
         debug: debugOwnedData_,
+        requestMigrationConfirm: requestMigrationConfirm_,
+        clearMigrationDecision: clearMigrationDecision_,
+        hasGuestMigrationData: hasGuestMigrationData_,
         isReady: isOwnedInteractionReady_,
         getStatus: () => Object.assign({}, syncStatus),
     };

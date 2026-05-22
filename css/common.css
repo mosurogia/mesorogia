@@ -387,6 +387,18 @@ button,
     flex: 0 0 auto;
 }
 
+.header-logo a {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.header-logo a:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.95);
+    outline-offset: 3px;
+    border-radius: 6px;
+}
+
 .header-logo img {
     height: 2.8rem;
     width: auto;

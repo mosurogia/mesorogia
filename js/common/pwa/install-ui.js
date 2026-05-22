@@ -290,6 +290,18 @@
       button.textContent = '再読み込み中...';
     }
 
+    try {
+      window.clearDeckPostListBrowserCache_?.();
+      const removeKeys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.indexOf('DeckPostListAll:') === 0 || key.indexOf('DeckPostListPage:') === 0)) {
+          removeKeys.push(key);
+        }
+      }
+      removeKeys.forEach(key => localStorage.removeItem(key));
+    } catch (_) {}
+
     const task = window.MesorogiaPwaMaintenance?.repairAndReload?.();
     if (task && typeof task.catch === 'function') {
       task.catch((error) => {

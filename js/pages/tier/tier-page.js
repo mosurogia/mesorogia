@@ -5,49 +5,8 @@
 (function () {
     'use strict';
 
-    const TIER_API_URL = 'https://script.google.com/macros/s/AKfycbzF_QBJc_wKd_vJ7vyBzhRUB_SYV87J5QhJ4RJaXHDJbCET_seQD5Q92ABfvE0wmFyvXg/exec';
+    const TIER_API_URL = 'https://script.google.com/macros/s/AKfycbyQ4DrQBXGDN035XOGjro9r7-nyarVPTJI-0_BifxiijvrPoH4iGnpONfPtj0VVz7UOjw/exec';
     const TIER_ORDER = ['S', 'A', 'B', 'C', 'D', 'E'];
-    const STATIC_TIER_ENVIRONMENTS = [
-        {
-            environmentId: '2026_05_w3',
-            environmentName: '5月第3週',
-            tierComment: 'モルゲンが…',
-            items: [
-                { deckName: '歪祝', imageFile: '歪祝', tierScore: 53, tier: 'S', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=7361c806', postId: '7361c806' },
-                { deckName: '鬼刹衆', imageFile: '鬼刹衆', tierScore: 55, tier: 'S', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=62c3185c', postId: '62c3185c' },
-                { deckName: '秘饗', imageFile: '秘饗', tierScore: 58, tier: 'S', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=67c94079', postId: '67c94079' },
-                { deckName: 'アストロＬＯ', imageFile: 'アストロLO', tierScore: 60, tier: 'S', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=eb8bc6d6', postId: 'eb8bc6d6' },
-                { deckName: '蒼ノ刀', imageFile: '蒼ノ刀', tierScore: 65, tier: 'S', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=f56ca0fb', postId: 'f56ca0fb' },
-                { deckName: '電竜', imageFile: '電竜', tierScore: 95, tier: 'S', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=033c3e39', postId: '033c3e39' },
-                { deckName: '白騎士', imageFile: '白騎士', tierScore: 105, tier: 'A', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=cd85bfeb', postId: 'cd85bfeb' },
-                { deckName: 'アドミラルシップ', imageFile: 'アドミラルシップ', tierScore: 110, tier: 'A', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=1c12861e', postId: '1c12861e' },
-                { deckName: 'メイドロボ', imageFile: 'メイドロボ', tierScore: 120, tier: 'A', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=6897371f', postId: '6897371f' },
-                { deckName: '炎閻魔', imageFile: '炎閻魔', tierScore: 125, tier: 'A', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=ba1b8840', postId: 'ba1b8840' },
-                { deckName: 'バトメイ', imageFile: 'バトメイ', tierScore: 130, tier: 'A', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=68efa151', postId: '68efa151' },
-                { deckName: '星装', imageFile: '星装', tierScore: 140, tier: 'A', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=df04e5bd', postId: 'df04e5bd' },
-                { deckName: 'ヴァントム', imageFile: 'ヴァントム', tierScore: 150, tier: 'A', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=7294bfa7', postId: '7294bfa7' },
-                { deckName: '白騎士ＬＯ', imageFile: '白騎士LO', tierScore: 168, tier: 'A', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=f0d2d7ee', postId: 'f0d2d7ee' },
-                { deckName: 'ゴーゴン', imageFile: 'ゴーゴン', tierScore: 170, tier: 'A', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=c55fbae9', postId: 'c55fbae9' },
-                { deckName: 'テックノイズ', imageFile: 'テックノイズ', tierScore: 180, tier: 'A', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=096f8c1a', postId: '096f8c1a' },
-                { deckName: 'アグドラ', imageFile: 'アグドラ', tierScore: 193, tier: 'A', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=c7ee61a1', postId: 'c7ee61a1' },
-                { deckName: '愚者愚者', imageFile: '愚者愚者', tierScore: 195, tier: 'A', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=90b6518f', postId: '90b6518f' },
-                { deckName: '火鞠', imageFile: '火鞠', tierScore: 200, tier: 'B', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=d7074e1f', postId: 'd7074e1f' },
-                { deckName: 'ルミナス１０スタン', imageFile: 'ルミナス10スタン', tierScore: 220, tier: 'B', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=fd63930c', postId: 'fd63930c' },
-                { deckName: 'アルケミ', imageFile: 'アルケミ', tierScore: 230, tier: 'B', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=8cf8900b', postId: '8cf8900b' },
-                { deckName: '燃焼ドラゴン', imageFile: '燃焼ドラゴン', tierScore: 240, tier: 'B', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=255a5361', postId: '255a5361' },
-                { deckName: 'バーントム', imageFile: 'バーントム', tierScore: 245, tier: 'B', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=412967d5', postId: '412967d5' },
-                { deckName: 'ナチュリア', imageFile: 'ナチュリア', tierScore: 250, tier: 'B', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=1cec2c50', postId: '1cec2c50' },
-                { deckName: 'ユノLO', imageFile: 'ユノLO', tierScore: 260, tier: 'B', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=80ebdf24', postId: '80ebdf24' },
-                { deckName: 'ロスリス', imageFile: 'ロスリス', tierScore: 265, tier: 'B', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=55e3e2c2', postId: '55e3e2c2' },
-                { deckName: 'メロウディア', imageFile: 'メロウディア', tierScore: 270, tier: 'B', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=00511a7f', postId: '00511a7f' },
-                { deckName: '聖焔龍', imageFile: '聖焔龍', tierScore: 275, tier: 'B', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=a35e0a8f', postId: 'a35e0a8f' },
-                { deckName: 'ジークフリート', imageFile: 'ジークフリート', tierScore: 280, tier: 'B', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=d26eaa10', postId: 'd26eaa10' },
-                { deckName: 'マディスキア', imageFile: 'マディスキア', tierScore: 285, tier: 'B', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=da1a021d', postId: 'da1a021d' },
-                { deckName: '神翼騎士', imageFile: '神翼騎士', tierScore: 290, tier: 'B', comment: '', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=4856170d', postId: '4856170d' },
-                { deckName: '風花森', imageFile: '風花森', tierScore: 300, tier: 'C', comment: 'B弾から健在の強さ…', postUrl: 'https://mosurogia.github.io/mesorogia-cards/deck-post.html?pid=39395bf7', postId: '39395bf7' }
-            ]
-        }
-    ];
     const MAIN_RACES = ['ドラゴン', 'アンドロイド', 'エレメンタル', 'ルミナス', 'シェイド'];
     const RACE_BG_CLASS_NAMES = [
         ...MAIN_RACES.map((race) => `race-bg-${race}`),
@@ -58,6 +17,7 @@
         environments: [],
         currentEnvironmentIndex: 0,
         postCache: new Map(),
+        prefetchedPostPages: new Set(),
         guideObserver: null,
         guideLoadQueue: [],
         guideActiveLoads: 0,
@@ -70,6 +30,15 @@
         if (!status) return;
 
         status.textContent = text;
+        status.classList.remove('is-error');
+    }
+
+    function setStatusError(text) {
+        const status = document.querySelector('.tier-board-status');
+        if (!status) return;
+
+        status.textContent = text;
+        status.classList.add('is-error');
     }
 
     function escapeHtml(value) {
@@ -140,6 +109,38 @@
         return String(item && (item.shareCode || item.deckCode || item.code) || '').trim();
     }
 
+    function getPostDetailHref(postUrl) {
+        const postId = getPostIdFromUrl(postUrl);
+        return postId ? `deck-post.html?pid=${encodeURIComponent(postId)}` : String(postUrl || '').trim();
+    }
+
+    function prefetchPostDetailPage(href) {
+        const url = String(href || '').trim();
+        if (!url || !document.head || state.prefetchedPostPages.has(url)) return;
+
+        const link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = url;
+        link.dataset.tierPrefetch = url;
+        document.head.append(link);
+        state.prefetchedPostPages.add(url);
+    }
+
+    function storePostTransfer(postId) {
+        const pid = String(postId || '').trim();
+        const item = pid ? state.postCache.get(pid) : null;
+        if (!pid || !item || typeof sessionStorage === 'undefined') return;
+
+        try {
+            sessionStorage.setItem(`deck-post-transfer:${pid}`, JSON.stringify({
+                expiresAt: Date.now() + 5 * 60 * 1000,
+                item
+            }));
+        } catch (_) {
+            // sessionStorage が使えない環境では通常遷移に任せる。
+        }
+    }
+
     function getEnvironmentItems(environment) {
         return Array.isArray(environment && environment.items) ? environment.items : [];
     }
@@ -153,7 +154,27 @@
         const title = document.getElementById('tierBoardTitle');
         if (!title || !environment) return;
 
-        title.textContent = `${index === 0 ? '最新Tier' : 'Tier'}（${getEnvironmentName(environment, index)}）`;
+        title.textContent = `${index === 0 ? '最新Tier表' : 'Tier表'}（最終更新${getEnvironmentName(environment, index)}）`;
+        setStatus(`${index === 0 ? '最新' : '表示中'}：${getEnvironmentName(environment, index)}`);
+    }
+
+    function setGuideEnvironmentLabel(environment, index) {
+        const title = document.getElementById('tierDeckGuideTitle');
+        if (title) {
+            title.textContent = `デッキ紹介（最終更新${getEnvironmentName(environment, index)}）`;
+        }
+
+        document.querySelectorAll('[data-tier-guide-environment]').forEach((label) => {
+            label.textContent = `${index === 0 ? '最新' : '表示中'}：${getEnvironmentName(environment, index)}`;
+            label.classList.remove('is-error');
+        });
+    }
+
+    function setGuideEnvironmentStatus(text, isError) {
+        document.querySelectorAll('[data-tier-guide-environment]').forEach((label) => {
+            label.textContent = text;
+            label.classList.toggle('is-error', !!isError);
+        });
     }
 
     function setEnvironmentComment(environment) {
@@ -167,17 +188,17 @@
     }
 
     function updateEnvironmentControls() {
-        const prevButton = document.querySelector('[data-tier-env-prev]');
-        const nextButton = document.querySelector('[data-tier-env-next]');
+        const prevButtons = document.querySelectorAll('[data-tier-env-prev]');
+        const nextButtons = document.querySelectorAll('[data-tier-env-next]');
         const hasMultipleEnvironments = state.environments.length > 1;
 
-        if (prevButton) {
+        prevButtons.forEach((prevButton) => {
             prevButton.disabled = !hasMultipleEnvironments || state.currentEnvironmentIndex >= state.environments.length - 1;
-        }
+        });
 
-        if (nextButton) {
+        nextButtons.forEach((nextButton) => {
             nextButton.disabled = !hasMultipleEnvironments || state.currentEnvironmentIndex <= 0;
-        }
+        });
     }
 
     function groupItemsByTier(items) {
@@ -202,12 +223,13 @@
         const deckName = String(item.deckName || '名称未設定').trim() || '名称未設定';
         const imageFile = String(item.imageFile || '').trim();
         const postUrl = String(item.postUrl || '').trim();
-        const card = document.createElement(postUrl ? 'a' : 'article');
+        const detailHref = getPostDetailHref(postUrl);
+        const card = document.createElement(detailHref ? 'a' : 'article');
 
         card.className = 'tier-card';
         card.dataset.guideId = getDeckGuideId(item);
-        if (postUrl) {
-            card.href = postUrl;
+        if (detailHref) {
+            card.href = detailHref;
             card.rel = 'noopener';
             card.dataset.postUrl = postUrl;
             card.dataset.postId = getPostIdFromUrl(postUrl);
@@ -527,8 +549,7 @@
         if (guideCard.dataset.loaded === '1') return;
 
         guideCard.dataset.loading = '1';
-        setGuideDeckStatus(guideCard, 'デッキリストを読み込み中…', false);
-        list.replaceChildren();
+        setGuideEnvironmentStatus('デッキリスト切り替え中', false);
 
         try {
             const item = await fetchPostById(postId);
@@ -537,9 +558,15 @@
             const rendered = await renderDeckList(item, list);
             guideCard.dataset.loaded = rendered ? '1' : '0';
             setGuideDeckStatus(guideCard, rendered ? '' : 'デッキリスト未登録', !rendered);
+            if (rendered) {
+                setGuideEnvironmentLabel(state.environments[state.currentEnvironmentIndex], state.currentEnvironmentIndex);
+            } else {
+                setGuideEnvironmentStatus('デッキリスト未登録', true);
+            }
         } catch (error) {
             console.warn('[tier] デッキリストを取得できませんでした。', error);
             setGuideDeckStatus(guideCard, 'デッキリストの取得に失敗しました。投稿リンクから確認してください。', true);
+            setGuideEnvironmentStatus('デッキリスト取得失敗', true);
         } finally {
             delete guideCard.dataset.loading;
         }
@@ -561,18 +588,28 @@
 
     async function preloadGuideDeckLists() {
         const guideCards = Array.from(document.querySelectorAll('.tier-guide-deck[data-post-id]'));
-        const postIds = guideCards.map((card) => String(card.dataset.postId || '').trim()).filter(Boolean);
+        const targetCards = guideCards.filter((card) => card.dataset.loaded !== '1');
+        const postIds = targetCards.map((card) => String(card.dataset.postId || '').trim()).filter(Boolean);
+        if (!targetCards.length) {
+            if (guideCards.length) {
+                setGuideEnvironmentLabel(state.environments[state.currentEnvironmentIndex], state.currentEnvironmentIndex);
+            } else {
+                setGuideEnvironmentStatus('デッキリストなし', false);
+            }
+            return;
+        }
         if (!postIds.length) return;
 
         state.triedBatchLoad = true;
-        guideCards.forEach((card) => setGuideDeckStatus(card, 'デッキリストを一括読み込み中…', false));
+        setGuideEnvironmentStatus('デッキリスト切り替え中', false);
 
         try {
             await fetchPostsByIds(postIds);
-            await Promise.all(guideCards.map(renderGuideDeckFromCache));
+            await Promise.all(targetCards.map(renderGuideDeckFromCache));
+            setGuideEnvironmentLabel(state.environments[state.currentEnvironmentIndex], state.currentEnvironmentIndex);
         } catch (error) {
             console.warn('[tier] デッキリストの一括取得に失敗しました。個別取得へ切り替えます。', error);
-            guideCards.forEach((card) => setGuideDeckStatus(card, 'デッキリスト読み込み待ち', false));
+            setGuideEnvironmentStatus('デッキリスト切り替え待ち', false);
             observeGuideDeckCards();
         }
     }
@@ -674,6 +711,7 @@
         const comment = String(item.comment || '').trim();
         const postUrl = String(item.postUrl || '').trim();
         const postId = getPostIdFromUrl(postUrl);
+        const detailHref = getPostDetailHref(postUrl);
         const deckCode = getDeckCode(item);
         const card = document.createElement('article');
 
@@ -697,10 +735,10 @@
         const detailLink = document.createElement('a');
         detailLink.className = 'tier-guide-detail-link';
         detailLink.textContent = 'デッキを詳しく見る';
-        if (postUrl) {
-            detailLink.href = postUrl;
-            detailLink.target = '_blank';
+        if (detailHref) {
+            detailLink.href = detailHref;
             detailLink.rel = 'noopener';
+            if (postId) detailLink.dataset.postId = postId;
         } else {
             detailLink.setAttribute('aria-disabled', 'true');
             detailLink.tabIndex = -1;
@@ -718,7 +756,7 @@
         const status = document.createElement('div');
         status.className = 'tier-guide-deck-status';
         status.dataset.tierGuideStatus = '1';
-        status.textContent = postId ? 'デッキリスト読み込み待ち' : 'まだ参考デッキがありません';
+        status.textContent = postId ? '' : 'まだ参考デッキがありません';
 
         const list = document.createElement('div');
         list.className = 'tier-post-decklist';
@@ -756,10 +794,19 @@
         return section;
     }
 
-    function renderDeckGuide(items) {
+    function guideMatchesItems(items) {
+        const guideCards = Array.from(document.querySelectorAll('.tier-guide-deck[data-guide-id]'));
+        const nextIds = (items || []).map(getDeckGuideId);
+        if (!guideCards.length || guideCards.length !== nextIds.length) return false;
+
+        return nextIds.every((guideId, index) => String(guideCards[index].dataset.guideId || '') === String(guideId));
+    }
+
+    function renderDeckGuide(items, environment, index) {
         const guide = document.querySelector('[data-tier-deck-guide]');
         const body = document.querySelector('[data-tier-deck-guide-body]');
         if (!guide || !body) return;
+        setGuideEnvironmentStatus('最新リスト確認中', false);
 
         const groups = groupItemsByTier(items);
         const orderedTiers = getOrderedTiers(groups);
@@ -768,7 +815,10 @@
             .filter(Boolean);
 
         guide.hidden = !sections.length;
-        body.replaceChildren(...sections);
+        if (!guideMatchesItems(items)) {
+            body.replaceChildren(...sections);
+        }
+        setGuideEnvironmentLabel(environment, index);
         state.guideLoadQueue = [];
         state.guideActiveLoads = 0;
         state.triedBatchLoad = false;
@@ -784,33 +834,235 @@
         setEnvironmentComment(environment);
         const items = getEnvironmentItems(environment);
         renderTierBoard(items);
-        renderDeckGuide(items);
+        renderDeckGuide(items, environment, index);
         updateEnvironmentControls();
     }
 
-    function renderStaticTierData() {
-        state.environments = STATIC_TIER_ENVIRONMENTS;
-        renderEnvironment(0);
-        setStatus('保存済みTierを表示中');
-    }
 
     function bindEnvironmentControls() {
-        const prevButton = document.querySelector('[data-tier-env-prev]');
-        const nextButton = document.querySelector('[data-tier-env-next]');
-
-        if (prevButton) {
+        document.querySelectorAll('[data-tier-env-prev]').forEach((prevButton) => {
+            if (prevButton.dataset.tierEnvBound) return;
+            prevButton.dataset.tierEnvBound = '1';
             prevButton.addEventListener('click', () => {
                 renderEnvironment(Math.min(state.currentEnvironmentIndex + 1, state.environments.length - 1));
             });
-        }
+        });
 
-        if (nextButton) {
+        document.querySelectorAll('[data-tier-env-next]').forEach((nextButton) => {
+            if (nextButton.dataset.tierEnvBound) return;
+            nextButton.dataset.tierEnvBound = '1';
             nextButton.addEventListener('click', () => {
                 renderEnvironment(Math.max(state.currentEnvironmentIndex - 1, 0));
             });
-        }
+        });
 
         updateEnvironmentControls();
+    }
+
+    function getTierImageFileName() {
+        const environment = state.environments[state.currentEnvironmentIndex];
+        const name = getEnvironmentName(environment, state.currentEnvironmentIndex).replace(/[\\/:*?"<>|]/g, '_');
+        return `tier-list-${name || 'latest'}.png`;
+    }
+
+    function closeTierImageModal(modal) {
+        if (modal) modal.remove();
+        document.body.style.overflow = '';
+    }
+
+    function createTierImageButton(label) {
+        const button = document.createElement('a');
+        button.textContent = label;
+        Object.assign(button.style, {
+            flex: '1 1 0',
+            display: 'inline-block',
+            padding: '10px 12px',
+            borderRadius: '10px',
+            background: '#fff',
+            color: '#111',
+            fontSize: '14px',
+            fontWeight: '800',
+            textAlign: 'center',
+            textDecoration: 'none',
+            boxShadow: '0 2px 8px rgba(0,0,0,.25)'
+        });
+        return button;
+    }
+
+    function showTierImagePreview(canvas, fileName) {
+        const dataUrl = canvas.toDataURL('image/png');
+        document.getElementById('tier-image-preview-modal')?.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'tier-image-preview-modal';
+        Object.assign(modal.style, {
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            overflowY: 'auto',
+            padding: '40px 0',
+            background: 'rgba(0,0,0,0.8)',
+            color: '#fff',
+            fontFamily: 'system-ui, sans-serif'
+        });
+
+        document.body.style.overflow = 'hidden';
+
+        const closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.textContent = '×';
+        closeButton.setAttribute('aria-label', '閉じる');
+        Object.assign(closeButton.style, {
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            width: '36px',
+            height: '36px',
+            border: 'none',
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.9)',
+            color: '#111',
+            fontSize: '22px',
+            fontWeight: '700',
+            lineHeight: '1',
+            cursor: 'pointer',
+            boxShadow: '0 0 6px rgba(0,0,0,0.3)'
+        });
+        closeButton.addEventListener('click', () => closeTierImageModal(modal));
+
+        const hint = document.createElement('div');
+        const ua = String(navigator.userAgent || '').toLowerCase();
+        if (/iphone|ipad|ipod/.test(ua)) {
+            hint.textContent = '長押しで「写真に追加」や「共有（画像保存）」ができます';
+        } else if (/android/.test(ua)) {
+            hint.textContent = '長押しで「画像をダウンロード」や「共有（画像保存）」ができます';
+        } else {
+            hint.textContent = '右クリックで「名前を付けて保存」できます';
+        }
+        Object.assign(hint.style, {
+            margin: '15px',
+            fontSize: 'clamp(14px, 2vw, 18px)',
+            textAlign: 'center'
+        });
+
+        const buttonBar = document.createElement('div');
+        Object.assign(buttonBar.style, {
+            display: 'flex',
+            gap: '8px',
+            width: 'min(92vw, 760px)',
+            maxWidth: 'min(92vw, 760px)',
+            margin: '8px auto 12px'
+        });
+
+        const saveButton = createTierImageButton('ダウンロード');
+        saveButton.href = dataUrl;
+        saveButton.download = fileName;
+
+        const shareButton = createTierImageButton('共有（画像保存）');
+        shareButton.href = 'javascript:void(0)';
+        const isIOS = /iphone|ipad|ipod/.test(ua) || (ua.includes('macintosh') && (navigator.maxTouchPoints || 0) >= 2);
+        const isAndroid = /android/.test(ua);
+        if (!isIOS && !isAndroid) {
+            shareButton.style.display = 'none';
+        } else {
+            shareButton.addEventListener('click', async () => {
+                try {
+                    const blob = await (await fetch(dataUrl)).blob();
+                    const file = new File([blob], fileName, { type: 'image/png' });
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file] });
+                    } else {
+                        alert('この端末では共有に対応していません。ダウンロードをご利用ください。');
+                    }
+                } catch (error) {
+                    console.warn('[tier] Tier表画像を共有できませんでした。', error);
+                }
+            });
+        }
+
+        const image = document.createElement('img');
+        image.src = dataUrl;
+        image.alt = 'Tier表画像プレビュー';
+        Object.assign(image.style, {
+            maxWidth: 'min(92vw, 760px)',
+            height: 'auto',
+            borderRadius: '12px',
+            boxShadow: '0 0 24px rgba(0,0,0,0.6)',
+            objectFit: 'contain'
+        });
+
+        const note = document.createElement('div');
+        note.textContent = '※ここで生成した画像はXやDiscordなどに自由に投稿して構いません。';
+        Object.assign(note.style, {
+            width: 'min(92vw, 760px)',
+            maxWidth: 'min(92vw, 760px)',
+            margin: '10px auto 16px',
+            color: 'rgba(255,255,255,0.8)',
+            fontSize: 'clamp(12px, 1.8vw, 14px)',
+            textAlign: 'center'
+        });
+
+        buttonBar.append(saveButton, shareButton);
+        modal.append(closeButton, hint, buttonBar, image, note);
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal && event.clientY < window.innerHeight * 0.9) {
+                closeTierImageModal(modal);
+            }
+        });
+        document.body.append(modal);
+    }
+
+    async function exportTierBoardImage(button) {
+        const target = document.getElementById('tierBoard');
+        if (!target) return;
+        if (typeof html2canvas !== 'function') {
+            alert('画像生成機能を読み込めませんでした。ページを再読み込みしてください。');
+            return;
+        }
+
+        const previousText = button ? button.textContent : '';
+        if (button) {
+            button.disabled = true;
+            button.classList.add('is-loading');
+        }
+
+        try {
+            await Promise.all(Array.from(target.querySelectorAll('img')).map((image) => {
+                if (image.complete) return Promise.resolve();
+                return new Promise((resolve) => {
+                    image.addEventListener('load', resolve, { once: true });
+                    image.addEventListener('error', resolve, { once: true });
+                    setTimeout(resolve, 1500);
+                });
+            }));
+            const canvas = await html2canvas(target, {
+                useCORS: true,
+                backgroundColor: '#fff',
+                scale: Math.max(2, Math.min(3, window.devicePixelRatio || 1))
+            });
+            showTierImagePreview(canvas, getTierImageFileName());
+        } catch (error) {
+            console.error('[tier] Tier表画像の生成に失敗しました。', error);
+            alert('Tier表画像の生成に失敗しました。ページを再読み込みしてください。');
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.classList.remove('is-loading');
+                button.textContent = previousText || '📷';
+            }
+        }
+    }
+
+    function bindTierImageExport() {
+        document.querySelectorAll('[data-tier-board-image]').forEach((button) => {
+            if (button.dataset.tierImageBound) return;
+            button.dataset.tierImageBound = '1';
+            button.addEventListener('click', () => exportTierBoardImage(button));
+        });
     }
 
     function bindPostDetailEvents() {
@@ -829,15 +1081,35 @@
                     return;
                 }
 
+                const detailLink = event.target.closest('.tier-guide-detail-link[data-post-id]');
+                if (detailLink) {
+                    storePostTransfer(detailLink.dataset.postId);
+                    prefetchPostDetailPage(detailLink.href);
+                    return;
+                }
+
                 const guideCard = event.target.closest('.tier-guide-deck[data-post-id]');
                 if (!guideCard || event.target.closest('a')) return;
                 enqueueGuideDeckLoad(guideCard);
+            });
+
+            guide.addEventListener('pointerover', (event) => {
+                const detailLink = event.target.closest('.tier-guide-detail-link[href]');
+                if (!detailLink) return;
+                prefetchPostDetailPage(detailLink.getAttribute('href'));
+            });
+
+            guide.addEventListener('focusin', (event) => {
+                const detailLink = event.target.closest('.tier-guide-detail-link[href]');
+                if (!detailLink) return;
+                prefetchPostDetailPage(detailLink.getAttribute('href'));
             });
         }
     }
 
     async function fetchLatestTier() {
-        setStatus('最新データ確認中');
+        setStatus('最新リスト確認中');
+        setGuideEnvironmentStatus('最新リスト確認中', false);
 
         try {
             const url = new URL(TIER_API_URL);
@@ -862,21 +1134,19 @@
                 }];
                 renderEnvironment(0);
             }
-
-            setStatus('最新データ反映済み');
         } catch (error) {
-            if (!state.environments.length) renderStaticTierData();
             console.warn('[tier] 最新Tierデータを取得できませんでした。', error);
-            setStatus('保存済みTierを表示中');
+            setStatusError('保存済みリスト表示中');
             updateEnvironmentControls();
         }
     }
 
     function init() {
-        setStatus('表示中');
+        setStatus('最新リスト確認中');
+        setGuideEnvironmentStatus('最新リスト確認中', false);
         bindEnvironmentControls();
+        bindTierImageExport();
         bindPostDetailEvents();
-        renderStaticTierData();
         fetchLatestTier();
     }
 

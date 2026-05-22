@@ -54,7 +54,9 @@
 <!-- ヘッダー -->
 <header class="main-header">
     <div class="header-logo">
-        <img src="img/tatudosi.webp" alt="神託のメソロギア ロゴ" />
+        <a href="index.html" aria-label="ホームへ移動">
+            <img src="img/tatudosi.webp" alt="神託のメソロギア ロゴ" />
+        </a>
     </div>
     <nav class="header-nav">
         <a  href="cards.html">
@@ -85,9 +87,8 @@
                 <span class="sr-only">探索・情報メニュー</span>
             </button>
             <div class="header-menu-panel" id="header-explore-menu" role="menu" hidden>
-                <a role="menuitem" href="#" aria-disabled="true" data-header-disabled-link>
+                <a role="menuitem" href="index.html">
                     <span>ホーム</span>
-                    <span class="header-menu-badge">今後予定</span>
                 </a>
                 <a class="header-menu-tier-link" role="menuitem" href="tier.html">
                     <span>Tier表</span>
@@ -267,16 +268,10 @@
                     <li>❤️ いいねしたデッキを一覧で確認できます</li>
                     <li>✏️ 投稿したデッキの<strong>デッキ解説編集</strong>ができます</li>
                     <li>🗑 不要になったデッキ投稿の<strong>削除</strong>ができます</li>
+                    <li>🏷 タグの編集</li>
+                    <li>🃏 デッキコードの追加</li>
                 </ul>
 
-                <div class="mine-header-beta">
-                    🧪 <strong>ベータ版のお知らせ</strong><br>
-                    今後のアップデートで、以下の機能を追加予定です。
-                    <ul>
-                        <li>🏷 タグの編集機能</li>
-                        <li>🃏 デッキコード・デッキ内容の編集機能</li>
-                    </ul>
-                </div>
             </div>
 
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
@@ -865,7 +860,7 @@
 <script src="js/common/account/auth-ui.js?v=2026-05-05-008"></script>
 <script src="js/common/account/account.js?v=2026-05-06-003"></script>
 <script src="js/common/account/account-app-data-sync.js?v=2026-05-05-008"></script>
-<script src="js/common/pwa/cache-config.js?v=2026-05-17-001"></script>
+<script src="js/common/pwa/cache-config.js?v=2026-05-20-002"></script>
 <script src="js/common/pwa/offline-cards.js?v=2026-05-06-003"></script>
 <script src="js/common/account/account-data-manager.js?v=2026-05-14-001"></script>
 <script src="js/common/account/account-match-results.js?v=2026-05-05-008"></script>
@@ -892,7 +887,7 @@
 </div>
 
 <!-- ページ固有 -->
-<script src="js/pages/deck-post/deck-post-page-loader.js?v=2026-05-05-008"></script>
+<script src="js/pages/deck-post/deck-post-page-loader.js?v=2026-05-20-002"></script>
 <script src="js/common/pwa/install-ui.js?v=2026-05-07-001"></script>
 <script src="js/common/pwa/register.js?v=2026-05-16-001"></script>
 

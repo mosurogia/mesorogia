@@ -1288,28 +1288,33 @@
   /**
    * 詳細表示に必要な本文を不足時だけ1件取得する
    */
-  async function ensurePostDetailData_(postId) {
+  async function ensurePostDetailData_(postId, opts = {}) {
     const pid = String(postId || '').trim();
     if (!pid) return null;
 
-    const cached = getCachedPostDetail_(pid);
-    if (cached) return cached;
+    const forceRefresh = opts.refresh === true || opts.forceRefresh === true;
 
-    const inFlight = detailPayloadInFlight_.get(pid);
+    if (!forceRefresh) {
+      const cached = getCachedPostDetail_(pid);
+      if (cached) return cached;
+    }
+
+    const inFlightKey = forceRefresh ? `${pid}:refresh` : pid;
+    const inFlight = detailPayloadInFlight_.get(inFlightKey);
     if (inFlight) return await inFlight;
 
     const current = findItemById_(pid);
     if (!current) return null;
-    if (hasDetailPayload_(current)) return current;
+    if (!forceRefresh && hasDetailPayload_(current)) return current;
 
     const promise = (async () => {
       const latest = findItemById_(pid) || current;
-      if (hasDetailPayload_(latest)) {
+      if (!forceRefresh && hasDetailPayload_(latest)) {
         detailPayloadCache_.set(pid, latest);
         return latest;
       }
 
-      const res = await window.DeckPostApi?.apiGetPost?.({ postId: pid });
+      const res = await window.DeckPostApi?.apiGetPost?.({ postId: pid, refresh: forceRefresh });
       if (!res || res.ok === false) {
         throw new Error((res && res.error) || 'get failed');
       }
@@ -1321,10 +1326,10 @@
       detailPayloadCache_.set(pid, merged);
       return merged;
     })().finally(() => {
-      detailPayloadInFlight_.delete(pid);
+      detailPayloadInFlight_.delete(inFlightKey);
     });
 
-    detailPayloadInFlight_.set(pid, promise);
+    detailPayloadInFlight_.set(inFlightKey, promise);
     return await promise;
   }
 
@@ -2510,6 +2515,7 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
       <button type="button" class="post-detail-tab is-active" data-tab="info">📘 デッキ情報</button>
       <button type="button" class="post-detail-tab" data-tab="note">📝 デッキ解説</button>
       <button type="button" class="post-detail-tab" data-tab="cards">🗂 カード解説</button>
+      <button type="button" class="post-detail-refresh-btn" aria-label="最新の投稿内容を再取得">更新</button>
     </div>
   `;
 
@@ -3136,6 +3142,44 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
     // -------------------------
     // 2) デッキコードコピー（横長ボタン）
     // -------------------------
+    const refreshBtn = e.target.closest('.post-detail-refresh-btn');
+    if (refreshBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (refreshBtn.dataset.loading === '1') return;
+
+      const rootEl = refreshBtn.closest('.post-detail-inner');
+      const postId = String(rootEl?.dataset?.postid || '').trim();
+      const listMode = rootEl?.dataset?.listMode || 'list';
+      const pane = rootEl?.closest?.('#postDetailPane, #postDetailPaneMine');
+      if (!postId || !pane?.id) return;
+
+      const originalText = refreshBtn.textContent || '更新';
+      refreshBtn.dataset.loading = '1';
+      refreshBtn.disabled = true;
+      refreshBtn.setAttribute('aria-busy', 'true');
+      refreshBtn.textContent = '更新中';
+      rootEl?.setAttribute('aria-busy', 'true');
+
+      try {
+        const item = await ensurePostDetailData_(postId, { refresh: true });
+        if (!item || !hasDetailPayload_(item)) {
+          throw new Error('get failed');
+        }
+        await withCardMapForPostDate_(item, () => renderDetailPaneForItem(item, pane.id, { listMode }));
+        window.showActionToast?.('最新の投稿内容に更新しました');
+      } catch (err) {
+        console.warn('post detail refresh failed', err);
+        window.showActionToast?.('投稿内容を更新できませんでした');
+        refreshBtn.dataset.loading = '0';
+        refreshBtn.disabled = false;
+        refreshBtn.removeAttribute('aria-busy');
+        refreshBtn.textContent = originalText;
+        rootEl?.removeAttribute('aria-busy');
+      }
+      return;
+    }
+
     const wideCopy = e.target.closest('.btn-copy-code-wide');
     if (wideCopy) {
       const code = String(wideCopy.dataset.code || '').trim();

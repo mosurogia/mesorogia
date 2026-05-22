@@ -1,26 +1,309 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 
 <head>
-    <meta charset="utf-8">
+    <!-- ===== 基本設定 ===== -->
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google-site-verification" content="5NzYWNH5_YUg0dUV2iCzg_bSo7M1lLJi6IzOeF2dGXM">
+    <link rel="icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="img/appicon_1024.webp">
+    <link rel="manifest" href="manifest.webmanifest?v=2026-05-05-006">
+    <meta name="theme-color" content="#111827">
 
-    <!-- 正規URLを図鑑へ -->
-    <link rel="canonical" href="https://mosurogia.github.io/mesorogia-cards/cards.html">
+    <!-- ===== タイトル ===== -->
+    <title>モスロギア｜神託のメソロギア攻略・カード図鑑</title>
 
-    <!-- 即時遷移（JS無効でも動く） -->
-    <meta http-equiv="refresh" content="0; url=https://mosurogia.github.io/mesorogia-cards/cards.html">
+    <!-- ===== 検索向け設定 ===== -->
+    <meta name="description" content="神託のメソロギアのカード図鑑、デッキメーカー、デッキ投稿、Tier表、更新情報、イベント情報をまとめた非公式ファンサイトです。">
+    <link rel="canonical" href="https://mosurogia.github.io/mesorogia-cards/">
 
-    <title>図鑑ページへ移動します</title>
-    <meta name="robots" content="noindex">
+    <!-- ===== 共有表示設定 ===== -->
+    <meta property="og:title" content="モスロギア｜神託のメソロギア攻略・カード図鑑">
+    <meta property="og:description" content="神託のメソロギアの主要ツール、更新履歴、イベント情報をまとめた入口ページです。">
+    <meta property="og:image" content="https://mosurogia.github.io/mesorogia-cards/img/indexogp.jpg">
+    <meta property="og:url" content="https://mosurogia.github.io/mesorogia-cards/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="モスロギア">
+
+    <!-- ===== Xカード設定 ===== -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="モスロギア｜神託のメソロギア">
+    <meta name="twitter:description" content="カード図鑑、デッキメーカー、デッキ投稿、Tier表への導線をまとめた非公式ファンサイト。">
+    <meta name="twitter:image" content="https://mosurogia.github.io/mesorogia-cards/img/indexogp.jpg">
+
+    <!-- ===== スタイル ===== -->
+    <link rel="stylesheet" href="css/common.css?v=2026-05-16-001">
+    <link rel="stylesheet" href="css/common-page124.css?v=2026-05-05-006">
+    <link rel="stylesheet" href="css/common-page234.css?v=2026-05-05-006">
+    <link rel="stylesheet" href="css/page0.css?v=2026-05-22-001">
 </head>
 
 <body>
-    <p>図鑑ページへ移動します。</p>
-    <p><a href="https://mosurogia.github.io/mesorogia-cards/cards.html">移動する</a></p>
-    <script>
-        location.replace("https://mosurogia.github.io/mesorogia-cards/cards.html");
-    </script>
-</body>
+<header class="main-header">
+    <div class="header-logo">
+        <a href="index.html" aria-label="ホームへ移動">
+            <img src="img/tatudosi.webp" alt="神託のメソロギア ロゴ">
+        </a>
+    </div>
+    <nav class="header-nav">
+        <a href="cards.html">
+            <img src="img/header_icon_1.webp" alt="">
+            <span>図鑑</span>
+        </a>
 
+        <a href="deckmaker.html">
+            <img src="img/header_icon_2.webp" alt="">
+            <span>デッキメーカー</span>
+        </a>
+
+        <a href="deck-post.html">
+            <img src="img/header_icon_3.webp" alt="">
+            <span>デッキ投稿</span>
+        </a>
+
+        <a class="header-nav-tier" href="tier.html">
+            <img src="img/header_icon_5.webp" alt="">
+            <span>Tier表</span>
+        </a>
+    </nav>
+    <div class="header-actions">
+        <div class="header-dropdown header-explore-menu" data-header-dropdown>
+            <button type="button" class="header-menu-button" aria-haspopup="true" aria-expanded="false"
+                aria-controls="header-explore-menu">
+                <span aria-hidden="true">☰</span>
+                <span class="sr-only">探索・情報メニュー</span>
+            </button>
+            <div class="header-menu-panel" id="header-explore-menu" role="menu" hidden>
+                <a class="active-page" role="menuitem" href="index.html">
+                    <span>ホーム</span>
+                </a>
+                <a class="header-menu-tier-link" role="menuitem" href="tier.html">
+                    <span>Tier表</span>
+                </a>
+                <a role="menuitem" href="#page-guide">
+                    <span>ページ紹介</span>
+                </a>
+                <a role="menuitem" href="#events">
+                    <span>イベント情報</span>
+                </a>
+                <button type="button" role="menuitem" data-header-app-action="install">アプリで開く</button>
+            </div>
+        </div>
+    </div>
+    <div class="header-account" data-header-auth></div>
+</header>
+
+<main class="home-page">
+    <section class="home-hero" aria-labelledby="home-title">
+        <div class="home-hero__content">
+            <p class="home-hero__eyebrow">神託のメソロギア 非公式ファンサイト</p>
+            <h1 id="home-title">モスロギア</h1>
+            <p class="home-hero__lead">
+                カード検索、デッキ構築、投稿デッキ確認、環境Tier表まで、神託のメソロギアでよく使う情報をまとめた入口ページです。
+            </p>
+        </div>
+
+        <nav class="home-quick-links" aria-label="よく使うページ">
+            <a class="home-quick-link home-quick-link--cards" href="cards.html">
+                <img src="img/header_icon_1.webp" alt="">
+                <span>カード図鑑</span>
+            </a>
+            <a class="home-quick-link home-quick-link--deckmaker" href="deckmaker.html">
+                <img src="img/header_icon_2.webp" alt="">
+                <span>デッキメーカー</span>
+            </a>
+            <a class="home-quick-link home-quick-link--deckpost" href="deck-post.html">
+                <img src="img/header_icon_3.webp" alt="">
+                <span>デッキ投稿</span>
+            </a>
+            <a class="home-quick-link home-quick-link--tier" href="tier.html">
+                <img src="img/header_icon_5.webp" alt="">
+                <span>Tier表</span>
+            </a>
+        </nav>
+    </section>
+
+    <section class="home-section-grid" aria-label="更新情報とイベント情報">
+        <section class="home-panel" aria-labelledby="news-title">
+            <div class="home-section-head">
+                <div>
+                    <h2 id="news-title">更新履歴</h2>
+                </div>
+                <span class="home-section-note">最新5件</span>
+            </div>
+
+            <div class="home-list" id="home-news-list" data-home-news-list>
+                <article class="home-list-item">
+                    <time datetime="2026-05-22">2026.05.22</time>
+                    <div>
+                        <h3>ホームページ基盤を追加</h3>
+                        <p>主要ページへの導線、更新履歴、イベント情報の枠を作成しました。</p>
+                    </div>
+                </article>
+            </div>
+
+            <a class="home-more-link is-disabled" href="#" aria-disabled="true" data-home-disabled-link>更新履歴一覧へ<span>準備中</span></a>
+        </section>
+
+        <section class="home-panel" id="events" aria-labelledby="events-title">
+            <div class="home-section-head">
+                <div>
+                    <h2 id="events-title">イベントカレンダー</h2>
+                </div>
+                <span class="home-section-note">直近イベント</span>
+            </div>
+
+            <div class="home-list home-event-list" id="home-event-list" data-home-event-list>
+                <article class="home-list-item">
+                    <time datetime="2026-06-01">2026.06.01</time>
+                    <div>
+                        <span class="home-label home-label--official">公式イベント</span>
+                        <h3>シーズンイベント</h3>
+                        <p>詳細は後から差し替え予定です。</p>
+                    </div>
+                </article>
+            </div>
+
+            <a class="home-more-link is-disabled" href="#" aria-disabled="true" data-home-disabled-link>イベント申請はこちら<span>準備中</span></a>
+        </section>
+    </section>
+
+    <section class="home-page-guide" id="page-guide" aria-labelledby="page-guide-title">
+        <div class="home-section-head">
+            <div>
+                <h2 id="page-guide-title">各ページ紹介</h2>
+            </div>
+        </div>
+
+        <div class="home-card-grid">
+            <article class="home-page-card">
+                <div class="home-page-card__thumb">
+                    <img src="img/cardlist.webp" alt="カード図鑑のサムネイル" loading="lazy">
+                </div>
+                <div class="home-page-card__body">
+                    <h3>カード図鑑</h3>
+                    <p>カード検索、ソート、所持率チェックをまとめて確認できます。</p>
+                    <a class="home-card-button" href="cards.html">開く</a>
+                </div>
+            </article>
+
+            <article class="home-page-card">
+                <div class="home-page-card__thumb">
+                    <img src="img/deckmakerogp.jpg" alt="デッキメーカーのサムネイル" loading="lazy">
+                </div>
+                <div class="home-page-card__body">
+                    <h3>デッキメーカー</h3>
+                    <p>カードを選びながらデッキ構築、分析、投稿準備ができます。</p>
+                    <a class="home-card-button" href="deckmaker.html">開く</a>
+                </div>
+            </article>
+
+            <article class="home-page-card">
+                <div class="home-page-card__thumb">
+                    <img src="img/deckpostogp.jpg" alt="デッキ投稿のサムネイル" loading="lazy">
+                </div>
+                <div class="home-page-card__body">
+                    <h3>デッキ投稿</h3>
+                    <p>投稿されたデッキを検索し、構築例やメモを確認できます。</p>
+                    <a class="home-card-button" href="deck-post.html">開く</a>
+                </div>
+            </article>
+
+            <article class="home-page-card">
+                <div class="home-page-card__thumb">
+                    <img src="img/deckpostogp.jpg" alt="Tier表のサムネイル" loading="lazy">
+                </div>
+                <div class="home-page-card__body">
+                    <h3>Tier表</h3>
+                    <p>環境デッキの評価とサンプルリストを確認できます。</p>
+                    <a class="home-card-button" href="tier.html">開く</a>
+                </div>
+            </article>
+
+            <article class="home-page-card is-coming-soon">
+                <div class="home-page-card__thumb">
+                    <span aria-hidden="true">用</span>
+                </div>
+                <div class="home-page-card__body">
+                    <span class="home-status-badge">準備中</span>
+                    <h3>用語集</h3>
+                    <p>カード効果やプレイ中に使われる用語を整理する予定です。</p>
+                    <span class="home-card-button is-disabled">今後追加予定</span>
+                </div>
+            </article>
+
+            <article class="home-page-card is-coming-soon">
+                <div class="home-page-card__thumb">
+                    <span aria-hidden="true">初</span>
+                </div>
+                <div class="home-page-card__body">
+                    <span class="home-status-badge">準備中</span>
+                    <h3>初心者ガイド</h3>
+                    <p>始めたばかりの方向けに、基本ルールや進め方をまとめる予定です。</p>
+                    <span class="home-card-button is-disabled">今後追加予定</span>
+                </div>
+            </article>
+
+            <article class="home-page-card is-coming-soon">
+                <div class="home-page-card__thumb">
+                    <span aria-hidden="true">＋</span>
+                </div>
+                <div class="home-page-card__body">
+                    <span class="home-status-badge">今後追加予定</span>
+                    <h3>追加予定ページ</h3>
+                    <p>イベント一覧、更新履歴一覧など、サイト拡張用の枠です。</p>
+                    <span class="home-card-button is-disabled">準備中</span>
+                </div>
+            </article>
+        </div>
+    </section>
+</main>
+
+<footer class="site-footer" role="contentinfo">
+    <div class="footer-mini">
+        <div class="footer-mini-left">
+            <span class="footer-brand">モスロギア</span>
+            <span class="footer-sep">・</span>
+            <a class="footer-link" href="https://mythologiatheoracle.com/" target="_blank" rel="noopener noreferrer">
+                公式サイト
+            </a>
+            <span class="footer-sep">・</span>
+            <a class="footer-link footer-feedback"
+                href="https://docs.google.com/forms/d/e/【フォームID】/viewform?usp=pp_url&entry.123456789=ホーム"
+                target="_blank" rel="noopener noreferrer">
+                フィードバック
+            </a>
+        </div>
+
+        <details class="footer-details">
+            <summary class="footer-more">このサイトについて</summary>
+            <div class="footer-detail-body">
+                <p>
+                    <strong>モスロギア</strong> はアプリ『神託のメソロギア』の非公式ファンサイトです。<br>
+                    画像・データ等の著作権は各権利者に帰属します。
+                </p>
+                <p>
+                    一部画像素材は「ジュエルセイバーFREE」
+                    （<a href="https://www.jewel-s.jp/" target="_blank" rel="noopener">https://www.jewel-s.jp/</a>）
+                    を使用しています。
+                </p>
+                <p class="footer-contact">
+                    連絡先：<a href="https://x.com/192837465aruneo" target="_blank"
+                        rel="noopener noreferrer">@192837465aruneo</a>
+                </p>
+                <div class="footer-copy">© 2025 Mesorogia Cards</div>
+            </div>
+        </details>
+    </div>
+</footer>
+
+<!-- ===== スクリプト ===== -->
+<script src="js/common/ui/header-menu.js?v=2026-05-15-002"></script>
+<script src="js/pages/home/home.js?v=2026-05-22-001"></script>
+<script src="js/common/pwa/cache-config.js?v=2026-05-20-002"></script>
+<script src="js/common/pwa/install-ui.js?v=2026-05-07-001"></script>
+<script src="js/common/pwa/register.js?v=2026-05-16-001"></script>
+
+</body>
 </html>

@@ -1109,7 +1109,9 @@ function rebuildFilteredItems(){
 
   if (!state?.list) return [];
 
-  const base = state.list.allItems || [];
+  const base = typeof window.getListItemsForFilterBase_ === 'function'
+    ? window.getListItemsForFilterBase_(state.list.allItems || [])
+    : (state.list.allItems || []);
   const sortKey = state.list.sortKey || 'new';
 
   let filtered = base.slice();

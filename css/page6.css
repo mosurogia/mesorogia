@@ -612,7 +612,6 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 10px;
 }
 
 .tier-guide-deck-title {
@@ -621,6 +620,29 @@
     font-size: 15px;
     font-weight: 900;
     line-height: 1.35;
+}
+
+.tier-guide-deck-meta {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0px 0 10px;
+}
+
+.tier-guide-deck-meta-item {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 0 8px;
+    border: 1px solid rgba(15, 23, 42, .08);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .72);
+    color: #334155;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.2;
 }
 
 .tier-guide-deck-actions {
@@ -959,6 +981,17 @@
 
     .tier-guide-deck-title {
         font-size: 14px;
+    }
+
+    .tier-guide-deck-meta {
+        gap: 5px;
+        margin-bottom: 8px;
+    }
+
+    .tier-guide-deck-meta-item {
+        min-height: 21px;
+        padding: 0 7px;
+        font-size: 11px;
     }
 
     .tier-guide-deck-actions-wide {

@@ -5,7 +5,7 @@
 (function () {
     'use strict';
 
-    const TIER_API_URL = 'https://script.google.com/macros/s/AKfycbxYpjWumAT8QHCjx00cNT8NuaazxuMtMyWl2DBEcwCzaHRzZHCf-6BJR0ukOxWd9ajHcw/exec';
+    const TIER_API_URL = 'https://script.google.com/macros/s/AKfycbwB2DTjmeaaVA1nJvGmUIFMnI1M66WakN3LSOiOk7ECekS4-sBkQqYR0xVERopXeZWQDA/exec';
     const TIER_ORDER = ['S', 'A', 'B', 'C', 'D', 'E'];
     const MAIN_RACES = ['ドラゴン', 'アンドロイド', 'エレメンタル', 'ルミナス', 'シェイド'];
     const RACE_BG_CLASS_NAMES = [
@@ -116,6 +116,17 @@
             ...(environment || {}),
             items: getEnvironmentItems(environment).map(normalizeTierItem)
         };
+    }
+
+    function getGuideDeckMetaItems(item) {
+        const author = String(item && item.author || '').trim();
+        const createdAt = String(item && item.createdAt || '').trim();
+        const metaItems = [];
+
+        if (createdAt) metaItems.push(`作成日：${createdAt}`);
+        if (author) metaItems.push(`投稿者：${author}`);
+
+        return metaItems;
     }
 
     function getPostIdFromUrl(url) {
@@ -780,6 +791,19 @@
 
         head.append(title);
         card.append(head);
+
+        const metaItems = getGuideDeckMetaItems(item);
+        if (metaItems.length) {
+            const meta = document.createElement('div');
+            meta.className = 'tier-guide-deck-meta';
+            metaItems.forEach((text) => {
+                const metaItem = document.createElement('span');
+                metaItem.className = 'tier-guide-deck-meta-item';
+                metaItem.textContent = text;
+                meta.append(metaItem);
+            });
+            card.append(meta);
+        }
 
         const wideActions = document.createElement('div');
         wideActions.className = 'tier-guide-deck-actions-wide';

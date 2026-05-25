@@ -1016,34 +1016,7 @@
 }
 
 .tier-discord-banner-main {
-    display: grid;
-    align-items: center;
-    grid-template-columns: 52px minmax(0, 1fr);
-    column-gap: 12px;
     min-width: 0;
-}
-
-.tier-discord-banner-logo {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    grid-row: 1 / span 2;
-    width: 52px;
-    height: 52px;
-
-    border-radius: 16px;
-
-    background: rgba(88, 101, 242, .12);
-    box-shadow:
-        inset 0 0 0 1px rgba(88, 101, 242, .18),
-        0 6px 16px rgba(88, 101, 242, .16);
-}
-
-.tier-discord-banner-logo img {
-    display: block;
-    width: 34px;
-    height: 34px;
-    object-fit: contain;
 }
 
 .tier-discord-banner-title {
@@ -1066,8 +1039,12 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
+    box-sizing: border-box;
+    flex: 0 1 auto;
 
-    min-width: 140px;
+    width: min(100%, 180px);
+    max-width: 100%;
     min-height: 40px;
     padding: 0 16px;
 
@@ -1087,28 +1064,21 @@
         0 4px 14px rgba(88, 101, 242, .28);
 }
 
+.tier-discord-banner-button img {
+    display: block;
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    border-radius: 20px;
+}
+
 @media (max-width: 768px) {
     .tier-discord-banner {
         flex-direction: column;
         align-items: stretch;
 
         padding: 12px;
-    }
-
-    .tier-discord-banner-main {
-        grid-template-columns: 46px minmax(0, 1fr);
-        column-gap: 10px;
-    }
-
-    .tier-discord-banner-logo {
-        width: 46px;
-        height: 46px;
-        border-radius: 14px;
-    }
-
-    .tier-discord-banner-logo img {
-        width: 30px;
-        height: 30px;
     }
 
     .tier-discord-banner-button {

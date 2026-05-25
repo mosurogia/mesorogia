@@ -283,7 +283,7 @@
     showInstruction_(isIos_() ? 'ios' : 'manual');
   }
 
-  function runRepairReload_(button) {
+  async function runRepairReload_(button) {
     const prevText = button?.textContent || '';
     if (button) {
       button.disabled = true;
@@ -292,6 +292,12 @@
 
     try {
       window.clearDeckPostListBrowserCache_?.();
+      const tierCacheTask = window.clearTierListBrowserCache_?.();
+      if (tierCacheTask && typeof tierCacheTask.catch === 'function') {
+        await tierCacheTask.catch((error) => {
+          console.warn('Tier表キャッシュの再取得に失敗しました。', error);
+        });
+      }
       const removeKeys = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);

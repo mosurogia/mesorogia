@@ -5,7 +5,7 @@
 (function () {
     'use strict';
 
-    const TIER_API_URL = 'https://script.google.com/macros/s/AKfycbyQ4DrQBXGDN035XOGjro9r7-nyarVPTJI-0_BifxiijvrPoH4iGnpONfPtj0VVz7UOjw/exec';
+    const TIER_API_URL = 'https://script.google.com/macros/s/AKfycbxYpjWumAT8QHCjx00cNT8NuaazxuMtMyWl2DBEcwCzaHRzZHCf-6BJR0ukOxWd9ajHcw/exec';
     const TIER_ORDER = ['S', 'A', 'B', 'C', 'D', 'E'];
     const MAIN_RACES = ['ドラゴン', 'アンドロイド', 'エレメンタル', 'ルミナス', 'シェイド'];
     const RACE_BG_CLASS_NAMES = [
@@ -64,6 +64,58 @@
     function getTierScore(item) {
         const score = Number(item && item.tierScore);
         return Number.isFinite(score) ? score : Number.MAX_SAFE_INTEGER;
+    }
+
+    function isFiniteNumberLike(value) {
+        const text = String(value ?? '').trim();
+        if (!text) return false;
+        return Number.isFinite(Number(text));
+    }
+
+    function isPostUrlLike(value) {
+        const text = String(value ?? '').trim();
+        return /^https?:\/\//i.test(text) || /[?&](?:pid|postId)=/i.test(text);
+    }
+
+    function normalizeImageFileName(value) {
+        return String(value || '')
+            .trim()
+            .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+    }
+
+    function scoreToTier(score) {
+        if (score < 100) return 'S';
+        if (score < 200) return 'A';
+        if (score < 300) return 'B';
+        if (score < 400) return 'C';
+        if (score < 500) return 'D';
+        if (score < 600) return 'E';
+        return 'その他';
+    }
+
+    function normalizeTierItem(item) {
+        const normalized = { ...(item || {}) };
+        const imageFile = String(normalized.imageFile || '').trim();
+        const tierScore = String(normalized.tierScore ?? '').trim();
+        const comment = String(normalized.comment || '').trim();
+        const postUrl = String(normalized.postUrl || '').trim();
+
+        if (isFiniteNumberLike(imageFile) && !isFiniteNumberLike(tierScore)) {
+            normalized.tierScore = Number(imageFile);
+            normalized.tier = scoreToTier(normalized.tierScore);
+            normalized.comment = tierScore;
+            normalized.postUrl = isPostUrlLike(comment) && !postUrl ? comment : postUrl;
+            normalized.imageFile = '';
+        }
+
+        return normalized;
+    }
+
+    function normalizeTierEnvironment(environment) {
+        return {
+            ...(environment || {}),
+            items: getEnvironmentItems(environment).map(normalizeTierItem)
+        };
     }
 
     function getPostIdFromUrl(url) {
@@ -221,7 +273,7 @@
 
     function createDeckCard(item) {
         const deckName = String(item.deckName || '名称未設定').trim() || '名称未設定';
-        const imageFile = String(item.imageFile || '').trim();
+        const imageFile = normalizeImageFileName(deckName);
         const postUrl = String(item.postUrl || '').trim();
         const detailHref = getPostDetailHref(postUrl);
         const card = document.createElement(detailHref ? 'a' : 'article');
@@ -859,10 +911,74 @@
         updateEnvironmentControls();
     }
 
+    const TIER_IMAGE_CAPTURE_WIDTH = 1024;
+    const TIER_IMAGE_CAPTURE_SCALE = 2;
+
     function getTierImageFileName() {
         const environment = state.environments[state.currentEnvironmentIndex];
         const name = getEnvironmentName(environment, state.currentEnvironmentIndex).replace(/[\\/:*?"<>|]/g, '_');
         return `tier-list-${name || 'latest'}.png`;
+    }
+
+    function waitTierBoardImages(target) {
+        return Promise.all(Array.from(target.querySelectorAll('img')).map((image) => {
+            if (image.complete) return Promise.resolve();
+            return new Promise((resolve) => {
+                image.addEventListener('load', resolve, { once: true });
+                image.addEventListener('error', resolve, { once: true });
+                setTimeout(resolve, 1500);
+            });
+        }));
+    }
+
+    function createTierBoardCaptureTarget(source) {
+        const captureTarget = source.cloneNode(true);
+        captureTarget.removeAttribute('id');
+        captureTarget.setAttribute('aria-hidden', 'true');
+
+        Object.assign(captureTarget.style, {
+            position: 'absolute',
+            left: '-10000px',
+            top: '0',
+            width: `${TIER_IMAGE_CAPTURE_WIDTH}px`,
+            maxWidth: 'none',
+            boxSizing: 'border-box',
+            pointerEvents: 'none'
+        });
+
+        captureTarget.querySelectorAll('.tier-row').forEach((row) => {
+            Object.assign(row.style, {
+                display: 'grid',
+                gridTemplateColumns: '72px minmax(0, 1fr)',
+                minHeight: '86px'
+            });
+        });
+
+        captureTarget.querySelectorAll('.tier-items').forEach((items) => {
+            Object.assign(items.style, {
+                display: 'flex',
+                alignContent: 'flex-start',
+                alignItems: 'flex-start',
+                flexWrap: 'wrap',
+                gap: '4px',
+                padding: '6px'
+            });
+        });
+
+        captureTarget.querySelectorAll('.tier-card').forEach((card) => {
+            Object.assign(card.style, {
+                width: '88px'
+            });
+        });
+
+        captureTarget.querySelectorAll('.tier-card-image-wrap').forEach((wrap) => {
+            Object.assign(wrap.style, {
+                minHeight: '90px'
+            });
+        });
+
+        document.body.append(captureTarget);
+        return captureTarget;
     }
 
     function closeTierImageModal(modal) {
@@ -1030,25 +1146,24 @@
             button.classList.add('is-loading');
         }
 
+        let captureTarget = null;
         try {
-            await Promise.all(Array.from(target.querySelectorAll('img')).map((image) => {
-                if (image.complete) return Promise.resolve();
-                return new Promise((resolve) => {
-                    image.addEventListener('load', resolve, { once: true });
-                    image.addEventListener('error', resolve, { once: true });
-                    setTimeout(resolve, 1500);
-                });
-            }));
-            const canvas = await html2canvas(target, {
+            captureTarget = createTierBoardCaptureTarget(target);
+            await waitTierBoardImages(captureTarget);
+            const canvas = await html2canvas(captureTarget, {
                 useCORS: true,
                 backgroundColor: '#fff',
-                scale: Math.max(2, Math.min(3, window.devicePixelRatio || 1))
+                width: captureTarget.offsetWidth,
+                height: captureTarget.offsetHeight,
+                windowWidth: TIER_IMAGE_CAPTURE_WIDTH,
+                scale: TIER_IMAGE_CAPTURE_SCALE
             });
             showTierImagePreview(canvas, getTierImageFileName());
         } catch (error) {
             console.error('[tier] Tier表画像の生成に失敗しました。', error);
             alert('Tier表画像の生成に失敗しました。ページを再読み込みしてください。');
         } finally {
+            if (captureTarget) captureTarget.remove();
             if (button) {
                 button.disabled = false;
                 button.classList.remove('is-loading');
@@ -1123,8 +1238,9 @@
                 throw new Error('Tierデータの形式が不正です');
             }
 
+            data.items = data.items.map(normalizeTierItem);
             if (Array.isArray(data.environments) && data.environments.length) {
-                state.environments = data.environments;
+                state.environments = data.environments.map(normalizeTierEnvironment);
                 renderEnvironment(0);
             } else {
                 state.environments = [{
@@ -1140,6 +1256,19 @@
             updateEnvironmentControls();
         }
     }
+
+    window.clearTierListBrowserCache_ = async function () {
+        state.postCache.clear();
+        state.prefetchedPostPages.clear();
+
+        const url = new URL(TIER_API_URL);
+        url.searchParams.set('mode', 'tierList');
+        url.searchParams.set('force', '1');
+        url.searchParams.set('_', String(Date.now()));
+
+        const response = await fetch(url.toString(), { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    };
 
     function init() {
         setStatus('最新リスト確認中');

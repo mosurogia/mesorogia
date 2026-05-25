@@ -36,7 +36,7 @@
     border-radius: 8px;
     background:
         linear-gradient(135deg, rgba(17, 24, 39, .9), rgba(79, 70, 229, .78)),
-        url("../../img/indexogp.jpg") center / cover;
+        url("../../img/homehero.webp") center / cover;
     box-shadow: 0 14px 34px rgba(15, 23, 42, .18);
     overflow: hidden;
 }

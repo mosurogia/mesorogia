@@ -69,7 +69,7 @@ window.BASE_PATH = window.BASE_PATH ?? '';
 // =======================================
 window.GAS_API_BASE =
   window.GAS_API_BASE ||
-  'https://script.google.com/macros/s/AKfycbwdQzC0XS4cS4zhL-ETjEIQh2oZipjz5safK5oYxhPa07QHEhUJos6fAIARSYCtbjWi/exec';
+  'https://script.google.com/macros/s/AKfycbwgvqClfe8RSOQoZ9Jw6A6yVjmrb8TYS9eu0ir-ORnstb29vnmz85RpXrVJXW8mQoU/exec';
 
 window.DECKPOST_API_BASE ??= window.GAS_API_BASE;
 window.AUTH_API_BASE     ??= window.GAS_API_BASE;
@@ -109,12 +109,15 @@ window.CATEGORY_ORDER_LIST ??= [
     "ドラゴライダー",
     "電竜",
     "メロウディア",
+    "翔舞士（しょうぶし）",
+    "契神導師（かんなぎ）",
 
     // --- 2: アンドロイド枠 ---
     "メイドロボ",
     "アドミラルシップ",
     "テックノイズ",
     "星装（アストロイ）",
+    "発明家（ラベンダー）"  ,
 
     // --- 3: エレメンタル枠 ---
     "ナチュリア",
@@ -129,6 +132,8 @@ window.CATEGORY_ORDER_LIST ??= [
     "愚者愚者（クラウンクラウド）",
     "蒼ノ刀",
     "歪祝（エヴァル）",
+    "アルテアス",
+
 
 
     // --- 5: シェイド枠 ---
@@ -136,6 +141,8 @@ window.CATEGORY_ORDER_LIST ??= [
     "マディスキア",
     "炎閻魔（えんえんま）",
     "ヴァントム",
+    "ヴォルグリム",
+
 
     // --- その他 ---
     "ノーカテゴリ",
@@ -145,17 +152,16 @@ window.CATEGORY_ORDER_LIST ??= [
  * - LISTだけでは race が分からないため “枠” 定義を持つ
  */
 window.CATEGORY_GROUPS ??= [
-    { race: 'ドラゴン',   list: ["聖焔龍（フォルティア）","ドラゴライダー","電竜","メロウディア"] },
-    { race: 'アンドロイド', list: ["メイドロボ","アドミラルシップ","テックノイズ","星装（アストロイ）"
-    ] },
+    { race: 'ドラゴン',   list: ["聖焔龍（フォルティア）","ドラゴライダー","電竜","メロウディア","翔舞士（しょうぶし）","契神導師（かんなぎ）"] },
+    { race: 'アンドロイド', list: ["メイドロボ","アドミラルシップ","テックノイズ","星装（アストロイ）","発明家（ラベンダー）"] },
     { race: 'エレメンタル', list: ["ナチュリア","鬼刹（きせつ）","風花森（ふかしん）","秘饗（バンケット）","アルケミクルス"] },
-    { race: 'ルミナス',   list: ["ロスリス","白騎士","愚者愚者（クラウンクラウド）","蒼ノ刀","歪祝（エヴァル）"] },
-    { race: 'シェイド',   list: ["昏き霊園（スレイヴヤード）","マディスキア","炎閻魔（えんえんま）","ヴァントム"] },
+    { race: 'ルミナス',   list: ["ロスリス","白騎士","愚者愚者（クラウンクラウド）","蒼ノ刀","歪祝（エヴァル）","アルテアス"] },
+    { race: 'シェイド',   list: ["昏き霊園（スレイヴヤード）","マディスキア","炎閻魔（えんえんま）","ヴァントム","ヴォルグリム"] },
     // ノーカテゴリは race なし
 ];
 
 /**
- * ✅ index再生成（LIST/GROUPSを差し替えた時に呼べる）
+ * ✅ index再生成（LIST/GROUPSを差し替えた時に呼べる
  */
 window.rebuildCategoryDefs ??= function rebuildCategoryDefs(){
     const list = Array.isArray(window.CATEGORY_ORDER_LIST) ? window.CATEGORY_ORDER_LIST : [];

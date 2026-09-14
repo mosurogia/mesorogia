@@ -34,17 +34,16 @@
       icon: './img/header_icon_3.webp'
     },
     {
-      href: 'match-results.html',
-      key: 'match-results.html',
-      label: '戦績',
-      icon: './img/header_icon_4.webp'
+      href: 'tier.html',
+      key: 'tier.html',
+      label: 'ティア表',
+      icon: './img/header_icon_5.webp'
     },
     {
-      href: '#',
-      key: 'settings',
-      label: '設定',
-      iconText: '☰',
-      action: 'account'
+      href: 'info.html',
+      key: 'info.html',
+      label: '情報',
+      iconText: 'i'
     }
   ];
 
@@ -66,6 +65,48 @@
 
   function isIos_() {
     return /iphone|ipad|ipod/i.test(window.navigator.userAgent || '');
+  }
+
+  function getVisualViewportBottomGap_() {
+    const viewport = window.visualViewport;
+    if (!viewport) return 0;
+
+    const layoutHeight = Math.max(
+      window.innerHeight || 0,
+      document.documentElement.clientHeight || 0,
+      viewport.height || 0
+    );
+    const visualBottom = viewport.offsetTop + viewport.height;
+    const gap = Math.max(0, layoutHeight - visualBottom);
+    return Math.min(320, Math.round(gap * 100) / 100);
+  }
+
+  function refreshAppViewportGap_() {
+    const gap = isStandalone_() ? getVisualViewportBottomGap_() : 0;
+    document.documentElement.style.setProperty('--app-visual-viewport-bottom-gap', `${gap}px`);
+  }
+
+  function bindAppViewportGap_() {
+    if (document.__appViewportGapBound) return;
+    document.__appViewportGapBound = true;
+
+    const refreshLater = () => {
+      refreshAppViewportGap_();
+      window.setTimeout(refreshAppViewportGap_, 80);
+      window.setTimeout(refreshAppViewportGap_, 240);
+      window.setTimeout(refreshAppViewportGap_, 700);
+    };
+
+    refreshAppViewportGap_();
+    window.addEventListener('resize', refreshLater, { passive: true });
+    window.addEventListener('orientationchange', refreshLater, { passive: true });
+    window.addEventListener('pageshow', refreshLater, { passive: true });
+    document.addEventListener('focusin', refreshLater);
+    document.addEventListener('focusout', refreshLater);
+    document.addEventListener('visibilitychange', refreshLater);
+
+    window.visualViewport?.addEventListener?.('resize', refreshLater, { passive: true });
+    window.visualViewport?.addEventListener?.('scroll', refreshLater, { passive: true });
   }
 
   function getCurrentPageKey_() {
@@ -111,6 +152,14 @@
     }).join('');
 
     return nav;
+  }
+
+  function openCurrentBottomTabMenu_() {
+    const link = document.querySelector('.app-bottom-nav a.is-active[data-tab-menu]');
+    const key = link?.dataset.tabMenu;
+    if (!link || !key || !TAB_MENUS[key]?.length) return;
+
+    openBottomTabMenu_(link, key);
   }
 
   function ensureAppNavLoading_(message, isError = false) {
@@ -174,17 +223,6 @@
 
       const link = event.target.closest?.('.app-bottom-nav a');
       if (!link) return;
-      if (link.dataset.action === 'account') {
-        event.preventDefault();
-
-        if (typeof window.openAccountDataModal === 'function') {
-          window.openAccountDataModal({ scope: 'all' });
-        } else if (typeof window.openAccountModal === 'function') {
-          window.openAccountModal();
-        }
-
-        return;
-      }
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       if (link.target && link.target !== '_self') return;
 
@@ -220,9 +258,16 @@
   function refreshStandaloneChrome_() {
     const standalone = isStandalone_();
     document.body.classList.toggle('is-pwa-standalone', standalone);
+    refreshAppViewportGap_();
 
     const nav = ensureAppBottomNav_();
     nav.hidden = !standalone;
+
+    if (standalone) {
+      requestAnimationFrame(openCurrentBottomTabMenu_);
+    } else {
+      closeBottomTabMenu_();
+    }
   }
 
   function canShowNudge_() {
@@ -306,6 +351,7 @@
         }
       }
       removeKeys.forEach(key => localStorage.removeItem(key));
+      localStorage.removeItem('deckmaker_invalid_race_guide_seen_at');
     } catch (_) {}
 
     const task = window.MesorogiaPwaMaintenance?.repairAndReload?.();
@@ -590,6 +636,7 @@
   });
 
   function init_() {
+    bindAppViewportGap_();
     refreshStandaloneChrome_();
     refreshHeaderBanner_();
     addFooterEntry_();
@@ -615,6 +662,7 @@
 
   window.matchMedia?.('(display-mode: standalone)')?.addEventListener?.('change', () => {
     refreshStandaloneChrome_();
+    refreshAppViewportGap_();
     refreshHeaderBanner_();
     refreshFooterButton_();
     refreshToolbarButtons_();

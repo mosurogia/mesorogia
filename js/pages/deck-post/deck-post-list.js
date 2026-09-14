@@ -403,7 +403,7 @@
     if (!src || typeof src !== 'object') return null;
 
     const payload = parseJsonObject_(src.payload || src.payloadJSON || src.rawPayload);
-    const item = { ...src };
+    const item = { ...(payload || {}), ...src };
     item.postId = String(item.postId || postId || '').trim();
     if (!item.postId) return null;
 
@@ -418,6 +418,9 @@
         : payload?.cardNotes
     );
     item.hasCardNotes = item.cardNotes.some((row) => row && (row.cd || row.text));
+    item.lethalPlans = Array.isArray(src.lethalPlans)
+      ? src.lethalPlans
+      : (Array.isArray(payload?.lethalPlans) ? payload.lethalPlans : []);
     item.deckNoteLength = Array.from(String(item.deckNote || '').trim()).length;
     item.__detailPayloadLoaded = true;
     return item;
@@ -752,6 +755,8 @@
     const isMine = (listMode === 'mine');
     const bg = D.raceBg?.(item.races) || '';
 
+    const titleBadge = item.titleBadge || item.titleTags || item.tagsTitle;
+    const tagsTitle = window.DeckPostFilter?.tagChipsTitleBadge?.(titleBadge) || '';
     const tagsMain = window.DeckPostFilter?.tagChipsMain?.(item.tagsAuto, item.tagsPick) || '';
     const tagsUser = window.DeckPostFilter?.tagChipsUser?.(item.tagsUser) || '';
 
@@ -829,6 +834,7 @@
         </div>
 
         <div class="post-tags-wrap">
+          <div class="post-tags post-tags-title">${tagsTitle}</div>
           <div class="post-tags post-tags-main">${tagsMain}</div>
           <div class="post-tags post-tags-user">${tagsUser}</div>
         </div>
@@ -849,6 +855,8 @@
     const oldGod = D.getOldGodNameFromItem?.(item) || '';
 
     if (opts.deferDetail && !isMine) {
+      const titleBadge = item.titleBadge || item.titleTags || item.tagsTitle;
+      const tagsTitle = window.DeckPostFilter?.tagChipsTitleBadge?.(titleBadge) || '';
       const tagsMain = window.DeckPostFilter?.tagChipsMain?.(item.tagsAuto, item.tagsPick) || '';
       const tagsUser = window.DeckPostFilter?.tagChipsUser?.(item.tagsUser) || '';
       const posterXRaw = String(item.posterX || '').trim();
@@ -908,6 +916,7 @@
           </div>
 
           <div class="post-tags-wrap">
+            <div class="post-tags post-tags-title">${tagsTitle}</div>
             <div class="post-tags post-tags-main">${tagsMain}</div>
             <div class="post-tags post-tags-user">${tagsUser}</div>
           </div>
@@ -936,10 +945,13 @@
     const scope = listMode;
     const spPaneId = `sp-${scope}-${pidSan}`;
 
+    const titleBadge = item.titleBadge || item.titleTags || item.tagsTitle;
+    const tagsTitle = window.DeckPostFilter?.tagChipsTitleBadge?.(titleBadge) || '';
     const tagsMain = window.DeckPostFilter?.tagChipsMain?.(item.tagsAuto, item.tagsPick) || '';
     const tagsUser = window.DeckPostFilter?.tagChipsUser?.(item.tagsUser) || '';
     const deckList = D.buildDeckListHtml?.(item) || '';
     const cardNotesHtml = D.buildCardNotesHtml?.(item) || '';
+    const lethalPlansHtml = D.buildLethalPlansHtml_?.(item) || '';
 
     const posterXRaw = String(item.posterX || '').trim();
     const posterXLabel = posterXRaw;
@@ -1077,6 +1089,7 @@
         </div>
 
         <div class="post-tags-wrap">
+          <div class="post-tags post-tags-title">${tagsTitle}</div>
           <div class="post-tags post-tags-main">${tagsMain}</div>
           <div class="post-tags post-tags-user">${tagsUser}</div>
         </div>
@@ -1108,7 +1121,7 @@
               <dt>旧神</dt><dd>${escapeHtml(oldGod || 'なし')}</dd>
 
               ${typeChipsHtml
-                ? `<dt>タイプ構成</dt><dd><div class="post-detail-chips">${typeChipsHtml}</div></dd>`
+                ? `<dt>役割構成</dt><dd><div class="post-detail-chips">${typeChipsHtml}</div></dd>`
                 : ''
               }
 
@@ -1133,6 +1146,8 @@
                   （平均チャージ量：<span id="avg-charge-${escapeHtml(spPaneId)}">-</span>）
                 </span>
               </dd>
+
+              ${lethalPlansHtml ? `<dt class="lethal-plan-label">リーサルプラン<span class="lethal-planner__title-badge">ベータ版</span></dt><dd>${lethalPlansHtml}</dd>` : ''}
             </dl>
 
             <div class="deck-compare-block">
@@ -2125,7 +2140,8 @@ document.addEventListener('click', async (e) => {
       !!fs.selectedCardCds?.size ||
       !!String(fs.selectedPosterKey || '').trim() ||
       !!String(fs.selectedPoster || '').trim() ||
-      !!String(fs.selectedPostId || '').trim()
+      !!String(fs.selectedPostId || '').trim() ||
+      !!String(fs.keywordQuery || '').trim()
     );
   }
 
@@ -2380,11 +2396,16 @@ document.addEventListener('click', async (e) => {
   /**
    * フィルター・並び替えを再計算して一覧を再描画
    */
-  async function applySortAndRerenderList(resetToFirstPage = false) {
+  async function applySortAndRerenderList(resetToFirstPage = false, opts = {}) {
     const state = getDeckPostState_();
     const page = resetToFirstPage ? 1 : (state?.list?.currentPage || 1);
     stopSlowBackgroundListFetch_('裏読み停止中');
     normalizeCompleteAllItemsState_();
+
+    if (opts.useLatestSnapshot !== false && listLatestSnapshot_ && !applyingLatestSnapshot_) {
+      await applyLatestListSnapshot_(page);
+      return;
+    }
 
     if (!shouldUseAllItemsForList_()) {
       loadListPage(page);
@@ -2464,12 +2485,15 @@ document.addEventListener('click', async (e) => {
     showListStatusMessage('loading', '共有リンクのデッキを読み込み中…');
 
     const transferredItem = readTransferredPost_(pid);
-    const res = transferredItem ? null : await window.DeckPostApi?.apiGetPost?.({ postId: pid });
-    if (!transferredItem && (!res || res.ok === false)) {
+    const res = await window.DeckPostApi?.apiGetPost?.({ postId: pid });
+    const fetchedItem = res && res.ok !== false
+      ? normalizeSharedPostResponse_(res, pid)
+      : null;
+    if (!fetchedItem && !transferredItem && (!res || res.ok === false)) {
       throw createListFetchError_((res && res.error) || 'shared post fetch failed', res);
     }
 
-    const item = transferredItem || normalizeSharedPostResponse_(res, pid);
+    const item = fetchedItem || transferredItem;
     if (!item) {
       throw createListFetchError_('shared post response invalid', {
         code: 'INVALID_SHARED_POST_RESPONSE',
@@ -2515,6 +2539,35 @@ document.addEventListener('click', async (e) => {
     startCurrentPageDetailPrefetch_(pageItems);
     scrollToPostListTop_();
     return true;
+  }
+
+  /**
+   * 共有リンク専用の1件表示を解除して通常一覧へ戻す
+   */
+  function clearSharedPostView_() {
+    const state = getDeckPostState_();
+    if (!state?.list) return;
+
+    stopCurrentPageDetailPrefetch_();
+    stopSlowBackgroundListFetch_('裏読み停止中');
+
+    state.list.allItems = [];
+    state.list.filteredItems = [];
+    state.list.items = [];
+    state.list.nextOffset = 0;
+    state.list.currentPage = 1;
+    state.list.totalPages = 1;
+    state.list.total = 0;
+    state.list.sourceTotal = 0;
+    state.list.hasAllItems = false;
+    state.list.pageCache = {};
+
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('pid');
+      url.searchParams.delete('post');
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+    } catch (_) {}
   }
 
   function renderAdoptionCardSearchResults_(complete = false) {
@@ -2872,7 +2925,7 @@ document.addEventListener('click', async (e) => {
   /**
    * 一覧用：指定ページを描画
    */
-  async function loadListPage(page) {
+  async function loadListPage(page, opts = {}) {
     const state = getDeckPostState_();
     stopCurrentPageDetailPrefetch_();
     normalizeCompleteAllItemsState_();
@@ -2881,7 +2934,7 @@ document.addEventListener('click', async (e) => {
     if (!listEl) return;
 
     const requestedPage = Math.max(Number(page || 1), 1);
-    if (listLatestSnapshot_ && !applyingLatestSnapshot_) {
+    if (opts.useLatestSnapshot && listLatestSnapshot_ && !applyingLatestSnapshot_) {
       await applyLatestListSnapshot_(requestedPage);
       return;
     }
@@ -3429,14 +3482,14 @@ document.addEventListener('click', async (e) => {
     const onPrev = () => {
       const state = getDeckPostState_();
       const page = Number(state?.list?.currentPage || 1);
-      if (page > 1) window.DeckPostList?.loadListPage?.(page - 1);
+      if (page > 1) window.DeckPostList?.loadListPage?.(page - 1, { useLatestSnapshot: true });
     };
 
     const onNext = () => {
       const state = getDeckPostState_();
       const page = Number(state?.list?.currentPage || 1);
       const total = Number(state?.list?.totalPages || 1);
-      if (page < total) window.DeckPostList?.loadListPage?.(page + 1);
+      if (page < total) window.DeckPostList?.loadListPage?.(page + 1, { useLatestSnapshot: true });
     };
 
     document.getElementById('pagePrevTop')?.addEventListener('click', onPrev);
@@ -3688,7 +3741,7 @@ document.addEventListener('click', async (e) => {
             if (minePage && !minePage.hidden) {
               window.DeckPostList?.loadMinePage?.(1);
             } else {
-              window.DeckPostList?.applySortAndRerenderList?.();
+              window.DeckPostList?.applySortAndRerenderList?.(false, { useLatestSnapshot: false });
             }
           }
         }, 120);
@@ -3725,9 +3778,6 @@ document.addEventListener('click', async (e) => {
       setToMineButtonLoading_(true);
 
       try {
-        if (listLatestSnapshot_) {
-          await applyLatestListSnapshot_(getDeckPostState_()?.list?.currentPage || 1);
-        }
         updateMineLoginStatus();
 
         if (getMineActiveTab_() === 'posts') {
@@ -3744,9 +3794,6 @@ document.addEventListener('click', async (e) => {
     });
 
     document.getElementById('backToListBtn')?.addEventListener('click', async () => {
-      if (listLatestSnapshot_) {
-        await applyLatestListSnapshot_(getDeckPostState_()?.list?.currentPage || 1);
-      }
       window.DeckPostList?.showList?.();
     });
   }
@@ -3790,6 +3837,7 @@ document.addEventListener('click', async (e) => {
   window.mergeListItemsDedup_ = mergeListItemsDedup_;
   window.applyFilterIncrementally_ = applyFilterIncrementally_;
   window.clearDeckPostListBrowserCache_ = () => clearBrowserListPageCache_(1);
+  window.clearSharedPostView_ = clearSharedPostView_;
 
   // 新namespace
   window.DeckPostList = window.DeckPostList || {};
@@ -3809,6 +3857,7 @@ document.addEventListener('click', async (e) => {
   window.DeckPostList.mergeListItemsDedup = mergeListItemsDedup_;
   window.DeckPostList.applyFilterIncrementally = applyFilterIncrementally_;
   window.DeckPostList.clearBrowserCache = window.clearDeckPostListBrowserCache_;
+  window.DeckPostList.clearSharedPostView = clearSharedPostView_;
   window.DeckPostList.showListStatusMessage = showListStatusMessage;
   window.DeckPostList.showList = showList;
   window.DeckPostList.showMine = showMine;

@@ -44,6 +44,9 @@
     { key: 'mana_up',   label: 'マナ獲得', test: c => inSet_(normEnum_(c.mana_effect), ['UP','BOTH']) },
     { key: 'mana_down', label: 'マナ削減', test: c => inSet_(normEnum_(c.mana_effect), ['DOWN','BOTH']) },
 
+    { key: 'cost_up',   label: 'コスト増', test: c => inSet_(normEnum_(c.cost_effect), ['UP','BOTH']) },
+    { key: 'cost_down', label: 'コスト減', test: c => inSet_(normEnum_(c.cost_effect), ['DOWN','BOTH']) },
+
     // ⑬ 奪う：life/power/mana のいずれかが STEAL
     { key: 'steal', label: '奪う', test: c => {
         const le = normEnum_(c.life_effect);
@@ -53,6 +56,144 @@
         }
     },
     ];
+
+    const LETHAL_FILTER_TYPES = [
+    { key: 'attack', label: '攻撃', icon: '⚔', prefix: '', featuredValues: [6, 7, 8, 9, 10, 12] },
+    { key: 'burn', label: 'バーン', icon: '🔥', prefix: '', featuredValues: [1, 2, 3, 4] },
+    { key: 'buff', label: 'バフ', icon: '💪', prefix: '+', featuredValues: [1, 2, 3, 4] },
+    ];
+
+    function formatLethalFilterLabel_(type, value){
+    const typeDef = LETHAL_FILTER_TYPES.find(def => def.key === type);
+    if (!typeDef) return value;
+    if (value === 'any') return `${typeDef.icon} ${typeDef.label}全て`;
+    return `${typeDef.icon} ${typeDef.prefix}${value}`;
+    }
+
+    // リーサルプランで表示している打点をフィルター用に取得する
+    function getLethalValues_(lethalEntry){
+    if (!lethalEntry) return [];
+    const values = Array.isArray(lethalEntry.values) ? lethalEntry.values : [];
+    return [...values, lethalEntry.repeat?.value]
+        .map(Number)
+        .filter(value => Number.isFinite(value) && value > 0);
+    }
+
+    // 旧形式の lethal_burn（数値・カンマ区切り・「*」付き）にも対応する
+    function getLegacyLethalBurnValues_(value){
+    return String(value ?? '')
+        .split(',')
+        .map(item => Number(item.replace('*', '').trim()))
+        .filter(item => Number.isFinite(item) && item > 0);
+    }
+
+    function getCardLethalFilterValues_(card){
+    const attackValues = getLethalValues_(card.lethal?.attack);
+    const lethalBurnValues = getLethalValues_(card.lethal?.lethalBurn);
+    const combinedAttackValues = attackValues.flatMap(attack =>
+        lethalBurnValues.map(burn => attack + burn)
+    );
+
+    return {
+        attack: [...new Set([...attackValues, ...combinedAttackValues])],
+        burn: [...new Set([
+        ...getLethalValues_(card.lethal?.freeBurn),
+        ...lethalBurnValues,
+        ...getLegacyLethalBurnValues_(card.lethal_burn),
+        ])],
+        buff: [...new Set([
+        ...getLethalValues_(card.lethal?.freeBuff),
+        ...getLethalValues_(card.lethal?.lethalBuff),
+        ])],
+    };
+    }
+
+    function createLethalFilterBlock_(cards){
+    const { wrapper } = createFilterBlock_('打点');
+    wrapper.classList.add('filter-range-wrapper');
+
+    const groups = document.createElement('div');
+    groups.className = 'lethal-filter-groups';
+
+    const featuredGroups = document.createElement('div');
+    featuredGroups.className = 'lethal-filter-sections';
+
+    const otherGroups = document.createElement('div');
+    otherGroups.className = 'lethal-filter-sections lethal-filter-values--other';
+
+    LETHAL_FILTER_TYPES.forEach(type => {
+        const values = [...new Set(cards.flatMap(card =>
+        getCardLethalFilterValues_(card)[type.key]
+        ))].sort((a, b) => a - b);
+
+        if (values.length === 0) return;
+
+        const createValueButton = value => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'filter-btn';
+        btn.dataset.lethal = `${type.key}:${value}`;
+        btn.textContent = value === 'any' ? '全て' : `${type.prefix}${value}`;
+        btn.setAttribute('aria-label', `${type.label} ${type.prefix}${value}`);
+        return btn;
+        };
+
+        const createTypeGroup = (groupValues, includeAll = false) => {
+        if (!includeAll && groupValues.length === 0) return null;
+
+        const section = document.createElement('div');
+        section.className = `lethal-filter-section lethal-filter-section--${type.key}`;
+
+        const label = document.createElement('span');
+        label.className = 'lethal-filter-label';
+        const icon = document.createElement('span');
+        icon.className = 'lethal-filter-label-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = type.icon;
+        label.append(icon, document.createTextNode(type.label));
+        section.appendChild(label);
+
+        const valueGroup = document.createElement('div');
+        valueGroup.className = 'filter-group lethal-filter-values';
+        valueGroup.dataset.key = '打点';
+
+        if (includeAll) {
+            const allButton = createValueButton('any');
+            allButton.classList.add('lethal-filter-all-button');
+            allButton.setAttribute('aria-label', `${type.label}全て`);
+            valueGroup.appendChild(allButton);
+        }
+        groupValues.forEach(value => valueGroup.appendChild(createValueButton(value)));
+        section.appendChild(valueGroup);
+        return section;
+        };
+
+        const featuredSet = new Set(type.featuredValues);
+        const featuredValues = values.filter(value => featuredSet.has(value));
+        const otherValues = values.filter(value => !featuredSet.has(value));
+
+        const featuredSection = createTypeGroup(featuredValues, true);
+        if (featuredSection) featuredGroups.appendChild(featuredSection);
+
+        const otherSection = createTypeGroup(otherValues);
+        if (otherSection) otherGroups.appendChild(otherSection);
+    });
+
+    groups.appendChild(featuredGroups);
+
+    if (otherGroups.childElementCount > 0) {
+        const details = document.createElement('details');
+        details.className = 'lethal-filter-other';
+        const summary = document.createElement('summary');
+        summary.textContent = 'その他の値';
+        details.appendChild(summary);
+        details.appendChild(otherGroups);
+        groups.appendChild(details);
+    }
+
+    wrapper.appendChild(groups);
+    return wrapper;
+    }
 
     // 値ゆれ対策（TRUE/true/1など）
     function isTrue_(v){
@@ -145,6 +286,24 @@
     // - OFF / 所持 / 未コンプ / コンプ
     // - 排他（1つだけ選択）
     // ==============================
+    function hasAnyOwned_() {
+    const map = (typeof window.readOwnedDataSafe === 'function')
+        ? window.readOwnedDataSafe()
+        : {};
+
+    if (!map || typeof map !== 'object') return false;
+
+    for (const v of Object.values(map)) {
+        if (typeof v === 'number') {
+        if ((v | 0) > 0) return true;
+        } else if (v && typeof v === 'object') {
+        const total = v.normal | 0;
+        if (total > 0) return true;
+        }
+    }
+    return false;
+    }
+
     function createOwnedFilter4Buttons_() {
     const { wrapper } = createFilterBlock_('所持フィルター');
 
@@ -174,6 +333,15 @@
 
     wrapper.appendChild(groupDiv);
     return wrapper;
+    }
+
+    function ensureOwnedFilterUI_() {
+    const personalFilters = document.getElementById('personal-filters');
+    if (!personalFilters || !hasAnyOwned_()) return false;
+    if (personalFilters.querySelector('.filter-group[data-key="所持フィルター"]')) return false;
+
+    personalFilters.insertBefore(createOwnedFilter4Buttons_(), personalFilters.firstChild);
+    return true;
     }
 
     // ==============================
@@ -496,7 +664,7 @@
             <li>カードグループの作成・編集は、図鑑ページで行えます</li>
         </ul>
         `,
-    'タイプ': `
+    '役割': `
         <ul>
             <li>チャージャー / アタッカー / ブロッカー で絞り込み</li>
             <li>複数選択も可能</li>
@@ -567,6 +735,16 @@
             <li><b>特殊効果未所持</b>：特殊効果を持たないカード</li>
         </ul>
     `,
+    '打点': `
+        <ul>
+            <li><b>打点</b>とは、カードが相手のライフに与えられるダメージ量です</li>
+            <li><b>⚔ 攻撃</b>：アタッカーの攻撃によって与えるダメージ量</li>
+            <li><b>🔥 バーン</b>：カード効果によって相手のライフへ直接与えるダメージ量</li>
+            <li><b>💪 バフ</b>：アタッカーのパワーを増やし、攻撃のダメージを上乗せする量</li>
+            <li>複数の打点候補があるカードは、それぞれの値に登録されています</li>
+            <li>攻撃成功時に発生する打点も、攻撃の打点として登録されています</li>
+        </ul>
+    `,
     'その他': `
         <ul>
             <li>ドロー / サーチ / 回復 など、効果系フラグで絞り込み</li>
@@ -623,7 +801,7 @@
     return { wrapper, titleEl: strong };
     }
 
-    function createButtonGroup_(title, list, filterKey) {
+    function createButtonGroup_(title, list, filterKey, itemCounts = null) {
         const { wrapper } = createFilterBlock_(title);
 
         const groupDiv = document.createElement('div');
@@ -646,9 +824,29 @@
             btn.dataset.catRace = r || 'none';
         }
 
-        // 表示（カテゴリだけ改行）
-        if (filterKey === 'category' && String(item).includes('（')) {
-            btn.innerHTML = String(item).replace('（', '<br>（');
+        // 表示（カテゴリは枚数をカテゴリ名の横に付け、読み仮名を改行）
+        if (filterKey === 'category') {
+            const label = String(item);
+            const readingIndex = label.indexOf('（');
+            const categoryName = readingIndex >= 0 ? label.slice(0, readingIndex) : label;
+            const categoryReading = readingIndex >= 0 ? label.slice(readingIndex) : '';
+            const count = itemCounts?.get(item) || 0;
+
+            const categoryNameEl = document.createElement('span');
+            categoryNameEl.className = 'filter-category-name';
+            categoryNameEl.textContent = categoryName;
+
+            const categoryCountEl = document.createElement('span');
+            categoryCountEl.className = 'filter-category-count';
+            categoryCountEl.textContent = `${count}枚`;
+
+            btn.append(categoryNameEl, categoryCountEl);
+            if (categoryReading) {
+            const categoryReadingEl = document.createElement('span');
+            categoryReadingEl.className = 'filter-category-reading';
+            categoryReadingEl.textContent = categoryReading;
+            btn.appendChild(categoryReadingEl);
+            }
         } else {
             btn.textContent =
             (window.DISPLAY_LABELS && window.DISPLAY_LABELS[item] != null)
@@ -663,14 +861,14 @@
         return wrapper;
     }
 
-    // 2択/複数の横並び（タイプ・レア・BP・特殊効果など）
-    function createRangeStyleWrapper_(title, list, filterKey) {
+    // 2択/複数の横並び（役割・レア・BP・特殊効果など）
+    function createRangeStyleWrapper_(title, list, filterKey, groupKey = title) {
     const { wrapper } = createFilterBlock_(title);
     wrapper.classList.add('filter-range-wrapper');
 
     const groupDiv = document.createElement('div');
     groupDiv.className = 'filter-group';
-    groupDiv.dataset.key = title;
+    groupDiv.dataset.key = groupKey;
 
     list.forEach(item => {
         const btn = document.createElement('button');
@@ -1097,9 +1295,10 @@
     // ✅ タブUIに反映（関数がまだなら何もしない）
     try { setTimeout(() => { try { setModalTab_(pick); } catch {} }, 0); } catch {}
 
-    // ✅ 追加：モーダルを開くたびに「カードグループ」を必ず再描画
+    // ✅ 追加：モーダルを開くたびに個人用フィルターを必ず再同期
     try {
         setTimeout(() => {
+        try { ensureOwnedFilterUI_(); } catch {}
         try { refreshCardGroupFilterUI_(); } catch {}
         try { renderActiveFilterChips(); } catch {}
         }, 0);
@@ -1152,6 +1351,69 @@
     });
     }
 
+    const URL_PACK_FILTERS = {
+        innocent_oldgod: {
+        label: 'イノセント＆旧神ピックアップパック',
+        featureKey: 'innocentOldgodPickup',
+        races: ['イノセント', '旧神'],
+        },
+        'juggernaut-incarnate': {
+        label: 'Jパック',
+        featureKey: 'juggernautIncarnatePack',
+        pack: 'Juggernaut Incarnate',
+        },
+    };
+
+    function isPackPickupEnabled_(key) {
+        const setting = URL_PACK_FILTERS[String(key || '').trim()];
+        if (!setting) return false;
+        if (!setting.featureKey) return true;
+        if (typeof window.isMesorogiaEventFeatureEnabled !== 'function') return false;
+        return window.isMesorogiaEventFeatureEnabled(setting.featureKey);
+    }
+
+    function isCardsPage_() {
+        const file = String(location.pathname || '').split('/').pop() || 'index.html';
+        return file === 'cards.html';
+    }
+
+    function getUrlPackFilter_() {
+        try {
+        const params = new URLSearchParams(window.location.search || '');
+        const key = String(params.get('pack') || '').trim();
+        if (!isPackPickupEnabled_(key)) return null;
+        return URL_PACK_FILTERS[key] || null;
+        } catch {
+        return null;
+        }
+    }
+
+    function getSelectedPackPickupValues_() {
+        return Array.from(document.querySelectorAll('.filter-btn.selected[data-pack-pickup]'))
+        .map(btn => String(btn.dataset.packPickup || '').trim())
+        .filter(Boolean);
+    }
+
+    function applyInitialUrlPackFilter_() {
+        if (window.__cardFilterInitialUrlPackApplied) return false;
+
+        const setting = getUrlPackFilter_();
+        if (!setting) return false;
+
+        const params = new URLSearchParams(window.location.search || '');
+        const key = String(params.get('pack') || '').trim();
+        const targetSelector = setting.pack
+        ? `.filter-btn[data-pack="${CSS.escape(setting.pack)}"]`
+        : `.filter-btn[data-pack-pickup="${CSS.escape(key)}"]`;
+        const targetBtn = document.querySelector(targetSelector);
+        if (!targetBtn) return false;
+
+        targetBtn.classList.add('selected');
+
+        window.__cardFilterInitialUrlPackApplied = true;
+        return true;
+    }
+
     // ==============================
     // フィルターUI生成
     // ==============================
@@ -1177,6 +1439,11 @@
         : ((_) => 9999);
 
         const categories = getUniqueValues('category').sort((a, b) => catOrder(a) - catOrder(b));
+        const categoryCounts = cards.reduce((counts, card) => {
+        const category = String(card.category || '').trim();
+        if (category) counts.set(category, (counts.get(category) || 0) + 1);
+        return counts;
+        }, new Map());
         const races = getUniqueValues('race');
         const costs = [...new Set(cards.map(c => parseInt(c.cost)).filter(Number.isFinite))].sort((a, b) => a - b);
         const powers = [...new Set(cards.map(c => parseInt(c.power)).filter(Number.isFinite))].sort((a, b) => a - b);
@@ -1222,6 +1489,15 @@
         uniq.forEach(sp => addPackBtn(sp.en, sp.jp));
         }
 
+        if (isCardsPage_() && isPackPickupEnabled_('innocent_oldgod')) {
+        const pickupBtn = document.createElement('button');
+        pickupBtn.type = 'button';
+        pickupBtn.className = 'filter-btn is-ring';
+        pickupBtn.dataset.packPickup = 'innocent_oldgod';
+        pickupBtn.textContent = 'イノセント＆旧神ピックアップ';
+        packGroup.appendChild(pickupBtn);
+        }
+
         packWrapper.appendChild(packGroup);
 
         // ---- 詳細 ----
@@ -1257,35 +1533,16 @@
         return ['no_ability', ...list];
         })();
 
-        // ✅ 所持データが “1枚でも” 入ってるか（チェッカー未使用判定）
-        function hasAnyOwned_() {
-        const map = (typeof window.readOwnedDataSafe === 'function')
-            ? window.readOwnedDataSafe()
-            : {};
-
-        if (!map || typeof map !== 'object') return false;
-
-        for (const v of Object.values(map)) {
-            if (typeof v === 'number') {
-            if ((v | 0) > 0) return true;
-            } else if (v && typeof v === 'object') {
-            const total = v.normal | 0;
-            if (total > 0) return true;
-            }
-        }
-        return false;
-        }
-
         // ---- メイン ----
         if (hasAnyOwned_()) {
         personalFilters.appendChild(createOwnedFilter4Buttons_()); // 所持フィルター（所持データがある時だけ）
         }
         personalFilters.appendChild(createCardGroupFilterBlock_()); // カードグループフィルター
-        mainFilters.appendChild(createRangeStyleWrapper_('タイプ', types, 'type'));
+        mainFilters.appendChild(createRangeStyleWrapper_('役割', types, 'type', 'タイプ'));
         mainFilters.appendChild(createRangeStyleWrapper_('レアリティ', rarities, 'rarity'));
         mainFilters.appendChild(packWrapper);
         mainFilters.appendChild(createButtonGroup_('種族', races, 'race'));
-        mainFilters.appendChild(createButtonGroup_('カテゴリ', categories, 'category'));
+        mainFilters.appendChild(createButtonGroup_('カテゴリ', categories, 'category', categoryCounts));
         mainFilters.appendChild(createCvFilterBlock_(cards));
         mainFilters.appendChild(createRangeSelector_('コスト', 'cost', costs, () => applyFilters()));
         mainFilters.appendChild(createRangeSelector_('パワー', 'power', powers, () => applyFilters()));
@@ -1305,6 +1562,8 @@
         detailFilters.appendChild(createRangeStyleWrapper_('BP（ブレッシングポイント）要素', ['true', 'false'], 'bp'));
             detailFilters.appendChild(createRangeStyleWrapper_('特殊効果', abilities, 'ability'));
 
+
+        detailFilters.appendChild(createLethalFilterBlock_(cards));
 
         // その他（複合条件）を1ブロックに統合
         const { wrapper: otherWrap } = createFilterBlock_('その他');
@@ -1335,6 +1594,8 @@
         h.textContent = 'さらに詳しい条件フィルター';
         df.parentNode.insertBefore(h, df);
         }
+
+        applyInitialUrlPackFilter_();
     }
 
     // ==============================
@@ -1452,6 +1713,21 @@
         }
 
         // ボタン系
+        document.querySelectorAll('.filter-btn.selected[data-pack-pickup]').forEach(btn => {
+            const val = String(btn.dataset.packPickup || '').trim();
+            const setting = URL_PACK_FILTERS[val];
+            if (!setting || !isPackPickupEnabled_(val)) return;
+
+            chips.push({
+                label: setting.label || 'ピックアップパック',
+                className: 'chip-pack',
+                onRemove: () => {
+                    btn.classList.remove('selected');
+                    applyFilters();
+                },
+            });
+        });
+
         const GROUPS = [
             ['所持', 'owned'],
             ['種族', 'race'],
@@ -1462,6 +1738,7 @@
             ['フィールド', 'field'],
             ['BP', 'bp'],
             ['特効', 'ability'],
+            ['打点', 'lethal'],
             ['その他', 'misc'],
         ];
 
@@ -1480,12 +1757,15 @@
                 } else if (key === 'misc') {
                     const def = MISC_FILTERS.find(d => d.key === val);
                     labelText = def?.label || val;
+                } else if (key === 'lethal') {
+                    const [type, value] = val.split(':');
+                    labelText = formatLethalFilterLabel_(type, value);
                 } else {
                     labelText = (DISPLAY_LABELS && DISPLAY_LABELS[val] != null) ? DISPLAY_LABELS[val] : val;
                 }
 
                 chips.push({
-                    label: `${title}:${labelText}`,
+                    label: key === 'lethal' ? labelText : `${title}:${labelText}`,
                     onRemove: () => {
                         btn.classList.remove('selected');
                         applyFilters();
@@ -1697,10 +1977,12 @@
         type: getSelectedFilterValues('type'),
         rarity: getSelectedFilterValues('rarity'),
         pack: getSelectedFilterValues('pack'),
+        pickup: getSelectedPackPickupValues_(),
         effect: getSelectedFilterValues('effect'),
         field: getSelectedFilterValues('field'),
         bp: getSelectedFilterValues('bp'),
         ability: getSelectedFilterValues('ability'),
+        lethal: getSelectedFilterValues('lethal'),
 
         // その他
         misc: getSelectedFilterValues('misc'),
@@ -1794,6 +2076,12 @@
         life_effect:    card.dataset.life_effect,
         power_effect:   card.dataset.power_effect,
         mana_effect:    card.dataset.mana_effect,
+        cost_effect:    card.dataset.cost_effect,
+        lethal: {
+            attack: String(card.dataset.lethalAttack || '').split(',').filter(Boolean),
+            burn: String(card.dataset.lethalBurn || '').split(',').filter(Boolean),
+            buff: String(card.dataset.lethalBuff || '').split(',').filter(Boolean),
+        },
 
         cost: parseInt(card.dataset.cost),
         power: parseInt(card.dataset.power),
@@ -1809,6 +2097,15 @@
         if (key === 'pack') {
             const cardEn = (cardData.pack || '').split('「')[0].trim();
             return selectedValues.includes(cardEn);
+        }
+
+        // ピックアップ：複数条件をパック欄の専用ボタンで扱う
+        if (key === 'pickup') {
+            return selectedValues.some(value => {
+            if (!isPackPickupEnabled_(value)) return false;
+            const setting = URL_PACK_FILTERS[value];
+            return setting?.races?.includes(cardData.race);
+            });
         }
 
         // effect：含む（効果名は effect_name1/2 の合成が入ってる想定）
@@ -1834,6 +2131,15 @@
         return selectedValues.some(k => {
             const def = MISC_FILTERS.find(d => d.key === k);
             return def ? !!def.test(cardData) : false;
+        });
+        }
+
+        // 打点：選択した種類と数値のいずれかを持つカードを通す
+        if (key === 'lethal') {
+        return selectedValues.some(selected => {
+            const [type, value] = selected.split(':');
+            if (value === 'any') return (cardData.lethal[type]?.length || 0) > 0;
+            return cardData.lethal[type]?.includes(value) || false;
         });
         }
 
@@ -2275,8 +2581,24 @@
 
         // UI生成＋状態同期
         generateFilterUI().catch(console.warn).then(() => {
+            const hasUrlFilter = !!getUrlPackFilter_();
+            applyInitialUrlPackFilter_();
             try { syncGroupFilterUIFromState_(); } catch {}
+            if (hasUrlFilter) applyFilters();
         });
+
+        if (!window.__cardFilterCardsLoadedHookBound) {
+        window.__cardFilterCardsLoadedHookBound = true;
+        const prevOnCardsLoaded = window.onCardsLoaded;
+        window.onCardsLoaded = function (...args) {
+            if (typeof prevOnCardsLoaded === 'function') {
+            try { prevOnCardsLoaded.apply(this, args); } catch (e) { console.warn(e); }
+            }
+            try { applyInitialUrlPackFilter_(); } catch {}
+            try { window.CardGroups?.refreshAutoGroups?.({ force: true }); } catch {}
+            try { applyFilters(); } catch {}
+        };
+        }
 
         // ==============================
         // CardGroups 更新 → フィルター側「カードグループ」欄を差し替え
@@ -2291,11 +2613,18 @@
         } catch {}
 
         window.addEventListener('account-owned-sync:ready', () => {
+            try { ensureOwnedFilterUI_(); } catch {}
             try { refreshCardGroupFilterUI_(); } catch {}
         });
         window.addEventListener('account-owned-sync:status', () => {
+            try { ensureOwnedFilterUI_(); } catch {}
             try { refreshCardGroupFilterUI_(); } catch {}
         });
+        try {
+        window.OwnedStore?.onChange?.(() => {
+            try { ensureOwnedFilterUI_(); } catch {}
+        });
+        } catch {}
 
         // キーワード：デバウンス
         const kw = document.getElementById('keyword');

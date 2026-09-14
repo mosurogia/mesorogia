@@ -8,6 +8,8 @@
 (function () {
   'use strict';
 
+  let deckNoteLatestCardMap_ = null;
+
   // =========================
   // 0) 小物
   // =========================
@@ -135,11 +137,15 @@
       .replace(/\n/g, '<br>');
   }
 
-  function resolveCardByName_(name) {
-    const target = String(name || '').trim();
-    if (!target) return null;
+  function normalizeCardRefName_(name) {
+    return String(name || '').replace(/[\s\u3000]+/g, ' ').trim();
+  }
 
-    const map = window.cardMap || window.allCardsMap || {};
+  function findCardByNameInMap_(map, name, options = {}) {
+    const target = String(name || '').trim();
+    const normalizedTarget = normalizeCardRefName_(target);
+    if (!target && !normalizedTarget) return null;
+
     for (const [cd, card] of Object.entries(map)) {
       if (String(card?.name || '').trim() === target) {
         return {
@@ -148,6 +154,31 @@
         };
       }
     }
+
+    if (!options.normalized || !normalizedTarget) return null;
+
+    for (const [cd, card] of Object.entries(map)) {
+      if (normalizeCardRefName_(card?.name) === normalizedTarget) {
+        return {
+          cd: normCd5_(card.cd || cd),
+          name: String(card.name || target)
+        };
+      }
+    }
+
+    return null;
+  }
+
+  function resolveCardByName_(name) {
+    const target = String(name || '').trim();
+    if (!target) return null;
+
+    const map = window.cardMap || window.allCardsMap || {};
+    const current = findCardByNameInMap_(map, target, { normalized: true });
+    if (current) return current;
+
+    const latest = findCardByNameInMap_(deckNoteLatestCardMap_ || {}, target, { normalized: true });
+    if (latest) return latest;
 
     return null;
   }
@@ -230,6 +261,15 @@
       return window.DeckPostFilter.tagChipsMain(tagsAuto, tagsPick);
     }
     return fallbackTagChips_([tagsAuto, tagsPick].filter(Boolean).join(','));
+  }
+
+  function tagChipsTitleBadge_(titleBadge) {
+    const label = String(titleBadge || '').trim();
+    if (!label) return '';
+    if (typeof window.DeckPostFilter?.tagChipsTitleBadge === 'function') {
+      return window.DeckPostFilter.tagChipsTitleBadge(label);
+    }
+    return `<span class="chip chip-title-badge">${escHtml_(label)}</span>`;
   }
 
   function tagChipsUser_(tagsUser) {
@@ -615,6 +655,9 @@
     if (low.includes('ensemble of silence') || low.includes('ensemble of slience')) return 'Eパック';
     if (low.includes('fallen fate')) return 'Fパック';
     if (low.includes('glory of the gods')) return 'Gパック';
+    if (low.includes('honor of the brave heart')) return 'Hパック';
+    if (low.includes('illustrated illusion')) return 'Iパック';
+    if (low.includes('juggernaut incarnate')) return 'Jパック';
 
     if (s.includes('コラボ') || low.includes('collab')) return 'コラボ';
     if (s.includes('その他特殊') || low.includes('special')) return '特殊';
@@ -1267,6 +1310,9 @@
     const next = { ...base, ...src };
     next.postId = String(next.postId || base.postId || '').trim();
     if (!next.postId) return null;
+    if (next.titleTags == null && payload?.titleTags != null) next.titleTags = payload.titleTags;
+    if (next.tagsTitle == null && payload?.tagsTitle != null) next.tagsTitle = payload.tagsTitle;
+    if (next.titleBadge == null && payload?.titleBadge != null) next.titleBadge = payload.titleBadge;
 
     next.deckNote = String(
       Object.prototype.hasOwnProperty.call(src, 'deckNote')
@@ -1279,6 +1325,9 @@
         : payload?.cardNotes
     );
     if (!next.cardNotes.length) next.cardNotes = normalizeCardNotes_(base.cardNotes);
+    next.lethalPlans = Array.isArray(src.lethalPlans)
+      ? src.lethalPlans
+      : (Array.isArray(payload?.lethalPlans) ? payload.lethalPlans : (base.lethalPlans || []));
     next.hasCardNotes = next.cardNotes.some((row) => row && (row.cd || row.text));
     next.deckNoteLength = Array.from(String(next.deckNote || '').trim()).length;
     next.__detailPayloadLoaded = true;
@@ -1434,6 +1483,19 @@
 
   async function loadLatestCardMap_() {
     return loadCardMapFile_('cards_latest.json');
+  }
+
+  async function ensureDeckNoteLatestCardMap_() {
+    if (hasUsableCardMap_(deckNoteLatestCardMap_)) return deckNoteLatestCardMap_;
+
+    try {
+      const map = await loadLatestCardMap_();
+      if (hasUsableCardMap_(map)) deckNoteLatestCardMap_ = map;
+    } catch (e) {
+      console.warn('ensureDeckNoteLatestCardMap_ failed:', e);
+    }
+
+    return deckNoteLatestCardMap_;
   }
 
   function hasUsableCardMap_(map) {
@@ -1676,6 +1738,7 @@
       if (!file) return runWithLatestCardMapIfNeeded_(fn);
 
       const map = await loadCardMapFile_(file);
+      await ensureDeckNoteLatestCardMap_();
       return runWithTemporaryCardMap_(map, fn);
     } catch (e) {
       console.warn('withCardMapForPostDate_ failed:', e);
@@ -2192,7 +2255,7 @@
       const card = cardMap[cd5] || {};
       const name = card.name || 'カード名未登録';
       const img = cardImageSrc_(card.cd ? card : { ...card, cd: cd5 });
-      const textHtml = escHtml_(r.text || '').replace(/\n/g, '<br>');
+      const textHtml = renderDeckNoteText_(r.text || '');
 
       return `
         <div class="post-cardnote">
@@ -2211,6 +2274,68 @@
     }).join('');
 
     return `<div class="post-cardnotes">${rows}</div>`;
+  }
+
+  function buildLethalPlansHtml_(item) {
+    const plans = Array.isArray(item?.lethalPlans) ? item.lethalPlans : [];
+    const validPlans = plans.filter(plan => Array.isArray(plan?.variants) && plan.variants.length);
+    if (!validPlans.length) return '';
+
+    const planRows = validPlans.map((plan, planIndex) => {
+      const values = (Array.isArray(plan.values) ? plan.values : [])
+        .map(Number)
+        .filter(Number.isFinite)
+        .sort((a, b) => a - b);
+      const total = Number(plan.total) || values.reduce((sum, value) => sum + value, 0);
+      const variants = plan.variants.map((variant, variantIndex) => {
+        // 保存された順序やバフの参照先は変えず、表示だけ数式と同じ昇順にする。
+        const steps = [...(Array.isArray(variant?.steps) ? variant.steps : [])]
+          .sort((a, b) => (Number(a?.value) || 0) - (Number(b?.value) || 0));
+        const cards = steps.map((step, stepIndex) => {
+          const cd = normCd5_(step?.cardId || step?.cd);
+          const card = window.getCard?.(cd) || {};
+          const name = String(step?.cardName || card.name || cd);
+          const image = cardImageSrc_(card.cd ? card : { ...card, cd });
+          const value = Number(step?.value) || 0;
+          let mark = `⚔ ${value}`;
+          let label = `攻撃 ${value}点`;
+          if (step?.type === 'buff') {
+            mark = `💪 +${value}`;
+            label = `バフ +${value}`;
+          } else if (step?.type === 'burn') {
+            mark = `🔥 ${value}`;
+            label = `バーン ${value}点`;
+          } else if (step?.attackValue != null && step?.lethalBurnValue != null) {
+            mark = `⚔ ${step.attackValue}\n🔥 ${step.lethalBurnValue}`;
+            label = `攻撃 ${step.attackValue}点・バーン ${step.lethalBurnValue}点`;
+          }
+          return `${stepIndex ? '<span class="lethal-plan-operator" aria-hidden="true">＋</span>' : ''}
+            <button type="button" class="lethal-plan-card" data-cd="${escHtml_(cd)}" aria-label="${escHtml_(name)}：${escHtml_(label)}。カード詳細を開く" title="${escHtml_(name)}：${escHtml_(label)}">
+              <img class="lethal-plan-card-image" src="${image}" alt="${escHtml_(name)}" loading="lazy" onerror="${cardImageErrorAttr_(card.cd ? card : { ...card, cd })}">
+              <span class="lethal-plan-card-value">${escHtml_(mark)}</span>
+            </button>`;
+        }).join('');
+        const variantLabel = plan.variants.length > 1
+          ? `<span class="lethal-plan-variant-label">${variantIndex + 1}</span>`
+          : '';
+        return `<div class="lethal-plan-variant">${variantLabel}${cards}</div>`;
+      }).join('');
+
+      return {
+        expression: `<div class="lethal-plan-expression">${planIndex + 1}. ${escHtml_(values.join(' + '))} = ${escHtml_(total)}</div>`,
+        detail: `<div class="lethal-plan-item"><div class="lethal-plan-detail-label">${planIndex + 1}. リーサル ${escHtml_(values.join(' + '))} = ${escHtml_(total)}</div>${variants}</div>`
+      };
+    });
+
+    const expressions = planRows.map(row => row.expression).join('');
+    const details = planRows.map(row => row.detail).join('');
+    return `<div class="lethal-plan-summary">
+      <div class="lethal-plan-values">${expressions}</div>
+      <details class="lethal-plan-details">
+        <summary>詳しく見る</summary>
+        <div class="lethal-plan-list">${details}</div>
+      </details>
+    </div>`;
   }
 
   function buildDeckCodeBoxFallback_(postId, code) {
@@ -2261,6 +2386,8 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
     : '';
 
   // ✅ deck-post-detail.js 側の fallback 付き関数を使う
+  const titleBadge = item.titleBadge || item.titleTags || item.tagsTitle;
+  const tagsTitle = tagChipsTitleBadge_(titleBadge);
   const tagsMain = tagChipsMain_(item.tagsAuto, item.tagsPick);
   const tagsUser = tagChipsUser_(item.tagsUser);
 
@@ -2278,6 +2405,7 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
   const deckListHtml = buildDeckListHtml(item);
   const deckNoteHtml = buildDeckNoteHtml(deckNote);
   const cardNotesHtml = buildCardNotesHtml(item);
+  const lethalPlansHtml = buildLethalPlansHtml_(item);
 
   const simpleStats = buildSimpleDeckStats(item);
   const typeChipsPane = buildTypeChipsHtml_(simpleStats);
@@ -2330,6 +2458,7 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
               </div>
 
               <div class="post-detail-tags">
+                <div class="post-tags post-tags-title">${tagsTitle}</div>
                 <div class="post-tags post-tags-main">${tagsMain}</div>
                 <div class="post-tags post-tags-user">${tagsUser}</div>
               </div>
@@ -2345,7 +2474,7 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
           <dt>旧神</dt><dd>${escHtml_(oldGod || 'なし')}</dd>
 
           ${typeChipsPane
-            ? `<dt>タイプ構成</dt><dd><div class="post-detail-chips">${typeChipsPane}</div></dd>`
+            ? `<dt>役割構成</dt><dd><div class="post-detail-chips">${typeChipsPane}</div></dd>`
             : ''
           }
 
@@ -2370,6 +2499,8 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
               （平均チャージ量：<span id="avg-charge-${escHtml_(paneUid)}">-</span>）
             </span>
           </dd>
+
+          ${lethalPlansHtml ? `<dt class="lethal-plan-label">リーサルプラン<span class="lethal-planner__title-badge">ベータ版</span></dt><dd>${lethalPlansHtml}</dd>` : ''}
         </div>
 
         <div class="deck-compare-block">
@@ -3268,6 +3399,17 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
       return;
     }
 
+    const lethalPlanCard = e.target.closest('.lethal-plan-card');
+    if (lethalPlanCard) {
+      const cd = normCd5_(lethalPlanCard.dataset.cd);
+      if (cd) {
+        e.preventDefault();
+        e.stopPropagation();
+        openCardDetailFromDeck_(cd, lethalPlanCard);
+      }
+      return;
+    }
+
     // -------------------------
     // 6) デッキ内カード → カード詳細
     // -------------------------
@@ -3435,6 +3577,7 @@ function renderDetailPaneForItem(item, basePaneId, opts = {}) {
 
   window.DeckPostDetail.buildDeckNoteHtml = buildDeckNoteHtml;
   window.DeckPostDetail.buildCardNotesHtml = buildCardNotesHtml;
+  window.DeckPostDetail.buildLethalPlansHtml_ = buildLethalPlansHtml_;
   window.DeckPostDetail.hasDetailPayload = hasDetailPayload_;
   window.DeckPostDetail.getCachedPostDetail = getCachedPostDetail_;
   window.DeckPostDetail.ensurePostDetailData = ensurePostDetailData_;

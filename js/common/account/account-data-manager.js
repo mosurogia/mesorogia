@@ -1014,11 +1014,26 @@
     }
 
     try {
+      if (typeof window.clearTierListBrowserCache_ === 'function') {
+        const tierCacheTask = window.clearTierListBrowserCache_();
+        if (tierCacheTask && typeof tierCacheTask.catch === 'function') {
+          await tierCacheTask.catch((err) => {
+            console.warn('Tier表キャッシュの再取得に失敗しました。', err);
+          });
+        }
+      } else {
+        try {
+          localStorage.removeItem('tier-list-cache-v1');
+        } catch (_) {}
+      }
+
       if (window.MesorogiaPwaMaintenance?.repairAndReload) {
+        try { localStorage.removeItem('deckmaker_invalid_race_guide_seen_at'); } catch (_) {}
         await window.MesorogiaPwaMaintenance.repairAndReload();
         return;
       }
 
+      try { localStorage.removeItem('deckmaker_invalid_race_guide_seen_at'); } catch (_) {}
       window.location.reload();
     } catch (err) {
       console.error('再読み込み処理に失敗しました。', err);

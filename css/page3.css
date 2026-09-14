@@ -180,7 +180,7 @@
 .summary-panel-toggle {
     position: sticky;
     top: var(--summary-toggle-top, calc(50vh - 24px));
-    z-index: 2100;
+    z-index: var(--z-sticky, 2000);
     flex: 0 0 28px;
     align-self: flex-start;
     display: grid;
@@ -1025,6 +1025,21 @@
     --pack-accent-rgb: var(--pack-g-rgb);
 }
 
+#pack-summary-list .pack-summary[data-pack-group="h"] {
+    --pack-border-rgb: var(--pack-h-accent-rgb);
+    --pack-accent-rgb: var(--pack-h-rgb);
+}
+
+#pack-summary-list .pack-summary[data-pack-group="i"] {
+    --pack-border-rgb: var(--pack-i-accent-rgb);
+    --pack-accent-rgb: var(--pack-i-rgb);
+}
+
+#pack-summary-list .pack-summary[data-pack-group="j"] {
+    --pack-border-rgb: var(--pack-j-accent-rgb);
+    --pack-accent-rgb: var(--pack-j-rgb);
+}
+
 #pack-summary-list .pack-summary[data-pack-group="special"] {
     --pack-border-rgb: var(--pack-special-accent-rgb);
     --pack-accent-rgb: var(--pack-special-rgb);
@@ -1455,6 +1470,21 @@
 .pack-section[data-packgroup="g"] {
     --pack-rgb: var(--pack-g-rgb);
     --pack-accent-rgb: var(--pack-g-accent-rgb);
+}
+
+.pack-section[data-packgroup="h"] {
+    --pack-rgb: var(--pack-h-rgb);
+    --pack-accent-rgb: var(--pack-h-accent-rgb);
+}
+
+.pack-section[data-packgroup="i"] {
+    --pack-rgb: var(--pack-i-rgb);
+    --pack-accent-rgb: var(--pack-i-accent-rgb);
+}
+
+.pack-section[data-packgroup="j"] {
+    --pack-rgb: var(--pack-j-rgb);
+    --pack-accent-rgb: var(--pack-j-accent-rgb);
 }
 
 .pack-section[data-packgroup="collab"] {

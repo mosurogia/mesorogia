@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="5NzYWNH5_YUg0dUV2iCzg_bSo7M1lLJi6IzOeF2dGXM" />
-    <link rel="icon" href="favicon.ico">
+    <link rel="icon" href="img/mosurogia_favicon.ico">
     <link rel="apple-touch-icon" href="img/appicon_1024.webp">
     <link rel="manifest" href="manifest.webmanifest?v=2026-05-05-007">
     <meta name="theme-color" content="#111827">
@@ -21,7 +21,7 @@
     <!-- ===== OGP ===== -->
     <meta property="og:title" content="神託のメソロギア デッキメーカー・デッキ構築・カード検索｜モスロギア">
     <meta property="og:description" content="神託のメソロギアのデッキメーカー。カード検索をしながらデッキ構築、デッキ分析、デッキ投稿ができます。スマホ対応。">
-    <meta property="og:image" content="https://mosurogia.github.io/mesorogia-cards/img/deckmakerOGP.webp">
+    <meta property="og:image" content="https://mosurogia.github.io/mesorogia-cards/img/deckmakerOGP.png">
     <meta property="og:url" content="https://mosurogia.github.io/mesorogia-cards/deckmaker.html">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="モスロギア">
@@ -30,14 +30,15 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="神託のメソロギア デッキメーカー・デッキ構築・カード検索｜モスロギア">
     <meta name="twitter:description" content="神託のメソロギアのデッキメーカー。カード検索をしながらデッキ構築、デッキ分析、デッキ投稿ができます。スマホ対応。">
-    <meta name="twitter:image" content="https://mosurogia.github.io/mesorogia-cards/img/deckmakerOGP.webp">
+    <meta name="twitter:image" content="https://mosurogia.github.io/mesorogia-cards/img/deckmakerOGP.png">
 
     <!-- ===== CSS ===== -->
-    <link rel="stylesheet" href="css/common.css?v=2026-05-16-001">
-    <link rel="stylesheet" href="css/common-page124.css?v=2026-05-05-007">
+    <link rel="stylesheet" href="css/common.css?v=2026-09-07-005">
+    <link rel="stylesheet" href="css/common-page124.css?v=2026-09-07-002">
     <link rel="stylesheet" href="css/common-page234.css?v=2026-05-05-007">
     <link rel="stylesheet" href="css/common-page24.css?v=2026-05-05-007">
-    <link rel="stylesheet" href="css/page2.css?v=2026-05-10-001">
+    <link rel="stylesheet" href="css/page2.css?v=2026-09-10-005">
+    <link rel="stylesheet" href="css/lethal-planner.css?v=2026-09-10-005">
 
     <!-- ===== 外部リソース（必要なら） ===== -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -101,7 +102,8 @@
 <header class="main-header">
     <div class="header-logo">
         <a href="index.html" aria-label="ホームへ移動">
-            <img src="img/tatudosi.webp" alt="神託のメソロギア ロゴ" />
+            <img src="img/appicon_1024.webp" alt="神託のメソロギア ロゴ" />
+            <span class="header-logo-title">モスロギア</span>
         </a>
     </div>
     <nav class="header-nav">
@@ -127,10 +129,10 @@
     </nav>
     <div class="header-actions">
         <div class="header-dropdown header-explore-menu" data-header-dropdown>
-            <button type="button" class="header-menu-button" aria-haspopup="true" aria-expanded="false"
+            <button type="button" class="header-menu-button header-menu-button--new" aria-haspopup="true" aria-expanded="false"
                 aria-controls="header-explore-menu">
                 <span aria-hidden="true">≡</span>
-                <span class="sr-only">探索・情報メニュー</span>
+                <span class="sr-only">探索・情報メニュー（新着：用語集）</span>
             </button>
             <div class="header-menu-panel" id="header-explore-menu" role="menu" hidden>
                 <a role="menuitem" href="index.html">
@@ -139,9 +141,8 @@
                 <a class="header-menu-tier-link" role="menuitem" href="tier.html">
                     <span>Tier表</span>
                 </a>
-                <a role="menuitem" href="#" aria-disabled="true" data-header-disabled-link>
-                    <span>用語集・質問</span>
-                    <span class="header-menu-badge">今後予定</span>
+                <a role="menuitem" href="glossary.html">
+                    <span>用語集</span><span class="header-menu-badge">NEW</span>
                 </a>
                 <a role="menuitem" href="#" aria-disabled="true" data-header-disabled-link>
                     <span>ランダムデッキ</span>
@@ -153,6 +154,24 @@
     </div>
     <div class="header-account" data-header-auth></div>
 </header>
+
+<a class="home-event-banner" href="cards.html?pack=innocent_oldgod" aria-label="イノセント旧神ピックアップパックの対象カードをカード図鑑で見る" data-event-feature="innocent-oldgod-pickup" hidden>
+    <div class="home-event-banner__text">
+        <span>1周年記念ピックアップ</span>
+        <strong>イノセント＆旧神</strong>
+        <small><span>対象カードを見に行く👀</span><span>カードグループで未所持もチェック</span></small>
+    </div>
+    <img src="img/innocent_oldgod_pack.webp" alt="" loading="eager">
+</a>
+
+<a class="home-event-banner home-event-banner--juggernaut" href="cards.html?pack=juggernaut-incarnate" aria-label="Jパックの対象カードをカード図鑑で見る" data-event-feature="juggernaut-incarnate-pack" hidden>
+    <div class="home-event-banner__text">
+        <span>新カードパック</span>
+        <strong>Juggernaut Incarnate</strong>
+        <small><span>対象カードを見に行く👀</span><span>Juggernaut Incarnate を一発検索</span></small>
+    </div>
+    <img src="img/イベントカレンダー/Jパック追加.jpg" alt="" loading="eager">
+</a>
 
 <!--タブ切り替え-->
 <div class="tab-bar">
@@ -190,7 +209,7 @@
             <div class="search-bar-left">
                 <!-- キーワード検索 -->
                 <input id="keyword" oninput="applyFilters()" placeholder="カード検索" type="text">
-                <!-- タイプ即時フィルター -->
+                <!-- 役割（タイプ）即時フィルター -->
                 <div class="type-quick-filter">
                     <button type="button" class="type-icon-btn is-active" data-type="">
                         <img src="img/type-all.webp" alt="All">
@@ -212,6 +231,7 @@
                         <option value="default">通常順</option>
                         <option value="cost">コスト順</option>
                         <option value="power">パワー順</option>
+                        <option value="pack">パック順</option>
                         <option value="category">カテゴリ順</option>
                         <option value="rarity">レアリティ順</option>
                     </select>
@@ -251,29 +271,9 @@
         </div>
     </div>
 
-    <!-- デッキサマリー＆投稿ボタン -->
+    <!-- デッキサマリー -->
     <div class="deck-summary" id="deck-summary">
         <div class="deck-info"></div>
-        <!-- デッキサマリー＆操作ボタン -->
-        <div class="analyze-button-wrapper">
-            <!-- 上段：投稿 ＋ ？ -->
-            <div class="analyze-row-top">
-                <!-- 分析＆投稿タブへ飛ぶボタン -->
-                <button class="analyze-button" type="button" onclick="goToAnalyzeTab()">
-                    📤 投稿へ
-                </button>
-
-                <!-- 投稿の流れヘルプ（？アイコン） -->
-                <button type="button" class=" analyze-help-button help-button" id="post-flow-help-btn-top" aria-label="デッキ投稿までの流れを確認">
-                    ？
-                </button>
-            </div>
-
-            <!-- 下段：デッキリセット -->
-            <button id="resetDeckButton" type="button" class="analyze-button">
-                デッキリセット
-            </button>
-        </div>
     </div>
 
     <button class="deck-summary-toggle" onclick="toggleDeckSummary()">◀</button>
@@ -282,7 +282,14 @@
 
 <!--使用不可種族表示非表示ボタン-->
 <div class="deck-filter-bar">
-    <button id="toggle-invalid-race" class="filter-toggle-button">✅使用不可種族を表示(モノクロ)</button>
+    <button type="button" class="filter-toggle-button deck-filter-action deck-filter-action-hand" onclick="goToDeckInfoTab()" aria-label="デッキ分析タブへ移動">分析へ</button>
+    <div id="mulligan-analysis-guide" class="mulligan-analysis-guide" role="status" hidden>
+        マリガンを試してみよう！
+    </div>
+    <button type="button" class="filter-toggle-button deck-filter-action deck-filter-action-post" onclick="goToAnalyzeTab()" aria-label="デッキ投稿タブへ移動">投稿へ</button>
+    <button id="resetDeckButton" type="button" class="filter-toggle-button deck-filter-action deck-filter-action-danger">リセット</button>
+    <button id="toggle-invalid-race" type="button" class="filter-toggle-button deck-filter-action deck-filter-action-invalid" aria-label="使用種族のみと全種族表示を切り替え">全種族表示</button>
+    <div id="invalid-race-guide" class="invalid-race-guide" hidden>使用種族だけ表示できます</div>
 </div>
 
 </div>
@@ -404,7 +411,7 @@
         <!-- サブタブ -->
         <div class="tab-bar subtab-bar">
                 <div class="info-tab-bar tab active" onclick="switchTab('info-tab', this)">
-                    <span>📋 デッキ情報</span>
+                    <span>📋 デッキ分析・マリガン</span>
                 </div>
                 <div class="post-tab-bar tab" onclick="switchTab('post-tab', this)">
                     <span>📤 デッキ投稿</span>
@@ -419,7 +426,7 @@
         <!--タブ内-->
         <div class="tab-contents-group">
 
-        <!-- デッキ情報タブ -->
+        <!-- デッキ分析タブ -->
         <div class=" tab-content active" id="info-tab">
             <div class="info-section">
 
@@ -466,9 +473,9 @@
                     <div class="info-value" id="rarity-summary">🌈レジェンド0枚 🟡ゴールド0枚 ⚪️シルバー0枚 🟤ブロンズ0枚</div>
                 </div>
 
-                <!-- 使用タイプ内訳 -->
+                <!-- 使用役割（タイプ）内訳 -->
                 <div class="info-row">
-                    <div class="info-label">タイプ構成</div>
+                    <div class="info-label">役割構成</div>
                     <div class="info-value">
                         <div id="type-summary" class="type-summary">
                             <!-- JSでチップを自動挿入 -->
@@ -493,6 +500,89 @@
                     <div class="info-label">平均チャージ量</div>
                     <div class="info-value"><span id="avg-charge">-</span></div>
                 </div>
+
+                <!--マリガン練習 -->
+                <div class="mulligan-trainer" id="mulligan-trainer">
+                    <div class="mull-remaining-title">マリガンシミュレーション</div>
+
+                    <!-- ✅ タイトル直下：説明（mull-hint） -->
+                    <div class="mull-topinfo">
+                        <div class="mull-hint">
+                            画像をタップで選択／解除できます。※選択したカードはマリガン対象から除外されます。
+                        </div>
+                    </div>
+
+                    <!-- デッキ不足メッセージ -->
+                    <div class="mull-warning" id="mull-warning" hidden>
+                        デッキにカードを追加してください（30枚以上が必要です）
+                    </div>
+
+                    <div class="mull-layout">
+                        <!-- 残り山札（枚数） -->
+                        <div class="mull-hand-chips" aria-label="残りの山札（役割別）">
+                            <span class="mull-hand-chips-label">残りの山札：</span>
+                            <ul id="mull-remaining-by-type" class="mull-remaining-list"></ul>
+                        </div>
+                        <!-- 手札4枚 -->
+                        <div class="hand-area" id="mull-hand">
+                            <!-- JSで4枚分のカードが入ります -->
+                        </div>
+
+                        <!-- 操作画面 -->
+                        <div class="mull-actions">
+                            <button type="button" id="btn-mull-or-reset" class="btn-mulligan" disabled>手札リセット</button>
+
+                            <!-- ✅ リセットボタン直下：マリガン後手札構成（常時表示） -->
+                            <div id="mull-outcome-probs" class="mull-outcome">
+                                <div class="mull-remaining-title">初期手札パターンの目安</div>
+                                <div class="mull-outcome-note">ここに初期手札パターンの目安が表示されます</div>
+                            </div>
+                            <div class="mull-hint">
+                                ※デッキの傾向を把握するための参考表示です。<br>
+                                ※マリガンの正解・推奨を示すものではありません。<br>
+                                ※計算はこの端末内で完結します。（サーバ送信なし）
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- リーサルプラン仮組 -->
+                <section class="lethal-planner" id="lethal-planner" aria-labelledby="lethal-planner-title">
+                    <div class="lethal-planner__header">
+                        <h3 class="lethal-planner__title" id="lethal-planner-title">
+                            リーサルプラン<span class="lethal-planner__title-badge">ベータ版</span>
+                        </h3>
+                        <button class="lethal-planner__auto-button" id="lethal-planner-auto" type="button">
+                            自動生成
+                        </button>
+                    </div>
+                    <div class="lethal-planner__auto-results" id="lethal-planner-auto-results"
+                        aria-live="polite"></div>
+                    <div class="lethal-planner__expression" id="lethal-planner-expression">
+                        = 0
+                    </div>
+                    <div class="lethal-planner__groups" id="lethal-planner-groups"></div>
+                    <div class="lethal-planner__cards">
+                        <h4 class="lethal-planner__cards-title">候補カード</h4>
+                        <div class="lethal-planner__card-list" id="lethal-planner-card-list">
+                            式に追加すると候補カードを表示します
+                        </div>
+                        <p class="lethal-planner__cards-guide">
+                            実際に使用するアタッカーなどを、カードの<span class="lethal-planner__operation lethal-planner__operation--mobile">タップ</span><span class="lethal-planner__operation lethal-planner__operation--desktop">クリック</span>で選択できます。
+                        </p>
+                    </div>
+                    <div class="lethal-planner__beta-report" aria-label="リーサル機能のβ報告">
+                        <span class="lethal-planner__beta-label">
+                            候補や計算が違う場合は、情報をコピーして報告できます。
+                        </span>
+                        <div class="lethal-planner__beta-actions">
+                            <button type="button" class="lethal-planner__beta-button"
+                                data-lethal-report>情報をコピーして報告</button>
+                        </div>
+                        <span class="lethal-planner__copy-status" data-lethal-copy-status
+                            role="status" aria-live="polite"></span>
+                    </div>
+                </section>
 
                 <!--グラフ分布-->
                 <div class="deckmaker-charts">
@@ -523,52 +613,6 @@
                         </div>
                     </div>
 
-                </div>
-
-
-                <!--マリガン練習 -->
-                <div class="mulligan-trainer" id="mulligan-trainer">
-                    <div class="mull-remaining-title">マリガンシミュレーション</div>
-
-                    <!-- ✅ タイトル直下：説明（mull-hint） -->
-                    <div class="mull-topinfo">
-                        <div class="mull-hint">
-                            画像をタップで選択／解除できます。※選択したカードはマリガン対象から除外されます。
-                        </div>
-                    </div>
-
-                    <!-- デッキ不足メッセージ -->
-                    <div class="mull-warning" id="mull-warning" hidden>
-                        デッキにカードを追加してください（30枚以上が必要です）
-                    </div>
-
-                    <div class="mull-layout">
-                        <!-- 残り山札（枚数） -->
-                        <div class="mull-hand-chips" aria-label="残りの山札（タイプ別）">
-                            <span class="mull-hand-chips-label">残りの山札：</span>
-                            <ul id="mull-remaining-by-type" class="mull-remaining-list"></ul>
-                        </div>
-                        <!-- 手札4枚 -->
-                        <div class="hand-area" id="mull-hand">
-                            <!-- JSで4枚分のカードが入ります -->
-                        </div>
-
-                        <!-- 操作画面 -->
-                        <div class="mull-actions">
-                            <button type="button" id="btn-mull-or-reset" class="btn-mulligan" disabled>手札リセット</button>
-
-                            <!-- ✅ リセットボタン直下：マリガン後手札構成（常時表示） -->
-                            <div id="mull-outcome-probs" class="mull-outcome">
-                                <div class="mull-remaining-title">初期手札パターンの目安</div>
-                                <div class="mull-outcome-note">ここに初期手札パターンの目安が表示されます</div>
-                            </div>
-                            <div class="mull-hint">
-                                ※デッキの傾向を把握するための参考表示です。<br>
-                                ※マリガンの正解・推奨を示すものではありません。<br>
-                                ※計算はこの端末内で完結します。（サーバ送信なし）
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
 
@@ -674,6 +718,30 @@
                         ※迷ったら「記事構成を追加」から選ぶと、必要な見出しをまとめて追加できます。
                     </div>
                     <textarea id="post-note" name="note" rows="10" placeholder="デッキの動きやプレイ方針を書いてください。記事構成や解説項目で見出しを追加でき、文中にカード名を入れたい時は「文中にカードを追加」から選べます。"required></textarea>
+                    </div>
+                </div>
+
+                <!-- 投稿用リーサルプラン -->
+                <div class="info-row post-lethal-row">
+                    <div class="info-label any post-lethal-label">
+                        <div class="post-lethal-label__title">リーサルプラン</div>
+                        <div class="any-text">(任意)</div>
+                        <span class="lethal-planner__title-badge">ベータ版</span>
+                    </div>
+                    <div class="info-value post-lethal-editor">
+                        <section class="lethal-planner post-lethal-planner" aria-labelledby="post-lethal-registered-title">
+                            <div class="lethal-planner__registration" id="lethal-planner-registration">
+                                <div class="lethal-planner__registered-header">
+                                    <h4 class="lethal-planner__registered-title" id="post-lethal-registered-title">登録済みリーサルプラン（<span
+                                            id="lethal-planner-registered-count">0/3</span>）</h4>
+                                    <button type="button" class="lethal-planner__register-button"
+                                        id="post-lethal-open-register">新規追加</button>
+                                </div>
+                                <div class="lethal-planner__registered-list" id="lethal-planner-registered-list">
+                                    <p class="lethal-planner__registered-empty">まだ登録されていません</p>
+                                </div>
+                            </div>
+                        </section>
                     </div>
                 </div>
 
@@ -964,12 +1032,22 @@
                 <div class="post-actions">
                     <button type="button" id="post-open-imagegen">画像生成</button>
                     <div class="post-draft-wrap">
-                        <button type="button" id="post-draft-toggle" aria-expanded="false" aria-controls="post-draft-menu">下書き ☰</button>
+                        <button type="button" id="post-draft-toggle" aria-expanded="false" aria-controls="post-draft-menu">下書き・復元 <span aria-hidden="true">▾</span></button>
                         <div id="post-draft-menu" class="post-draft-menu" hidden>
-                            <div id="post-draft-status" class="post-draft-status">保存データ：なし</div>
-                            <button type="button" id="post-draft-save">下書き保存</button>
-                            <button type="button" id="post-draft-restore">下書きを復元</button>
-                            <button type="button" id="post-reset">入力内容を削除</button>
+                            <section class="post-draft-section" aria-labelledby="post-draft-heading">
+                                <div class="post-draft-heading"><h3 id="post-draft-heading">手動下書き保存</h3></div>
+                                <p class="post-draft-help">任意のタイミングで保存できます（最大1件）</p>
+                                <button type="button" id="post-draft-save">現在の内容を保存</button>
+                                <button type="button" id="post-draft-restore"><span>下書き保存読み込み</span><span id="post-draft-status" class="post-draft-status">保存された下書きはありません</span></button>
+                            </section>
+                            <section class="post-draft-section" aria-labelledby="post-history-heading">
+                                <div class="post-draft-heading">
+                                    <h3 id="post-history-heading">自動下書き保存履歴</h3>
+                                </div>
+                                <p class="post-draft-help">内容が消えた時のバックアップ用です（直近20件）</p>
+                                <select id="post-history-select" aria-label="復元するバックアップ"></select>
+                                <button type="button" id="post-history-restore">選択中の履歴を読み込む</button>
+                            </section>
                         </div>
                     </div>
                     <span class="post-submit-wrap" id="post-submit-wrap" data-tooltip="投稿するには投稿同意にチェックしてください。">
@@ -1011,6 +1089,37 @@
                 </div>
             </div>
         </div>
+</div>
+
+<!-- リーサル登録：使用カード選択モーダル -->
+<div id="post-lethal-card-modal" class="modal post-lethal-card-modal" style="display:none;" aria-hidden="true">
+    <div class="modal-content lethal-planner post-lethal-card-modal__content" role="dialog" aria-modal="true" aria-labelledby="post-lethal-card-modal-title">
+        <button type="button" class="modal-close-x" id="post-lethal-card-modal-close" aria-label="閉じる">×</button>
+        <div class="lethal-planner__header">
+            <h3 class="lethal-planner__title" id="post-lethal-card-modal-title">
+                リーサルプラン追加<span class="lethal-planner__title-badge">ベータ版</span>
+            </h3>
+            <button type="button" class="lethal-planner__auto-button" id="post-lethal-auto">自動生成</button>
+        </div>
+        <div class="lethal-planner__auto-results" id="post-lethal-auto-results" aria-live="polite"></div>
+        <div class="lethal-planner__expression" id="post-lethal-expression">= 0</div>
+        <div class="lethal-planner__groups" id="post-lethal-groups"></div>
+        <div class="post-lethal-modal-candidates">
+            <div class="post-lethal-modal-candidates__header">
+                <h4 class="lethal-planner__cards-title">アタッカー構成</h4>
+                <button type="button" class="post-lethal-candidate-toggle" id="post-lethal-candidate-toggle">全てにチェック</button>
+            </div>
+            <p class="post-hint">そのリーサルで使うアタッカー構成にチェックしてください</p>
+        </div>
+        <div id="post-lethal-card-modal-list" class="lethal-planner__card-list"></div>
+        <button type="button" class="lethal-planner__register-button" id="lethal-planner-register">選択した組み合わせを登録</button>
+        <div class="lethal-planner__beta-report" aria-label="リーサル機能のβ報告">
+            <span class="lethal-planner__beta-label">候補や計算が違う場合は、情報をコピーして報告できます。</span>
+            <div class="lethal-planner__beta-actions"><button type="button" class="lethal-planner__beta-button"
+                    data-lethal-report>情報をコピーして報告</button></div>
+            <span class="lethal-planner__copy-status" data-lethal-copy-status role="status" aria-live="polite"></span>
+        </div>
+    </div>
 </div>
 
 <!-- ▼ カード解説：候補選択モーダル -->
@@ -1210,21 +1319,21 @@
 
 <!-- デッキ投稿の流れ ヘルプモーダル -->
 <div id="postFlowHelpModal" class="modal" style="display:none;">
-    <div class="modal-content flow-modal">
+    <div class="modal-content help-modal">
         <button id="post-flow-help-close" class="modal-close-x" type="button" aria-label="閉じる">×</button>
 
-        <h3 class="flow-title">
+        <h3 class="help-modal-title">
             <span>❓ デッキ投稿の流れ</span>
         </h3>
 
-        <ol class="flow-steps">
+        <ol class="help-modal-steps">
             <li>「🃏 デッキ構築」タブで、デッキを組みましょう。</li>
-            <li>「📋 デッキ情報」内で枚数・種族・レアリティなどを確認しましょう。</li>
+            <li>「📋 デッキ分析」内で枚数・種族・レアリティなどを確認しましょう。</li>
             <li>「📤 デッキ投稿」サブタブに進みます。投稿内のデッキ名・投稿コメント・タグなどの記入欄を埋めていきましょう。</li>
             <li>最後に、投稿チェック」にチェックを入れてから、一番下の「デッキを投稿する」ボタンを押したら投稿完了です！</li>
         </ol>
 
-        <p class="flow-note">
+        <p class="help-modal-note">
             ※ 投稿後は「デッキ投稿一覧ページ」にあなたのデッキが追加されます。
         </p>
     </div>
@@ -1261,39 +1370,41 @@
 
 <!-- スクリプト群 -->
 <!-- 共通処理 -->
-<script src="js/common/core/defs.js?v=2026-05-05-007"></script>
-<script src="js/common/core/card-core.js?v=2026-05-05-007"></script>
+<script src="js/common/core/defs.js?v=2026-09-09-009"></script>
+<script src="js/common/core/event-features.js?v=2026-09-07-001"></script>
+<script src="js/common/core/card-core.js?v=2026-07-24-020"></script>
 <script src="js/common/core/app-helpers.js?v=2026-05-05-007"></script>
-<script src="js/common/core/card-sort.js?v=2026-05-05-007"></script>
+<script src="js/common/core/card-sort.js?v=2026-07-17-005"></script>
 
 <!-- データストレージ -->
 <script src="js/common/storage/owned.js?v=2026-05-05-007"></script>
-<script src="js/common/storage/card-groups.js?v=2026-05-05-007"></script>
+<script src="js/common/storage/card-groups.js?v=2026-06-22-001"></script>
 
 <!-- アカウント関係 -->
-<script src="js/common/account/auth-core.js?v=2026-05-05-007"></script>
+<script src="js/common/account/auth-core.js?v=2026-08-19-002"></script>
 <script src="js/common/account/auth-ui.js?v=2026-05-05-007"></script>
-<script src="js/common/account/account.js?v=2026-05-06-003"></script>
+<script src="js/common/account/account.js?v=2026-05-31-001"></script>
 <script src="js/common/account/account-app-data-sync.js?v=2026-05-05-007"></script>
-<script src="js/common/pwa/cache-config.js?v=2026-05-20-002"></script>
+<script src="js/common/pwa/cache-config.js?v=2026-09-10-005"></script>
 <script src="js/common/pwa/offline-cards.js?v=2026-05-06-003"></script>
 <script src="js/common/account/account-data-manager.js?v=2026-05-14-001"></script>
 <script src="js/common/account/account-match-results.js?v=2026-05-05-007"></script>
-<script src="js/common/ui/header-menu.js?v=2026-05-15-002"></script>
-<script src="js/common/account/header-auth.js?v=2026-05-15-001"></script>
+<script src="js/common/ui/header-menu.js?v=2026-09-07-005"></script>
+<script src="js/common/account/header-auth.js?v=2026-05-28-002"></script>
+<script src="js/common/ui/floating-button.js?v=2026-06-14-001"></script>
 
 <!-- UI -->
 <script src="js/common/ui/tabs.js?v=2026-05-05-007"></script>
 
 <!-- カード共通 -->
-<script src="js/common/card/cardGrid.js?v=2026-05-05-007"></script>
-<script src="js/common/card/card-detail.js?v=2026-05-05-007"></script>
+<script src="js/common/card/cardGrid.js?v=2026-07-17-001"></script>
+<script src="js/common/card/card-detail.js?v=2026-06-22-003"></script>
 <script src="js/common/card/card-image-viewer.js?v=2026-05-05-007"></script>
-<script src="js/common/card/card-pick-modal.js?v=2026-05-05-007"></script>
+<script src="js/common/card/card-pick-modal.js?v=2026-07-18-001"></script>
 
 <script src="js/common/filter/keyword-filter.js?v=2026-05-05-007"></script>
 <script src="js/common/filter/chip-bar.js?v=2026-05-05-007"></script>
-<script src="js/common/card/cardFilter.js?v=2026-05-05-007"></script>
+<script src="js/common/card/cardFilter.js?v=2026-09-07-001"></script>
 
 
 <!-- デッキ保存 -->
@@ -1304,14 +1415,15 @@
 <script src="js/common/deck/deck-peek.js?v=2026-05-05-007"></script>
 <script src="js/common/deck/image-export.js?v=2026-05-05-007"></script>
 <script src="js/common/deck/deck-analysis.js?v=2026-05-05-007"></script>
-<script src="js/common/deck/deck-note-presets.js?v=2026-05-05-007"></script>
+<script src="js/common/deck/deck-note-presets.js?v=2026-06-13-001"></script>
 <script src="js/common/deck/post-result-modal.js?v=2026-05-10-001"></script>
 <script defer src="js/common/deck/screenshot-panel.js?v=2026-05-05-007"></script>
 
 <!-- デッキメーカーページ専用 -->
-<script src="js/pages/deckmaker/deckmaker-loader.js?v=2026-05-20-002"></script>
-<script src="js/common/pwa/install-ui.js?v=2026-05-07-001"></script>
-<script src="js/common/pwa/register.js?v=2026-05-16-001"></script>
+<script src="js/common/deck/lethal-planner.js?v=2026-09-10-005"></script>
+<script src="js/pages/deckmaker/deckmaker-loader.js?v=2026-09-09-008"></script>
+<script src="js/common/pwa/install-ui.js?v=2026-07-17-003"></script>
+<script src="js/common/pwa/register.js?v=2026-06-15-001"></script>
 
 </body>
 </html>

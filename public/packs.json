@@ -50,11 +50,25 @@
       "selector": "#pack-glory-of-the-gods"
     },
     {
-      "en": "その他特殊カード",
-      "jp": "",
-      "slug": "その他特殊カード",
-      "key": "その他特殊カード",
-      "selector": "#pack-その他特殊カード"
+      "en": "Honor of the Brave Heart",
+      "jp": "不屈の誇り",
+      "slug": "honor-of-the-brave-heart",
+      "key": "honor-of-the-brave-heart",
+      "selector": "#pack-honor-of-the-brave-heart"
+    },
+    {
+      "en": "Illustrated Illusion",
+      "jp": "描画された幻想",
+      "slug": "illustrated-illusion",
+      "key": "illustrated-illusion",
+      "selector": "#pack-illustrated-illusion"
+    },
+    {
+      "en": "Juggernaut Incarnate",
+      "jp": "神威の顕現",
+      "slug": "juggernaut-incarnate",
+      "key": "juggernaut-incarnate",
+      "selector": "#pack-juggernaut-incarnate"
     },
     {
       "en": "コラボカード",
@@ -62,6 +76,13 @@
       "slug": "コラボカード",
       "key": "コラボカード",
       "selector": "#pack-コラボカード"
+    },
+    {
+      "en": "その他特殊カード",
+      "jp": "",
+      "slug": "その他特殊カード",
+      "key": "その他特殊カード",
+      "selector": "#pack-その他特殊カード"
     }
   ],
   "order": [
@@ -72,7 +93,10 @@
     "Ensemble of Slience",
     "Fallen Fate",
     "Glory of the Gods",
-    "その他特殊カード",
-    "コラボカード"
+    "Honor of the Brave Heart",
+    "Illustrated Illusion",
+    "Juggernaut Incarnate",
+    "コラボカード",
+    "その他特殊カード"
   ]
 }

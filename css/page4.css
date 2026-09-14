@@ -2,12 +2,6 @@
   0.ベース / 共通レイアウト
 ========================*/
 
-/* 全体ベース */
-body {
-    margin: 0;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
-}
-
 /* コンテナ */
 .container {
     max-width: 1200px;
@@ -991,12 +985,22 @@ body.is-pwa-standalone .list-footer--bottom {
     padding: 3px 0;
     display: flex;
     flex-direction: column;
+    gap: 4px;
     margin-bottom: 4px;
 }
 
 /* メインタグ*/
 .post-tags-main {
     grid-area: main-tags;
+}
+
+/* 代表称号タグ行 */
+.post-tags-title {
+    grid-area: title-tags;
+}
+
+.post-tags-title:empty {
+    display: none;
 }
 
 /* ユーザータグ */
@@ -2494,6 +2498,21 @@ body.is-pwa-standalone .list-footer--bottom {
     --pack-stroke: rgba(var(--pack-g-accent-rgb), .70);
 }
 
+.stat-chip.pack-chip[data-pack="H"] {
+    --pack-bg: var(--pack-h-rgb);
+    --pack-stroke: rgba(var(--pack-h-accent-rgb), .70);
+}
+
+.stat-chip.pack-chip[data-pack="I"] {
+    --pack-bg: var(--pack-i-rgb);
+    --pack-stroke: rgba(var(--pack-i-accent-rgb), .70);
+}
+
+.stat-chip.pack-chip[data-pack="J"] {
+    --pack-bg: var(--pack-j-rgb);
+    --pack-stroke: rgba(var(--pack-j-accent-rgb), .70);
+}
+
 /* 特殊 / コラボ */
 .stat-chip.pack-chip[data-pack="SPECIAL"] {
     --pack-bg: var(--pack-special-rgb);
@@ -2709,20 +2728,15 @@ body.is-pwa-standalone .list-footer--bottom {
     padding-top: 4px;
 }
 
-
 /* ===== メインタグ（メーカー方向のオレンジ→ピンク） ===== */
 .post-tags-main .chip {
     background: linear-gradient(90deg, #ff9a54, #ff6d3f);
     border: 1px solid #ff6a3d;
     color: #fff;
     font-weight: 700;
-
-    /* シャドウ弱め（一覧でうるさくならない） */
     box-shadow:
         inset 0 0 3px rgba(255, 255, 255, 0.25),
         0 0 4px rgba(255, 110, 60, 0.35);
-
-    /* 文字の縁取り（背景色とぶつからない） */
     text-shadow: 0 0 2px rgba(0, 0, 0, 0.25);
 }
 
@@ -2736,15 +2750,88 @@ body.is-pwa-standalone .list-footer--bottom {
     border-style: dashed;
 }
 
-/* 開催中（任意：少し強調） */
-.chip.is-campaign-active {
-    font-weight: 800;
-}
-
+/* 開催中 */
+.chip.is-campaign-active,
 .post-filter-tag-btn.is-campaign-active {
     font-weight: 800;
 }
 
+/* 代表称号タグ：投稿カード側 */
+.post-tags-title .chip.chip-title-badge {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .45), rgba(255, 255, 255, 0) 45%),
+        linear-gradient(135deg,
+            #a78bfa 0%,
+            #8b5cf6 50%,
+            #7c3aed 100%);
+
+    border-color: #7c3aed;
+    color: #fff;
+
+    font-weight: 800;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .25),
+        0 2px 6px rgba(124, 58, 237, .22);
+
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, .18);
+}
+
+.post-tags-title .chip.chip-title-badge::before {
+    content: "✦";
+    margin-right: 2px;
+    color: #facc15;
+}
+
+/* 代表称号フィルター：未選択 */
+.post-filter-title-badge-btn {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .75), rgba(255, 255, 255, 0) 45%),
+        linear-gradient(135deg, #faf5ff 0%, #f3e8ff 48%, #ede9fe 100%);
+    border-color: #d8b4fe;
+    color: #6d28d9;
+    font-weight: 900;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .85),
+        0 2px 6px rgba(109, 40, 217, .12);
+}
+
+.post-filter-title-badge-btn::before {
+    content: "✦";
+    color: #facc15;
+    margin-right: 4px;
+}
+
+/* 代表称号フィルター：ホバー */
+.post-filter-title-badge-btn:hover,
+.post-filter-title-badge-btn:focus-visible {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .65), rgba(255, 255, 255, 0) 45%),
+        linear-gradient(135deg, #f3e8ff 0%, #ede9fe 48%, #ddd6fe 100%);
+    border-color: #c084fc;
+    color: #581c87;
+}
+
+/* 代表称号フィルター：選択時 */
+.post-filter-title-badge-btn.selected {
+    background:
+        linear-gradient(180deg,
+            #a78bfa 0%,
+            #8b5cf6 100%);
+
+    border-color: #7c3aed;
+    color: #fff;
+
+    box-shadow:
+        0 2px 8px rgba(124, 58, 237, .25);
+}
+
+.post-filter-title-badge-btn.selected::before {
+    color: #facc15;
+}
+
+/* 終了済みキャンペーン表示 */
 .chip.is-campaign-ended::before {
     content: "終了";
     display: inline-block;
@@ -2963,6 +3050,18 @@ body.is-pwa-standalone .list-footer--bottom {
 
 .deck-entry[data-pack="G"] {
     --pack-rgb: var(--pack-g-rgb);
+}
+
+.deck-entry[data-pack="H"] {
+    --pack-rgb: var(--pack-h-rgb);
+}
+
+.deck-entry[data-pack="I"] {
+    --pack-rgb: var(--pack-i-rgb);
+}
+
+.deck-entry[data-pack="J"] {
+    --pack-rgb: var(--pack-j-rgb);
 }
 
 .deck-entry[data-pack="SPECIAL"] {
@@ -3185,6 +3284,21 @@ body.is-pwa-standalone .list-footer--bottom {
 .carddetail-pack[data-pack="G"] {
     --pack-bg: var(--pack-g-rgb);
     --pack-stroke: rgba(var(--pack-g-accent-rgb), .7);
+}
+
+.carddetail-pack[data-pack="H"] {
+    --pack-bg: var(--pack-h-rgb);
+    --pack-stroke: rgba(var(--pack-h-accent-rgb), .7);
+}
+
+.carddetail-pack[data-pack="I"] {
+    --pack-bg: var(--pack-i-rgb);
+    --pack-stroke: rgba(var(--pack-i-accent-rgb), .7);
+}
+
+.carddetail-pack[data-pack="J"] {
+    --pack-bg: var(--pack-j-rgb);
+    --pack-stroke: rgba(var(--pack-j-accent-rgb), .7);
 }
 
 .carddetail-pack[data-pack="SPECIAL"] {
@@ -4526,17 +4640,74 @@ body.is-pwa-standalone #cardDetailDrawer .carddetail-drawer-inner {
 .post-card-note {
     display: grid;
     grid-template-columns: 100px 1fr;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto auto 1fr;
     grid-template-areas:
         "left pick"
+        "left toolbar"
         "left note";
-    gap: .5rem .75rem;
+    gap: .25rem .75rem;
     align-items: stretch;
     padding: .5rem;
     border: 1px solid #e5e7eb;
     border-radius: 10px;
     background: #fafafa;
     margin-bottom: .5rem;
+}
+
+/* カード解説の入力補助と文字数表示 */
+.post-card-note .card-note-editor-toolbar {
+    grid-area: toolbar;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: .5rem;
+}
+
+.post-card-note .card-note-editor-toolbar .post-char-limit {
+    margin-top: 0;
+    margin-left: auto;
+    text-align: right;
+}
+
+.post-card-note .card-note-card-ref-btn {
+    flex: 0 0 auto;
+    min-width: 10.5rem;
+    min-height: 30px;
+    padding: .25rem .5rem;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: inherit;
+    border-radius: 8px;
+    box-shadow: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.post-card-note .card-note-card-ref-btn:hover {
+    border-color: #9ca3af;
+    background: #f9fafb;
+    box-shadow: none;
+    transform: none;
+}
+
+.post-card-note .card-note-card-ref-btn:active {
+    background: #f3f4f6;
+    transform: none;
+}
+
+@media (max-width: 768px) {
+    .post-card-note .card-note-card-ref-btn {
+        min-width: 7.25rem;
+        min-height: 26px;
+        padding: .2rem .35rem;
+        font-size: 10px;
+        line-height: 1.25;
+    }
+
+    .post-card-note .card-note-editor-toolbar .post-char-limit {
+        font-size: 10px;
+    }
 }
 
 @media (max-width:1023px) {
@@ -5173,6 +5344,22 @@ textarea.is-char-limit-over {
     width: 100%;
 }
 
+.post-keyword-filter-box {
+    display: grid;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.post-keyword-filter-label {
+    color: #475569;
+    font-size: .78rem;
+    font-weight: 800;
+}
+
+.post-keyword-filter-input {
+    width: 100%;
+}
+
 /* スマホ：OR/AND を少し詰める */
 @media (max-width: 768px) {
     .post-filter-header {
@@ -5264,4 +5451,37 @@ textarea.is-char-limit-over {
     .post-filter-overview-chip {
         transition: none;
     }
+}
+/* 投稿詳細のリーサルプラン */
+.lethal-plan-label .lethal-planner__title-badge { display: block; width: fit-content; margin-top: .2rem; padding: 2px 6px; border: 1px solid color-mix(in srgb, #b91c1c 38%, transparent); border-radius: 999px; background: color-mix(in srgb, #b91c1c 7%, white); color: #b91c1c; font-size: .68rem; font-weight: 800; line-height: 1.2; white-space: nowrap; }
+.lethal-plan-summary { min-width: 0; }
+.lethal-plan-values { display: grid; gap: .15rem; }
+.lethal-plan-details { margin-top: .3rem; }
+.lethal-plan-details summary { width: fit-content; color: var(--primary-color, #3659a7); font-size: .82rem; font-weight: 700; cursor: pointer; }
+.lethal-plan-list { display: grid; gap: .4rem; margin-top: .4rem; }
+.lethal-plan-item { padding: .4rem; border: 1px solid var(--border-color, #d7dce3); border-radius: 7px; }
+.lethal-plan-expression { font-weight: 700; }
+.lethal-plan-detail-label { font-size: .78rem; font-weight: 700; }
+.lethal-plan-variant { display: flex; align-items: center; flex-wrap: wrap; gap: .25rem; margin-top: .35rem; }
+.lethal-plan-variant-label { display: inline-grid; width: 20px; height: 20px; place-items: center; border-radius: 50%; background: #eef2f7; color: #475569; font-size: .68rem; font-weight: 800; }
+.lethal-plan-card { display: inline-flex; flex-direction: column; width: 52px; padding: 0; overflow: hidden; border: 2px solid transparent; border-radius: 8px; background: transparent; cursor: pointer; }
+.lethal-plan-card-value { align-self: stretch; padding: 3px 2px; color: var(--text-color, #172b45); background: var(--lethal-planner-surface, #f7f9fc); font-size: .7rem; font-weight: 700; line-height: 1.4; text-align: center; white-space: pre-line; }
+.lethal-plan-card:hover { border-color: var(--primary-color, #3659a7); }
+.lethal-plan-card-image { display: block; width: 48px; aspect-ratio: 424 / 532; object-fit: cover; }
+.lethal-plan-operator { font-size: .8rem; font-weight: 700; }
+.lethal-plan-card:focus-visible { outline: 3px solid #ffbf47; outline-offset: 2px; }
+
+/* マイ投稿のリーサル管理 */
+.mine-lethal-section { margin-top: 1rem; min-width: 0; }
+.mine-lethal-section .lethal-planner__registered-header { flex-wrap: wrap; }
+.mine-lethal-preview { margin: .6rem 0; }
+.mine-lethal-workspace { min-width: 0; margin: 0; padding: 0; border: 0; }
+.mine-lethal-hint,
+#mine-lethal-status { font-size: .8rem; line-height: 1.5; }
+.mine-lethal-workspace .post-manage-actions { flex-wrap: wrap; }
+.mine-lethal-workspace:disabled { opacity: .65; }
+#post-lethal-card-modal { z-index: 7000; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lethal-plan-card { transition: none; }
 }

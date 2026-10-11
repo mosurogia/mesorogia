@@ -320,7 +320,7 @@
     if (currentName) currentName.textContent = user.displayName || '（未設定）';
 
     if (x) {
-        x.value = '';
+        x.value = String(user.x || '').replace(/^@/, '');
         x.placeholder = user.x ? `現在: ${user.x}` : '（未設定）';
     }
     const currentX = document.getElementById('acct-current-x');
@@ -459,10 +459,12 @@
         const footerLogoutBtn = document.getElementById('account-footer-logout');
         if (footerLogoutBtn) {
             footerLogoutBtn.addEventListener('click', async () => {
+                if (footerLogoutBtn.disabled) return;
                 const prevLabel = footerLogoutBtn.textContent;
 
                 footerLogoutBtn.disabled = true;
                 footerLogoutBtn.textContent = 'ログアウト中…';
+                footerLogoutBtn.setAttribute('aria-busy', 'true');
 
                 try {
                     await window.Auth?.logout?.();
@@ -472,8 +474,10 @@
                 } catch (err) {
                     console.error(err);
                     alert('ログアウト失敗: ' + (err?.message || 'unknown'));
+                } finally {
                     footerLogoutBtn.disabled = false;
                     footerLogoutBtn.textContent = prevLabel || 'ログアウト';
+                    footerLogoutBtn.setAttribute('aria-busy', 'false');
                 }
             });
         }
@@ -550,7 +554,7 @@
         });
         }
 
-        // 保存ボタン：入力があれば有効
+        // 保存ボタン：入力またはXの変更があれば有効
         document.addEventListener('input', () => {
         const $login = document.getElementById('acct-login-name');
         const $pwd   = document.getElementById('acct-password');
@@ -565,7 +569,7 @@
             ($pwd  ?.value?.trim()?.length || 0) > 0;
         const postAny =
             ($pname?.value?.trim()?.length || 0) > 0 ||
-            ($x    ?.value?.trim()?.length || 0) > 0;
+            String($x?.value || '').trim().replace(/^@/, '') !== String(window.Auth?.user?.x || '').trim().replace(/^@/, '');
 
         if (btn) btn.disabled = !accountAny;
         if (postBtn) postBtn.disabled = !postAny;
@@ -589,8 +593,7 @@
         const curNameRaw  = (document.getElementById('acct-poster-name')?.placeholder || '').trim();
         const curName     = curNameRaw.replace(/^現在:\s*/,'').trim();
 
-        const curXRaw     = (document.getElementById('acct-x')?.placeholder || '').trim();
-        const curX        = curXRaw.replace(/^現在:\s*/,'').trim();
+        const curX        = String(Auth?.user?.x || '').trim().replace(/^@/, '');
 
         const newLogin   = (document.getElementById('acct-login-name')?.value || '').trim();
         const newPass    = (document.getElementById('acct-password')?.value || '').trim();
@@ -624,7 +627,7 @@
         if (newNameRaw && newNameRaw !== curName){
         payload.posterName = newNameRaw;
         }
-        if (newXNorm && newXNorm !== curX){
+        if (newXNorm !== curX){
         payload.xAccount = newXNorm;
         }
         return payload;
@@ -657,7 +660,7 @@
         }
         if ($x){
         const now = resUser?.x ?? ($x.placeholder || '').replace(/^現在:\s*/,'').trim();
-        $x.value = '';
+        $x.value = String(now || '').replace(/^@/, '');
         $x.placeholder = now ? `現在: ${now}` : '（未設定）';
         const current = document.getElementById('acct-current-x');
         if (current) current.textContent = now ? `@${String(now).replace(/^@/, '')}` : '（未設定）';
@@ -707,6 +710,7 @@
         const keep = btn.textContent;
         btn.textContent = '送信中...';
 
+        let saved = false;
         try{
         const res = await postJSON(`${API}?mode=updateProfile`, sendBody);
         if (!res?.ok) throw new Error(res?.error || 'update failed');
@@ -733,12 +737,13 @@
         window.reflectLoginUI?.();
         window.AccountDataManager?.refresh?.();
 
+        saved = true;
         alert('アカウント情報を更新しました');
         }catch(err){
         console.error(err);
         alert('保存に失敗しました：' + err.message);
         }finally{
-        btn.disabled = false;
+        btn.disabled = saved;
         btn.textContent = keep;
         }
     });

@@ -72,6 +72,9 @@ window.GAS_API_BASE =
   'https://script.google.com/macros/s/AKfycbwgvqClfe8RSOQoZ9Jw6A6yVjmrb8TYS9eu0ir-ORnstb29vnmz85RpXrVJXW8mQoU/exec';
 
 window.DECKPOST_API_BASE ??= window.GAS_API_BASE;
+// ユーザータグ候補専用。投稿・認証の接続先は従来の設定を使う。
+window.DECKPOST_USER_TAG_API_BASE ??=
+  'https://script.google.com/macros/s/AKfycbwGXeme5P4tzx2EBxJvmbFLLjZvlxsH3rIJDTMB3h5mI6syl4MLb3yYVf0DK7wREg6h/exec';
 window.AUTH_API_BASE     ??= window.GAS_API_BASE;
 
 // ========================

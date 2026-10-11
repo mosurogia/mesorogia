@@ -2284,13 +2284,11 @@
     const planRows = validPlans.map((plan, planIndex) => {
       const values = (Array.isArray(plan.values) ? plan.values : [])
         .map(Number)
-        .filter(Number.isFinite)
-        .sort((a, b) => a - b);
+        .filter(Number.isFinite);
       const total = Number(plan.total) || values.reduce((sum, value) => sum + value, 0);
       const variants = plan.variants.map((variant, variantIndex) => {
-        // 保存された順序やバフの参照先は変えず、表示だけ数式と同じ昇順にする。
-        const steps = [...(Array.isArray(variant?.steps) ? variant.steps : [])]
-          .sort((a, b) => (Number(a?.value) || 0) - (Number(b?.value) || 0));
+        // 数式とカードを保存された順序で表示し、バフの参照先も維持する。
+        const steps = Array.isArray(variant?.steps) ? variant.steps : [];
         const cards = steps.map((step, stepIndex) => {
           const cd = normCd5_(step?.cardId || step?.cd);
           const card = window.getCard?.(cd) || {};

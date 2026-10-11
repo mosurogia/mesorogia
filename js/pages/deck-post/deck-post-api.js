@@ -20,6 +20,7 @@
   // 0) 設定
   // =========================
   const GAS_BASE = window.DECKPOST_API_BASE || window.GAS_API_BASE || '';
+  const USER_TAGS_BASE = window.DECKPOST_USER_TAG_API_BASE || GAS_BASE;
   const DEFAULT_PAGE_LIMIT = 20;
 
   // =========================
@@ -288,6 +289,107 @@
   }
 
   // =========================
+  // タグ専用API（検索ごと最大100件・30分キャッシュ）
+  // =========================
+  const PUBLIC_USER_TAG_LIMIT = 100;
+  const PUBLIC_USER_TAG_CACHE_MS = 30 * 60 * 1000;
+  // 接続先と版を分け、使用投稿数を持たない旧キャッシュを再利用しない。
+  const PUBLIC_USER_TAG_CACHE_KEY = 'DeckPostUserTagSuggestions:v3:' + USER_TAGS_BASE;
+  const PUBLIC_USER_TAG_CACHE_QUERIES = 20;
+  const publicUserTagCache_ = new Map();
+  const publicUserTagRequests_ = new Map();
+  let publicUserTagCacheLoaded_ = false;
+  let publicUserTagCacheGeneration_ = 0;
+
+  function normalizePublicUserTagQuery_(query) {
+    return String(query || '').normalize('NFKC').replace(/^\s*#+/, '').replace(/\s+/g, ' ').trim();
+  }
+
+  function isValidPublicUserTagCache_(cache) {
+    const age = Date.now() - Number(cache?.savedAt || 0);
+    return !!cache && Number.isFinite(age) && age >= 0 && age < PUBLIC_USER_TAG_CACHE_MS
+      && Array.isArray(cache.tags) && cache.tags.length <= PUBLIC_USER_TAG_LIMIT
+      && cache.tags.every(row => row && typeof row.tag === 'string' && !!row.tag.trim() && Number.isInteger(row.count) && row.count > 0);
+  }
+
+  function readPublicUserTagCache_(query) {
+    if (!publicUserTagCacheLoaded_) {
+      publicUserTagCacheLoaded_ = true;
+      try {
+        const entries = JSON.parse(localStorage.getItem(PUBLIC_USER_TAG_CACHE_KEY) || '[]');
+        if (Array.isArray(entries)) {
+          entries.slice(-PUBLIC_USER_TAG_CACHE_QUERIES).forEach(entry => {
+            if (Array.isArray(entry) && typeof entry[0] === 'string' && isValidPublicUserTagCache_(entry[1])) publicUserTagCache_.set(entry[0], entry[1]);
+          });
+        }
+      } catch (_) {}
+    }
+    const cache = publicUserTagCache_.get(query);
+    return isValidPublicUserTagCache_(cache) ? { ...cache, ok: true, fromCache: true } : null;
+  }
+
+  function savePublicUserTagCache_(query, cache) {
+    publicUserTagCache_.delete(query);
+    publicUserTagCache_.set(query, cache);
+    for (const [key, value] of publicUserTagCache_) {
+      if (!isValidPublicUserTagCache_(value)) publicUserTagCache_.delete(key);
+    }
+    while (publicUserTagCache_.size > PUBLIC_USER_TAG_CACHE_QUERIES) publicUserTagCache_.delete(publicUserTagCache_.keys().next().value);
+    try { localStorage.setItem(PUBLIC_USER_TAG_CACHE_KEY, JSON.stringify([...publicUserTagCache_])); } catch (_) {}
+  }
+
+  async function apiPublicUserTags(opts = {}) {
+    const query = normalizePublicUserTagQuery_(opts.q);
+    if (opts.refresh) {
+      // 管理設定変更をすぐ反映する更新では、他の検索語の古い候補も破棄する。
+      publicUserTagCacheGeneration_ += 1;
+      publicUserTagCacheLoaded_ = true;
+      publicUserTagCache_.clear();
+      publicUserTagRequests_.clear();
+      try { localStorage.setItem(PUBLIC_USER_TAG_CACHE_KEY, '[]'); } catch (_) {}
+    }
+    const cached = readPublicUserTagCache_(query);
+    if (cached) return cached;
+    if (publicUserTagRequests_.has(query)) return publicUserTagRequests_.get(query);
+    if (!USER_TAGS_BASE) return { ok: false, error: 'user tag api base not set' };
+
+    const generation = publicUserTagCacheGeneration_;
+    const request = (async () => {
+      try {
+        const qs = new URLSearchParams({ mode: 'userTags', q: query, limit: String(PUBLIC_USER_TAG_LIMIT) });
+        // 認証トークンを送らず、サーバーが許可した公開候補だけを取得する。
+        const data = await fetchJsonWithJsonpFallback_(USER_TAGS_BASE + '?' + qs.toString());
+        if (data?.ok !== true || !Array.isArray(data.tags) || !data.tags.every(row => row && typeof row.tag === 'string' && Number.isInteger(row.count))) {
+          return { ok: false, error: data?.error || 'invalid user tag response' };
+        }
+        // 正式名・別名検索・並び順はサーバーを正とし、フロントでは再ソートしない。
+        const seen = new Set();
+        const tags = data.tags
+          .filter(row => row.count > 0 && row.enabled !== false)
+          .map(row => ({ tag: row.tag.trim(), count: row.count }))
+          .filter(row => {
+            if (!row.tag || seen.has(row.tag)) return false;
+            seen.add(row.tag);
+            return true;
+          })
+          .slice(0, PUBLIC_USER_TAG_LIMIT);
+        if (generation !== publicUserTagCacheGeneration_) return { ok: false, error: 'superseded user tag request' };
+        const cache = { savedAt: Date.now(), tags };
+        savePublicUserTagCache_(query, cache);
+        return { ok: true, ...cache, fromCache: false };
+      } catch (_) {
+        return { ok: false, error: 'user tag request failed' };
+      }
+    })();
+    publicUserTagRequests_.set(query, request);
+    try {
+      return await request;
+    } finally {
+      if (publicUserTagRequests_.get(query) === request) publicUserTagRequests_.delete(query);
+    }
+  }
+
+  // =========================
   // 5) キャンペーンタグ一覧
   // =========================
   async function apiCampaignTags() {
@@ -452,6 +554,7 @@
     // doGet
     jsonpRequest,
     apiList,
+    apiPublicUserTags,
     apiCampaignTags,
     apiGetPost,
   };

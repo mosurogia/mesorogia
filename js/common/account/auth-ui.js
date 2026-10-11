@@ -13,12 +13,43 @@
 const Auth = window.Auth;
 let authModalMode = 'login';
 let authUiLoading = false;
+let authLoadingMessage = '';
 
 function getAuthModeLabel(mode){
     return mode === 'signup' ? '新規登録' : 'ログイン';
 }
 
+function renderAuthSubmitButton(){
+    const button = document.getElementById('auth-login-btn-submit');
+    if (!button) return;
+    const showSpinner = authUiLoading && authLoadingMessage !== 'ログアウト中…';
+    button.disabled = authUiLoading;
+    button.setAttribute('aria-busy', String(authUiLoading));
+    button.classList.toggle('is-auth-loading', showSpinner);
+    if (showSpinner) {
+        const spinner = document.createElement('span');
+        spinner.className = 'auth-button-spinner';
+        spinner.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span');
+        label.textContent = authLoadingMessage;
+        button.replaceChildren(spinner, label);
+    } else {
+        button.textContent = getAuthModeLabel(authModalMode);
+    }
+}
+
+// パスワードの案内は認証エラーと別の領域に展開する
+function setForgotPasswordGuide(open){
+    const guide = document.getElementById('auth-forgot-guide');
+    const button = document.getElementById('auth-forgot-password');
+    if (guide) guide.hidden = !open;
+    button?.setAttribute('aria-expanded', String(open));
+}
+
 function setAuthModalMode(mode = 'login'){
+    setForgotPasswordGuide(false);
+    // 通信中にモードやボタン表示を戻して重複送信させない
+    if (authUiLoading) { renderAuthSubmitButton(); return; }
     authModalMode = mode === 'signup' ? 'signup' : 'login';
 
     const isSignup = authModalMode === 'signup';
@@ -51,6 +82,7 @@ function setAuthModalMode(mode = 'login'){
     }
 
     if (status) status.textContent = '';
+    renderAuthSubmitButton();
 }
 
 function openAuthModal(mode = 'login'){
@@ -139,6 +171,7 @@ window.reflectLoginUI = function reflectLoginUI(){
 // ===== 認証UIフィードバック =====
 function setAuthLoading(on, msg){
     authUiLoading = !!on;
+    authLoadingMessage = on ? (msg || 'ログイン中…') : '';
     const loginBtn  = document.getElementById('auth-login-btn-submit');
     const signupBtn = document.getElementById('auth-signup-btn');
     if (loginBtn)  loginBtn.disabled  = !!on;
@@ -147,7 +180,8 @@ function setAuthLoading(on, msg){
     if (typeof window.setAuthChecking === 'function') window.setAuthChecking(!!on);
 
     const st = document.getElementById('auth-inline-status');
-    if (st) st.textContent = msg || '';
+    if (st) st.textContent = on && authLoadingMessage !== 'ログアウト中…' ? '' : (msg || '');
+    renderAuthSubmitButton();
 }
 
 function showAuthOK(msg){
@@ -158,13 +192,6 @@ function showAuthOK(msg){
 function showAuthError(msg){
     const st = document.getElementById('auth-inline-status');
     if (st) st.textContent = msg || 'エラーが発生しました';
-}
-
-function showForgotPasswordGuide(){
-    const st = document.getElementById('auth-inline-status');
-    if (!st) return;
-
-    st.textContent = 'ブラウザに保存されたパスワードをご確認ください。再設定が必要な場合は、ユーザー名・投稿者名・Xアカウント・投稿したデッキURLなど、本人確認に使える情報を添えて管理者へお問い合わせください。';
 }
 
 function startSlowTimer(ms = 5000) {
@@ -213,6 +240,7 @@ function triggerPasswordSave(username, password){
 }
 
 async function doSignup(){
+    if (authUiLoading) return;
     const username  = (document.getElementById('auth-username')?.value || '').trim().toLowerCase();
     const password  = (document.getElementById('auth-password')?.value || '');
     const password2 = (document.getElementById('auth-password-confirm')?.value || '');
@@ -260,7 +288,10 @@ async function doSignup(){
     }
 }
 
+let loginAttemptSequence = 0;
+
 async function doLogin(){
+    if (authUiLoading) return;
     const username = (document.getElementById('auth-username')?.value || '').trim().toLowerCase();
     const password = (document.getElementById('auth-password')?.value || '');
     if (!username || !password){
@@ -268,6 +299,8 @@ async function doLogin(){
     return;
     }
 
+    const attemptId = ++loginAttemptSequence;
+    window.dispatchEvent(new CustomEvent('auth:login-start', { detail: { attemptId } }));
     setAuthLoading(true, 'ログイン中…');
     const stopSlow = startSlowTimer(5000);
     try{
@@ -281,21 +314,30 @@ async function doLogin(){
     const modal = document.getElementById('authLoginModal');
     if (modal) modal.style.display = 'none';
 
-    setTimeout(() => {
-        alert('ログインしました');
-        location.hash = '#logged-in';
-    }, 100);
-
     triggerPasswordSave(username, password);
+
+    // ページ専用の完了表示がある場合は、共通の通知を置き換える
+    const useDefaultNotice = window.dispatchEvent(new CustomEvent('auth:login-success', {
+        cancelable: true,
+        detail: { attemptId, user: { ...(Auth.user || {}) } }
+    }));
+    if (useDefaultNotice) {
+        setTimeout(() => {
+            alert('ログインしました');
+            location.hash = '#logged-in';
+        }, 100);
+    }
 
     }catch(e){
     stopSlow();
     setAuthLoading(false, '');
+    window.dispatchEvent(new CustomEvent('auth:login-failed', { detail: { attemptId } }));
     showAuthError('ログイン失敗：' + (e?.message || 'unknown'));
     }
 }
 
 async function doLogout(){
+    if (authUiLoading) return;
     const logoutBtn = document.getElementById('auth-logout-btn');
     const prevLabel = logoutBtn ? logoutBtn.textContent : '';
 
@@ -354,7 +396,13 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById('auth-logout-btn')?.addEventListener('click', doLogout);
-    document.getElementById('auth-forgot-password')?.addEventListener('click', showForgotPasswordGuide);
+    document.getElementById('auth-forgot-password')?.addEventListener('click', () => {
+        const guide = document.getElementById('auth-forgot-guide');
+        setForgotPasswordGuide(!!guide?.hidden);
+    });
+    document.addEventListener('click', (event) => {
+        if (event.target.closest('[data-close="authLoginModal"]')) setForgotPasswordGuide(false);
+    });
 
     // 認証状態の初期化
     Auth?.init?.();

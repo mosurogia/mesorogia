@@ -1275,6 +1275,31 @@
     return payload;
   }
 
+  // 確認後のリセットを先に永続化し、次回起動で投稿用入力が復活するのを防ぐ。
+  window.persistDeckmakerPostReset = () => {
+    const keys = [AUTOSAVE_KEY, LEGACY_AUTOSAVE_KEY, RESCUE_KEY];
+    let previous = null;
+    try {
+      previous = keys.map(key => [key, localStorage.getItem(key)]);
+      if (window.backupDeckmakerNow() === false) return false;
+      const rescue = readStorageJson_(RESCUE_KEY);
+      if (rescue) archiveState_(rescue, true);
+      const next = { ...buildAutosavePayload_(), note: '', cardNotes: [], selectTags: [], userTags: [], lethalPlans: [], shareCode: '' };
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(next));
+      localStorage.removeItem(LEGACY_AUTOSAVE_KEY);
+      localStorage.removeItem(RESCUE_KEY);
+      if (__autosaveTimer) clearTimeout(__autosaveTimer);
+      __autosaveTimer = 0;
+      __autosaveDirty = false;
+      return true;
+    } catch (_) {
+      if (previous) previous.forEach(([key, value]) => {
+        try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch (_) {}
+      });
+      return false;
+    }
+  };
+
   function readPostDraftMeta_() {
     try {
       const raw = localStorage.getItem(POST_DRAFT_KEY);

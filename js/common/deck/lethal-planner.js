@@ -16,6 +16,8 @@
   let lethalPlannerCandidates = new Map();
   let lethalPlannerEventsBound = false;
   let lethalPlannerDragIndex = null;
+  let lethalPlannerOrderStepId = null;
+  let lethalPlannerIgnoreOrderClickUntil = 0;
   let lethalPlannerStepId = 0;
   let lethalPlannerAutoPlans = [];
   let lethalPlannerAutoSearched = false;
@@ -796,6 +798,7 @@
 
   function applyLethalPlannerAutoPlan_(plan) {
     lethalPlannerStepId = 0;
+    lethalPlannerOrderStepId = null;
     const selections = buildLethalPlannerAutoSelections_(plan.items);
     if (!selections) return;
     lethalPlannerAutoFilterActive = allowedAutoLethalOptions instanceof Set;
@@ -808,6 +811,7 @@
     const steps = plan?.variants?.[0]?.steps;
     if (!Array.isArray(steps) || steps.length === 0) return false;
     lethalPlannerStepId = 0;
+    lethalPlannerOrderStepId = null;
     const selections = buildLethalPlannerAutoSelections_(steps);
     if (!selections) return false;
     lethalPlannerAutoFilterActive = false;
@@ -1320,20 +1324,31 @@
   function appendLethalPlannerChip_(container, selection, selectionIndex, isBuff) {
     const chip = document.createElement('span');
     chip.className = `lethal-planner__term${isBuff ? ' lethal-planner__term--buff' : ''}`;
-    chip.draggable = true;
+    chip.draggable = window.matchMedia?.('(pointer: fine)').matches !== false;
     chip.dataset.lethalSelectionIndex = String(selectionIndex);
 
     const type = lethalPlannerTypes.find(item => item.key === selection.type);
+    const order = document.createElement('button');
+    order.type = 'button';
+    order.className = 'lethal-planner__term-order';
+    order.dataset.lethalSelectionIndex = String(selectionIndex);
+    order.disabled = lethalPlannerSelections.length < 2;
+    order.setAttribute('aria-pressed', String(selection.stepId === lethalPlannerOrderStepId));
+    order.setAttribute('aria-label', `${selectionIndex + 1}番目、${type?.label || selection.type} ${selection.display || selection.value}、${selection.stepId === lethalPlannerOrderStepId ? '選択中、もう一度押すと解除' : lethalPlannerOrderStepId != null ? '選択中の数値枠と交換' : '順番変更の元を選択'}`);
+    chip.classList.toggle('is-order-selected', selection.stepId === lethalPlannerOrderStepId);
+    const number = document.createElement('span');
+    number.className = 'lethal-planner__term-number';
+    number.textContent = String(selectionIndex + 1);
+    number.setAttribute('aria-hidden', 'true');
     const icon = document.createElement('span');
     icon.className = 'lethal-planner__term-icon';
     icon.setAttribute('aria-hidden', 'true');
     icon.textContent = type?.icon || '';
-    chip.appendChild(icon);
-
     const value = document.createElement('span');
     value.className = 'lethal-planner__term-value';
     value.textContent = isBuff ? `(+${selection.value})` : (selection.display || String(selection.value));
-    chip.appendChild(value);
+    order.append(number, icon, value);
+    chip.appendChild(order);
 
     const remove = document.createElement('button');
     remove.type = 'button';
@@ -1345,10 +1360,29 @@
     container.appendChild(chip);
   }
 
+  function appendLethalPlannerGap_(container, gap, selectedIndex) {
+    // 選択枠の直前・直後は移動しても順序が変わらないため表示しない。
+    if (selectedIndex < 0 || gap === selectedIndex || gap === selectedIndex + 1) return;
+    if (gap === 0) container.classList.add('has-start-gap');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `lethal-planner__order-gap${gap === 0 ? ' lethal-planner__order-gap--start' : ''}`;
+    button.dataset.lethalGap = String(gap);
+    const destination = gap > selectedIndex ? gap - 1 : gap;
+    button.setAttribute('aria-label', `選択した枠を${destination + 1}番目へ挿入（${gap === 0 ? '先頭' : gap === lethalPlannerSelections.length ? '末尾' : gap + '番目の枠の後'}）`);
+    button.title = button.getAttribute('aria-label');
+    const arrow = document.createElement('span');
+    arrow.setAttribute('aria-hidden', 'true');
+    arrow.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" focusable="false"><path d="M3 10 L12 2 L21 10 L16 10 L16 22 L8 22 L8 10 Z" fill="white" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></svg>';
+    button.appendChild(arrow);
+    container.appendChild(button);
+  }
+
   function appendLethalPlannerSeparator_(container) {
     const separator = document.createElement('span');
     separator.className = 'lethal-planner__operator';
-    separator.textContent = '+';
+    separator.textContent = '→';
+    separator.setAttribute('aria-hidden', 'true');
     container.appendChild(separator);
   }
 
@@ -1528,6 +1562,35 @@
     button.addEventListener('blur', hideLethalCandidateTooltip_);
   }
 
+  // 自動生成とリセットを同じ操作列に置き、再描画では無効状態だけを更新する。
+  function ensureLethalPlannerResetButton_(autoId, expressionId) {
+    const auto = document.getElementById(autoId);
+    if (!auto) return;
+    let actions = auto.closest('.lethal-planner__actions');
+    if (!actions) {
+      actions = document.createElement('span');
+      actions.className = 'lethal-planner__actions';
+      auto.before(actions);
+      actions.appendChild(auto);
+    }
+    let reset = actions.querySelector('.lethal-planner__numbers-reset');
+    if (!reset) {
+      reset = document.createElement('button');
+      reset.type = 'button';
+      reset.className = 'lethal-planner__numbers-reset';
+      reset.textContent = '数値をリセット';
+      reset.setAttribute('aria-label', '編集中の数値をリセット。登録済みプランは残ります');
+      reset.addEventListener('click', () => {
+        resetLethalPlannerComposer_();
+        const expression = document.getElementById(expressionId);
+        expression?.setAttribute('tabindex', '-1');
+        expression?.focus({ preventScroll: true });
+      });
+      actions.appendChild(reset);
+    }
+    reset.disabled = lethalPlannerSelections.length === 0;
+  }
+
   function renderLethalPlanner_() {
     const root = document.getElementById('lethal-planner');
     const groupsEl = document.getElementById('lethal-planner-groups');
@@ -1536,20 +1599,47 @@
 
     const total = lethalPlannerSelections.reduce((sum, selection) => sum + selection.value, 0);
     const expressionEl = document.getElementById('lethal-planner-expression');
-    expressionEl.innerHTML = '';
-    if (lethalPlannerSelections.length === 0) {
-      expressionEl.textContent = '= 0';
-    } else {
-      lethalPlannerSelections.forEach((selection, index) => {
-        if (index > 0) appendLethalPlannerSeparator_(expressionEl);
-        appendLethalPlannerChip_(expressionEl, selection, index, selection.type === 'buff');
-      });
-
-      const result = document.createElement('span');
-      result.className = 'lethal-planner__result';
-      result.textContent = `= ${total}`;
-      expressionEl.appendChild(result);
+    if (lethalPlannerSelections.length < 2 || !lethalPlannerSelections.some(selection => selection.stepId === lethalPlannerOrderStepId)) {
+      lethalPlannerOrderStepId = null;
     }
+    expressionEl.innerHTML = '';
+    const selectedIndex = lethalPlannerSelections.findIndex(selection => selection.stepId === lethalPlannerOrderStepId);
+    lethalPlannerSelections.forEach((selection, index) => {
+      // 矢印と次の枠を一緒に折り返し、行頭でも実行順を示す。
+      const slot = document.createElement('span');
+      slot.className = 'lethal-planner__order-slot';
+      const boundary = document.createElement('span');
+      boundary.className = 'lethal-planner__order-boundary';
+      boundary.dataset.lethalBoundary = String(index);
+      if (index > 0) appendLethalPlannerSeparator_(boundary);
+      appendLethalPlannerGap_(boundary, index, selectedIndex);
+      slot.appendChild(boundary);
+      appendLethalPlannerChip_(slot, selection, index, selection.type === 'buff');
+      expressionEl.appendChild(slot);
+    });
+    const result = document.createElement('span');
+    result.className = 'lethal-planner__result';
+    result.textContent = `合計 ${total}`;
+    const totalSlot = document.createElement('span');
+    totalSlot.className = 'lethal-planner__order-slot lethal-planner__order-slot--total';
+    const endBoundary = document.createElement('span');
+    endBoundary.className = 'lethal-planner__order-boundary';
+    endBoundary.dataset.lethalBoundary = String(lethalPlannerSelections.length);
+    appendLethalPlannerGap_(endBoundary, lethalPlannerSelections.length, selectedIndex);
+    totalSlot.append(endBoundary, result);
+    expressionEl.appendChild(totalSlot);
+    ensureLethalPlannerResetButton_('lethal-planner-auto', 'lethal-planner-expression');
+    ensureLethalPlannerResetButton_('post-lethal-auto', 'post-lethal-expression');
+    const help = document.createElement('span');
+    help.className = 'lethal-planner__order-help';
+    help.setAttribute('role', 'status');
+    help.setAttribute('aria-live', 'polite');
+    help.textContent = selectedIndex >= 0
+      ? `${selectedIndex + 1}番目を選択中。↑でその間へ挿入、別の数値枠で2つを交換します。同じ枠かEscで解除。`
+      : window.matchMedia?.('(pointer: coarse)').matches
+        ? '左から実行する順番です。長押しせず数値枠をタップし、↑でその間へ挿入、別の数値枠で2つを交換します。'
+        : '左から実行する順番です。数値枠を選び、↑でその間へ挿入、別の数値枠で2つを交換します。PCのドラッグは挿入です。';
+    expressionEl.appendChild(help);
 
     const isComplete = total >= LETHAL_PLANNER_TARGET;
     const isJustLethal = total >= LETHAL_PLANNER_TARGET && total <= LETHAL_PLANNER_REPEAT_TARGET;
@@ -1842,10 +1932,13 @@
   }
 
   function resetLethalPlannerComposer_() {
+    lethalPlannerDragIndex = null;
+    lethalPlannerIgnoreOrderClickUntil = 0;
     lethalPlannerSelections.splice(0, lethalPlannerSelections.length);
     lethalPlannerCardSelections.clear();
     lethalPlannerAutoFilterActive = false;
     lethalPlannerStepId = 0;
+    lethalPlannerOrderStepId = null;
     renderLethalPlanner_();
   }
 
@@ -2107,6 +2200,24 @@
     }, 3000);
   }
 
+  // 選択オブジェクトをそのまま移動し、stepIdとバフの参照を維持する。
+  function moveLethalPlannerSelection_(from, target, mode = 'insert') {
+    if (!Number.isInteger(from) || !Number.isInteger(target) || from < 0 || target < 0 || from >= lethalPlannerSelections.length || target >= lethalPlannerSelections.length) return;
+    lethalPlannerAutoFilterActive = false;
+    // 選択オブジェクトごと並べ替え、stepIdによるバフの参照を維持する。
+    if (mode === 'swap') {
+      [lethalPlannerSelections[from], lethalPlannerSelections[target]] = [lethalPlannerSelections[target], lethalPlannerSelections[from]];
+    } else {
+      const [selection] = lethalPlannerSelections.splice(from, 1);
+      lethalPlannerSelections.splice(target, 0, selection);
+    }
+    lethalPlannerCardSelections.clear();
+  }
+
+  function focusLethalPlannerOrder_(expressionId, index) {
+    document.getElementById(expressionId)?.querySelector(`.lethal-planner__term-order[data-lethal-selection-index="${index}"]`)?.focus({ preventScroll: true });
+  }
+
   function bindLethalPlannerEvents_() {
     if (lethalPlannerEventsBound) return;
     const root = document.getElementById('lethal-planner');
@@ -2239,7 +2350,81 @@
 
     // 分析画面と投稿画面で同じ打点の並べ替え処理を使う。
     [root, document.getElementById('post-lethal-expression')].filter(Boolean).forEach(root => {
+      let touchGesture = null;
+      root.addEventListener('pointerdown', event => {
+        const button = event.target.closest('.lethal-planner__term-order, .lethal-planner__order-gap');
+        if (!button) return;
+        const chip = button.closest('.lethal-planner__term');
+        if (chip) chip.draggable = event.pointerType === 'mouse';
+        if (event.pointerType !== 'touch') return;
+        lethalPlannerIgnoreOrderClickUntil = 0;
+        touchGesture = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
+      }, { passive: true });
+      root.addEventListener('pointermove', event => {
+        if (!touchGesture || touchGesture.id !== event.pointerId) return;
+        if (Math.hypot(event.clientX - touchGesture.x, event.clientY - touchGesture.y) > 10) touchGesture.moved = true;
+      }, { passive: true });
+      const finishTouch = event => {
+        if (!touchGesture || touchGesture.id !== event.pointerId) return;
+        if (touchGesture.moved || event.type === 'pointercancel') lethalPlannerIgnoreOrderClickUntil = performance.now() + 500;
+        touchGesture = null;
+      };
+      root.addEventListener('pointerup', finishTouch, { passive: true });
+      root.addEventListener('pointercancel', finishTouch, { passive: true });
+      // 並べ替え枠だけに適用し、入力欄や本文の選択・コピーは維持する。
+      for (const type of ['selectstart', 'contextmenu']) root.addEventListener(type, event => {
+        if (event.target.closest('.lethal-planner__term-order, .lethal-planner__order-gap')) event.preventDefault();
+      });
+      root.addEventListener('click', (event) => {
+        const gapButton = event.target.closest('.lethal-planner__order-gap');
+        if (gapButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (event.detail !== 0 && performance.now() < lethalPlannerIgnoreOrderClickUntil) return;
+          const from = lethalPlannerSelections.findIndex(item => item.stepId === lethalPlannerOrderStepId);
+          const gap = Number(gapButton.dataset.lethalGap);
+          if (from < 0 || !Number.isInteger(gap) || gap < 0 || gap > lethalPlannerSelections.length || gap === from || gap === from + 1) return;
+          const target = gap > from ? gap - 1 : gap;
+          const expressionId = gapButton.closest('.lethal-planner__expression')?.id || 'lethal-planner-expression';
+          moveLethalPlannerSelection_(from, target);
+          lethalPlannerOrderStepId = null;
+          renderLethalPlanner_();
+          focusLethalPlannerOrder_(expressionId, target);
+          return;
+        }
+        const button = event.target.closest('.lethal-planner__term-order');
+        if (!button || button.disabled) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.detail !== 0 && performance.now() < lethalPlannerIgnoreOrderClickUntil) return;
+        const target = Number(button.dataset.lethalSelectionIndex);
+        const selection = lethalPlannerSelections[target];
+        if (!selection) return;
+        const expressionId = button.closest('.lethal-planner__expression')?.id || 'lethal-planner-expression';
+        const from = lethalPlannerSelections.findIndex(item => item.stepId === lethalPlannerOrderStepId);
+        if (from < 0) {
+          lethalPlannerOrderStepId = selection.stepId;
+        } else {
+          if (from !== target) moveLethalPlannerSelection_(from, target, 'swap');
+          lethalPlannerOrderStepId = null;
+        }
+        renderLethalPlanner_();
+        focusLethalPlannerOrder_(expressionId, target);
+      });
+      root.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || lethalPlannerOrderStepId === null) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const expressionId = event.target.closest('.lethal-planner__expression')?.id || 'lethal-planner-expression';
+        const index = lethalPlannerSelections.findIndex(item => item.stepId === lethalPlannerOrderStepId);
+        lethalPlannerOrderStepId = null;
+        renderLethalPlanner_();
+        focusLethalPlannerOrder_(expressionId, index);
+      });
       root.addEventListener('dragstart', (event) => {
+        if (event.target.closest('.lethal-planner__term-remove, .lethal-planner__order-gap') || window.matchMedia?.('(pointer: coarse)').matches || touchGesture) { event.preventDefault(); return; }
+        lethalPlannerOrderStepId = null;
+        lethalPlannerIgnoreOrderClickUntil = performance.now() + 250;
         const chip = event.target.closest('.lethal-planner__term');
         if (!chip) return;
         lethalPlannerDragIndex = Number(chip.dataset.lethalSelectionIndex);
@@ -2264,17 +2449,17 @@
         event.preventDefault();
         const dropIndex = Number(chip.dataset.lethalSelectionIndex);
         if (Number.isInteger(dropIndex) && dropIndex !== lethalPlannerDragIndex) {
-          lethalPlannerAutoFilterActive = false;
-          const [movedSelection] = lethalPlannerSelections.splice(lethalPlannerDragIndex, 1);
-          lethalPlannerSelections.splice(dropIndex, 0, movedSelection);
-          lethalPlannerCardSelections.clear();
+          moveLethalPlannerSelection_(lethalPlannerDragIndex, dropIndex);
         }
         lethalPlannerDragIndex = null;
         renderLethalPlanner_();
       });
 
       root.addEventListener('dragend', () => {
+        lethalPlannerIgnoreOrderClickUntil = performance.now() + 250;
+        lethalPlannerOrderStepId = null;
         lethalPlannerDragIndex = null;
+        renderLethalPlanner_();
         root.querySelectorAll('.lethal-planner__term.is-dragging, .lethal-planner__term.is-drag-over')
           .forEach(item => item.classList.remove('is-dragging', 'is-drag-over'));
       });
@@ -2303,6 +2488,7 @@
     lethalPlannerSelections.length = 0;
     lethalPlannerCardSelections.clear();
     lethalPlannerStepId = 0;
+    lethalPlannerOrderStepId = null;
     lethalPlannerAutoPlans = [];
     lethalPlannerAutoSearched = false;
     lethalPlannerAutoExpanded = false;

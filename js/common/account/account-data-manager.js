@@ -31,6 +31,7 @@
     all: ['account', 'post', 'cardGroups', 'ownedCards', 'savedDecks', 'matchResults'],
     cards: ['account', 'cardGroups', 'ownedCards'],
     deckmaker: ['account', 'post', 'savedDecks'],
+    profileCard: ['account'],
     deckPost: ['account', 'post'],
     matchResults: ['account', 'matchResults'],
   };
@@ -39,6 +40,7 @@
     all: 'アカウント設定',
     cards: '図鑑設定',
     deckmaker: 'デッキメーカー設定',
+    profileCard: 'アカウント設定',
     deckPost: 'デッキ投稿設定',
     matchResults: '戦績設定',
   };
@@ -80,6 +82,7 @@
   }
 
   function getScopeTitle_(scope) {
+    if (scope === 'profileCard') return SCOPE_TITLES.profileCard;
     if (isStandaloneApp_()) return APP_SETTINGS_TITLE;
     return SCOPE_TITLES[scope] || SCOPE_TITLES.all;
   }
@@ -602,8 +605,10 @@
 
     const jumps = document.querySelector('#accountDataModal .account-jump-chips');
     if (jumps) {
-      jumps.hidden = !loggedIn;
-      jumps.style.display = loggedIn ? '' : 'none';
+      // プロフィール専用の設定ではパネル切替を表示しない
+      const showJumps = loggedIn && modal?.dataset.accountScope !== 'profileCard';
+      jumps.hidden = !showJumps;
+      jumps.style.display = showJumps ? '' : 'none';
     }
 
     document.querySelectorAll('#accountDataModal [data-account-loggedout]').forEach((section) => {
@@ -620,6 +625,12 @@
 
   function applyScopeVisibility_(scope) {
     reflectLoginRequiredVisibility_();
+
+    // プロフィールからは共通の端末設定も隠し、アカウント項目だけに限定する
+    document.querySelectorAll('#accountDataModal .account-data-section:not([data-account-section]):not([data-account-loggedout])').forEach((section) => {
+      section.hidden = scope === 'profileCard';
+      section.style.display = scope === 'profileCard' ? 'none' : '';
+    });
 
     const sectionNames = isLoggedIn_() ? resolveScopeSections_(scope) : [];
     const visibleSections = new Set(sectionNames);

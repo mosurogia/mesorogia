@@ -149,8 +149,7 @@
       const row = document.createElement('div');
       row.className = 'lethal-planner__registered-item';
       row.classList.toggle('is-invalid', invalidReasons.some(Boolean));
-      const sortedValues = [...plan.values].sort((a, b) => a - b);
-      const expression = sortedValues.join(' + ');
+      const expression = plan.values.join(' + ');
       const expressionRow = document.createElement('div');
       expressionRow.className = 'lethal-planner__registered-expression';
       const expressionText = document.createElement('span');

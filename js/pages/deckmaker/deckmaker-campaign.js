@@ -737,32 +737,38 @@
 
     document.body.appendChild(modal);
 
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.remove();
-    });
-
-    modal.querySelectorAll('button').forEach(btn=>{
-      btn.onclick = ()=>{
-        const action = String(btn.dataset.action || '').trim();
+    // キャンセル・背景クリックも完了として返し、呼び出し側の入力ロックを解除する。
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = action => {
+        if (settled) return;
+        settled = true;
+        document.removeEventListener('keydown', onKeydown);
         modal.remove();
-        if (action === 'join') onJoin?.();
-        if (action === 'skip') onSkip?.();
-        if (action === 'proceed') onProceed?.();
-        if (action === 'back') onBack?.();
+        const callback = { join: onJoin, skip: onSkip, proceed: onProceed, back: onBack }[action];
+        Promise.resolve().then(() => callback?.()).then(resolve, reject);
       };
+      const onKeydown = e => {
+        if (e.key === 'Escape'){ e.preventDefault(); finish('cancel'); }
+      };
+      document.addEventListener('keydown', onKeydown);
+      modal.addEventListener('click', e => { if (e.target === modal) finish('cancel'); });
+      modal.querySelectorAll('button').forEach(btn => {
+        btn.onclick = () => finish(String(btn.dataset.action || '').trim());
+      });
+      modal.querySelector('button')?.focus();
     });
   }
 
   // -----------------------------
   // 5) Post-button click handler (optional wiring)
   // -----------------------------
-  async function onClickPostButton(){
+  async function onClickPostButton({ submit = window.submitDeckPost } = {}){
     const camp = await fetchActiveCampaignSafe({ ttlMs: 60000 });
     const active = !!(camp && (camp.isActive === true || String(camp.isActive) === 'true'));
 
     if (!active){
-      window.submitDeckPost?.(null, { joinCampaign: false });
-      return;
+      return submit?.(null, { joinCampaign: false });
     }
 
     window.__activeCampaign = camp;
@@ -770,26 +776,25 @@
     const result = getCampaignSubmitRequirementResult_(camp);
 
     if (!result.ok){
-      openCampaignConfirmModal({
+      return openCampaignConfirmModal({
         mode: 'blocked',
         reasons: result.reasons,
-        onProceed: () => window.submitDeckPost?.(null, { joinCampaign: false, campaign: camp }),
+        onProceed: () => submit?.(null, { joinCampaign: false, campaign: camp }),
       });
       return;
     }
 
     if (isActiveCampaignTagSelected_(camp)){
-      window.submitDeckPost?.(null, { joinCampaign: true, campaign: camp });
-      return;
+      return submit?.(null, { joinCampaign: true, campaign: camp });
     }
 
-    openCampaignConfirmModal({
+    return openCampaignConfirmModal({
       mode: 'tag-missing',
       onJoin: () => {
         setActiveCampaignTagSelected_(camp, true);
-        window.submitDeckPost?.(null, { joinCampaign: true, campaign: camp });
+        return submit?.(null, { joinCampaign: true, campaign: camp });
       },
-      onSkip: () => window.submitDeckPost?.(null, { joinCampaign: false, campaign: camp }),
+      onSkip: () => submit?.(null, { joinCampaign: false, campaign: camp }),
     });
   }
 

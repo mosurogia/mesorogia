@@ -96,11 +96,74 @@
     return modal;
   }
 
-  function closeModal_() {
+  function hasImageOverlay_(){
+    return !!document.querySelector('#deckimg-preview-modal, .deckimg-loading-overlay');
+  }
+
+  function releaseResultSession_(modal, session){
+    if (!session) return;
+    session.controller.abort();
+    session.observer.disconnect();
+    document.removeEventListener('keydown', session.keydown, true);
+    session.roots.forEach((inert, root) => { root.inert = inert; });
+    document.body.style.overflow = session.overflow;
+    modal.__resultSession = null;
+  }
+
+  function startResultSession_(modal, opts){
+    releaseResultSession_(modal, modal.__resultSession);
+    const session = { controller: new AbortController(), roots: new Map(), overflow: document.body.style.overflow,
+      focus: document.activeElement, onRequestClose: opts.onRequestClose, pending: null };
+    modal.__resultSession = session;
+    const lock = root => {
+      if (!(root instanceof HTMLElement) || root === modal || root.id === 'deckimg-preview-modal'
+          || root.classList.contains('deckimg-loading-overlay') || root.classList.contains('deck-post-input-choice-modal') || session.roots.has(root)) return;
+      session.roots.set(root, root.inert);
+      root.inert = true;
+    };
+    Array.from(document.body.children).forEach(lock);
+    session.observer = new MutationObserver(records => {
+      records.forEach(record => record.addedNodes.forEach(lock));
+      if (modal.__resultSession === session && document.body.style.overflow !== 'hidden') document.body.style.overflow = 'hidden';
+    });
+    session.observer.observe(document.body, { childList: true, attributes: true, attributeFilter: ['style'] });
+    session.keydown = event => {
+      if (modal.__resultSession !== session || hasImageOverlay_() || session.pending) return;
+      if (event.key === 'Escape'){ event.preventDefault(); event.stopImmediatePropagation(); closeModal_(); }
+      if (event.key === 'Tab') {
+        const buttons = Array.from(modal.querySelectorAll('button')).filter(button => !button.disabled && !button.inert && button.getClientRects().length);
+        const first = buttons[0], last = buttons[buttons.length - 1];
+        if (first && (!modal.contains(document.activeElement) || (!event.shiftKey && document.activeElement === last) || (event.shiftKey && document.activeElement === first))) {
+          event.preventDefault(); (event.shiftKey ? last : first).focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', session.keydown, true);
+    setTimeout(() => {
+      if (modal.__resultSession === session && !session.pending && !hasImageOverlay_()) modal.querySelector('[data-deck-post-result-close]')?.focus({ preventScroll: true });
+    }, 0);
+    return session;
+  }
+
+  function closeModal_(afterClose = null) {
     const modal = document.getElementById('deck-post-result-modal');
-    if (!modal) return;
-    modal.style.display = 'none';
-    document.body.style.overflow = '';
+    const session = modal?.__resultSession;
+    if (!modal || !session || modal.style.display === 'none' || hasImageOverlay_()) return Promise.resolve(false);
+    if (session.pending) return session.pending;
+    const isCurrent = () => modal.__resultSession === session && modal.style.display !== 'none';
+    session.pending = Promise.resolve().then(async () => {
+      const accepted = typeof session.onRequestClose === 'function'
+        ? await session.onRequestClose({ signal: session.controller.signal, isCurrent }) : true;
+      if (!accepted || !isCurrent()) return false;
+      modal.style.display = 'none';
+      releaseResultSession_(modal, session);
+      session.focus?.focus?.({ preventScroll: true });
+      if (typeof afterClose === 'function') afterClose();
+      return true;
+    }).catch(error => { console.error('post-result close error:', error); return false; }).finally(() => {
+      if (modal.__resultSession === session) session.pending = null;
+    });
+    return session.pending;
   }
 
   function bindModal_(modal) {
@@ -112,8 +175,7 @@
     });
 
     modal.querySelector('#deck-post-result-open-posts')?.addEventListener('click', () => {
-      closeModal_();
-      location.href = 'deck-post.html';
+      closeModal_(() => { location.href = 'deck-post.html'; });
     });
 
     modal.querySelector('#deck-post-result-tweet')?.addEventListener('click', () => {
@@ -222,7 +284,7 @@
     return null;
   }
 
-  async function renderPreview_(modal, opts = {}) {
+  async function renderPreview_(modal, opts = {}, session) {
     const container = modal.querySelector('#deck-post-result-preview');
     if (!container) return false;
 
@@ -250,6 +312,7 @@
     if (typeof payload.showCredit === 'boolean') spec.showCredit = payload.showCredit;
 
     const node = await window.buildShareNodeForPreview(data, spec);
+    if (modal.__resultSession !== session || session.controller.signal.aborted) return false;
     node.style.position = 'relative';
     node.style.left = '0';
     node.style.top = '0';
@@ -302,6 +365,7 @@
     const previewItem = opts.item || findPostItem_(opts.postId);
     const previewPayload = opts.previewPayload || buildPreviewPayloadFromItem_(previewItem) || null;
 
+    const session = startResultSession_(modal, opts);
     modal.dataset.mode = mode;
     modal.dataset.postId = String(opts.postId || '');
     modal.dataset.deckName = deckName;
@@ -328,10 +392,11 @@
     document.body.style.overflow = 'hidden';
 
     if (showPreview) {
-      renderPreview_(modal, { ...opts, item: previewItem, previewPayload })
+      renderPreview_(modal, { ...opts, item: previewItem, previewPayload }, session)
         .then((ok) => {
+          if (modal.__resultSession !== session || session.controller.signal.aborted) return null;
           if (!ok && typeof window.updatePostSuccessPreview === 'function') {
-            return window.updatePostSuccessPreview();
+            return window.updatePostSuccessPreview({ isCurrent: () => modal.__resultSession === session && !session.controller.signal.aborted });
           }
           return null;
         })

@@ -16,6 +16,98 @@
 
   const GAS_POST_ENDPOINT = window.DECKPOST_API_BASE || window.GAS_API_BASE;
   let isPostingDeck = false;
+  let postFlowTransaction_ = null;
+
+  // 編集部品だけを inert にし、ページや投稿パネルのスクロールを維持する。
+  function beginPostFlow_(){
+    if (postFlowTransaction_) return null;
+    const btn = document.getElementById('post-submit');
+    const spinner = document.getElementById('post-loading');
+    const form = document.getElementById('deck-post-form');
+    const transaction = {
+      btn, spinner, form,
+      disabled: btn?.disabled, text: btn?.textContent,
+      buttonLabel: btn?.getAttribute('aria-label'), buttonBusyClass: btn?.classList.contains('is-posting'),
+      spinnerDisplay: spinner?.style.display, spinnerParent: spinner?.parentNode, spinnerNext: spinner?.nextSibling,
+      ariaBusy: form?.getAttribute('aria-busy'), controls: new Map(), focus: document.activeElement,
+    };
+    postFlowTransaction_ = transaction;
+    const confirmationSelector = '#sameDeckUpdateModal, .campaign-confirm-modal';
+    const controlSelector = 'input, textarea, select, button, a, [contenteditable], [role="button"], [onclick], .chip, .tab, [draggable="true"]';
+    const lockControl = control => {
+      if (control.closest(confirmationSelector) || control.id === 'scrollTopFixed' || transaction.controls.has(control)) return;
+      transaction.controls.set(control, control.inert);
+      control.inert = true;
+    };
+    const lockTree = root => {
+      if (!(root instanceof HTMLElement)) return;
+      if (root.matches(controlSelector)) lockControl(root);
+      root.querySelectorAll(controlSelector).forEach(lockControl);
+    };
+    lockTree(document.body);
+    // 動的な編集部品も止める。背景のクリック・キーイベントは編集処理へ渡さない。
+    transaction.blockEdit = e => {
+      if (e.target?.closest?.(confirmationSelector) || e.target?.closest?.('#scrollTopFixed')) return;
+      e.stopImmediatePropagation();
+      if (e.type !== 'keydown') e.preventDefault();
+    };
+    ['click', 'dblclick', 'dragstart', 'keydown'].forEach(type => document.addEventListener(type, transaction.blockEdit, true));
+    transaction.observer = new MutationObserver(records => {
+      records.forEach(record => record.addedNodes.forEach(lockTree));
+    });
+    transaction.observer.observe(document.body, { childList: true, subtree: true });
+    // ボタン内に重ね、通常時と同じ文言幅を保つ。読み上げには進行状態を伝える。
+    if (btn){
+      btn.disabled = true;
+      btn.classList.add('is-posting');
+      btn.setAttribute('aria-label', '確認中…');
+      if (spinner) btn.appendChild(spinner);
+    }
+    if (spinner) spinner.style.display = 'block';
+    form?.setAttribute('aria-busy', 'true');
+    // キーボードのスクロール先を、投稿ボタンを含むスクロール領域へ移す。
+    let scroller = btn?.parentElement;
+    while (scroller && scroller !== document.body){
+      if (scroller.scrollHeight > scroller.clientHeight && /auto|scroll/.test(getComputedStyle(scroller).overflowY)) break;
+      scroller = scroller.parentElement;
+    }
+    if (scroller){
+      transaction.scroller = scroller;
+      transaction.scrollTabindex = scroller.getAttribute('tabindex');
+      if (transaction.scrollTabindex === null) scroller.setAttribute('tabindex', '-1');
+      scroller.focus({ preventScroll: true });
+    }
+    return transaction;
+  }
+
+  function endPostFlow_(transaction){
+    if (!transaction || transaction !== postFlowTransaction_) return;
+    transaction.observer.disconnect();
+    ['click', 'dblclick', 'dragstart', 'keydown'].forEach(type => document.removeEventListener(type, transaction.blockEdit, true));
+    transaction.controls.forEach((inert, control) => { control.inert = inert; });
+    if (transaction.spinner){
+      transaction.spinner.style.display = transaction.spinnerDisplay;
+      transaction.spinnerParent?.insertBefore(transaction.spinner,
+        transaction.spinnerNext?.parentNode === transaction.spinnerParent ? transaction.spinnerNext : null);
+    }
+    if (transaction.btn){
+      transaction.btn.disabled = transaction.disabled || !document.getElementById('post-agree')?.checked;
+      transaction.btn.textContent = transaction.text;
+      transaction.btn.classList.toggle('is-posting', transaction.buttonBusyClass);
+      if (transaction.buttonLabel === null) transaction.btn.removeAttribute('aria-label');
+      else transaction.btn.setAttribute('aria-label', transaction.buttonLabel);
+    }
+    if (transaction.form){
+      if (transaction.ariaBusy === null) transaction.form.removeAttribute('aria-busy');
+      else transaction.form.setAttribute('aria-busy', transaction.ariaBusy);
+    }
+    if (transaction.scroller){
+      if (document.activeElement === transaction.scroller) transaction.focus?.focus?.({ preventScroll: true });
+      if (transaction.scrollTabindex === null) transaction.scroller.removeAttribute('tabindex');
+    }
+    postFlowTransaction_ = null;
+    isPostingDeck = false;
+  }
 
   // =====================================================
   // 0) 小物：バリデーション / X正規化 / ヘルプ / サブタブ
@@ -763,6 +855,11 @@
   const UserTags = (() => {
     const MAX_TAGS = 3;
     const USER_TAG_HISTORY_KEY = 'dm_user_tag_history_v1';
+    let publicSuggestedTags_ = [];
+    let publicSuggestStatus_ = 'idle';
+    let publicSuggestQuery_ = null;
+    let publicSuggestGeneration_ = 0;
+    let publicSuggestTimer_ = null;
 
     function elBox_() { return document.getElementById('user-tags'); }
     function elInput_() { return document.getElementById('user-tag-input'); }
@@ -854,103 +951,18 @@
       try { localStorage.setItem(USER_TAG_HISTORY_KEY, JSON.stringify(list)); } catch (_) {}
     }
 
+    function tagCandidateKey_(tag) {
+      return normalize_(tag).normalize('NFKC').replace(/^#+/, '').trim();
+    }
+
+    function currentSuggestQuery_() {
+      return tagCandidateKey_(elInput_()?.value || '');
+    }
+
     function getSuggestedTags_() {
-      const freq = new Map();
-
-      function ensureSuggestItem_(tag) {
-        const key = normalize_(tag);
-        if (!key) return null;
-
-        const current = freq.get(key) || { tag: key, count: 0, hasHistory: false, historyRank: 0 };
-        freq.set(key, current);
-        return current;
-      }
-
-      function addPostedTag_(tag, countScore = 1) {
-        const item = ensureSuggestItem_(tag);
-        if (!item) return;
-        item.count += countScore;
-      }
-
-      function addHistoryTag_(tag, index) {
-        const item = ensureSuggestItem_(tag);
-        if (!item) return;
-        item.hasHistory = true;
-        item.historyRank = Math.max(item.historyRank || 0, Math.max(1, 100 - index));
-      }
-
-      function addTagsUser_(raw, score = 1) {
-        String(raw || '')
-          .split(',')
-          .map(normalize_)
-          .filter(Boolean)
-          .forEach((tag) => {
-            addPostedTag_(tag, score);
-          });
-      }
-
-      function addItems_(items, score = 1) {
-        if (!Array.isArray(items)) return;
-        items.forEach((it) => addTagsUser_(it?.tagsUser, score));
-      }
-
-      getHistory().forEach((tag, index) => {
-        addHistoryTag_(tag, index);
-      });
-
-      addItems_(window.__DeckPostState?.list?.allItems, 1);
-      addItems_(window.DeckPostState?.getState?.()?.list?.allItems, 1);
-
-      try {
-        for (let i = 0; i < localStorage.length; i += 1) {
-          const key = localStorage.key(i);
-          if (!/^DeckPostListAll:v1:new:10:/.test(String(key || ''))) continue;
-
-          const cache = JSON.parse(localStorage.getItem(key) || '{}');
-          addItems_(cache?.items, 1);
-        }
-      } catch (_) {}
-
-      try {
-        const savedDecks = JSON.parse(localStorage.getItem('savedDecks') || '[]');
-        if (Array.isArray(savedDecks)) {
-          savedDecks.forEach((deck) => {
-            const tags = Array.isArray(deck?.userTags)
-              ? deck.userTags
-              : String(deck?.userTags || '').split(',');
-            tags.map(normalize_).filter(Boolean).forEach((tag) => {
-              addPostedTag_(tag, 1);
-            });
-          });
-        }
-      } catch (_) {}
-
-      try {
-        const currentDraft = window.readUserTags?.() || [];
-        if (Array.isArray(currentDraft)) {
-          currentDraft.map(normalize_).filter(Boolean).forEach((tag) => {
-            addPostedTag_(tag, 1);
-          });
-        }
-      } catch (_) {}
-
-      if (freq.size <= 0) {
-        read().forEach((tag, index) => addHistoryTag_(tag, index));
-      }
-
-      return [...freq.values()]
-        .map((item) => ({
-          ...item,
-          isHistoryOnly: item.hasHistory && item.count <= 0,
-        }))
-        .sort((a, b) => {
-          const aPosted = a.count > 0 ? 1 : 0;
-          const bPosted = b.count > 0 ? 1 : 0;
-          if (bPosted !== aPosted) return bPosted - aPosted;
-          if (b.count !== a.count) return b.count - a.count;
-          if (a.isHistoryOnly && b.isHistoryOnly && b.historyRank !== a.historyRank) return b.historyRank - a.historyRank;
-          return a.tag.localeCompare(b.tag, 'ja');
-        });
+      // サーバーが許可した候補と使用投稿数だけを表示し、履歴から追加しない。
+      if (publicSuggestQuery_ !== currentSuggestQuery_()) return [];
+      return publicSuggestedTags_;
     }
 
     // どこからでも呼べるフック（既存があれば上書きしない）
@@ -976,6 +988,8 @@
 
       function closeSuggest_() {
         if (!suggestBox) return;
+        clearTimeout(publicSuggestTimer_);
+        publicSuggestGeneration_ += 1;
         suggestBox.dataset.postedLimit = '';
         suggestBox.style.display = 'none';
         suggestBox.replaceChildren();
@@ -984,41 +998,93 @@
       function renderSuggest_() {
         if (!suggestBox) return;
 
-        const query = normalize_(input.value).toLowerCase();
-        const selected = new Set(read());
+        const query = currentSuggestQuery_();
+        const selected = new Set(read().map(tagCandidateKey_));
         const postedLimit = Math.max(40, Number(suggestBox.dataset.postedLimit || 40) || 40);
-        const matchedRows = getSuggestedTags_()
-          .filter(item => !selected.has(item.tag))
-          .filter(item => !query || item.tag.toLowerCase().includes(query));
-        const allPostedRows = matchedRows.filter(item => !item.isHistoryOnly);
+        // 別名での検索結果を落とさないよう、文字列の再絞り込みは行わない。
+        const allPostedRows = getSuggestedTags_().filter(item => !selected.has(tagCandidateKey_(item.tag)));
         const postedRows = allPostedRows.slice(0, postedLimit);
-        const historyRows = matchedRows.filter(item => item.isHistoryOnly).slice(0, 20);
-        const rows = [...postedRows, ...historyRows];
+        const rows = postedRows;
 
         suggestBox.replaceChildren();
 
-        const head = document.createElement('div');
-        head.className = 'user-tag-suggest-head';
-        head.textContent = rows.length ? '候補' : '候補がありません';
-        suggestBox.appendChild(head);
+        const toolbar = document.createElement('div');
+        toolbar.className = 'user-tag-suggest-toolbar';
+        let statusText = '';
+        if (publicSuggestStatus_ === 'idle' || publicSuggestStatus_ === 'loading') {
+          statusText = '候補を読み込み中…';
+        } else if (publicSuggestStatus_ === 'error') {
+          statusText = rows.length
+            ? '取得できませんでした。前回の候補を表示しています。'
+            : '候補を取得できませんでした。再試行してください。';
+        } else if (!rows.length) {
+          statusText = query ? '入力に一致する候補がありません' : '追加できる候補がありません';
+        } else if (publicSuggestedTags_.length >= 100) {
+          statusText = '候補は最大100件です。入力で絞り込めます。';
+        }
+        let status = null;
+        if (statusText) {
+          status = document.createElement('div');
+          status.className = 'user-tag-suggest-status';
+          status.setAttribute('role', 'status');
+          status.setAttribute('aria-live', 'polite');
+          status.textContent = statusText;
+        }
+
+        const refreshBtn = document.createElement('button');
+        refreshBtn.type = 'button';
+        refreshBtn.className = 'user-tag-suggest-refresh';
+        const refreshIcon = document.createElement('img');
+        refreshIcon.src = 'img/user-tag-refresh.png';
+        refreshIcon.alt = '';
+        refreshIcon.setAttribute('aria-hidden', 'true');
+        refreshIcon.draggable = false;
+        refreshBtn.appendChild(refreshIcon);
+        refreshBtn.setAttribute('aria-label', 'タグ候補を再取得');
+        refreshBtn.title = 'タグ候補を再取得';
+        refreshBtn.disabled = publicSuggestStatus_ === 'loading' || publicSuggestStatus_ === 'idle';
+        refreshBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!refreshBtn.disabled) loadPublicSuggest_(true);
+        });
+        toolbar.appendChild(refreshBtn);
+        if (status) toolbar.appendChild(status);
+        suggestBox.appendChild(toolbar);
+        suggestBox.setAttribute('aria-busy', String(publicSuggestStatus_ === 'loading'));
+
+        if (publicSuggestStatus_ === 'error') {
+          const retryBtn = document.createElement('button');
+          retryBtn.type = 'button';
+          retryBtn.className = 'user-tag-suggest-more';
+          retryBtn.textContent = '再試行';
+          retryBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            loadPublicSuggest_(true);
+          });
+          suggestBox.appendChild(retryBtn);
+        }
 
         for (const item of rows) {
           const tag = item.tag;
           const btn = document.createElement('button');
           btn.type = 'button';
           btn.className = 'user-tag-suggest-item';
-          if (item.isHistoryOnly) btn.classList.add('is-history-only');
+          // 通常時だけ最初の候補を右上の更新領域に合わせる。下の候補は幅を戻す。
+          if (item === rows[0] && !statusText) btn.classList.add('is-first-candidate');
           btn.dataset.tag = tag;
 
           const label = document.createElement('span');
           label.className = 'user-tag-suggest-label';
           label.textContent = tag;
 
+          btn.appendChild(label);
           const meta = document.createElement('span');
           meta.className = 'user-tag-suggest-meta';
-          meta.textContent = item.isHistoryOnly ? '履歴' : String(Math.max(1, item.count || 0));
-
-          btn.append(label, meta);
+          meta.textContent = String(item.count);
+          meta.title = '使用投稿数';
+          btn.appendChild(meta);
           btn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -1043,7 +1109,44 @@
           suggestBox.appendChild(moreBtn);
         }
 
-        suggestBox.style.display = 'flex';
+        suggestBox.style.display = 'block';
+      }
+
+      function loadPublicSuggest_(refresh = false) {
+        clearTimeout(publicSuggestTimer_);
+        const query = currentSuggestQuery_();
+        const generation = ++publicSuggestGeneration_;
+        publicSuggestStatus_ = 'loading';
+        renderSuggest_();
+        // 検索変更・開閉後の古い応答は画面に反映しない。同じ検索の通信はAPI側で共有する。
+        return Promise.resolve()
+          .then(() => {
+            if (typeof window.DeckPostApi?.apiPublicUserTags !== 'function') throw new Error('公開候補APIが読み込まれていません');
+            return window.DeckPostApi.apiPublicUserTags({ q: query, refresh });
+          })
+          .then(result => {
+            if (generation !== publicSuggestGeneration_ || query !== currentSuggestQuery_()) return;
+            if (!result?.ok || !Array.isArray(result.tags)) throw new Error(result?.error || '公開候補を取得できませんでした');
+            publicSuggestedTags_ = result.tags;
+            publicSuggestQuery_ = query;
+            publicSuggestStatus_ = 'ready';
+          })
+          .catch(() => {
+            if (generation === publicSuggestGeneration_ && query === currentSuggestQuery_()) publicSuggestStatus_ = 'error';
+          })
+          .finally(() => {
+            if (generation === publicSuggestGeneration_ && suggestBox?.style.display === 'block') renderSuggest_();
+          });
+      }
+
+      function schedulePublicSuggest_() {
+        clearTimeout(publicSuggestTimer_);
+        publicSuggestGeneration_ += 1;
+        publicSuggestStatus_ = 'loading';
+        suggestBox.dataset.postedLimit = '40';
+        renderSuggest_();
+        // 連続入力中は通信せず、検索語が落ち着いてから取得する。
+        publicSuggestTimer_ = setTimeout(() => loadPublicSuggest_(), 300);
       }
 
       function addTag(raw) {
@@ -1051,7 +1154,11 @@
         if (!v) return;
 
         const now = read(); // DOMが正
-        if (now.includes(v)) { input.value = ''; return; }
+        if (now.includes(v)) {
+          input.value = '';
+          if (suggestBox?.style.display === 'block') schedulePublicSuggest_();
+          return;
+        }
 
         if (now.length >= MAX_TAGS) {
           alert('ユーザータグは最大3個までです');
@@ -1065,6 +1172,7 @@
         try { window.onUserTagAdded?.(v); } catch (_) {}
         input.value = '';
         window.scheduleAutosave?.();
+        if (suggestBox?.style.display === 'block') schedulePublicSuggest_();
       }
 
       input.addEventListener('keydown', (e) => {
@@ -1079,22 +1187,20 @@
       suggestBtn?.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (suggestBox?.style.display === 'flex') {
+        if (suggestBox?.style.display === 'block') {
           closeSuggest_();
           return;
         }
         renderSuggest_();
+        loadPublicSuggest_();
       });
 
       input.addEventListener('input', () => {
-        if (suggestBox?.style.display === 'flex') {
-          suggestBox.dataset.postedLimit = '40';
-          renderSuggest_();
-        }
+        if (suggestBox?.style.display === 'block') schedulePublicSuggest_();
       });
 
       document.addEventListener('click', (e) => {
-        if (!suggestBox || suggestBox.style.display !== 'flex') return;
+        if (!suggestBox || suggestBox.style.display !== 'block') return;
         if (suggestBox.contains(e.target) || suggestBtn?.contains(e.target) || input.contains(e.target)) return;
         closeSuggest_();
       });
@@ -1383,7 +1489,7 @@
 
     const sync = () => {
       const ok = !!agree.checked;
-      submit.disabled = !ok;
+      submit.disabled = !!postFlowTransaction_ || !ok;
       submit.classList.toggle('is-disabled', !ok);
       updatePostSubmitGuidance_();
     };
@@ -1641,13 +1747,32 @@
       .replace(/'/g, '&#39;');
   }
 
-  function normalizePostErrorDetails_(details = {}) {
-    const code = details.code || details.error || details.name || '';
-    const reason = details.reason || details.message || '';
-    const status = details.status || '';
-    const statusText = details.statusText || '';
+  // コピーと詳細表示は許可済みのコード・固定説明・HTTP番号だけに限定する。
+  const POST_ERROR_EXPLANATIONS = Object.freeze({
+    dup_post: '同じ内容の二重送信を防ぐため、投稿を受け付けませんでした。',
+    too_many_posts: '短時間の連続投稿を制限しています。少し時間をおいて再度お試しください。',
+    campaign_daily_limit: 'キャンペーンの本日の投稿上限に達しました。',
+    same_deck_exists: '同じデッキの既存投稿が見つかりました。',
+    INVALID_JSON: '投稿サーバーから正常な応答を受け取れませんでした。',
+    UPDATE_FAILED: '既存投稿の更新を完了できませんでした。',
+    NETWORK_ERROR: '投稿サーバーとの通信に失敗しました。通信状況を確認してください。',
+    POST_FAILED: '投稿を完了できませんでした。入力内容を確認し、再度お試しください。',
+  });
 
-    return { code, reason, status, statusText };
+  function normalizePostErrorDetails_(details = {}) {
+    const rawCode = String(details?.code || details?.error || details?.name || '');
+    const code = Object.prototype.hasOwnProperty.call(POST_ERROR_EXPLANATIONS, rawCode)
+      ? rawCode : (rawCode === 'TypeError' ? 'NETWORK_ERROR' : 'POST_FAILED');
+    const rawStatus = details?.status;
+    const status = /^\d{3}$/.test(String(rawStatus)) && Number(rawStatus) >= 100 && Number(rawStatus) <= 599
+      ? Number(rawStatus) : '';
+    return { code, reason: POST_ERROR_EXPLANATIONS[code], status, statusText: '' };
+  }
+
+  function buildPostErrorCopyText_(details){
+    const d = normalizePostErrorDetails_(details);
+    return ['デッキ投稿エラー', 'エラーコード: ' + d.code, '説明: ' + d.reason,
+      ...(d.status ? ['HTTP: ' + d.status] : [])].join('\n');
   }
 
   function renderPostErrorDetailsHtml_(details) {
@@ -1677,16 +1802,22 @@
 
   function renderPersistToastHtml_(message, details = null){
     const safe = escapeToastHtml_(message ?? '');
-    const detailsHtml = details ? renderPostErrorDetailsHtml_(details) : '';
+    const detailsHtml = renderPostErrorDetailsHtml_(details);
 
     return `
       <div class="post-toast-main">${safe}</div>
       ${detailsHtml}
       <div class="post-toast-hint">
-        📸 エラーが続く場合は、このメッセージのスクリーンショットをご提出ください。
+        エラーが続く場合は、エラー情報をコピーしてお知らせください。スクリーンショットでも確認できます。
       </div>
       <div class="post-toast-actions">
+        <button id="toast-copy-btn" type="button">エラー情報をコピー</button>
         <button id="toast-close-btn" type="button">閉じる</button>
+      </div>
+      <div class="post-toast-copy-status" role="status" aria-live="polite"></div>
+      <div class="post-toast-copy-fallback" hidden>
+        <label for="toast-copy-text">コピー用のエラー情報</label>
+        <textarea id="toast-copy-text" readonly rows="5" spellcheck="false"></textarea>
       </div>
     `;
   }
@@ -1695,6 +1826,8 @@
     const box = document.getElementById('post-toast');
     if (!box) return;
 
+    clearTimeout(window._postToastTimer);
+    if (type === 'danger' || (persist && type === 'info')) type = 'error';
     if (persist) box.innerHTML = renderPersistToastHtml_(message, details);
     else box.textContent = String(message ?? '');
 
@@ -1702,6 +1835,32 @@
     box.style.display = 'block';
 
     if (persist) {
+      const copyText = buildPostErrorCopyText_(details);
+      const copyBtn = box.querySelector('#toast-copy-btn');
+      const copyStatus = box.querySelector('.post-toast-copy-status');
+      const fallback = box.querySelector('.post-toast-copy-fallback');
+      const copyField = box.querySelector('#toast-copy-text');
+      if (copyField) copyField.value = copyText;
+      copyBtn?.addEventListener('click', async () => {
+        if (copyBtn.disabled) return;
+        copyBtn.disabled = true;
+        try {
+          if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable');
+          await navigator.clipboard.writeText(copyText);
+          if (!box.contains(copyBtn)) return;
+          copyStatus.textContent = 'エラー情報をコピーしました。';
+          fallback.hidden = true;
+        } catch (_) {
+          if (!box.contains(copyBtn)) return;
+          fallback.hidden = false;
+          copyStatus.textContent = '自動コピーできませんでした。下の選択済みの情報をコピーしてください。';
+          copyField.focus({ preventScroll: true });
+          copyField.select();
+          copyField.scrollIntoView({ block: 'nearest' });
+        } finally {
+          copyBtn.disabled = false;
+        }
+      });
       document.getElementById('toast-close-btn')?.addEventListener('click', () => {
         box.style.display = 'none';
         box.innerHTML = '';
@@ -1926,13 +2085,110 @@
   // =====================================================
   let _lastPostedId = '';
 
+  // 投稿用入力だけを消す。デッキ本体・名前・代表カード・投稿者情報は維持する。
+  function resetPostedInputs_(){
+    if (window.persistDeckmakerPostReset?.() !== true) {
+      showPostToast('保存に失敗したためリセットを中止しました。入力内容は残っています。', 'error', true);
+      return false;
+    }
+    writePostNote('');
+    window.writeCardNotes?.([]);
+    SelectTags.clear();
+    SelectTags.render();
+    writeUserTags([]);
+    const userInput = document.getElementById('user-tag-input');
+    if (userInput) userInput.value = '';
+    const userHidden = document.getElementById('post-user-tags-hidden');
+    if (userHidden) userHidden.value = '';
+    window.DeckmakerLethalPost?.reset?.();
+    window.DeckmakerLethalPost?.close?.();
+    window.resetLethalPlannerComposer?.();
+    window.writePastedDeckCode?.('');
+    const code = document.getElementById('post-deck-code');
+    if (code) code.value = window.exportDeckCode?.() || '';
+    const agree = document.getElementById('post-agree');
+    if (agree) agree.checked = false;
+    const submit = document.getElementById('post-submit');
+    if (submit){ submit.disabled = true; submit.classList.add('is-disabled'); }
+    document.getElementById('post-note')?.dispatchEvent(new Event('input', { bubbles: true }));
+    userInput?.dispatchEvent(new Event('input', { bubbles: true }));
+    window.refreshPostSummary?.();
+    window.scheduleAutosave?.();
+    updatePostSubmitGuidance_();
+    return true;
+  }
+
+  function confirmPostedInputs_({ signal, isCurrent }){
+    if (signal.aborted || !isCurrent()) return Promise.resolve(false);
+    const result = document.getElementById('deck-post-result-modal');
+    const previousInert = result?.inert;
+    const previousFocus = document.activeElement;
+    const choice = document.createElement('div');
+    choice.className = 'modal deck-post-input-choice-modal';
+    choice.style.display = 'flex';
+    choice.innerHTML = `
+      <div class="modal-content deck-post-input-choice-dialog" role="dialog" aria-modal="true" aria-labelledby="post-input-choice-title">
+        <button type="button" class="modal-close-x" data-input-choice="cancel" aria-label="投稿完了画面に戻る">×</button>
+        <h3 id="post-input-choice-title">今の入力内容をどうしますか？</h3>
+        <p>デッキ本体・デッキ名・代表カードは残ります。</p>
+        <p>リセットすると、デッキ解説・カード解説・選択／手入力タグ・登録リーサル・貼り付けた共有コード・投稿同意を消します。</p>
+        <p>投稿者名・X・ゲーム内ID、保存デッキ・手動下書き・履歴は残ります。デッキから算出するタグとコードは維持します。</p>
+        <div class="deck-post-input-choice-actions">
+          <button type="button" data-input-choice="keep" class="btn primary">入力内容を残す</button>
+          <button type="button" data-input-choice="reset" class="btn ghost">投稿用入力をリセット</button>
+          <button type="button" data-input-choice="cancel" class="btn ghost">投稿完了画面に戻る</button>
+        </div>
+      </div>`;
+    const dialog = choice.querySelector('[role="dialog"]');
+    dialog.tabIndex = -1;
+    if (result) result.inert = true;
+    document.body.appendChild(choice);
+    return new Promise(resolve => {
+      let finished = false;
+      const finish = action => {
+        if (finished) return;
+        finished = true;
+        signal.removeEventListener('abort', abort);
+        document.removeEventListener('keydown', keydown, true);
+        choice.remove();
+        if (result) result.inert = previousInert;
+        if (!isCurrent()) { resolve(false); return; }
+        if (action === 'reset' && !resetPostedInputs_()) {
+          previousFocus?.focus?.({ preventScroll: true }); resolve(false); return;
+        }
+        if (action === 'keep') window.saveAutosaveNow?.(true);
+        if (action === 'cancel') previousFocus?.focus?.({ preventScroll: true });
+        resolve(action === 'keep' || action === 'reset');
+      };
+      const abort = () => finish('cancel');
+      const keydown = event => {
+        if (event.key === 'Escape'){ event.preventDefault(); event.stopImmediatePropagation(); finish('cancel'); }
+        if (event.key === 'Tab') {
+          const buttons = Array.from(choice.querySelectorAll('button'));
+          const next = event.shiftKey ? buttons[buttons.length - 1] : buttons[0];
+          if (document.activeElement === dialog || !choice.contains(document.activeElement) || (!event.shiftKey && document.activeElement === buttons[buttons.length - 1]) || (event.shiftKey && document.activeElement === buttons[0])) {
+            event.preventDefault(); next.focus();
+          }
+        }
+      };
+      signal.addEventListener('abort', abort, { once: true });
+      document.addEventListener('keydown', keydown, true);
+      choice.addEventListener('click', event => {
+        const button = event.target.closest('[data-input-choice]');
+        if (button) finish(button.dataset.inputChoice);
+        else if (event.target === choice) finish('cancel');
+      });
+      dialog.focus({ preventScroll: true });
+    });
+  }
+
   function openPostSuccessModal(opts = {}) {
     _lastPostedId = String(opts.postId || '');
-    window.DeckPostResultModal?.openPostSuccess?.(opts);
+    window.DeckPostResultModal?.openPostSuccess?.({ ...opts, onRequestClose: confirmPostedInputs_ });
   }
 
   function openPostUpdateSuccessModal(opts = {}){
-    window.DeckPostResultModal?.openPostUpdateSuccess?.(opts);
+    window.DeckPostResultModal?.openPostUpdateSuccess?.({ ...opts, onRequestClose: confirmPostedInputs_ });
   }
 
   function initPostUpdateSuccessModal_(){
@@ -1958,7 +2214,7 @@
   // =====================================================
   // 追記：投稿成功モーダル内：画像プレビュー（任意の共通関数がある場合のみ）
   // =====================================================
-  async function updatePostSuccessPreview(){
+  async function updatePostSuccessPreview(opts = {}){
     const container =
       document.getElementById('deck-post-result-preview') ||
       document.getElementById('post-success-preview');
@@ -1986,6 +2242,7 @@
 
     try{
       const node = await window.buildShareNodeForPreview(data, spec);
+      if (opts.isCurrent && !opts.isCurrent()) return;
 
       node.style.position = 'relative';
       node.style.left = '0';
@@ -2222,54 +2479,45 @@
   //  ※ CampaignUI があればそちらのモーダルを優先
   // =====================================================
   async function handlePostSubmit_(e){
-    if (window.DeckmakerLethalPost?.hasInvalid?.()) {
-      e?.preventDefault?.();
-      alert('登録済みリーサルプランに、現在のデッキでは成立しない組み合わせがあります。再登録または削除してください。');
-      return;
-    }
     e?.preventDefault();
-
-    // ✅ deckmaker-campaign.js がいるならそっちに委譲（確認モーダル付き）
-    if (window.CampaignUI && typeof window.CampaignUI.onClickPostButton === 'function'){
-      if (hasPostPreValidationIssue_()) {
-        return submitDeckPost(e, { joinCampaign: false, campaign: null });
+    const transaction = beginPostFlow_();
+    if (!transaction) return false;
+    try {
+      if (window.DeckmakerLethalPost?.hasInvalid?.()) {
+        alert('登録済みリーサルプランに、現在のデッキでは成立しない組み合わせがあります。再登録または削除してください。');
+        return false;
       }
-      await window.CampaignUI.onClickPostButton();
+      const submit = (event, opts) => submitDeckPost(event, opts, transaction);
+      if (window.CampaignUI && typeof window.CampaignUI.onClickPostButton === 'function'){
+        if (hasPostPreValidationIssue_()) return await submit(e, { joinCampaign: false, campaign: null });
+        await window.CampaignUI.onClickPostButton({ submit });
+        return false;
+      }
+      return await submit(e, { joinCampaign: false, campaign: null });
+    } catch (err) {
+      console.error(err);
+      showPostToast('投稿の確認に失敗しました。再度お試しください。', 'error', true);
       return false;
+    } finally {
+      endPostFlow_(transaction);
     }
-
-    // ✅ deckmaker-campaign.js が無いときは通常投稿
-    return submitDeckPost(e, { joinCampaign: false, campaign: null });
   }
 
   // =====================================================
   // 12) submit 本体
   // =====================================================
-  async function submitDeckPost(e, opts = {}){
+  async function submitDeckPost(e, opts = {}, transaction = null){
     e?.preventDefault();
 
-    if (isPostingDeck){
+    if (isPostingDeck || (postFlowTransaction_ && transaction !== postFlowTransaction_)){
       showPostToast('投稿処理中です。完了までお待ちください。', 'info');
       return false;
     }
+    transaction = transaction || beginPostFlow_();
     isPostingDeck = true;
-
     const btn = document.getElementById('post-submit');
-    const spinner = document.getElementById('post-loading');
-    const resetPostButton_ = () => {
-      if (btn){
-        btn.disabled = false;
-        btn.textContent = '投稿';
-      }
-      if (spinner) spinner.style.display = 'none';
-      isPostingDeck = false;
-    };
-    if (btn){
-      btn.disabled = true;
-      btn.textContent = '確認中…';
-    }
-    if (spinner) spinner.style.display = 'block';
-
+    const resetPostButton_ = () => endPostFlow_(transaction);
+    try {
     const form = document.getElementById('deck-post-form');
     clearPostAuxiliaryValidity_();
     hasDeckNoteLimitIssue_();
@@ -2348,7 +2596,7 @@
     }
 
     if (btn){
-      btn.textContent = '投稿中…';
+      btn.setAttribute('aria-label', '投稿中…');
     }
 
     // representativeCd が空なら保険で自動補完
@@ -2443,7 +2691,6 @@
 
         const postId = String(json.postId || '');
         openPostSuccessModal({ deckName, postId, campaign: camp });
-        window.DeckmakerLethalPost?.reset?.();
         window.MesorogiaPwaInstall?.showNudge?.();
       }else{
         const failureDetails = {
@@ -2490,7 +2737,6 @@
               document.getElementById('post-deck-name')?.value ||
               '').trim();
           openPostUpdateSuccessModal({ deckName, postId: existingPostId });
-          window.DeckmakerLethalPost?.reset?.();
           window.MesorogiaPwaInstall?.showNudge?.();
         }else if (json.error === 'campaign_daily_limit'){
           showPostToast(
@@ -2502,7 +2748,7 @@
         }else if (json.error === 'too_many_posts'){
           showPostToast('短時間に連続して投稿することはできません。少し時間をおいて再度お試しください。', 'error', true, failureDetails);
         }else if (json.error === 'dup_post'){
-          showPostToast('同じ内容の投稿を二重送信しそうだったのでブロックしました。', 'info', true, failureDetails);
+          showPostToast('同じ内容の投稿を二重送信しそうだったのでブロックしました。', 'error', true, failureDetails);
         }else{
           showPostToast(`投稿失敗：${json.error || '不明なエラー'}`, 'error', true, failureDetails);
         }
@@ -2515,16 +2761,12 @@
         statusText: err?.statusText || '',
         reason: err?.reason || err?.message || '投稿APIへの通信に失敗しました。',
       });
-    }finally{
-      if (btn){
-        btn.disabled = false;
-        btn.textContent = '投稿';
-      }
-      if (spinner) spinner.style.display = 'none';
-      isPostingDeck = false;
     }
 
     return false;
+    } finally {
+      endPostFlow_(transaction);
+    }
   }
 
   // =====================================================

@@ -19,6 +19,8 @@
     'deckmaker-ui.js',
     'deckmaker-shortage-ui.js',
     'deckmaker-mulligan.js',
+    // 投稿画面と同じ通信処理を候補取得にも使う。
+    '../deck-post/deck-post-api.js',
     'deckmaker-post.js',
     'deckmaker-campaign.js',
     'deckmaker-tabs.js',

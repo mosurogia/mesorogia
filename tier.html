@@ -31,10 +31,10 @@
     <meta name="twitter:image" content="https://mosurogia.github.io/mesorogia-cards/img/homeOGP.png">
 
     <!-- ===== CSS ===== -->
-    <link rel="stylesheet" href="css/common.css?v=2026-09-07-005">
+    <link rel="stylesheet" href="css/common.css?v=2026-10-11-001">
     <link rel="stylesheet" href="css/common-page124.css?v=2026-09-07-002">
     <link rel="stylesheet" href="css/common-page234.css?v=2026-05-05-006">
-    <link rel="stylesheet" href="css/page6.css?v=2026-09-14-013">
+    <link rel="stylesheet" href="css/page6.css?v=2026-09-15-040">
     <!-- ===== 構造化データ ===== -->
     <script type="application/ld+json">
     {
@@ -1350,6 +1350,8 @@
                 target="_blank" rel="noopener noreferrer">
                 フィードバック
             </a>
+            <span class="footer-sep">・</span>
+            <a class="footer-link" href="https://forms.gle/qXwEivHAkVBqmZVt7" target="_blank" rel="noopener noreferrer">機能改善フォーム</a>
         </div>
 
         <details class="footer-details">
@@ -1407,9 +1409,11 @@
                         <button class="btn primary" type="submit" id="auth-login-btn-submit">ログイン</button>
                     </div>
 
-                    <button type="button" class="auth-forgot-link" id="auth-forgot-password">
-                        パスワードを忘れた場合
-                    </button>
+                    <button type="button" class="auth-forgot-link" id="auth-forgot-password" aria-expanded="false" aria-controls="auth-forgot-guide">パスワードを忘れた場合</button>
+                    <div class="auth-forgot-guide" id="auth-forgot-guide" hidden>
+                        <p>ブラウザに保存されたパスワードをご確認ください。再設定について相談したい場合は、状況を添えて<a class="auth-forgot-contact" id="auth-forgot-contact" href="https://x.com/192837465aruneo" target="_blank" rel="noopener noreferrer">こちらにご連絡ください（Xへ）</a>。</p>
+                        <small class="auth-forgot-hint">パスワードそのものは送らないでください。</small>
+                    </div>
 
                     <p id="auth-inline-status" class="auth-inline-status" aria-live="polite" style="margin:0; font-size:.9rem;">
                     </p>
@@ -1442,19 +1446,19 @@
 <script src="js/common/core/event-features.js?v=2026-09-07-001"></script>
 <script src="js/common/core/card-core.js?v=2026-05-05-006"></script>
 <script src="js/common/core/card-sort.js?v=2026-05-05-008"></script>
-<script src="js/common/core/app-helpers.js?v=2026-05-05-006"></script>
+<script src="js/common/core/app-helpers.js?v=2026-09-24-001"></script>
 <script src="js/common/card/card-detail.js?v=2026-05-05-008"></script>
 <script src="js/common/card/card-image-viewer.js?v=2026-05-05-008"></script>
 <script src="js/common/account/auth-core.js?v=2026-08-19-002"></script>
-<script src="js/common/account/auth-ui.js?v=2026-05-05-006"></script>
-<script src="js/common/account/account.js?v=2026-05-31-001"></script>
+<script src="js/common/account/auth-ui.js?v=2026-10-10-003"></script>
+<script src="js/common/account/account.js?v=2026-10-10-001"></script>
 <script src="js/common/account/account-app-data-sync.js?v=2026-05-13-002"></script>
-<script src="js/common/pwa/cache-config.js?v=2026-09-14-013"></script>
+<script src="js/common/pwa/cache-config.js?v=2026-09-15-040"></script>
 <script src="js/common/pwa/offline-cards.js?v=2026-05-06-003"></script>
 <script src="js/common/account/account-data-manager.js?v=2026-05-14-001"></script>
-<script src="js/common/ui/header-menu.js?v=2026-09-07-005"></script>
-<script src="js/common/account/header-auth.js?v=2026-05-28-002"></script>
-<script src="js/pages/tier/tier-page.js?v=2026-09-14-013"></script>
+<script src="js/common/ui/header-menu.js?v=2026-10-11-003"></script>
+<script src="js/common/account/header-auth.js?v=2026-10-11-001"></script>
+<script src="js/pages/tier/tier-page.js?v=2026-09-15-040"></script>
 <script src="js/common/pwa/install-ui.js?v=2026-07-17-003"></script>
 <script src="js/common/pwa/register.js?v=2026-06-15-001"></script>
 

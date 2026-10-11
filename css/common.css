@@ -603,13 +603,13 @@ button,
     white-space: nowrap;
 }
 
-/* ===== 用語集公開を知らせるメニューの丸印 ===== */
+/* ===== 探索メニューの未閲覧項目を知らせる丸印 ===== */
 .main-header .header-menu-button--new {
     position: relative;
     --header-menu-new-color: var(--glossary-news-color, #d93636);
 }
 
-.has-glossary-news .main-header .header-menu-button--new::after {
+.has-header-menu-news .main-header .header-menu-button--new::after {
     content: "";
     position: absolute;
     top: -3px;
@@ -1132,6 +1132,13 @@ button,
     text-decoration: underline;
     cursor: pointer;
 }
+
+.auth-forgot-guide { padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; color: #475569; font-size: .85rem; line-height: 1.6; }
+.auth-forgot-guide[hidden] { display: none; }
+.auth-forgot-guide p { margin: 0 0 6px; }
+.auth-forgot-contact { color: #4f46e5; text-decoration: underline; }
+.auth-forgot-contact:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; border-radius: 4px; }
+.auth-forgot-hint { margin: 0; color: #64748b; font-size: .78rem; line-height: 1.5; }
 
 .auth-forgot-link:hover {
     color: #3730a3;
@@ -3242,4 +3249,48 @@ body.is-pwa-standalone .app-back-to-top.is-visible {
     #deck-post-result-modal .deck-post-result-dialog {
         scroll-behavior: auto;
     }
+}
+
+/* 投稿完了画面を閉じる前の入力保持・リセット確認 */
+.modal.deck-post-input-choice-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, .5);
+}
+.deck-post-input-choice-modal .deck-post-input-choice-dialog {
+    position: relative;
+    width: min(100%, 540px);
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding: 20px;
+    border-radius: 12px;
+    background: #fff;
+    color: #172033;
+}
+.deck-post-input-choice-dialog h3 { padding-right: 28px; }
+.deck-post-input-choice-dialog p { line-height: 1.6; }
+.deck-post-input-choice-actions { display: grid; gap: 10px; }
+.deck-post-input-choice-actions button { min-height: 44px; }
+.deck-post-input-choice-actions button:focus-visible { outline: 2px solid #2458a6; outline-offset: 2px; }
+
+/* 通常の固定UIは共通ダイアログより下に置く。重ねたダイアログの既存層は維持する。 */
+:root { --layer-page-sticky: 100; --layer-page-subtab: 110; --layer-dialog: 2000; }
+@media (max-width: 768px) {
+    .account-modal { box-sizing: border-box; padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+    .account-modal > .modal-content { max-width: 100%; }
+}
+
+/* 共通の認証送信ボタン内に処理状態を表示する */
+#auth-login-btn-submit.is-auth-loading { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.auth-button-spinner { width: 14px; height: 14px; flex: 0 0 auto; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: auth-button-spin .8s linear infinite; }
+@keyframes auth-button-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .auth-button-spinner { animation: none; }
 }
